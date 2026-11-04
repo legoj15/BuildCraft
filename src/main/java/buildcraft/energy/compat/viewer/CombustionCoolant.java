@@ -8,7 +8,7 @@ package buildcraft.energy.compat.viewer;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
  * One displayed combustion-engine coolant. Two shapes share this record, discriminated by
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  *     melts into (with its produced amount, e.g. 1500 mB water for ice), {@code coolingPerMb} 0.</li>
  * </ul>
  */
-public record CombustionCoolant(ItemStack item, FluidStack fluid, float coolingPerMb) {
+public record CombustionCoolant(ItemStack item, BCFluidStack fluid, float coolingPerMb) {
     public boolean isSolid() {
         return !item.isEmpty();
     }

@@ -15,8 +15,8 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.lib.compat.jei.JeiFluidAliases;
@@ -93,7 +93,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, IDistillationRecipe recipe, IFocusGroup focuses) {
-        FluidStack in = recipe.in();
+        BCFluidStack in = recipe.in();
         if (!in.isEmpty()) {
             builder.addInputSlot(TANK_IN_X, TANK_IN_Y)
                     .setFluidRenderer(in.getAmount(), false, TANK_IN_W, TANK_IN_H)
@@ -104,7 +104,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                     //?}
             JeiFluidAliases.addAliases(builder, in, RecipeIngredientRole.INPUT);
         }
-        FluidStack outGas = recipe.outGas();
+        BCFluidStack outGas = recipe.outGas();
         if (outGas != null && !outGas.isEmpty()) {
             builder.addOutputSlot(TANK_GAS_X, TANK_GAS_Y)
                     .setFluidRenderer(outGas.getAmount(), false, TANK_GAS_W, TANK_GAS_H)
@@ -115,7 +115,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                     //?}
             JeiFluidAliases.addAliases(builder, outGas, RecipeIngredientRole.OUTPUT);
         }
-        FluidStack outLiquid = recipe.outLiquid();
+        BCFluidStack outLiquid = recipe.outLiquid();
         if (outLiquid != null && !outLiquid.isEmpty()) {
             builder.addOutputSlot(TANK_LIQ_X, TANK_LIQ_Y)
                     .setFluidRenderer(outLiquid.getAmount(), false, TANK_LIQ_W, TANK_LIQ_H)

@@ -53,8 +53,7 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.TagValueInput;
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.recipes.AssemblyRecipe;
 
 import buildcraft.VanillaSetupBaseTester;
@@ -125,7 +124,7 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
     /** One item stack or fluid found in a saved tag, at {@code path} (for messages) reached by {@code where} (the
      *  compound keys and list indices leading to it). {@code amountKnown} is false for a fluid saved as a bare id
      *  string, whose amount sits under a key of the tile's own choosing. */
-    private record Content(String path, List<Object> where, @Nullable ItemStack item, @Nullable FluidStack fluid,
+    private record Content(String path, List<Object> where, @Nullable ItemStack item, @Nullable BCFluidStack fluid,
                            boolean amountKnown) {
         String describe() {
             return item != null
@@ -326,7 +325,7 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
             if (!done.add(tank)) return;
             Fluid fluid = fluids.get(nextFluid % fluids.size());
             int amount = Math.min(100 + 50 * nextFluid++, tank.getCapacityMb(0));
-            tank.setFluidStack(0, new FluidStack(fluid, amount));
+            tank.setFluidStack(0, new BCFluidStack(fluid, amount));
             kinds.add(Kind.TANK);
         }
     }
@@ -369,12 +368,12 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
         return stack.isEmpty() ? null : stack;
     }
 
-    /** The fluid a compound saves in {@code FluidStack.CODEC} form ({@code id}, {@code amount}); null otherwise. */
+    /** The fluid a compound saves in {@code BCFluidStack.CODEC} form ({@code id}, {@code amount}); null otherwise. */
     @Nullable
-    private static FluidStack fluidOf(CompoundTag tag) {
+    private static BCFluidStack fluidOf(CompoundTag tag) {
         if (!tag.contains("amount") || !isFluidId(NBTUtilBC.getString(tag, "id", ""))) return null;
-        FluidStack stack = FluidStack.CODEC.parse(NBTUtilBC.registryAwareOps(), tag).resultOrPartial()
-            .orElse(FluidStack.EMPTY);
+        BCFluidStack stack = BCFluidStack.CODEC.parse(NBTUtilBC.registryAwareOps(), tag).resultOrPartial()
+            .orElse(BCFluidStack.EMPTY);
         return stack.isEmpty() ? null : stack;
     }
 
@@ -393,7 +392,7 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
                 found.add(new Content(path, where, item, null, true));
                 return;
             }
-            FluidStack fluid = fluidOf(compound);
+            BCFluidStack fluid = fluidOf(compound);
             if (fluid != null) {
                 found.add(new Content(path, where, null, fluid, true));
                 return;
@@ -405,7 +404,7 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
                 if (child instanceof StringTag && isFluidId(RequiredExtractor.readString(child))) {
                     Identifier id = Identifier.parse(RequiredExtractor.readString(child));
                     found.add(new Content(childPath, childWhere, null,
-                        new FluidStack(RegistryUtilBC.getValue(BuiltInRegistries.FLUID, id), 1), false));
+                        new BCFluidStack(RegistryUtilBC.getValue(BuiltInRegistries.FLUID, id), 1), false));
                 } else {
                     scan(child, childPath, childWhere, found);
                 }
@@ -483,8 +482,8 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
         return priced;
     }
 
-    private static List<FluidStack> pricedFluids(Set<JsonRule> rules, BlockState state, CompoundTag tileNbt) {
-        List<FluidStack> priced = new ArrayList<>();
+    private static List<BCFluidStack> pricedFluids(Set<JsonRule> rules, BlockState state, CompoundTag tileNbt) {
+        List<BCFluidStack> priced = new ArrayList<>();
         for (RequiredExtractor extractor : pricingExtractors(rules)) {
             priced.addAll(extractor.extractFluidsFromBlock(state, tileNbt));
         }
@@ -545,9 +544,9 @@ public class TileContentsPricingGuardTester extends VanillaSetupBaseTester {
                 .stream().filter(s -> ItemStack.isSameItemSameComponents(s, wanted)).mapToInt(ItemStack::getCount).sum();
             return lost >= wanted.getCount();
         }
-        FluidStack wanted = content.fluid();
-        int lost = lost(pricedFluids(rules, state, tileNbt), pricedFluids(rules, state, ablated), FluidStack::matches)
-            .stream().filter(f -> f.getFluid() == wanted.getFluid()).mapToInt(FluidStack::getAmount).sum();
+        BCFluidStack wanted = content.fluid();
+        int lost = lost(pricedFluids(rules, state, tileNbt), pricedFluids(rules, state, ablated), BCFluidStack::matches)
+            .stream().filter(f -> f.getFluid() == wanted.getFluid()).mapToInt(BCFluidStack::getAmount).sum();
         return content.amountKnown() ? lost >= wanted.getAmount() : lost > 0;
     }
 

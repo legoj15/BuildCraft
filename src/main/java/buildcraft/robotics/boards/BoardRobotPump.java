@@ -16,12 +16,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
@@ -106,7 +105,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             return false;
         }
         // The search predicate only ever offers source blocks, so getType() is already the source fluid.
-        return fluidFilter.matches(new FluidStack(fluidState.getType(), BUCKET));
+        return fluidFilter.matches(new BCFluidStack(fluidState.getType(), BUCKET));
     }
 
     /** The search predicate: a drainable fluid source nobody else has reserved that the station's gate filter

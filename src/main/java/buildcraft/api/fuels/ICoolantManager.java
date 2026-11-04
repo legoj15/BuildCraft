@@ -9,28 +9,29 @@ import java.util.Collection;
 import net.minecraft.world.item.ItemStack;
 
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.api.fluids.BCFluidStack;
 
 public interface ICoolantManager {
     ICoolant addCoolant(ICoolant coolant);
 
-    ICoolant addCoolant(FluidStack fluid, float degreesCoolingPerMb);
+    ICoolant addCoolant(BCFluidStack fluid, float degreesCoolingPerMb);
 
     default ICoolant addCoolant(Fluid fluid, float degreesCoolingPerMb) {
-        return addCoolant(new FluidStack(fluid, 1), degreesCoolingPerMb);
+        return addCoolant(new BCFluidStack(fluid, 1), degreesCoolingPerMb);
     }
 
     ISolidCoolant addSolidCoolant(ISolidCoolant solidCoolant);
 
-    ISolidCoolant addSolidCoolant(ItemStack solid, FluidStack fluid, float multiplier);
+    ISolidCoolant addSolidCoolant(ItemStack solid, BCFluidStack fluid, float multiplier);
 
     Collection<ICoolant> getCoolants();
 
     Collection<ISolidCoolant> getSolidCoolants();
 
-    ICoolant getCoolant(FluidStack fluid);
+    ICoolant getCoolant(BCFluidStack fluid);
 
-    float getDegreesPerMb(FluidStack fluid, float heat);
+    float getDegreesPerMb(BCFluidStack fluid, float heat);
 
     ISolidCoolant getSolidCoolant(ItemStack solid);
 }

@@ -7,12 +7,12 @@
 package buildcraft.lib.compat.jei;
 
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import mezz.jei.api.gui.builder.IIngredientAcceptor;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.compat.viewer.FluidContainerAliases;
 
 /** JEI's half of {@link FluidContainerAliases}: adds a fluid slot's item forms to a recipe layout as invisible
@@ -22,7 +22,7 @@ public final class JeiFluidAliases {
 
     /** Adds every item form of {@code stack} to {@code builder} as invisible ingredients with the given role. No-op for
      *  empty fluids. */
-    public static void addAliases(IRecipeLayoutBuilder builder, FluidStack stack, RecipeIngredientRole role) {
+    public static void addAliases(IRecipeLayoutBuilder builder, BCFluidStack stack, RecipeIngredientRole role) {
         if (stack == null || stack.isEmpty()) {
             return;
         }

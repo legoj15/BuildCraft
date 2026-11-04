@@ -21,15 +21,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RegistryUtilBC;
 
 /**
  * Prices the fluid a tile or entity holds at {@link #path}, in whichever of the three shapes a tank saves:
  * <ul>
- *   <li>one {@code FluidStack.CODEC} compound (a distiller's {@code fluidIn});</li>
+ *   <li>one {@code BCFluidStack.CODEC} compound (a distiller's {@code fluidIn});</li>
  *   <li>a list of them (NeoForge's transfer handlers save {@code stacks}, an empty slot as an empty compound);</li>
  *   <li>a fluid id string, with its amount at {@link #amountPath} (an iron engine's {@code fuelFluid} and
  *       {@code fuelAmount}, a 1.21.1 tank's {@code fluid0} and {@code amount0}).</li>
@@ -46,14 +45,14 @@ public class RequiredExtractorTank extends RequiredExtractor {
         return path != null;
     }
 
-    private static FluidStack parseFluidStack(CompoundTag ct) {
-        if (ct.contains("Empty")) return FluidStack.EMPTY;
-        return FluidStack.CODEC.parse(NBTUtilBC.registryAwareOps(), ct).resultOrPartial().orElse(FluidStack.EMPTY);
+    private static BCFluidStack parseFluidStack(CompoundTag ct) {
+        if (ct.contains("Empty")) return BCFluidStack.EMPTY;
+        return BCFluidStack.CODEC.parse(NBTUtilBC.registryAwareOps(), ct).resultOrPartial().orElse(BCFluidStack.EMPTY);
     }
 
-    private List<FluidStack> extract(CompoundTag nbt) {
+    private List<BCFluidStack> extract(CompoundTag nbt) {
         Tag found = path.get(nbt);
-        List<FluidStack> fluids = new ArrayList<>();
+        List<BCFluidStack> fluids = new ArrayList<>();
         if (found instanceof CompoundTag ct) {
             fluids.add(parseFluidStack(ct));
         } else if (found instanceof ListTag) {
@@ -63,23 +62,23 @@ public class RequiredExtractorTank extends RequiredExtractor {
             int amount = readInt(amountPath.get(nbt), 0);
             if (id != null && amount > 0 && BuiltInRegistries.FLUID.containsKey(id)) {
                 Fluid fluid = RegistryUtilBC.getValue(BuiltInRegistries.FLUID, id);
-                fluids.add(new FluidStack(fluid, amount));
+                fluids.add(new BCFluidStack(fluid, amount));
             }
         }
-        fluids.removeIf(FluidStack::isEmpty);
+        fluids.removeIf(BCFluidStack::isEmpty);
         return fluids;
     }
 
     @Nonnull
     @Override
-    public List<FluidStack> extractFluidsFromBlock(@Nonnull BlockState blockState, @Nullable CompoundTag tileNbt) {
+    public List<BCFluidStack> extractFluidsFromBlock(@Nonnull BlockState blockState, @Nullable CompoundTag tileNbt) {
         if (tileNbt == null || path == null) return Collections.emptyList();
         return extract(tileNbt);
     }
 
     @Nonnull
     @Override
-    public List<FluidStack> extractFluidsFromEntity(@Nonnull CompoundTag entityNbt) {
+    public List<BCFluidStack> extractFluidsFromEntity(@Nonnull CompoundTag entityNbt) {
         if (path == null) return Collections.emptyList();
         return extract(entityNbt);
     }

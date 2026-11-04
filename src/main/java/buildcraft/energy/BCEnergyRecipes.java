@@ -11,8 +11,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
@@ -53,13 +52,13 @@ public class BCEnergyRecipes {
         BuildcraftFuelRegistry.coolant.addCoolant(Fluids.WATER, 0.0023f);
         BuildcraftFuelRegistry.coolant.addSolidCoolant(
             new ItemStack(Blocks.ICE),
-            new FluidStack(Fluids.WATER, 1000), 1.5f);
+            new BCFluidStack(Fluids.WATER, 1000), 1.5f);
         BuildcraftFuelRegistry.coolant.addSolidCoolant(
             new ItemStack(Blocks.PACKED_ICE),
-            new FluidStack(Fluids.WATER, 1000), 2f);
+            new BCFluidStack(Fluids.WATER, 1000), 2f);
         BuildcraftFuelRegistry.coolant.addSolidCoolant(
             new ItemStack(Blocks.BLUE_ICE),
-            new FluidStack(Fluids.WATER, 1000), 2.5f);
+            new BCFluidStack(Fluids.WATER, 1000), 2.5f);
 
         // --- Fuels (oil-derived) ---
         // Relative amounts from 1.12 refinery chain
@@ -95,16 +94,16 @@ public class BCEnergyRecipes {
 
         // --- Distillation recipes ---
         if (BuildcraftRecipeRegistry.refineryRecipes != null) {
-            FluidStack[] gas_light_dense_residue = createFluidStacks("oil", _oil);
-            FluidStack[] gas_light_dense = createFluidStacks("oil_distilled", _gas_light_dense);
-            FluidStack[] gas_light = createFluidStacks("fuel_mixed_light", _gas_light);
-            FluidStack[] gas = createFluidStacks("fuel_gaseous", _gas);
-            FluidStack[] light_dense_residue = createFluidStacks("oil_heavy", _light_dense_residue);
-            FluidStack[] light_dense = createFluidStacks("fuel_mixed_heavy", _light_dense);
-            FluidStack[] light = createFluidStacks("fuel_light", _light);
-            FluidStack[] dense_residue = createFluidStacks("oil_dense", _dense_residue);
-            FluidStack[] dense = createFluidStacks("fuel_dense", _dense);
-            FluidStack[] residue = createFluidStacks("oil_residue", _residue);
+            BCFluidStack[] gas_light_dense_residue = createFluidStacks("oil", _oil);
+            BCFluidStack[] gas_light_dense = createFluidStacks("oil_distilled", _gas_light_dense);
+            BCFluidStack[] gas_light = createFluidStacks("fuel_mixed_light", _gas_light);
+            BCFluidStack[] gas = createFluidStacks("fuel_gaseous", _gas);
+            BCFluidStack[] light_dense_residue = createFluidStacks("oil_heavy", _light_dense_residue);
+            BCFluidStack[] light_dense = createFluidStacks("fuel_mixed_heavy", _light_dense);
+            BCFluidStack[] light = createFluidStacks("fuel_light", _light);
+            BCFluidStack[] dense_residue = createFluidStacks("oil_dense", _dense_residue);
+            BCFluidStack[] dense = createFluidStacks("fuel_dense", _dense);
+            BCFluidStack[] residue = createFluidStacks("oil_residue", _residue);
 
             addDistillation(gas_light_dense_residue, gas, light_dense_residue, 0, 32 * MjAPI.MJ);
             addDistillation(gas_light_dense_residue, gas_light, dense_residue, 1, 16 * MjAPI.MJ);
@@ -135,11 +134,11 @@ public class BCEnergyRecipes {
             addHeatExchange("fuel_gaseous");
 
             // Water heating: consumed as heat source, produces nothing
-            FluidStack water = new FluidStack(Fluids.WATER, 10);
+            BCFluidStack water = new BCFluidStack(Fluids.WATER, 10);
             BuildcraftRecipeRegistry.refineryRecipes.addHeatableRecipe(water, null, 0, 1);
 
             // Lava cooling: consumed as coolant, produces nothing
-            FluidStack lava = new FluidStack(Fluids.LAVA, 5);
+            BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 5);
             BuildcraftRecipeRegistry.refineryRecipes.addCoolableRecipe(lava, null, 4, 2);
         }
     }
@@ -166,23 +165,23 @@ public class BCEnergyRecipes {
     }
 
     /**
-     * Creates a FluidStack array with one entry per heat level (0, 1, 2),
+     * Creates a BCFluidStack array with one entry per heat level (0, 1, 2),
      * matching the 1.12.2 pattern where each fluid has 3 temperature variants.
      */
-    private static FluidStack[] createFluidStacks(String baseName, int amount) {
-        FluidStack[] arr = new FluidStack[3];
+    private static BCFluidStack[] createFluidStacks(String baseName, int amount) {
+        BCFluidStack[] arr = new BCFluidStack[3];
         for (int heat = 0; heat < 3; heat++) {
             Fluid fluid = findFluidByHeat(baseName, heat);
-            arr[heat] = fluid != null ? new FluidStack(fluid, amount) : FluidStack.EMPTY;
+            arr[heat] = fluid != null ? new BCFluidStack(fluid, amount) : BCFluidStack.EMPTY;
         }
         return arr;
     }
 
-    private static void addDistillation(FluidStack[] in, FluidStack[] outGas, FluidStack[] outLiquid,
+    private static void addDistillation(BCFluidStack[] in, BCFluidStack[] outGas, BCFluidStack[] outLiquid,
             int heat, long mjCost) {
-        FluidStack _in = in[heat];
-        FluidStack _outGas = outGas[heat];
-        FluidStack _outLiquid = outLiquid[heat];
+        BCFluidStack _in = in[heat];
+        BCFluidStack _outGas = outGas[heat];
+        BCFluidStack _outLiquid = outLiquid[heat];
         if (_in.isEmpty() || _outGas.isEmpty() || _outLiquid.isEmpty()) {
             return; // fluid was disabled
         }
@@ -210,20 +209,20 @@ public class BCEnergyRecipes {
     private static void addDirtyFuel(String baseName, int amountDiff, int multiplier, int boostOver4) {
         Fluid residue = findFluid("oil_residue");
         // residue disabled — register as clean fuel
-        FluidStack residueStack = residue == null ? null : new FluidStack(residue, 1000 / amountDiff);
+        BCFluidStack residueStack = residue == null ? null : new BCFluidStack(residue, 1000 / amountDiff);
         addFuel(baseName, amountDiff, multiplier, boostOver4, residueStack);
     }
 
     /** Registers all three heat tiers of a fuel. Burn time per bucket (and residue) come from the cool
      *  tier and don't change with heat; only power and engine heat follow the heat curve. */
     private static void addFuel(String baseName, int amountDiff, int multiplier, int boostOver4,
-            FluidStack residue) {
+            BCFluidStack residue) {
         long coolPower = multiplier * MjAPI.MJ;
         int totalTime = TIME_BASE * boostOver4 / 4 / multiplier / amountDiff;
         for (int heat = 0; heat < 3; heat++) {
             Fluid fuel = findFluidByHeat(baseName, heat);
             if (fuel == null) continue; // disabled
-            FluidStack stack = new FluidStack(fuel, 1);
+            BCFluidStack stack = new BCFluidStack(fuel, 1);
             long power = coolPower * POWER_QUARTERS_BY_HEAT[heat] / 4;
             long engineHeat = coolPower * HEAT_QUARTERS_BY_HEAT[heat] / 4;
             if (residue == null) {
@@ -246,8 +245,8 @@ public class BCEnergyRecipes {
             Fluid cool = findFluidByHeat(baseName, heat);
             Fluid hot = findFluidByHeat(baseName, heat + 1);
             if (cool == null || hot == null) continue; // fluid variant disabled
-            FluidStack coolStack = new FluidStack(cool, 10);
-            FluidStack hotStack = new FluidStack(hot, 10);
+            BCFluidStack coolStack = new BCFluidStack(cool, 10);
+            BCFluidStack hotStack = new BCFluidStack(hot, 10);
             BuildcraftRecipeRegistry.refineryRecipes.addHeatableRecipe(coolStack, hotStack, heat, heat + 1);
             BuildcraftRecipeRegistry.refineryRecipes.addCoolableRecipe(hotStack, coolStack, heat + 1, heat);
         }

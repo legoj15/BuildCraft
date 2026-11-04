@@ -15,7 +15,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -24,10 +23,12 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -69,7 +70,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
-            searchedFluid = FluidResource.of(FluidUtilBC.getFluidContained(stack));
+            searchedFluid = FluidResource.of(NeoFluidStacks.toNeo(FluidUtilBC.getFluidContained(stack)));
         }
 
         int tanks = handler.size();
@@ -154,7 +155,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             return false;
         }
 
-        FluidStack searchedFluid = FluidStack.EMPTY;
+        BCFluidStack searchedFluid = BCFluidStack.EMPTY;
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
@@ -169,7 +170,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
         switch (state) {
             case EMPTY: {
                 for (int i = 0; i < tanks; i++) {
-                    FluidStack fluid = handler.getFluidInTank(i);
+                    BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
                     if (!fluid.isEmpty() && fluid.getAmount() > 0) {
                         return false;
                     }
@@ -178,9 +179,9 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             }
             case CONTAINS: {
                 for (int i = 0; i < tanks; i++) {
-                    FluidStack fluid = handler.getFluidInTank(i);
+                    BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
                     if (!fluid.isEmpty() && fluid.getAmount() > 0
-                        && (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid))) {
+                        && (searchedFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(fluid, searchedFluid))) {
                         return true;
                     }
                 }
@@ -189,7 +190,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             case SPACE: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        FluidStack fluid = handler.getFluidInTank(i);
+                        BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
                         int cap = handler.getTankCapacity(i);
                         if (fluid.isEmpty() || fluid.getAmount() < cap) {
                             return true;
@@ -199,14 +200,14 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                 }
                 // Probe with an unbounded amount, never committed: a cauldron takes fluid only in whole steps, so a
                 // 1 mB probe always failed and a filtered SPACE read false (and FULL true) on an empty one.
-                FluidStack probe = searchedFluid.copy();
+                BCFluidStack probe = searchedFluid.copy();
                 probe.setAmount(Integer.MAX_VALUE);
-                return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0;
+                return handler.fill(NeoFluidStacks.toNeo(probe), IFluidHandler.FluidAction.SIMULATE) > 0;
             }
             case FULL: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        FluidStack fluid = handler.getFluidInTank(i);
+                        BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
                         int cap = handler.getTankCapacity(i);
                         if (fluid.isEmpty() || fluid.getAmount() < cap) {
                             return false;
@@ -214,9 +215,9 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                     }
                     return true;
                 }
-                FluidStack probe = searchedFluid.copy();
+                BCFluidStack probe = searchedFluid.copy();
                 probe.setAmount(Integer.MAX_VALUE);
-                return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) <= 0;
+                return handler.fill(NeoFluidStacks.toNeo(probe), IFluidHandler.FluidAction.SIMULATE) <= 0;
             }
         }
         return false;

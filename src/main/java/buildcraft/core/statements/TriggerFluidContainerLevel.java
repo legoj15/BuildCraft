@@ -15,7 +15,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -24,10 +23,12 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -75,7 +76,7 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
-            searchedFluid = FluidResource.of(FluidUtilBC.getFluidContained(stack));
+            searchedFluid = FluidResource.of(NeoFluidStacks.toNeo(FluidUtilBC.getFluidContained(stack)));
         }
 
         int tanks = handler.size();
@@ -119,7 +120,7 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
             return false;
         }
 
-        FluidStack searchedFluid = FluidStack.EMPTY;
+        BCFluidStack searchedFluid = BCFluidStack.EMPTY;
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
@@ -132,7 +133,7 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
         }
 
         for (int i = 0; i < tanks; i++) {
-            FluidStack fluid = handler.getFluidInTank(i);
+            BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
             int capacity = handler.getTankCapacity(i);
             if (capacity <= 0) continue;
 
@@ -142,13 +143,13 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
                     return true; // Empty tank is certainly below threshold
                 }
                 // An unbounded, uncommitted probe (see TriggerFluidContainer): a cauldron refuses a 1 mB one.
-                FluidStack probe = searchedFluid.copy();
+                BCFluidStack probe = searchedFluid.copy();
                 probe.setAmount(Integer.MAX_VALUE);
-                if (handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0) {
+                if (handler.fill(NeoFluidStacks.toNeo(probe), IFluidHandler.FluidAction.SIMULATE) > 0) {
                     return true;
                 }
             } else {
-                if (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid)) {
+                if (searchedFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(fluid, searchedFluid)) {
                     float percentage = fluid.getAmount() / (float) capacity;
                     return percentage < type.level;
                 }

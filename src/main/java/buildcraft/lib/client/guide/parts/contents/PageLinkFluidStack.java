@@ -8,8 +8,7 @@ import com.google.common.collect.ImmutableList;
 
 import net.minecraft.util.profiling.ProfilerFiller;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.PageLine;
 import buildcraft.lib.client.guide.entry.FluidStackValueFilter;
@@ -17,23 +16,24 @@ import buildcraft.lib.client.guide.entry.PageEntryFluidStack;
 import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.parts.GuidePage;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiFluid;
 import buildcraft.lib.gui.ISimpleDrawable;
 
 /** Fluid-side analogue of {@link PageLinkItemStack}: a search-result link backed
- *  by a {@link FluidStack}, rendered with a {@link GuiFluid} icon. Used by
+ *  by a {@link BCFluidStack}, rendered with a {@link GuiFluid} icon. Used by
  *  {@link PageEntryFluidStack#iterateAllDefault} to surface every registered fluid
  *  in the suffix-array search index, including fluids without a BC guide page.
  *  When clicked, opens a self-synthesizing page backed by {@link PageEntryFluidStack}. */
 public final class PageLinkFluidStack extends PageLink {
 
-    public final FluidStack stack;
+    public final BCFluidStack stack;
     public final List<String> tooltip;
     public final String searchText;
 
-    public static PageLinkFluidStack create(boolean startVisible, FluidStack stack, ProfilerFiller prof) {
+    public static PageLinkFluidStack create(boolean startVisible, BCFluidStack stack, ProfilerFiller prof) {
         prof.push("create_page_link_fluid");
-        String displayName = stack.getFluid().getFluidType().getDescription(stack).getString();
+        String displayName = stack.getFluid().getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
         List<String> tooltip = Collections.singletonList(displayName);
         String searchText = displayName.toLowerCase(Locale.ROOT);
         ISimpleDrawable icon = new GuiFluid(stack);
@@ -43,7 +43,7 @@ public final class PageLinkFluidStack extends PageLink {
     }
 
     private PageLinkFluidStack(
-        PageLine text, boolean startVisible, FluidStack stack, List<String> tooltip, String searchText
+        PageLine text, boolean startVisible, BCFluidStack stack, List<String> tooltip, String searchText
     ) {
         super(text, startVisible);
         this.stack = stack;

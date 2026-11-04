@@ -70,9 +70,8 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.TagValueInput;
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
@@ -513,7 +512,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
 
     @Nonnull
     @Override
-    public List<FluidStack> computeRequiredFluids() {
+    public List<BCFluidStack> computeRequiredFluids() {
         Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
         return rules.stream()
             .map(rule -> rule.requiredExtractors)

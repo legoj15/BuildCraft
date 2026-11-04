@@ -13,9 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.IPlayerOwned;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjBattery;
 
 public interface ITileForSnapshotBuilder extends IPlayerOwned {
@@ -81,6 +80,6 @@ public interface ITileForSnapshotBuilder extends IPlayerOwned {
      * when the broken block was a {@link net.minecraft.world.level.block.LiquidBlock} source
      * (always 1000 mB of the source fluid).
      */
-    default void onBlockBroken(BlockPos brokenPos, List<ItemStack> drops, int xp, FluidStack capturedFluid) {
+    default void onBlockBroken(BlockPos brokenPos, List<ItemStack> drops, int xp, BCFluidStack capturedFluid) {
     }
 }

@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -21,9 +20,11 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.fluids.FluidActionResult;*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.fuels.ISolidCoolant;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.Widget_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
@@ -109,7 +110,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             if (invStack.isEmpty()) continue;
             // Skip non-empty containers — only fill empty ones to avoid silently swapping
             // the player's existing fluid containers.
-            if (!FluidUtil.getFluidContained(invStack).orElse(FluidStack.EMPTY).isEmpty()) continue;
+            if (!FluidUtil.getFluidContained(invStack).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY).isEmpty()) continue;
             ItemStack single = invStack.copyWithCount(1);
             FluidActionResult result = FluidUtil.tryFillContainer(single, tank, Integer.MAX_VALUE, player, true);
             if (result.isSuccess()) {
@@ -246,10 +247,10 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             ItemStack singleCopyCoolant = stack.copyWithCount(1);
             ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopyCoolant);
             if (solidCoolant != null) {
-                FluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
+                BCFluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
                 if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
                     try (Transaction tx = Transaction.openRoot()) {
-                        int filled = tank.insert(0, FluidResource.of(fluidCoolant), fluidCoolant.getAmount(), tx);
+                        int filled = tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(fluidCoolant)), fluidCoolant.getAmount(), tx);
                         if (filled == fluidCoolant.getAmount()) {
                             tx.commit();
                             // Trigger "Ice cool" advancement for using solid coolant
@@ -275,7 +276,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
 
         boolean isFluidContainer = FluidUtil.getFluidHandler(carried.copy()).isPresent();
         if (isFluidContainer) {
-            FluidStack contained = FluidUtil.getFluidContained(carried).orElse(FluidStack.EMPTY);
+            BCFluidStack contained = NeoFluidStacks.fromNeo(FluidUtil.getFluidContained(carried).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));
             if (isCreative) {
                 // Creative: act on a detached copy so the cursor item is never consumed.
                 if (!contained.isEmpty()) {
@@ -315,7 +316,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             ItemStack singleCopyCoolant = stack.copyWithCount(1);
             ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopyCoolant);
             if (solidCoolant != null) {
-                FluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
+                BCFluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
                 if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
                     if (tank.fill(0, fluidCoolant, true) == fluidCoolant.getAmount()) {
                         tank.fill(0, fluidCoolant, false);

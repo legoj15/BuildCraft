@@ -8,15 +8,14 @@ package buildcraft.lib.inventory.filter;
 
 import net.minecraft.resources.Identifier;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.fluids.BCFluidStack;
 
 /** Returns true if the stack matches any one one of the filter stacks. */
 public class PassThroughFluidFilter implements IFluidFilter {
 
     @Override
-    public boolean matches(FluidStack fluid) {
+    public boolean matches(BCFluidStack fluid) {
         return fluid != null;
     }
 

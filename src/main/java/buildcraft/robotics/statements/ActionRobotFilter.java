@@ -14,11 +14,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
@@ -112,7 +112,7 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         }
         Set<Fluid> fluids = new HashSet<>();
         for (ItemStack stack : stacks) {
-            FluidStack contained = FluidUtilBC.getFluidContained(stack);
+            BCFluidStack contained = FluidUtilBC.getFluidContained(stack);
             if (!contained.isEmpty()) {
                 fluids.add(contained.getFluid());
             }
@@ -150,7 +150,7 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
                     return true;
                 }
                 for (ItemStack stack : param.getStacks()) {
-                    FluidStack fluid = FluidUtilBC.getFluidContained(stack);
+                    BCFluidStack fluid = FluidUtilBC.getFluidContained(stack);
                     if (!fluid.isEmpty() && filter.matches(fluid)) {
                         return true;
                     }

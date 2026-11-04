@@ -10,8 +10,7 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.lists.ListMatchHandler;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -44,7 +43,7 @@ public class ListMatchHandlerFluid extends ListMatchHandler {
                 }
                 return java.util.List.of();
             case MATERIAL: {
-                FluidStack fluid = FluidUtilBC.getFluidContained(stack);
+                BCFluidStack fluid = FluidUtilBC.getFluidContained(stack);
                 if (fluid.isEmpty()) return java.util.List.of();
                 net.minecraft.resources.Identifier id =
                         net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(fluid.getFluid());
@@ -61,9 +60,9 @@ public class ListMatchHandlerFluid extends ListMatchHandler {
             case TYPE:
                 return FluidUtilBC.isFluidContainer(source) && FluidUtilBC.isFluidContainer(target);
             case MATERIAL: {
-                FluidStack a = FluidUtilBC.getFluidContained(source);
-                FluidStack b = FluidUtilBC.getFluidContained(target);
-                return !a.isEmpty() && !b.isEmpty() && FluidStack.isSameFluidSameComponents(a, b);
+                BCFluidStack a = FluidUtilBC.getFluidContained(source);
+                BCFluidStack b = FluidUtilBC.getFluidContained(target);
+                return !a.isEmpty() && !b.isEmpty() && BCFluidStack.isSameFluidSameComponents(a, b);
             }
             default:
                 return false;

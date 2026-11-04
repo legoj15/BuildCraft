@@ -18,8 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.FuelValues;
 *///?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.fuels.ICoolant;
 import buildcraft.api.fuels.IFuel;
@@ -39,7 +38,7 @@ public final class EngineFuelCollector {
         List<IFuel> fuels = new ArrayList<>();
         if (BuildcraftFuelRegistry.fuel == null) return fuels;
         for (IFuel fuel : BuildcraftFuelRegistry.fuel.getFuels()) {
-            FluidStack fluid = fuel.getFluid();
+            BCFluidStack fluid = fuel.getFluid();
             if (fluid != null && !fluid.isEmpty()) {
                 fuels.add(fuel);
             }
@@ -52,15 +51,15 @@ public final class EngineFuelCollector {
         List<CombustionCoolant> out = new ArrayList<>();
         if (BuildcraftFuelRegistry.coolant == null) return out;
         for (ICoolant coolant : BuildcraftFuelRegistry.coolant.getCoolants()) {
-            FluidStack rep = coolant.getRepresentativeFluid();
+            BCFluidStack rep = coolant.getRepresentativeFluid();
             if (rep == null || rep.isEmpty()) continue;
             out.add(new CombustionCoolant(ItemStack.EMPTY, rep, coolant.getDegreesCoolingPerMB(rep, 1f)));
         }
         for (ISolidCoolant solid : BuildcraftFuelRegistry.coolant.getSolidCoolants()) {
             ItemStack rep = solid.getRepresentativeStack();
             if (rep == null || rep.isEmpty()) continue;
-            FluidStack produced = solid.getFluidFromSolidCoolant(rep);
-            out.add(new CombustionCoolant(rep, produced == null ? FluidStack.EMPTY : produced, 0f));
+            BCFluidStack produced = solid.getFluidFromSolidCoolant(rep);
+            out.add(new CombustionCoolant(rep, produced == null ? BCFluidStack.EMPTY : produced, 0f));
         }
         return out;
     }

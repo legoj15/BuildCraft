@@ -29,10 +29,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
@@ -174,7 +173,7 @@ public class ItemSchematicSingle extends Item {
                 ISchematicBlock schematicBlock = getSchematic(stack);
                 if (schematicBlock != null) {
                     if (!schematicBlock.isBuilt(world, placePos) && schematicBlock.canBuild(world, placePos)) {
-                        List<FluidStack> requiredFluids = schematicBlock.computeRequiredFluids();
+                        List<BCFluidStack> requiredFluids = schematicBlock.computeRequiredFluids();
                         List<ItemStack> requiredItems = schematicBlock.computeRequiredItems();
                         if (requiredFluids.isEmpty()) {
                             InventoryWrapper itemTransactor = new InventoryWrapper(player.getInventory());

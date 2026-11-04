@@ -10,12 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.ChatFormatting;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.factory.tile.TileDistiller_BC8;

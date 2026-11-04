@@ -18,6 +18,7 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -102,7 +103,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
             }
         }
 
-        boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
+        boolean gaseous = FluidUtilBC.isGaseous(resource.getFluid());
 
         // Fill from bottom to top (liquids) or top to bottom (gases)
         int remaining = amount;
@@ -139,7 +140,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
 
         List<TileTank> tanks = owner.getTankColumn();
 
-        boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
+        boolean gaseous = FluidUtilBC.isGaseous(resource.getFluid());
 
         // Drain from top to bottom (liquids) or bottom to top (gases)
         int remaining = amount;
@@ -194,7 +195,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
         FluidStack fluid = FluidStack.EMPTY;
         long total = 0;
         for (TileTank t : owner.getTankColumn()) {
-            FluidStack held = t.tank.getFluidStack(0);
+            FluidStack held = NeoFluidStacks.toNeo(t.tank.getFluidStack(0));
             if (!held.isEmpty()) {
                 if (fluid.isEmpty()) fluid = held.copy();
                 total += t.tank.getAmountMb(0);
@@ -226,13 +227,13 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
 
         // Check that existing fluid in the column is compatible
         for (TileTank t : tanks) {
-            FluidStack current = t.tank.getFluidStack(0);
+            FluidStack current = NeoFluidStacks.toNeo(t.tank.getFluidStack(0));
             if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, resource)) {
                 return 0; // Different fluid already present
             }
         }
 
-        boolean gaseous = FluidUtilBC.isGaseous(resource);
+        boolean gaseous = FluidUtilBC.isGaseous(resource.getFluid());
         boolean simulate = action.simulate();
         int remaining = resource.getAmount();
         int totalFilled = 0;
@@ -242,7 +243,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
                 if (remaining <= 0) break;
                 FluidStack toFill = resource.copy();
                 toFill.setAmount(remaining);
-                int filled = tanks.get(i).tank.fill(0, toFill, simulate);
+                int filled = tanks.get(i).tank.fill(0, NeoFluidStacks.fromNeo(toFill), simulate);
                 remaining -= filled;
                 totalFilled += filled;
             }
@@ -251,7 +252,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
                 if (remaining <= 0) break;
                 FluidStack toFill = resource.copy();
                 toFill.setAmount(remaining);
-                int filled = t.tank.fill(0, toFill, simulate);
+                int filled = t.tank.fill(0, NeoFluidStacks.fromNeo(toFill), simulate);
                 remaining -= filled;
                 totalFilled += filled;
             }
@@ -281,7 +282,7 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
         FluidStack representative = getFluidInTank(0);
         if (representative.isEmpty()) return FluidStack.EMPTY;
 
-        boolean gaseous = FluidUtilBC.isGaseous(representative);
+        boolean gaseous = FluidUtilBC.isGaseous(representative.getFluid());
         boolean simulate = action.simulate();
         int remaining = maxDrain;
         int totalDrained = 0;
@@ -289,14 +290,14 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
         if (gaseous) {
             for (TileTank t : tanks) {
                 if (remaining <= 0) break;
-                FluidStack drained = t.tank.drain(0, remaining, simulate);
+                FluidStack drained = NeoFluidStacks.toNeo(t.tank.drain(0, remaining, simulate));
                 remaining -= drained.getAmount();
                 totalDrained += drained.getAmount();
             }
         } else {
             for (int i = tanks.size() - 1; i >= 0; i--) {
                 if (remaining <= 0) break;
-                FluidStack drained = tanks.get(i).tank.drain(0, remaining, simulate);
+                FluidStack drained = NeoFluidStacks.toNeo(tanks.get(i).tank.drain(0, remaining, simulate));
                 remaining -= drained.getAmount();
                 totalDrained += drained.getAmount();
             }

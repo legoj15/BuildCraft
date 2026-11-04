@@ -17,8 +17,7 @@ import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
@@ -87,7 +86,7 @@ public class CauldronPipeTester {
         PipeFlowFluids flow = (PipeFlowFluids) pipe.getFlow();
 
         for (int i = 0; i < FLOW_TICKS; i++) {
-            flow.insertFluidsForce(new FluidStack(Fluids.WATER, 200), null, false);
+            flow.insertFluidsForce(new BCFluidStack(Fluids.WATER, 200), null, false);
             pipe.onTick();
         }
 
@@ -147,7 +146,7 @@ public class CauldronPipeTester {
     public static void testWoodPipeKeepsItsFluid(GameTestHelper helper) {
         helper.setBlock(CAULDRON, Blocks.LAVA_CAULDRON);
         Pipe pipe = placePipe(helper, BCTransportItems.PIPE_WOOD_FLUID.get());
-        ((PipeFlowFluids) pipe.getFlow()).insertFluidsForce(new FluidStack(Fluids.WATER, 100), null, false);
+        ((PipeFlowFluids) pipe.getFlow()).insertFluidsForce(new BCFluidStack(Fluids.WATER, 100), null, false);
 
         ((PipeBehaviourWood) pipe.getBehaviour()).receivePower(512 * MjAPI.MJ, false);
 

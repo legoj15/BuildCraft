@@ -36,8 +36,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
@@ -270,7 +269,7 @@ public class TilePump extends TileMiner implements IDebuggable {
      *
      * <p>No-ops if no owner, no server (client-side or non-logical), or owner offline.
      */
-    private void creditRefineAndRedefineFromPumpedOil(FluidStack drain) {
+    private void creditRefineAndRedefineFromPumpedOil(BCFluidStack drain) {
         if (getOwner() == null || level == null || level.isClientSide()) return;
         net.minecraft.server.MinecraftServer server = level.getServer();
         if (server == null) return;
@@ -733,7 +732,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                 return;
             }
 
-            FluidStack drain = BlockUtil.drainBlock(level, currentPos, false);
+            BCFluidStack drain = BlockUtil.drainBlock(level, currentPos, false);
 
             drain_attempt: {
                 if (drain == null) {

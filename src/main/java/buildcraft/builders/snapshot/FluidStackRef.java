@@ -15,10 +15,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
- * Resolves a FluidStack from NBT references (fluid id, amount).
+ * Resolves a BCFluidStack from NBT references (fluid id, amount).
  * In 1.21.11, fluids are looked up via BuiltInRegistries.FLUID.
  */
 public class FluidStackRef {
@@ -30,7 +30,7 @@ public class FluidStackRef {
         this.amount = amount;
     }
 
-    public FluidStack get(Tag nbt) {
+    public BCFluidStack get(Tag nbt) {
         Identifier fluidId = Identifier.parse(
             fluid
                 .get(nbt)
@@ -50,6 +50,6 @@ public class FluidStackRef {
             /*.map(IntTag::getAsInt)*/
             //?}
             .orElse(1000); // Default to bucket volume
-        return new FluidStack(fluidObj, fluidAmount);
+        return new BCFluidStack(fluidObj, fluidAmount);
     }
 }

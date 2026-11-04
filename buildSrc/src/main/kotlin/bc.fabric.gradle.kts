@@ -2,7 +2,8 @@
 // fabric (today only 26.3-fabric). Loom's version is pinned in buildSrc/build.gradle.kts.
 //
 // Phase 2 spike (#100): COMPILE ONLY, NOTHING SHIPS. The node compiles buildcraft/platform/** from main (the
-// loader-neutral contracts, the binder with its fabric arm live, and buildcraft.platform.fabric) and nothing else:
+// loader-neutral contracts, the binder with its fabric arm live, and buildcraft.platform.fabric) plus the vanilla-only
+// BCFluidStack in buildcraft/api/fluids, and nothing else:
 // no resources, no tests, no jar, no buildAndCollect. Its share of the root fullTestSuite is compileJava alone.
 //
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
@@ -21,7 +22,8 @@ sourceSets {
     named("main") {
         // Only the platform layer compiles here until the rest of BC has a Fabric route. The filter applies to
         // whichever directory Stonecutter points the source set at (src/ raw, or this node's generated copy).
-        java { include("buildcraft/platform/**") }
+        // buildcraft/api/fluids is the loader-neutral BCFluidStack the platform converts (vanilla types only).
+        java { include("buildcraft/platform/**", "buildcraft/api/fluids/**") }
         // BC's resources are NeoForge's (mods.toml, the data down-ports); a Fabric node ships none yet.
         resources { exclude("**") }
     }

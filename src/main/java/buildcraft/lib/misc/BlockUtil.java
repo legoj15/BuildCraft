@@ -48,8 +48,7 @@ import net.minecraft.world.phys.Vec3;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.core.BCCoreConfig;
@@ -607,10 +606,10 @@ public class BlockUtil {
      * @param world    the level
      * @param pos      the position to drain
      * @param doDrain  if true, actually takes the fluid; if false, simulates only
-     * @return a FluidStack of 1000mB if a drainable source was present, or null
+     * @return a BCFluidStack of 1000mB if a drainable source was present, or null
      */
     @Nullable
-    public static FluidStack drainBlock(Level world, BlockPos pos, boolean doDrain) {
+    public static BCFluidStack drainBlock(Level world, BlockPos pos, boolean doDrain) {
         BlockState state = world.getBlockState(pos);
         Fluid fluid = getDrainableFluid(world, pos);
         if (fluid == null) {
@@ -623,7 +622,7 @@ public class BlockUtil {
                 return null;
             }
         }
-        return new FluidStack(fluid, 1000);
+        return new BCFluidStack(fluid, 1000);
     }
 
     /** Creates a comparator that falls back to coordinate comparison when the parent reports equality,
@@ -699,7 +698,7 @@ public class BlockUtil {
      * blocks and for flowing (non-source) fluid breaks — flowing fluid is transient world-state
      * with no meaningful volume to bucket up.
      */
-    public record BreakResult(List<ItemStack> drops, int xp, FluidStack capturedFluid) {}
+    public record BreakResult(List<ItemStack> drops, int xp, BCFluidStack capturedFluid) {}
 
     /**
      * Records the block states around {@code pos} that a removal there can invalidate indirectly —
@@ -800,7 +799,7 @@ public class BlockUtil {
     public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
             ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, @Nullable GameProfile owner) {
         if (world.getBlockState(pos).isAir()) {
-            return Optional.of(new BreakResult(List.of(), 0, FluidStack.EMPTY));
+            return Optional.of(new BreakResult(List.of(), 0, BCFluidStack.EMPTY));
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(world, MachineIdentity.of(owner), pos)) {
             return breakBlockAndGetDropsWithXp(world, pos, tool, lease.player());
@@ -813,7 +812,7 @@ public class BlockUtil {
             ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, Player breaker) {
         BlockState state = world.getBlockState(pos);
         if (state.isAir()) {
-            return Optional.of(new BreakResult(List.of(), 0, FluidStack.EMPTY));
+            return Optional.of(new BreakResult(List.of(), 0, BCFluidStack.EMPTY));
         }
         if (state.getDestroySpeed(world, pos) < 0) {
             return Optional.empty();
@@ -873,11 +872,11 @@ public class BlockUtil {
         // can meaningfully extract. Callers that care (Builder under CLEAR) absorb this into
         // their tanks; callers that don't (Quarry / Mining Well / Stripes / Filler) leave it
         // in the result and let it fall on the floor.
-        FluidStack capturedFluid = FluidStack.EMPTY;
+        BCFluidStack capturedFluid = BCFluidStack.EMPTY;
         if (state.getBlock() instanceof LiquidBlock) {
             FluidState fluidState = state.getFluidState();
             if (!fluidState.isEmpty() && fluidState.isSource()) {
-                capturedFluid = new FluidStack(fluidState.getType(), 1000);
+                capturedFluid = new BCFluidStack(fluidState.getType(), 1000);
             }
         }
 

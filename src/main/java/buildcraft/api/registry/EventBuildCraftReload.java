@@ -9,8 +9,9 @@ import com.google.gson.GsonBuilder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.bus.api.Event;
+
+import buildcraft.api.fluids.BCFluidStack;
 
 public abstract class EventBuildCraftReload extends Event {
 
@@ -43,7 +44,7 @@ public abstract class EventBuildCraftReload extends Event {
     }
 
     /** Fired after {@link PreLoad}, but before scripts are loaded in order to register custom type adaptors for various
-     * classes. BuildCraft itself adds adaptors for {@link ItemStack}, {@link Ingredient}, and {@link FluidStack} before
+     * classes. BuildCraft itself adds adaptors for {@link ItemStack}, {@link Ingredient}, and {@link BCFluidStack} before
      * this event is fired. */
     public static class PopulateGson extends EventBuildCraftReload {
 

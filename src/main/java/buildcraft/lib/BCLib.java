@@ -7,6 +7,7 @@ package buildcraft.lib;
 
 import net.neoforged.bus.api.IEventBus;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.lib.fluid.FuelRegistry;
@@ -37,6 +38,10 @@ public class BCLib {
 
         // Wire refinery recipe registry
         BuildcraftRecipeRegistry.refineryRecipes = RefineryRecipeRegistry.INSTANCE;
+
+        // BCFluidStack (api, loader-neutral) names itself through the loader's fluid services
+        BCFluidStack.setHoverNameProvider(
+            stack -> Platform.fluids().hoverName(stack.getFluidHolder(), stack.getAmount(), stack.getComponentsPatch()));
 
         BCLibItems.ITEMS.register(modEventBus);
 

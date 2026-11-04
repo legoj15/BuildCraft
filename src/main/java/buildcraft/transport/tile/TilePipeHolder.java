@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 import io.netty.buffer.Unpooled;
 import javax.annotation.Nullable;
 
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -41,10 +40,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.IWireManager;
@@ -724,8 +722,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     // --- Detonation (gas in a fluid pipe exploding; every other pipe holds nothing that can) ---
 
     @Override
-    public FluidStack containedFluid() {
-        return pipe != null && pipe.getFlow() instanceof PipeFlowFluids fluids ? fluids.getStoredFluid() : FluidStack.EMPTY;
+    public BCFluidStack containedFluid() {
+        return pipe != null && pipe.getFlow() instanceof PipeFlowFluids fluids ? fluids.getStoredFluid() : BCFluidStack.EMPTY;
     }
 
     @Override

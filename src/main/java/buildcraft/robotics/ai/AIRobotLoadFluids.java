@@ -10,8 +10,6 @@ package buildcraft.robotics.ai;
 
 import javax.annotation.Nullable;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -22,9 +20,11 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.fluid.NeoFluidStacks;
 
 /** Loads fluid from the robot's station input into the robot's own tank, one bucket per pass, until the
  *  tank is full or the station runs dry. Ported from 7.1.x {@code AIRobotLoadFluids} (7.1.x moved the
@@ -102,7 +102,7 @@ public class AIRobotLoadFluids extends AIRobot {
         if (available <= 0) {
             return 0;
         }
-        if (filter != null && !filter.matches(resource.toStack(available))) {
+        if (filter != null && !filter.matches(NeoFluidStacks.fromNeo(resource.toStack(available)))) {
             return 0;
         }
         IFluidHandlerAdv robotTank = robot.getFluidHandler();
@@ -129,7 +129,7 @@ public class AIRobotLoadFluids extends AIRobot {
         if (input == null) {
             return 0;
         }
-        FluidStack inTank = input.getFluidInTank(0);
+        BCFluidStack inTank = NeoFluidStacks.fromNeo(input.getFluidInTank(0));
         if (inTank.isEmpty()) {
             return 0;
         }
@@ -144,31 +144,31 @@ public class AIRobotLoadFluids extends AIRobot {
         }
         // The classic getFluidInTank may ALIAS the handler's internal stack (FluidTank does), which a drain
         // then shrinks - so the request is copied up front.
-        FluidStack wanted = inTank.copyWithAmount(amount);
+        BCFluidStack wanted = inTank.copyWithAmount(amount);
         // Same order as the 1.21.10+ branch's rolled-back transaction: prove BOTH halves in simulation first,
         // and only then execute. Filling the robot first and learning afterwards that the station will not
         // give that much leaves the fluid in BOTH tanks.
-        FluidStack simulated = input.drain(wanted, IFluidHandler.FluidAction.SIMULATE);
+        BCFluidStack simulated = NeoFluidStacks.fromNeo(input.drain(NeoFluidStacks.toNeo(wanted), IFluidHandler.FluidAction.SIMULATE));
         int extractable = simulated.getAmount();
         if (extractable <= 0) {
             return 0;
         }
-        if (robotTank.fill(simulated, IFluidHandler.FluidAction.SIMULATE) < extractable) {
+        if (robotTank.fill(NeoFluidStacks.toNeo(simulated), IFluidHandler.FluidAction.SIMULATE) < extractable) {
             return 0;
         }
         if (!doLoad) {
             return extractable;
         }
-        FluidStack drained = input.drain(wanted.copyWithAmount(extractable), IFluidHandler.FluidAction.EXECUTE);
+        BCFluidStack drained = NeoFluidStacks.fromNeo(input.drain(NeoFluidStacks.toNeo(wanted.copyWithAmount(extractable)), IFluidHandler.FluidAction.EXECUTE));
         int extracted = drained.getAmount();
         if (extracted <= 0) {
             return 0;
         }
-        int filled = robotTank.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+        int filled = robotTank.fill(NeoFluidStacks.toNeo(drained), IFluidHandler.FluidAction.EXECUTE);
         if (filled < extracted) {
             // The robot's tank changed between the dry run and the real fill (cannot happen inside one server
             // tick, but a destroyed bucket is worse than a defensive line): hand the rest back.
-            input.fill(drained.copyWithAmount(extracted - filled), IFluidHandler.FluidAction.EXECUTE);
+            input.fill(NeoFluidStacks.toNeo(drained.copyWithAmount(extracted - filled)), IFluidHandler.FluidAction.EXECUTE);
         }
         return filled;*/
         //?}

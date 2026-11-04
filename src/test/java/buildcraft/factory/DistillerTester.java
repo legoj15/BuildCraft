@@ -16,8 +16,6 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
@@ -26,9 +24,11 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 // setFluidStack/getAmountMb/extractInternal/insertInternal) stands in.*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCoreItems;
 import buildcraft.factory.block.BlockDistiller;
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.fluid.NeoFluidStacks;
 
 /**
  * Regression coverage for the distiller's wrench-rotation behaviour.
@@ -160,7 +160,7 @@ public class DistillerTester {
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
         //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
-        FluidResource lava = FluidResource.of(new FluidStack(Fluids.LAVA, 1000));
+        FluidResource lava = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.LAVA, 1000)));
         try (Transaction tx = Transaction.openRoot()) {
             int inserted = distiller.getTankIn().insert(0, lava, 1000, tx);
             assertTrue(inserted == 0,
@@ -171,7 +171,7 @@ public class DistillerTester {
                 "InputTank should still be empty after a rejected insert");
         //?} else {
         /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
-        FluidStack lava = new FluidStack(Fluids.LAVA, 1000);
+        BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 1000);
         int inserted = distiller.getTankIn().fill(0, lava, false);
         assertTrue(inserted == 0,
                 "InputTank must reject a non-distillable insert via isValid, got " + inserted);
@@ -195,7 +195,7 @@ public class DistillerTester {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
 
         // Bypass the isValid filter the same way NBT load does: write directly with set().
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 1000));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1000)));
         distiller.getTankIn().set(0, water, 1000);
 
         try (Transaction tx = Transaction.openRoot()) {
@@ -219,17 +219,17 @@ public class DistillerTester {
         //?} else {
         /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
         // Bypass the isValid filter the same way NBT load does: write directly with setFluidStack.
-        FluidStack water = new FluidStack(Fluids.WATER, 1000);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 1000);
         distiller.getTankIn().setFluidStack(0, water);
 
-        FluidStack drained = distiller.getTankIn().drain(0, 1000, false);
+        BCFluidStack drained = distiller.getTankIn().drain(0, 1000, false);
         assertTrue(drained.isEmpty(),
                 "InputTank must reject external extract, got " + drained);
         assertTrue(distiller.getTankIn().getAmountMb(0) == 1000,
                 "InputTank should still be full after a rejected extract, got " + distiller.getTankIn().getAmountMb(0));
 
         // The recipe loop must still be able to drain it. Without this, distillation halts.
-        FluidStack internal = distiller.getTankIn().extractInternal(1000, false);
+        BCFluidStack internal = distiller.getTankIn().extractInternal(1000, false);
         assertTrue(internal.getAmount() == 1000,
                 "InputTank.extractInternal must drain the full amount, got " + internal.getAmount());
         assertTrue(distiller.getTankIn().getAmountMb(0) == 0,
@@ -249,7 +249,7 @@ public class DistillerTester {
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
         //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 500)));
 
         for (TileDistiller_BC8.OutputTank tank : new TileDistiller_BC8.OutputTank[] {
                 distiller.getTankGasOut(), distiller.getTankLiquidOut() }) {
@@ -281,7 +281,7 @@ public class DistillerTester {
         }
         //?} else {
         /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
-        FluidStack water = new FluidStack(Fluids.WATER, 500);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 500);
 
         for (TileDistiller_BC8.OutputTank tank : new TileDistiller_BC8.OutputTank[] {
                 distiller.getTankGasOut(), distiller.getTankLiquidOut() }) {
@@ -336,13 +336,13 @@ public class DistillerTester {
 
             // Fill it the way the craft loop does, then read capacity at rest — not mid-insert.
             //? if >=1.21.10 {
-            FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
+            FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 500)));
             try (Transaction tx = Transaction.openRoot()) {
                 tank.insertInternal(0, water, 500, tx);
                 tx.commit();
             }
             //?} else {
-            /*tank.insertInternal(new FluidStack(Fluids.WATER, 500), false);*/
+            /*tank.insertInternal(new BCFluidStack(Fluids.WATER, 500), false);*/
             //?}
             assertTrue(tank.getAmountMb(0) == 500,
                     "OutputTank should hold 500mb after internal insert, got " + tank.getAmountMb(0));

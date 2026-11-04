@@ -35,13 +35,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
@@ -129,8 +129,8 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
     public void clearContent() {
         ExchangeSection section = getSection();
         if (section != null) {
-            section.tankInput.setFluidStack(0, FluidStack.EMPTY);
-            section.tankOutput.setFluidStack(0, FluidStack.EMPTY);
+            section.tankInput.setFluidStack(0, BCFluidStack.EMPTY);
+            section.tankOutput.setFluidStack(0, BCFluidStack.EMPTY);
         }
         containerSlots.clearStacks();
     }
@@ -537,13 +537,13 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         if (section != null) {
             output.putBoolean("hasSection", true);
             output.putBoolean("isStart", section instanceof ExchangeSectionStart);
-            FluidStack inStack = section.tankInput.getFluidStack(0);
+            BCFluidStack inStack = section.tankInput.getFluidStack(0);
             if (!inStack.isEmpty()) {
-                output.store("sectionInput", FluidStack.CODEC, inStack);
+                output.store("sectionInput", BCFluidStack.CODEC, inStack);
             }
-            FluidStack outStack = section.tankOutput.getFluidStack(0);
+            BCFluidStack outStack = section.tankOutput.getFluidStack(0);
             if (!outStack.isEmpty()) {
-                output.store("sectionOutput", FluidStack.CODEC, outStack);
+                output.store("sectionOutput", BCFluidStack.CODEC, outStack);
             }
             if (section instanceof ExchangeSectionStart s) {
                 output.putInt("middleCount", s.middleCount);
@@ -607,7 +607,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
      * leave the stale client value in place forever.
      */
     private static void loadTank(BCFluidTank tank, BCValueInput input, String key) {
-        FluidStack fluid = input.read(key, FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        BCFluidStack fluid = input.read(key, BCFluidStack.CODEC).orElse(BCFluidStack.EMPTY);
         tank.setFluidStack(0, fluid);
     }
 
@@ -636,10 +636,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         public final FluidSmoother smoothedTankInput, smoothedTankOutput;
         private TileHeatExchange tile;
 
-        ExchangeSection(TileHeatExchange tile, Predicate<FluidStack> inputFilter) {
+        ExchangeSection(TileHeatExchange tile, Predicate<BCFluidStack> inputFilter) {
             tankInput = new BCFluidTank(1, 2000) {
                 @Override
-                protected boolean isFluidValid(FluidStack stack) {
+                protected boolean isFluidValid(BCFluidStack stack) {
                     return inputFilter.test(stack);
                 }
             };
@@ -659,8 +659,8 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         }
 
         void getDebugInfo(List<String> left, List<String> right, Direction side) {
-            FluidStack inStack = tankInput.getFluidStack(0);
-            FluidStack outStack = tankOutput.getFluidStack(0);
+            BCFluidStack inStack = tankInput.getFluidStack(0);
+            BCFluidStack outStack = tankOutput.getFluidStack(0);
             left.add("tank_input = " + FluidUtilBC.getDebugString(inStack));
             left.add("tank_output = " + FluidUtilBC.getDebugString(outStack));
         }
@@ -702,7 +702,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         }
 
         @Override
-        protected boolean isFluidValid(FluidStack stack) {
+        protected boolean isFluidValid(BCFluidStack stack) {
             return internalInsert;
         }
 
@@ -711,9 +711,9 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
          * blocks all external insertions. Flips {@code internalInsert} so the
          * underlying tank validator accepts the stack for the duration of the
          * {@code fill}, then restores it. {@code simulate} forwards to
-         * {@link BCFluidTank#fill(int, FluidStack, boolean)} (true = test only).
+         * {@link BCFluidTank#fill(int, BCFluidStack, boolean)} (true = test only).
          */
-        public int fillInternal(FluidStack stack, boolean simulate) {
+        public int fillInternal(BCFluidStack stack, boolean simulate) {
             internalInsert = true;
             try {
                 return fill(0, stack, simulate);
@@ -762,7 +762,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         }
 
         /** Heatant filter: water, oil, fuel — fluids that get heated by the START's coolant counterpart. */
-        private static boolean isHeatant(FluidStack fluid) {
+        private static boolean isHeatant(BCFluidStack fluid) {
             IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
             if (manager == null) return false;
             return manager.getHeatableRegistry().getRecipeForInput(fluid) != null;
@@ -861,8 +861,8 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 progressState = EnumProgressState.STOPPING;
                 return;
             }
-            FluidStack c_in_fluid = c_in.getFluidStack(0);
-            FluidStack h_in_fluid = h_in.getFluidStack(0);
+            BCFluidStack c_in_fluid = c_in.getFluidStack(0);
+            BCFluidStack h_in_fluid = h_in.getFluidStack(0);
             ICoolableRecipe c_recipe = reg.getCoolableRegistry().getRecipeForInput(c_in_fluid);
             IHeatableRecipe h_recipe = reg.getHeatableRegistry().getRecipeForInput(h_in_fluid);
             if (h_recipe == null || c_recipe == null) {
@@ -881,10 +881,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             }
 
             int max_amount = FLUID_MULT[Math.min(middleCount - 1, FLUID_MULT.length - 1)];
-            FluidStack c_in_f = setAmount(c_recipe.in(), max_amount);
-            FluidStack c_out_f = setAmount(c_recipe.out(), max_amount);
-            FluidStack h_in_f = setAmount(h_recipe.in(), max_amount);
-            FluidStack h_out_f = setAmount(h_recipe.out(), max_amount);
+            BCFluidStack c_in_f = setAmount(c_recipe.in(), max_amount);
+            BCFluidStack c_out_f = setAmount(c_recipe.out(), max_amount);
+            BCFluidStack h_in_f = setAmount(h_recipe.in(), max_amount);
+            BCFluidStack h_out_f = setAmount(h_recipe.out(), max_amount);
 
             int c_out_amount = c_out_f == null || c_out_f.isEmpty()
                     ? max_amount
@@ -951,7 +951,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             if (end == null || getTile().level == null) return;
 
             Vec3 from = Vec3.atCenterOf(getTile().getBlockPos());
-            FluidStack c_in_f = end.tankInput.getFluidStack(0);
+            BCFluidStack c_in_f = end.tankInput.getFluidStack(0);
             // If coolant is lava, spew smoke from start side
             if (!c_in_f.isEmpty() && c_in_f.getFluid() == Fluids.LAVA) {
                 Direction facing = getTile().getFacing();
@@ -960,7 +960,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 }
             }
 
-            FluidStack h_in_f = tankInput.getFluidStack(0);
+            BCFluidStack h_in_f = tankInput.getFluidStack(0);
             from = Vec3.atCenterOf(end.getTile().getBlockPos());
             // If heatant is water, spew steam from end top
             if (!h_in_f.isEmpty() && h_in_f.getFluid() == Fluids.WATER) {
@@ -1010,23 +1010,23 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         // --- Helpers ---
 
         @Nullable
-        private static FluidStack setAmount(@Nullable FluidStack fluid, int amount) {
+        private static BCFluidStack setAmount(@Nullable BCFluidStack fluid, int amount) {
             if (fluid == null || fluid.isEmpty()) return null;
             return fluid.copyWithAmount(amount);
         }
 
-        private static int simulateExtract(BCFluidTank t, @Nullable FluidStack fluid) {
+        private static int simulateExtract(BCFluidTank t, @Nullable BCFluidStack fluid) {
             if (fluid == null || fluid.isEmpty()) return 0;
             // Only count toward min_common if the tank actually holds the recipe input fluid,
             // matching the old fluid-specific extract(FluidResource.of(fluid), …).
-            FluidStack inTank = t.getFluidStack(0);
-            if (inTank.isEmpty() || !FluidStack.isSameFluidSameComponents(inTank, fluid)) {
+            BCFluidStack inTank = t.getFluidStack(0);
+            if (inTank.isEmpty() || !BCFluidStack.isSameFluidSameComponents(inTank, fluid)) {
                 return 0;
             }
             return t.drain(0, fluid.getAmount(), true).getAmount();
         }
 
-        private static int simulateInsert(OutputTank t, @Nullable FluidStack fluid) {
+        private static int simulateInsert(OutputTank t, @Nullable BCFluidStack fluid) {
             if (fluid == null || fluid.isEmpty()) return 0;
             return t.fillInternal(fluid, true);
         }
@@ -1037,10 +1037,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
          * fluid-specific {@code extract(FluidResource.of(fluid), amount, tx)} — the version-neutral
          * {@link BCFluidTank#drain} is amount-only, so the fluid identity is checked here.
          */
-        private static boolean drainExact(BCFluidTank t, @Nullable FluidStack fluid, boolean simulate) {
+        private static boolean drainExact(BCFluidTank t, @Nullable BCFluidStack fluid, boolean simulate) {
             if (fluid == null || fluid.isEmpty()) return true;
-            FluidStack inTank = t.getFluidStack(0);
-            if (inTank.isEmpty() || !FluidStack.isSameFluidSameComponents(inTank, fluid)) {
+            BCFluidStack inTank = t.getFluidStack(0);
+            if (inTank.isEmpty() || !BCFluidStack.isSameFluidSameComponents(inTank, fluid)) {
                 return false;
             }
             return t.drain(0, fluid.getAmount(), simulate).getAmount() == fluid.getAmount();
@@ -1064,7 +1064,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         }
 
         /** Coolant filter: lava, hot oil, hot fuel — fluids that get cooled by the END's heatant counterpart. */
-        private static boolean isCoolant(FluidStack fluid) {
+        private static boolean isCoolant(BCFluidStack fluid) {
             IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
             if (manager == null) return false;
             return manager.getCoolableRegistry().getRecipeForInput(fluid) != null;

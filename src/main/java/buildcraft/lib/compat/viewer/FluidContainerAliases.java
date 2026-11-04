@@ -15,8 +15,8 @@ import javax.annotation.Nullable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemFragileFluidContainer;
 
@@ -63,7 +63,7 @@ public final class FluidContainerAliases {
         // player holds will still match this alias.
         registerProvider((fluidStack, sink) -> {
             ItemStack shard = new ItemStack(BCCoreItems.FRAGILE_FLUID_CONTAINER.get());
-            FluidStack copy = fluidStack.copy();
+            BCFluidStack copy = fluidStack.copy();
             copy.setAmount(ItemFragileFluidContainer.MAX_FLUID_HELD);
             ItemFragileFluidContainer.setFluid(shard, copy);
             sink.accept(shard);
@@ -85,7 +85,7 @@ public final class FluidContainerAliases {
     /**
      * Every item form the registered providers emit for {@code stack}, in provider order; empty for an empty fluid.
      */
-    public static List<ItemStack> itemForms(@Nullable FluidStack stack) {
+    public static List<ItemStack> itemForms(@Nullable BCFluidStack stack) {
         List<ItemStack> forms = new ArrayList<>();
         if (stack == null || stack.isEmpty()) {
             return forms;
@@ -102,6 +102,6 @@ public final class FluidContainerAliases {
 
     @FunctionalInterface
     public interface Provider {
-        void addAliases(FluidStack fluidStack, Consumer<ItemStack> sink);
+        void addAliases(BCFluidStack fluidStack, Consumer<ItemStack> sink);
     }
 }

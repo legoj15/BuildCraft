@@ -14,9 +14,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 
 public interface ISchematicBlock extends ISchematic<SchematicBlockContext> {
     @Override
@@ -37,7 +36,7 @@ public interface ISchematicBlock extends ISchematic<SchematicBlockContext> {
     }
 
     @Nonnull
-    default List<FluidStack> computeRequiredFluids() {
+    default List<BCFluidStack> computeRequiredFluids() {
         return Collections.emptyList();
     }
 

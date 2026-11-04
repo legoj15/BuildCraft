@@ -17,8 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.Platform;
 
 public class SoundUtil {
@@ -67,12 +66,12 @@ public class SoundUtil {
         level.playSound(null, pos, soundEvent, SoundSource.BLOCKS, volume, pitch);
     }
 
-    public static void playBucketEmpty(Level world, BlockPos pos, FluidStack fluid) {
+    public static void playBucketEmpty(Level world, BlockPos pos, BCFluidStack fluid) {
         SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), false);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
-    public static void playBucketFill(Level world, BlockPos pos, FluidStack fluid) {
+    public static void playBucketFill(Level world, BlockPos pos, BCFluidStack fluid) {
         SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), true);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
     }

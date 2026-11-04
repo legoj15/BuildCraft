@@ -17,8 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.statements.IStatement;
 
 import buildcraft.lib.client.guide.entry.FluidStackValueFilter;
@@ -43,8 +42,8 @@ public class GuideGroupManager {
         addTransformer(ItemStack.class, ItemStackValueFilter.class, ItemStackValueFilter::new);
         addTransformer(Item.class, ItemStack.class, ItemStack::new);
         addTransformer(Block.class, ItemStack.class, ItemStack::new);
-        addTransformer(FluidStack.class, FluidStackValueFilter.class, FluidStackValueFilter::new);
-        addTransformer(Fluid.class, FluidStack.class, fluid -> new FluidStack(fluid, 1));
+        addTransformer(BCFluidStack.class, FluidStackValueFilter.class, FluidStackValueFilter::new);
+        addTransformer(Fluid.class, BCFluidStack.class, fluid -> new BCFluidStack(fluid, 1));
 
         // Group population happens lazily in populateDefaultGroups(), called from
         // GuideManager.reload0() — by which time BC modules and registries are loaded.
@@ -264,7 +263,7 @@ public class GuideGroupManager {
         // engine is the consumer/key. Skip the empty-fluid sentinel.
         if (buildcraft.api.fuels.BuildcraftFuelRegistry.fuel != null) {
             for (buildcraft.api.fuels.IFuel fuel : buildcraft.api.fuels.BuildcraftFuelRegistry.fuel.getFuels()) {
-                net.neoforged.neoforge.fluids.FluidStack fs = fuel.getFluid();
+                buildcraft.api.fluids.BCFluidStack fs = fuel.getFluid();
                 if (fs == null || fs.isEmpty()) continue;
                 addEntry("buildcraft", "combustion_fuels", fs);
             }
@@ -276,7 +275,7 @@ public class GuideGroupManager {
         // Solid coolants get listed alongside fluids in the same group.
         if (buildcraft.api.fuels.BuildcraftFuelRegistry.coolant != null) {
             for (buildcraft.api.fuels.ICoolant c : buildcraft.api.fuels.BuildcraftFuelRegistry.coolant.getCoolants()) {
-                net.neoforged.neoforge.fluids.FluidStack fs = c.getRepresentativeFluid();
+                buildcraft.api.fluids.BCFluidStack fs = c.getRepresentativeFluid();
                 if (fs == null || fs.isEmpty()) continue;
                 addEntry("buildcraft", "coolants", fs);
             }

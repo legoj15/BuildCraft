@@ -12,12 +12,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 
 /**
- * An {@link ISimpleDrawable} that renders a {@link FluidStack} as a 16x16 fluid icon —
+ * An {@link ISimpleDrawable} that renders a {@link BCFluidStack} as a 16x16 fluid icon —
  * uses the fluid's still-texture from the block atlas and tints it with the fluid's
  * dynamic colour, mirroring how {@link GuiStack} renders an item icon.
  *
@@ -26,7 +25,7 @@ import buildcraft.lib.client.render.fluid.FluidSprites;
  * Screen pushes once per frame.
  */
 public class GuiFluid implements ISimpleDrawable {
-    private final FluidStack stack;
+    private final BCFluidStack stack;
 
     /** The BCGraphics context — set by the surrounding Screen each frame. */
     private static BCGraphics currentGraphics;
@@ -36,11 +35,11 @@ public class GuiFluid implements ISimpleDrawable {
         currentGraphics = graphics;
     }
 
-    public GuiFluid(FluidStack stack) {
+    public GuiFluid(BCFluidStack stack) {
         this.stack = stack;
     }
 
-    public FluidStack getStack() {
+    public BCFluidStack getStack() {
         return stack;
     }
 

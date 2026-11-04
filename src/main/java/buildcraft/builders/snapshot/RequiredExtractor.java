@@ -21,10 +21,9 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.IStackFilter;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
@@ -39,7 +38,7 @@ public abstract class RequiredExtractor {
     }
 
     @Nonnull
-    public List<FluidStack> extractFluidsFromBlock(@Nonnull BlockState blockState, @Nullable CompoundTag tileNbt) {
+    public List<BCFluidStack> extractFluidsFromBlock(@Nonnull BlockState blockState, @Nullable CompoundTag tileNbt) {
         return Collections.emptyList();
     }
 
@@ -49,7 +48,7 @@ public abstract class RequiredExtractor {
     }
 
     @Nonnull
-    public List<FluidStack> extractFluidsFromEntity(@Nonnull CompoundTag entityNbt) {
+    public List<BCFluidStack> extractFluidsFromEntity(@Nonnull CompoundTag entityNbt) {
         return Collections.emptyList();
     }
 

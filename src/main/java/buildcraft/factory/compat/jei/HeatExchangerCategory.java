@@ -13,11 +13,11 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.compat.viewer.HeatExchangerRecipePair;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
 import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
@@ -90,7 +90,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
         ICoolableRecipe coolable = pair.coolable();
 
         // Inputs sit on their owning section's input tank.
-        FluidStack hIn = heatable.in();
+        BCFluidStack hIn = heatable.in();
         if (!hIn.isEmpty()) {
             builder.addInputSlot(START_IN_X, START_IN_Y)
                     .setFluidRenderer(hIn.getAmount(), false, START_IN_W, START_IN_H)
@@ -101,7 +101,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?}
             JeiFluidAliases.addAliases(builder, hIn, RecipeIngredientRole.INPUT);
         }
-        FluidStack cIn = coolable.in();
+        BCFluidStack cIn = coolable.in();
         if (!cIn.isEmpty()) {
             builder.addInputSlot(END_IN_X, END_IN_Y)
                     .setFluidRenderer(cIn.getAmount(), false, END_IN_W, END_IN_H)
@@ -117,7 +117,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
         // start.tankOutput, h_out = end.tankOutput) and gives the GUI's
         // "fluids trade vertical positions" look: the heated cold-fluid product
         // exits at TOP-RIGHT, and the cooled hot-fluid product exits at MID-RIGHT.
-        FluidStack hOut = heatable.out();
+        BCFluidStack hOut = heatable.out();
         if (hOut != null && !hOut.isEmpty()) {
             builder.addOutputSlot(END_OUT_X, END_OUT_Y)
                     .setFluidRenderer(hOut.getAmount(), false, END_OUT_W, END_OUT_H)
@@ -128,7 +128,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?}
             JeiFluidAliases.addAliases(builder, hOut, RecipeIngredientRole.OUTPUT);
         }
-        FluidStack cOut = coolable.out();
+        BCFluidStack cOut = coolable.out();
         if (cOut != null && !cOut.isEmpty()) {
             builder.addOutputSlot(START_OUT_X, START_OUT_Y)
                     .setFluidRenderer(cOut.getAmount(), false, START_OUT_W, START_OUT_H)

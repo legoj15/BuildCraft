@@ -23,10 +23,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.enums.EnumSnapshotType;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.BCContainerSupport;
 import buildcraft.lib.gui.ContainerBCTile;
@@ -238,7 +237,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         boolean changed = false;
         for (int i = 0; i < TileBuilder.TANK_COUNT; i++) {
             BCFluidTank t = tile.getTank(i);
-            FluidStack res = t.getFluidStack(0);
+            BCFluidStack res = t.getFluidStack(0);
             int amount = t.getAmountMb(0);
             if (res.isEmpty() || amount == 0) {
                 current[i] = FluidSnapshot.EMPTY;
@@ -329,11 +328,11 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             Identifier fluidId = Identifier.tryParse(fluidIdStr);
             Fluid fluid = fluidId != null ? buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.FLUID, fluidId) : null;
             if (fluid != null && fluid != Fluids.EMPTY) {
-                handler.setFluidStack(0, new FluidStack(fluid, amount));
+                handler.setFluidStack(0, new BCFluidStack(fluid, amount));
                 return;
             }
         }
-        handler.setFluidStack(0, FluidStack.EMPTY);
+        handler.setFluidStack(0, BCFluidStack.EMPTY);
     }
 
     private static boolean displayListEquals(List<ItemStack> a, List<ItemStack> b) {

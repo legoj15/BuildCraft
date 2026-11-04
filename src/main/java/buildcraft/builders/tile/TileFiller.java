@@ -694,7 +694,7 @@ public class TileFiller extends TileBC_Neptune
      */
     @Override
     public void onBlockBroken(BlockPos brokenPos, List<ItemStack> drops, int xp,
-            net.neoforged.neoforge.fluids.FluidStack capturedFluid) {
+            buildcraft.api.fluids.BCFluidStack capturedFluid) {
         if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
         for (ItemStack stack : drops) {
             if (stack.isEmpty()) continue;

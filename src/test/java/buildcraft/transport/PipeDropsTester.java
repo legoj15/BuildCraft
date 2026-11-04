@@ -22,8 +22,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.core.BCCoreItems;
@@ -293,7 +292,7 @@ public class PipeDropsTester {
 
             // Seed a non-trivial amount so the fluid-shard converter has a stack to emit.
             PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
-            int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
+            int inserted = flow.insertFluidsForce(new BCFluidStack(Fluids.WATER, 1000), null, false);
             helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
             DropArenaUtil.breakBlock(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
@@ -337,7 +336,7 @@ public class PipeDropsTester {
             TilePipeHolder tile = placeFluidPipe(helper, pipePos);
 
             PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
-            int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
+            int inserted = flow.insertFluidsForce(new BCFluidStack(Fluids.WATER, 1000), null, false);
             helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
             clearDroppedItemsAround(helper);

@@ -14,8 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.BlockUtil;
@@ -183,7 +182,7 @@ public class MinerRedstonePauseTester {
             }
 
             // Fluid the pump already holds still goes onward to a tank beside it while the pump is paused.
-            pump.getTank().setFluidStack(0, new FluidStack(Fluids.WATER, 1000));
+            pump.getTank().setFluidStack(0, new BCFluidStack(Fluids.WATER, 1000));
             // The pump lays its tube straight under itself as soon as it picks a cell: a paused one lays none.
             BlockPos belowAbs = helper.absolutePos(MACHINE.below());
             BlockState below = helper.getLevel().getBlockState(belowAbs);
@@ -220,11 +219,11 @@ public class MinerRedstonePauseTester {
     private static void cleanUpPump(GameTestHelper helper, TilePump pump, TileTank tank) {
         // Empty both tanks before the blocks go: a tank broken with fluid in it spills fluid shards.
         if (pump != null) {
-            pump.getTank().setFluidStack(0, FluidStack.EMPTY);
+            pump.getTank().setFluidStack(0, BCFluidStack.EMPTY);
             pump.onRemove();
         }
         if (tank != null) {
-            tank.tank.setFluidStack(0, FluidStack.EMPTY);
+            tank.tank.setFluidStack(0, BCFluidStack.EMPTY);
         }
         helper.setBlock(SIGNAL_SIDE, Blocks.AIR);
         helper.setBlock(MACHINE, Blocks.AIR);

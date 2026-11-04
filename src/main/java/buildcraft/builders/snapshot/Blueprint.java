@@ -25,10 +25,9 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Rotation;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.ISchematicEntity;
 
@@ -334,18 +333,18 @@ public class Blueprint extends Snapshot {
     @SuppressWarnings("WeakerAccess")
     public class BuildingInfo extends Snapshot.BuildingInfo {
         public final List<ItemStack>[] toPlaceRequiredItems;
-        public final List<FluidStack>[] toPlaceRequiredFluids;
+        public final List<BCFluidStack>[] toPlaceRequiredFluids;
         public final List<ISchematicBlock> rotatedPalette;
         public final Set<ISchematicEntity> entities;
         /** Re-baked as a whole by {@link #refreshRequiredItemsForContentsMode}, hence not final. */
         public Map<ISchematicEntity, List<ItemStack>> entitiesRequiredItems;
-        public final Map<ISchematicEntity, List<FluidStack>> entitiesRequiredFluids;
+        public final Map<ISchematicEntity, List<BCFluidStack>> entitiesRequiredFluids;
 
         @SuppressWarnings("unchecked")
         public BuildingInfo(BlockPos basePos, Rotation rotation) {
             super(basePos, rotation);
             toPlaceRequiredItems = (List<ItemStack>[]) new List<?>[getDataSize()];
-            toPlaceRequiredFluids = (List<FluidStack>[]) new List<?>[getDataSize()];
+            toPlaceRequiredFluids = (List<BCFluidStack>[]) new List<?>[getDataSize()];
             rotatedPalette = ImmutableList.copyOf(
                 palette.stream()
                     .map(schematicBlock -> schematicBlock.getRotated(rotation))
@@ -365,7 +364,7 @@ public class Blueprint extends Snapshot {
             ImmutableSet.Builder<ISchematicEntity> entitiesBuilder = ImmutableSet.builder();
             ImmutableMap.Builder<ISchematicEntity, List<ItemStack>> entitiesRequiredItemsBuilder =
                 ImmutableMap.builder();
-            ImmutableMap.Builder<ISchematicEntity, List<FluidStack>> entitiesRequiredFluidsBuilder =
+            ImmutableMap.Builder<ISchematicEntity, List<BCFluidStack>> entitiesRequiredFluidsBuilder =
                 ImmutableMap.builder();
             for (ISchematicEntity schematicEntity : getSnapshot().entities) {
                 ISchematicEntity rotatedSchematicEntity = schematicEntity.getRotated(rotation);

@@ -9,8 +9,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.IFuel;
 import buildcraft.api.fuels.IFuelManager;
 
@@ -26,12 +25,12 @@ public enum FuelRegistry implements IFuelManager {
     }
 
     @Override
-    public IFuel addFuel(FluidStack fluid, long powerPerCycle, int totalBurningTime) {
+    public IFuel addFuel(BCFluidStack fluid, long powerPerCycle, int totalBurningTime) {
         return addFuel(new Fuel(fluid, powerPerCycle, totalBurningTime));
     }
 
     @Override
-    public IDirtyFuel addDirtyFuel(FluidStack fuel, long powerPerCycle, int totalBurningTime, FluidStack residue) {
+    public IDirtyFuel addDirtyFuel(BCFluidStack fuel, long powerPerCycle, int totalBurningTime, BCFluidStack residue) {
         return addFuel(new DirtyFuel(fuel, powerPerCycle, totalBurningTime, residue));
     }
 
@@ -41,12 +40,12 @@ public enum FuelRegistry implements IFuelManager {
     }
 
     @Override
-    public IFuel getFuel(FluidStack fluid) {
+    public IFuel getFuel(BCFluidStack fluid) {
         if (fluid == null || fluid.isEmpty()) {
             return null;
         }
         for (IFuel fuel : fuels) {
-            if (FluidStack.isSameFluid(fuel.getFluid(), fluid)) {
+            if (BCFluidStack.isSameFluid(fuel.getFluid(), fluid)) {
                 return fuel;
             }
         }
@@ -54,16 +53,16 @@ public enum FuelRegistry implements IFuelManager {
     }
 
     public static class Fuel implements IFuel {
-        private final FluidStack fluid;
+        private final BCFluidStack fluid;
         private final long powerPerCycle;
         private final int totalBurningTime;
         private final long heatPerCycle;
 
-        public Fuel(FluidStack fluid, long powerPerCycle, int totalBurningTime) {
+        public Fuel(BCFluidStack fluid, long powerPerCycle, int totalBurningTime) {
             this(fluid, powerPerCycle, totalBurningTime, powerPerCycle);
         }
 
-        public Fuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle) {
+        public Fuel(BCFluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle) {
             this.fluid = fluid;
             this.powerPerCycle = powerPerCycle;
             this.totalBurningTime = totalBurningTime;
@@ -71,7 +70,7 @@ public enum FuelRegistry implements IFuelManager {
         }
 
         @Override
-        public FluidStack getFluid() {
+        public BCFluidStack getFluid() {
             return fluid;
         }
 
@@ -92,20 +91,20 @@ public enum FuelRegistry implements IFuelManager {
     }
 
     public static class DirtyFuel extends Fuel implements IDirtyFuel {
-        private final FluidStack residue;
+        private final BCFluidStack residue;
 
-        public DirtyFuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, FluidStack residue) {
+        public DirtyFuel(BCFluidStack fluid, long powerPerCycle, int totalBurningTime, BCFluidStack residue) {
             this(fluid, powerPerCycle, totalBurningTime, powerPerCycle, residue);
         }
 
-        public DirtyFuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle,
-                FluidStack residue) {
+        public DirtyFuel(BCFluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle,
+                BCFluidStack residue) {
             super(fluid, powerPerCycle, totalBurningTime, heatPerCycle);
             this.residue = residue;
         }
 
         @Override
-        public FluidStack getResidue() {
+        public BCFluidStack getResidue() {
             return residue;
         }
     }

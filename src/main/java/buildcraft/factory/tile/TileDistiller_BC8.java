@@ -6,9 +6,7 @@
 
 package buildcraft.factory.tile;
 
-
 import javax.annotation.Nullable;
-
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,8 +27,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
@@ -153,9 +150,9 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     // See AbstractBCBlockEntity#clearContent.
     @Override
     public void clearContent() {
-        tankIn.setFluidStack(0, FluidStack.EMPTY);
-        tankGasOut.setFluidStack(0, FluidStack.EMPTY);
-        tankLiquidOut.setFluidStack(0, FluidStack.EMPTY);
+        tankIn.setFluidStack(0, BCFluidStack.EMPTY);
+        tankGasOut.setFluidStack(0, BCFluidStack.EMPTY);
+        tankLiquidOut.setFluidStack(0, BCFluidStack.EMPTY);
         containerSlots.clearStacks();
     }
 
@@ -271,7 +268,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
 
     // --- Recipe Filtering ---
 
-    private boolean isDistillableFluid(FluidStack fluid) {
+    private boolean isDistillableFluid(BCFluidStack fluid) {
         IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
         if (manager == null) return false;
         IDistillationRecipe recipe = manager.getDistillationRegistry().getRecipeForInput(fluid);
@@ -313,7 +310,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
      * Heating-and-Distilling pattern here. Progress accrues on the attachment regardless,
      * so it lands when the player next logs in.
      */
-    private void creditRefineAndRedefine(FluidStack outGas, FluidStack outLiquid) {
+    private void creditRefineAndRedefine(BCFluidStack outGas, BCFluidStack outLiquid) {
         if (owner == null || level == null || level.isClientSide()) return;
         net.minecraft.server.MinecraftServer server = level.getServer();
         if (server == null) return;
@@ -355,7 +352,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         currentRecipe = null;
         IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
         if (manager != null) {
-            FluidStack inFluid = tankIn.getFluidStack(0);
+            BCFluidStack inFluid = tankIn.getFluidStack(0);
             if (!inFluid.isEmpty()) {
                 currentRecipe = manager.getDistillationRegistry().getRecipeForInput(inFluid);
             }
@@ -372,13 +369,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
                     | (isFull(tankGasOut) ? BLOCKER_GAS : 0)
                     | (isFull(tankLiquidOut) ? BLOCKER_LIQUID : 0);
         } else {
-            FluidStack reqIn = currentRecipe.in();
-            FluidStack outLiquid = currentRecipe.outLiquid();
-            FluidStack outGas = currentRecipe.outGas();
+            BCFluidStack reqIn = currentRecipe.in();
+            BCFluidStack outLiquid = currentRecipe.outLiquid();
+            BCFluidStack outGas = currentRecipe.outGas();
 
-            FluidStack resIn = tankIn.getFluidStack(0);
+            BCFluidStack resIn = tankIn.getFluidStack(0);
             boolean canExtract = !resIn.isEmpty()
-                    && FluidStack.isSameFluidSameComponents(resIn, reqIn)
+                    && BCFluidStack.isSameFluidSameComponents(resIn, reqIn)
                     && tankIn.getAmountMb(0) >= reqIn.getAmount();
 
             // Simulate the output fills (internalInsert flag lets the guarded OutputTank accept them).
@@ -516,13 +513,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         OwnerData.writeOwner(output, owner);
         // Save each tank's fluid contents directly
         if (!tankIn.isTankEmpty(0)) {
-            output.store("fluidIn", FluidStack.CODEC, tankIn.getFluidStack(0));
+            output.store("fluidIn", BCFluidStack.CODEC, tankIn.getFluidStack(0));
         }
         if (!tankGasOut.isTankEmpty(0)) {
-            output.store("fluidGasOut", FluidStack.CODEC, tankGasOut.getFluidStack(0));
+            output.store("fluidGasOut", BCFluidStack.CODEC, tankGasOut.getFluidStack(0));
         }
         if (!tankLiquidOut.isTankEmpty(0)) {
-            output.store("fluidLiquidOut", FluidStack.CODEC, tankLiquidOut.getFluidStack(0));
+            output.store("fluidLiquidOut", BCFluidStack.CODEC, tankLiquidOut.getFluidStack(0));
         }
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
@@ -560,7 +557,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
      * input/output tank guards, as the saved fluid is trusted.
      */
     private static void loadTank(BCFluidTank tank, BCValueInput input, String key) {
-        FluidStack fluid = input.read(key, FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        BCFluidStack fluid = input.read(key, BCFluidStack.CODEC).orElse(BCFluidStack.EMPTY);
         tank.setFluidStack(0, fluid);
     }
 
@@ -588,7 +585,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         }
 
         @Override
-        protected boolean isFluidValid(FluidStack stack) {
+        protected boolean isFluidValid(BCFluidStack stack) {
             // Accept only registered distillation inputs. setFluidStack() bypasses
             // this anyway (trusted NBT load), but keep the check robust against
             // simulated capability checks before recipes load.
@@ -596,14 +593,14 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         }
 
         @Override
-        public FluidStack drain(int slot, int maxMb, boolean simulate) {
+        public BCFluidStack drain(int slot, int maxMb, boolean simulate) {
             // External drains are rejected (setCanDrain(false)); only the craft loop's
             // extractInternal — which flips internalExtract — may pull input out.
-            return internalExtract ? super.drain(slot, maxMb, simulate) : FluidStack.EMPTY;
+            return internalExtract ? super.drain(slot, maxMb, simulate) : BCFluidStack.EMPTY;
         }
 
         /** Internal drain used by the craft loop; flips the guard so {@link #drain} succeeds. */
-        public FluidStack extractInternal(int amount, boolean simulate) {
+        public BCFluidStack extractInternal(int amount, boolean simulate) {
             internalExtract = true;
             try {
                 return super.drain(0, amount, simulate);
@@ -652,12 +649,12 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         }
 
         @Override
-        protected boolean isFluidValid(FluidStack stack) {
+        protected boolean isFluidValid(BCFluidStack stack) {
             return internalInsert;
         }
 
         /** Internal fill used by the craft loop; flips the guard so {@link #fill} accepts the result. */
-        public int insertInternal(FluidStack stack, boolean simulate) {
+        public int insertInternal(BCFluidStack stack, boolean simulate) {
             internalInsert = true;
             try {
                 return super.fill(0, stack, simulate);

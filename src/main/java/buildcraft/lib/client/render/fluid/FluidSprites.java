@@ -11,7 +11,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.fluid.NeoFluidStacks;
 
 /**
  * Client-only lookup of how a fluid stack looks outside the world: its still sprite and its tint. Every tank, gauge,
@@ -29,7 +31,7 @@ public final class FluidSprites {
     /** The fluid's still sprite on the blocks atlas, or {@code null} for an empty stack. A fluid that declares no
      *  texture falls back to water's. */
     @Nullable
-    public static TextureAtlasSprite stillSprite(FluidStack stack) {
+    public static TextureAtlasSprite stillSprite(BCFluidStack stack) {
         if (stack.isEmpty()) {
             return null;
         }
@@ -43,7 +45,7 @@ public final class FluidSprites {
     /** The name of the fluid's still sprite, or {@code null} for an empty stack. For callers that cache the name and
      *  resolve the sprite later (it survives a resource reload; a sprite object does not). */
     @Nullable
-    public static Identifier stillTexture(FluidStack stack) {
+    public static Identifier stillTexture(BCFluidStack stack) {
         if (stack.isEmpty()) {
             return null;
         }
@@ -53,7 +55,7 @@ public final class FluidSprites {
         /*// Same rule as the 26.1+ model(): a fluid that declares no texture, or one that never reached the atlas,
         // falls back to water's instead of drawing the missing texture.
         Identifier texture = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid())
-            .getStillTexture(stack);
+            .getStillTexture(NeoFluidStacks.toNeo(stack));
         boolean missing = texture == null || blocksAtlas().getSprite(texture).contents().name()
             .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
         return missing
@@ -64,15 +66,15 @@ public final class FluidSprites {
 
     /** The fluid's ARGB tint for this stack; opaque white when it has none. A tint reporting zero alpha (some fluids
      *  return a bare RGB) is made opaque, so no caller draws a fluid invisible. */
-    public static int tint(FluidStack stack) {
+    public static int tint(BCFluidStack stack) {
         if (stack.isEmpty()) {
             return 0xFFFFFFFF;
         }
         //? if >=26.1 {
         net.neoforged.neoforge.client.fluid.FluidTintSource source = model(stack).fluidTintSource();
-        int tint = source != null ? source.colorAsStack(stack) : 0xFFFFFFFF;
+        int tint = source != null ? source.colorAsStack(NeoFluidStacks.toNeo(stack)) : 0xFFFFFFFF;
         //?} else {
-        /*int tint = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid()).getTintColor(stack);*/
+        /*int tint = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid()).getTintColor(NeoFluidStacks.toNeo(stack));*/
         //?}
         return (tint >>> 24) == 0 ? tint | 0xFF000000 : tint;
     }
@@ -80,7 +82,7 @@ public final class FluidSprites {
     //? if >=26.1 {
     /** The fluid's baked model. The set hands back a missing-texture model (never null) for a fluid with none
      *  registered; fall back to water's instead of drawing that. */
-    private static net.minecraft.client.renderer.block.FluidModel model(FluidStack stack) {
+    private static net.minecraft.client.renderer.block.FluidModel model(BCFluidStack stack) {
         net.minecraft.client.renderer.block.FluidStateModelSet models =
             Minecraft.getInstance().getModelManager().getFluidStateModelSet();
         net.minecraft.client.renderer.block.FluidModel model = models.get(stack.getFluid().defaultFluidState());

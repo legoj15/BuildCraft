@@ -13,9 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.compat.viewer.CoreSubtypes;
 import buildcraft.core.item.ItemFragileFluidContainer;
@@ -111,7 +110,7 @@ public class SubtypeKeysTest extends VanillaSetupBaseTester {
 
     // ── Fragile fluid shard ─────────────────────────────────────────────────
 
-    private static ItemStack shard(FluidStack fluid) {
+    private static ItemStack shard(BCFluidStack fluid) {
         ItemStack stack = new ItemStack(BCCoreItems.FRAGILE_FLUID_CONTAINER.get());
         ItemFragileFluidContainer.setFluid(stack, fluid);
         return stack;
@@ -119,12 +118,12 @@ public class SubtypeKeysTest extends VanillaSetupBaseTester {
 
     @Test
     public void fragileShardKeysOnFluidIdOnly() {
-        Object full = CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 1000)));
-        Object half = CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 500)));
+        Object full = CoreSubtypes.fragileFluidKey(shard(new BCFluidStack(Fluids.WATER, 1000)));
+        Object half = CoreSubtypes.fragileFluidKey(shard(new BCFluidStack(Fluids.WATER, 500)));
         Assertions.assertEquals(full, half, "a shard's amount must not split it into a new JEI entry");
         Assertions.assertEquals("minecraft:water", full.toString());
-        Assertions.assertNotEquals(full, CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.LAVA, 1000))));
-        Assertions.assertNull(CoreSubtypes.fragileFluidKey(shard(FluidStack.EMPTY)),
+        Assertions.assertNotEquals(full, CoreSubtypes.fragileFluidKey(shard(new BCFluidStack(Fluids.LAVA, 1000))));
+        Assertions.assertNull(CoreSubtypes.fragileFluidKey(shard(BCFluidStack.EMPTY)),
             "an empty shard has no subtype (JeiSubtypes maps null to JEI's 'none' on every node)");
     }
 }

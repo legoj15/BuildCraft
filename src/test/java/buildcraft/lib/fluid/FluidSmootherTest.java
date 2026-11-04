@@ -10,9 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
  * An emptied tank must keep rendering its last fluid while the smoothed level drains to zero, as the 1.12.2 smoother
@@ -26,7 +25,7 @@ public class FluidSmootherTest extends VanillaSetupBaseTester {
     void emptiedTankDrainsItsLastFluidSmoothly() {
         BCFluidTank tank = new BCFluidTank(1, 2000);
         FluidSmoother smoother = new FluidSmoother(tank);
-        tank.setFluidStack(0, new FluidStack(Fluids.LAVA, 1000));
+        tank.setFluidStack(0, new BCFluidStack(Fluids.LAVA, 1000));
         smoother.tick();
 
         // Drain rather than replace: on 1.21.1 the tank shrinks its live stack in place, which would also empty a
@@ -46,7 +45,7 @@ public class FluidSmootherTest extends VanillaSetupBaseTester {
         }
         Assertions.assertEquals(0, smoother.getFluidForRender(1).amount(), "the displayed level never reached zero");
 
-        tank.setFluidStack(0, new FluidStack(Fluids.WATER, 500));
+        tank.setFluidStack(0, new BCFluidStack(Fluids.WATER, 500));
         smoother.tick();
         Assertions.assertTrue(smoother.getFluidForRender(1).fluid().is(Fluids.WATER),
                 "a refill with a new fluid still shows the old one");

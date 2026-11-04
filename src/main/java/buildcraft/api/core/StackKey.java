@@ -8,18 +8,19 @@ import java.util.Objects;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
  * A hashable key that can represent either an {@link ItemStack} or a
- * {@link FluidStack}, intended for use in maps
+ * {@link BCFluidStack}, intended for use in maps
  * and sets that need to match stacks ignoring count.
  */
 public final class StackKey {
     public final ItemStack stack;
-    public final FluidStack fluidStack;
+    public final BCFluidStack fluidStack;
 
-    private StackKey(ItemStack stack, FluidStack fluidStack) {
+    private StackKey(ItemStack stack, BCFluidStack fluidStack) {
         this.stack = stack;
         this.fluidStack = fluidStack;
     }
@@ -28,7 +29,7 @@ public final class StackKey {
         this(stack, null);
     }
 
-    private StackKey(FluidStack stack) {
+    private StackKey(BCFluidStack stack) {
         this(null, stack);
     }
 
@@ -48,7 +49,7 @@ public final class StackKey {
         return new StackKey(new ItemStack(block, 1));
     }
 
-    public static StackKey fluid(FluidStack fluidStack) {
+    public static StackKey fluid(BCFluidStack fluidStack) {
         return new StackKey(fluidStack);
     }
 
@@ -68,7 +69,7 @@ public final class StackKey {
             }
         }
         if (fluidStack != null) {
-            if (!FluidStack.isSameFluidSameComponents(fluidStack, k.fluidStack)) {
+            if (!BCFluidStack.isSameFluidSameComponents(fluidStack, k.fluidStack)) {
                 return false;
             }
         }

@@ -10,8 +10,6 @@ package buildcraft.robotics.ai;
 
 import javax.annotation.Nullable;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -21,9 +19,11 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.fluid.NeoFluidStacks;
 
 /** Unloads fluid from the robot's own tank into its station output, one bucket per pass, until the tank
  *  is empty or the station is full. Ported from 7.1.x {@code AIRobotUnloadFluids} (7.1.x moved the fluid
@@ -80,7 +80,7 @@ public class AIRobotUnloadFluids extends AIRobot {
         }
         // 7.1.x gated the unload on ActionRobotFilter.canInteractWithFluid(station,
         // SimpleFluidFilter(carried), ActionStationAcceptFluids.class) — the D1 policy takes the filter.
-        if (!station.canRobotAcceptFluid(stack -> FluidStack.isSameFluid(stack, resource.toStack(1)))) {
+        if (!station.canRobotAcceptFluid(stack -> BCFluidStack.isSameFluid(stack, NeoFluidStacks.fromNeo(resource.toStack(1))))) {
             return 0;
         }
         // A station whose pipe carries no fluid flow has NO fluid output, even when an Accept Fluids gate
@@ -110,11 +110,11 @@ public class AIRobotUnloadFluids extends AIRobot {
         }
         //?} else {
         /*IFluidHandlerAdv robotTank = robot.getFluidHandler();
-        FluidStack carriedStack = robotTank.getFluidInTank(0);
+        BCFluidStack carriedStack = NeoFluidStacks.fromNeo(robotTank.getFluidInTank(0));
         if (carriedStack.isEmpty()) {
             return 0;
         }
-        if (!station.canRobotAcceptFluid(stack -> FluidStack.isSameFluid(stack, carriedStack))) {
+        if (!station.canRobotAcceptFluid(stack -> BCFluidStack.isSameFluid(stack, carriedStack))) {
             return 0;
         }
         IFluidHandler output = station.getFluidOutput();
@@ -130,31 +130,31 @@ public class AIRobotUnloadFluids extends AIRobot {
         // drain() then shrinks — so the request is copied up front, and the fill always uses a fresh stack
         // a drain returned, never carriedStack (copyWithAmount on an emptied alias hands fill an EMPTY
         // stack and 0 comes back).
-        FluidStack wanted = carriedStack.copyWithAmount(amount);
+        BCFluidStack wanted = carriedStack.copyWithAmount(amount);
         // Same order as the 1.21.10+ branch's rolled-back transaction: prove BOTH halves in simulation
         // first, and only then execute. Draining the robot first and learning afterwards that the station
         // refuses the fill destroys the carried fluid.
-        FluidStack simulated = robotTank.drain(wanted, IFluidHandler.FluidAction.SIMULATE);
+        BCFluidStack simulated = NeoFluidStacks.fromNeo(robotTank.drain(NeoFluidStacks.toNeo(wanted), IFluidHandler.FluidAction.SIMULATE));
         int extractable = simulated.getAmount();
         if (extractable <= 0) {
             return 0;
         }
-        if (output.fill(simulated, IFluidHandler.FluidAction.SIMULATE) < extractable) {
+        if (output.fill(NeoFluidStacks.toNeo(simulated), IFluidHandler.FluidAction.SIMULATE) < extractable) {
             return 0;
         }
         if (!doUnload) {
             return extractable;
         }
-        FluidStack drained = robotTank.drain(wanted.copyWithAmount(extractable), IFluidHandler.FluidAction.EXECUTE);
+        BCFluidStack drained = NeoFluidStacks.fromNeo(robotTank.drain(NeoFluidStacks.toNeo(wanted.copyWithAmount(extractable)), IFluidHandler.FluidAction.EXECUTE));
         int extracted = drained.getAmount();
         if (extracted <= 0) {
             return 0;
         }
-        int filled = output.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+        int filled = output.fill(NeoFluidStacks.toNeo(drained), IFluidHandler.FluidAction.EXECUTE);
         if (filled < extracted) {
             // The station changed between the dry run and the real fill (cannot happen inside one server
             // tick, but a destroyed bucket is worse than a defensive line): hand the rest back.
-            robotTank.fill(drained.copyWithAmount(extracted - filled), IFluidHandler.FluidAction.EXECUTE);
+            robotTank.fill(NeoFluidStacks.toNeo(drained.copyWithAmount(extracted - filled)), IFluidHandler.FluidAction.EXECUTE);
         }
         return filled;*/
         //?}

@@ -25,8 +25,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.compat.viewer.FluidContainerAliases;
 
 /**
@@ -99,7 +98,7 @@ public final class ReiLayout {
      * output it also indexes the fluid's item forms (bucket, fragile shard; see {@link FluidContainerAliases}) without
      * drawing them, so a lookup on the item a player holds finds the recipe. Empty fluids add nothing.
      */
-    public ReiLayout fluid(int x, int y, int width, int height, Role role, FluidStack fluid, long amount) {
+    public ReiLayout fluid(int x, int y, int width, int height, Role role, BCFluidStack fluid, long amount) {
         if (fluid == null || fluid.isEmpty()) {
             return this;
         }
@@ -121,7 +120,7 @@ public final class ReiLayout {
     }
 
     /** A fluid tank showing the whole of {@code fluid}. */
-    public ReiLayout fluid(int x, int y, int width, int height, Role role, FluidStack fluid) {
+    public ReiLayout fluid(int x, int y, int width, int height, Role role, BCFluidStack fluid) {
         return fluid == null ? this : fluid(x, y, width, height, role, fluid, fluid.getAmount());
     }
 

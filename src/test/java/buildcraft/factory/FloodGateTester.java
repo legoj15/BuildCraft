@@ -261,7 +261,7 @@ public class FloodGateTester {
         /*TileFloodGate gate = helper.getBlockEntity(gatePos);*/
         //?}
         gate.openSides.retainAll(java.util.EnumSet.of(Direction.DOWN));
-        gate.getTank().setFluidStack(0, new net.neoforged.neoforge.fluids.FluidStack(
+        gate.getTank().setFluidStack(0, new buildcraft.api.fluids.BCFluidStack(
                 net.minecraft.world.level.material.Fluids.WATER, 2000));
 
         BlockPos absPocket = helper.absolutePos(pocket);

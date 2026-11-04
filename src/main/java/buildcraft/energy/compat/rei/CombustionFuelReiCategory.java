@@ -10,8 +10,7 @@ import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 
 import net.minecraft.network.chat.Component;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.IFuel;
 import buildcraft.api.fuels.IFuelManager.IDirtyFuel;
 
@@ -45,7 +44,7 @@ public class CombustionFuelReiCategory extends ReiCategory<IFuel> {
     protected void layout(IFuel recipe, ReiLayout layout) {
         layout.fluid(IN_X, IN_Y, TANK_W, TANK_H, Role.INPUT, recipe.getFluid(), BUCKET);
         if (recipe instanceof IDirtyFuel dirty) {
-            FluidStack residue = dirty.getResidue();
+            BCFluidStack residue = dirty.getResidue();
             layout.fluid(RESIDUE_X, RESIDUE_Y, TANK_W, TANK_H, Role.OUTPUT, residue);
         }
         // getPowerPerCycle() is already micro-MJ per tick, which localizeMjFlow expects.

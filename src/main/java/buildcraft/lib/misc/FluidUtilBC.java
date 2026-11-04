@@ -21,7 +21,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -40,7 +39,9 @@ import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public class FluidUtilBC {
@@ -65,7 +66,7 @@ public class FluidUtilBC {
     }
 
     /** @see #shouldRenderTranslucent(Fluid) */
-    public static boolean shouldRenderTranslucent(FluidStack stack) {
+    public static boolean shouldRenderTranslucent(BCFluidStack stack) {
         return !stack.isEmpty() && shouldRenderTranslucent(stack.getFluid());
     }
 
@@ -113,12 +114,12 @@ public class FluidUtilBC {
     }*/
     //?}
 
-    public static List<FluidStack> mergeSameFluids(List<FluidStack> fluids) {
-        List<FluidStack> stacks = new ArrayList<>();
+    public static List<BCFluidStack> mergeSameFluids(List<BCFluidStack> fluids) {
+        List<BCFluidStack> stacks = new ArrayList<>();
         fluids.forEach(toAdd -> {
             boolean found = false;
-            for (FluidStack stack : stacks) {
-                if (FluidStack.isSameFluidSameComponents(stack, toAdd)) {
+            for (BCFluidStack stack : stacks) {
+                if (BCFluidStack.isSameFluidSameComponents(stack, toAdd)) {
                     stack.grow(toAdd.getAmount());
                     found = true;
                 }
@@ -130,10 +131,10 @@ public class FluidUtilBC {
         return stacks;
     }
 
-    public static boolean areFluidStackEqual(FluidStack a, FluidStack b) {
+    public static boolean areFluidStackEqual(BCFluidStack a, BCFluidStack b) {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
-        return FluidStack.isSameFluidSameComponents(a, b) && a.getAmount() == b.getAmount();
+        return BCFluidStack.isSameFluidSameComponents(a, b) && a.getAmount() == b.getAmount();
     }
 
     public static boolean areFluidsEqual(Fluid a, Fluid b) {
@@ -153,7 +154,7 @@ public class FluidUtilBC {
      */
     //? if >=1.21.10 {
     @Nullable
-    public static FluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
+    public static BCFluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
         return move(from, to, Integer.MAX_VALUE);
     }
 
@@ -163,7 +164,7 @@ public class FluidUtilBC {
      * @return The fluidstack that was moved, or null if no fluid was moved.
      */
     @Nullable
-    public static FluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to, int max) {
+    public static BCFluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to, int max) {
         if (from == null || to == null) {
             return null;
         }
@@ -183,29 +184,29 @@ public class FluidUtilBC {
             int moved = ResourceHandlerUtil.move(from, to, r -> true, max, tx);
             if (moved > 0) {
                 tx.commit();
-                return firstAvailable.toStack(moved);
+                return NeoFluidStacks.fromNeo(firstAvailable.toStack(moved));
             }
         }
         return null;
     }
     //?} else {
     /*@Nullable
-    public static FluidStack move(IFluidHandler from, IFluidHandler to) {
+    public static BCFluidStack move(IFluidHandler from, IFluidHandler to) {
         return move(from, to, Integer.MAX_VALUE);
     }
 
     @Nullable
-    public static FluidStack move(IFluidHandler from, IFluidHandler to, int max) {
+    public static BCFluidStack move(IFluidHandler from, IFluidHandler to, int max) {
         if (from == null || to == null) {
             return null;
         }
-        FluidStack moved = FluidUtil.tryFluidTransfer(to, from, max, true);
+        BCFluidStack moved = NeoFluidStacks.fromNeo(FluidUtil.tryFluidTransfer(to, from, max, true));
         return moved.isEmpty() ? null : moved;
     }*/
     //?}
 
     /** @return A debug string representation of the given fluid stack, or "empty" if empty. */
-    public static String getDebugString(FluidStack stack) {
+    public static String getDebugString(BCFluidStack stack) {
         if (stack == null || stack.isEmpty()) {
             return "empty";
         }
@@ -218,7 +219,7 @@ public class FluidUtilBC {
      * which returns true when density ≤ 0 — equivalent to the old
      * {@code Fluid.isGaseous()} from Forge 1.12.2.
      */
-    public static boolean isGaseous(FluidStack fluid) {
+    public static boolean isGaseous(BCFluidStack fluid) {
         return !fluid.isEmpty() && fluid.getFluid().getFluidType().isLighterThanAir();
     }
 
@@ -247,7 +248,7 @@ public class FluidUtilBC {
                 );
                 if (moved > 0) {
                     tx.commit();
-                    if (!tankFluid.isEmpty()) SoundUtil.playBucketFill(world, pos, tankFluid.toStack(moved));
+                    if (!tankFluid.isEmpty()) SoundUtil.playBucketFill(world, pos, NeoFluidStacks.fromNeo(tankFluid.toStack(moved)));
                     
                     if (isCreative) return true;
                     if (held.getCount() == 1) {
@@ -271,7 +272,7 @@ public class FluidUtilBC {
                 );
                 if (moved > 0) {
                     tx.commit();
-                    if (!itemFluid.isEmpty()) SoundUtil.playBucketEmpty(world, pos, itemFluid.toStack(moved));
+                    if (!itemFluid.isEmpty()) SoundUtil.playBucketEmpty(world, pos, NeoFluidStacks.fromNeo(itemFluid.toStack(moved)));
 
                     if (isCreative) return true;
                     if (held.getCount() == 1) {
@@ -308,18 +309,18 @@ public class FluidUtilBC {
     // as-is. FluidContainerHelperTest pins that both halves behave the same.
 
     /**
-     * The fluid held by ONE item of the given stack (the stack's count is ignored), or {@link FluidStack#EMPTY} for
+     * The fluid held by ONE item of the given stack (the stack's count is ignored), or {@link BCFluidStack#EMPTY} for
      * an empty container, a non-container or the empty stack. Never modifies {@code stack}.
      */
-    public static FluidStack getFluidContained(ItemStack stack) {
+    public static BCFluidStack getFluidContained(ItemStack stack) {
         if (stack.isEmpty()) {
-            return FluidStack.EMPTY;
+            return BCFluidStack.EMPTY;
         }
         //? if >=1.21.10 {
         // Reads through a one-by-one ItemAccess over the stack: getResource/getAmount only, nothing is extracted.
-        return net.neoforged.neoforge.transfer.fluid.FluidUtil.getFirstStackContained(stack);
+        return NeoFluidStacks.fromNeo(net.neoforged.neoforge.transfer.fluid.FluidUtil.getFirstStackContained(stack));
         //?} else {
-        /*return FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);*/
+        /*return NeoFluidStacks.fromNeo(FluidUtil.getFluidContained(stack).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));*/
         //?}
     }
 
@@ -399,7 +400,7 @@ public class FluidUtilBC {
     }
     //?}
 
-    public static ItemStack getFilledBucket(FluidStack fluidStack) {
+    public static ItemStack getFilledBucket(BCFluidStack fluidStack) {
         if (fluidStack == null || fluidStack.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -410,6 +411,6 @@ public class FluidUtilBC {
                 return new ItemStack(net.minecraft.world.item.Items.LAVA_BUCKET);
             }
         }
-        return fluidStack.getFluidType().getBucket(fluidStack);
+        return fluidStack.getFluid().getFluidType().getBucket(NeoFluidStacks.toNeo(fluidStack));
     }
 }

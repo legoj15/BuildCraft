@@ -3,7 +3,7 @@ package buildcraft.api.items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.NonNullList;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 public class FluidItemDrops {
 
@@ -11,9 +11,9 @@ public class FluidItemDrops {
 
     /** Adds a fragile fluid-shard drop for each non-empty fluid. Callers holding BuildCraft tanks should pass the
      * tank's contents directly, e.g. {@code addFluidDrops(toDrop, tank.getFluidStack(0))}. */
-    public static void addFluidDrops(NonNullList<ItemStack> toDrop, FluidStack... fluids) {
+    public static void addFluidDrops(NonNullList<ItemStack> toDrop, BCFluidStack... fluids) {
         if (item != null) {
-            for (FluidStack fluid : fluids) {
+            for (BCFluidStack fluid : fluids) {
                 if (fluid != null && !fluid.isEmpty()) {
                     item.addFluidDrops(toDrop, fluid);
                 }

@@ -7,6 +7,7 @@ package buildcraft.energy.client.gui;
 
 import java.util.List;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -15,7 +16,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-
 
 import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
@@ -127,7 +127,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * (many fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(BCGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
-        net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid, 1);
+        BCFluidStack stack = new BCFluidStack(fluid, 1);
         TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
         if (sprite == null) return;
 

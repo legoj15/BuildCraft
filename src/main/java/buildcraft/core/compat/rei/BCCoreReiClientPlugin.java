@@ -23,8 +23,7 @@ import me.shedaniel.rei.forge.REIPluginClient;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCore;
 
 import buildcraft.lib.fluid.BCFluidTank;
@@ -87,7 +86,7 @@ public class BCCoreReiClientPlugin implements REIClientPlugin {
                 BCFluidTank tank = tankElem.getTank();
                 if (tank == null || tank.size() == 0) continue;
 
-                FluidStack stack = tank.getFluidStack(0);
+                BCFluidStack stack = tank.getFluidStack(0);
                 long amount = tank.getAmountMb(0);
                 if (stack.isEmpty() || amount <= 0) continue;
 

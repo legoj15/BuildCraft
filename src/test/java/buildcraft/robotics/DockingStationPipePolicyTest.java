@@ -17,10 +17,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
@@ -60,12 +59,12 @@ public class DockingStationPipePolicyTest extends VanillaSetupBaseTester {
     private static final IFluidFilter WATER_ONLY = fluid -> fluid.getFluid() == Fluids.WATER;
     private static final IFluidFilter LAVA_ONLY = fluid -> fluid.getFluid() == Fluids.LAVA;
 
-    private static FluidStack water() {
-        return new FluidStack(Fluids.WATER, 1000);
+    private static BCFluidStack water() {
+        return new BCFluidStack(Fluids.WATER, 1000);
     }
 
-    private static FluidStack lava() {
-        return new FluidStack(Fluids.LAVA, 1000);
+    private static BCFluidStack lava() {
+        return new BCFluidStack(Fluids.LAVA, 1000);
     }
 
     // ── the gateless contrast ────────────────────────────────────────────────
@@ -106,7 +105,7 @@ public class DockingStationPipePolicyTest extends VanillaSetupBaseTester {
                 "no work or tool filter: the robot works on anything");
         Assertions.assertTrue(station.getRobotFluidFilter().matches(lava()),
                 "no work filter: the robot takes any fluid");
-        Assertions.assertFalse(station.getRobotFluidFilter().matches(FluidStack.EMPTY),
+        Assertions.assertFalse(station.getRobotFluidFilter().matches(BCFluidStack.EMPTY),
                 "…but 'no fluid' is never a fluid worth fetching");
     }
 
@@ -232,7 +231,7 @@ public class DockingStationPipePolicyTest extends VanillaSetupBaseTester {
         IFluidFilter filter = station.getRobotFluidFilter();
         Assertions.assertTrue(filter.matches(water()), "a water-bucket work filter wants water");
         Assertions.assertFalse(filter.matches(lava()), "…not lava");
-        Assertions.assertFalse(filter.matches(FluidStack.EMPTY), "…and never 'no fluid'");
+        Assertions.assertFalse(filter.matches(BCFluidStack.EMPTY), "…and never 'no fluid'");
     }
 
     @Test

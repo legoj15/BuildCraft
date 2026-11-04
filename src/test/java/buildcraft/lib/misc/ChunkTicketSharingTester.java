@@ -16,28 +16,27 @@ import buildcraft.platform.Platform;
  * the game-test framework under each test's structure). The Fabric chunk tickets used to be vanilla's shared forced
  * set, so BuildCraft's release unforced the chunk for everyone; a game-test structure chunk unforced that way never
  * became entity-ticking and its test never started.
+ *
+ * <p>The other owner is the framework itself: it forced this test's own structure chunk before the test began, and
+ * only unforces it when the batch ends. An earlier version forced a fresh chunk 64 chunks away instead, and
+ * {@code setChunkForced} loads the chunk it forces on the server thread, with the 27x27 chunks its ticket reaches
+ * queued for generation ahead of it: under load that blocked the whole server for up to 109 s, which the Fabric
+ * run's wall-clock chunk-wait watchdog counted against every test of the batch still waiting for its chunks (#114).
  */
 public class ChunkTicketSharingTester {
 
     public static void releaseKeepsAnotherOwnersForcedChunk(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        // Far from every arena: the framework places none here, so forcing and unforcing it disturbs no test.
-        BlockPos owner = helper.absolutePos(BlockPos.ZERO).offset(16 * 64, 0, 16 * 64);
+        BlockPos owner = helper.absolutePos(BlockPos.ZERO);
         int chunkX = owner.getX() >> 4;
         int chunkZ = owner.getZ() >> 4;
         long key = BlockUtil.chunkKey(chunkX, chunkZ);
-        boolean wasForced = forced(level).contains(key);
-        try {
-            level.setChunkForced(chunkX, chunkZ, true); // the other owner (/forceload)
-            Platform.chunkTickets().forceChunk(level, owner, chunkX, chunkZ, true);
-            Platform.chunkTickets().forceChunk(level, owner, chunkX, chunkZ, false);
-            helper.assertTrue(forced(level).contains(key),
-                "BuildCraft's release must leave a chunk another owner forced still forced");
-        } finally {
-            if (!wasForced) {
-                level.setChunkForced(chunkX, chunkZ, false);
-            }
-        }
+        helper.assertTrue(forced(level).contains(key),
+            "precondition: the framework forced this test's structure chunk");
+        Platform.chunkTickets().forceChunk(level, owner, chunkX, chunkZ, true);
+        Platform.chunkTickets().forceChunk(level, owner, chunkX, chunkZ, false);
+        helper.assertTrue(forced(level).contains(key),
+            "BuildCraft's release must leave a chunk another owner forced still forced");
         helper.succeed();
     }
 

@@ -100,6 +100,7 @@ import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.platform.LoaderHook;
 import buildcraft.platform.hook.LevelRemovalEntity;
+import buildcraft.platform.hook.SpawnDataEntity;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
@@ -140,12 +141,12 @@ import buildcraft.robotics.statements.ActionRobotWorkInArea;
  * so a robot placed today registers, docks, charges, takes damage, drops correctly and idles. Ph4 fills the AI
  * tree in behind the seams already present here.
  */
-// NeoForge sends the extra spawn data through this interface (Fabric gap: none is sent, and none exists yet).
+// NeoForge sends the extra spawn data through IEntityWithComplexSpawn; Fabric through SpawnDataEntity's payload.
 //? if neoforge {
-public class EntityRobot extends EntityRobotBase
-        implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn, IDebuggable, LevelRemovalEntity {
+public class EntityRobot extends EntityRobotBase implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn,
+        SpawnDataEntity, IDebuggable, LevelRemovalEntity {
 //?} else {
-/*public class EntityRobot extends EntityRobotBase implements IDebuggable, LevelRemovalEntity {
+/*public class EntityRobot extends EntityRobotBase implements SpawnDataEntity, IDebuggable, LevelRemovalEntity {
 *///?}
 
     /** Wearable slots. Wearables never enter play before Ph9, but the list, its NBT and its spawn-sync land
@@ -544,24 +545,26 @@ public class EntityRobot extends EntityRobotBase
     @LoaderHook("neoforge:IEntityWithComplexSpawn#writeSpawnData")
     @Override
     public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
-        writeWearables(buffer);
+        writeExtraSpawnData(buffer);
     }
 
     @LoaderHook("neoforge:IEntityWithComplexSpawn#readSpawnData")
     @Override
     public void readSpawnData(RegistryFriendlyByteBuf additionalData) {
-        readWearables(additionalData);
+        readExtraSpawnData(additionalData);
     }
     //?}
 
-    private void writeWearables(RegistryFriendlyByteBuf buffer) {
+    @Override
+    public void writeExtraSpawnData(RegistryFriendlyByteBuf buffer) {
         buffer.writeVarInt(wearables.size());
         for (ItemStack wearable : wearables) {
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, wearable);
         }
     }
 
-    private void readWearables(RegistryFriendlyByteBuf buffer) {
+    @Override
+    public void readExtraSpawnData(RegistryFriendlyByteBuf buffer) {
         wearables.clear();
         int count = buffer.readVarInt();
         for (int i = 0; i < count && i < MAX_WEARABLES; i++) {

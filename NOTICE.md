@@ -37,6 +37,9 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
   original pixel redrawing that follows the layout of upstream BuildCraft's `logo.png` (crane, "BuildCraft",
   hazard stripe, gears), which it replaces; the gears are the mod's own gear item textures, and the credit
   font (`misc/branding/font/girder7.txt`) was drawn for this project.
+- `src/main/resources-fabric/assets/buildcraftunofficial/textures/item/mask/bucket_fluid.png` (the Fabric
+  node's bucket fluid mask) was drawn for this project, fitted to the opening of vanilla's bucket; it stands in
+  for NeoForge's `neoforge:item/mask/bucket_fluid_drip`, which is not copied.
 
 ## Files under the Minecraft Mod Public License 1.0.1
 

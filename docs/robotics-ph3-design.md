@@ -143,7 +143,7 @@ The six 7.1.x `PacketCommand` messages and the client `requestInitialization` ro
   `!ItemStack.matches(shadow, current)`. JOML `Vector3f` DOES value-compare — do not generalize the
   trap to STEAM_DIR. A game test must mutate a slot in place, push, and assert the synched value
   changed.
-- **Spawn data**: `IEntityWithComplexSpawn` (uniform all five nodes) carries the wearables list.
+- **Spawn data**: `IEntityWithComplexSpawn` (uniform all five nodes) carries the wearables list; on Fabric the same bytes follow the spawn packet as a payload (`platform.hook.SpawnDataEntity`, `FabricSpawnData`).
 - Laser DW 12–15 + NBT + the three never-called setters: **port the API, skip the render branch**
   (verified: nothing in 7.1.x ever calls them; keep for addon surface + NBT-shape stability).
 

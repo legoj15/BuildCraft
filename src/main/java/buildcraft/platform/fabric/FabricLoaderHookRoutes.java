@@ -91,6 +91,8 @@ public final class FabricLoaderHookRoutes {
                 removal.onLeftLevel();
             }
         });
+        // NeoForge's IEntityWithComplexSpawn: the extra spawn data follows the spawn packet as a payload.
+        FabricSpawnData.register();
     }
 
     /^* Tells each queued block entity still in its level that it joined it (NeoForge's onLoad). *^/

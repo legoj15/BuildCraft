@@ -32,3 +32,6 @@ accessible	field	net/minecraft/client/renderer/texture/SpriteContents	originalIm
 accessible	method	net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture	getFrameX	(I)I
 accessible	method	net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture	getFrameY	(I)I
 accessible	field	net/minecraft/world/item/crafting/RecipeManager	recipes	Lnet/minecraft/world/item/crafting/RecipeMap;
+accessible	method	net/minecraft/client/renderer/item/CuboidItemModelWrapper	<init>	(Ljava/util/List;Lnet/minecraft/client/resources/model/geometry/QuadCollection;Lnet/minecraft/client/renderer/item/ModelRenderProperties;Lorg/joml/Matrix4fc;)V
+accessible	class	net/minecraft/client/resources/model/cuboid/ItemModelGenerator$ItemLayerKey
+accessible	method	net/minecraft/client/resources/model/cuboid/ItemModelGenerator$ItemLayerKey	<init>	(Lnet/minecraft/client/resources/model/sprite/Material$Baked;Lnet/minecraft/client/renderer/block/dispatch/ModelState;I)V

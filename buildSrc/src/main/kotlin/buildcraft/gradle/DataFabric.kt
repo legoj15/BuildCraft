@@ -19,7 +19,8 @@ import java.io.File
 //      match is NeoForge's non-strict one: the listed components must be present and equal).
 //   3. data/neoforge/** and data/<ns>/neoforge/biome_modifier/** are dropped: Fabric reads neither. The biome
 //      modifiers are code on Fabric (FabricDataServices); each dropped modifier must be one this file knows.
-//   4. neoforge:fluid_container item models -> a plain vanilla model of the container's base texture.
+//   4. neoforge:fluid_container item models -> buildcraftunofficial:fluid_container, the Fabric twin of that model
+//      type (same codec), with each NeoForge mask texture swapped for the Fabric node's own one.
 // Anything it cannot translate fails the build with the file named, rather than shipping data Fabric would
 // ignore or reject. verifyNoNeoForgeData then fails on any "neoforge:" left in the output.
 
@@ -63,7 +64,7 @@ object DataFabric {
         dropBiomeModifiers(dataDir, fabricDataCode.readText())
         dataDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { transformDataFile(it) }
         resourcesDir.resolve("assets").listFiles()?.forEach { ns ->
-            rewriteFluidContainerModels(ns.resolve("items"), ns.resolve("models/item"))
+            rewriteFluidContainerModels(ns.resolve("items"))
         }
     }
 
@@ -187,25 +188,36 @@ object DataFabric {
     }
 
     // ─── 4: fluid_container item models ──────────────────────────────────────
-    // Fabric has no dynamic fluid-container model, so the item shows its empty container (the base texture) with no
-    // fluid overlay. The item definition is pointed at a generated item/generated model of that base.
+    // Fabric's twin of NeoForge's dynamic fluid-container model is BuildCraft's own item model type,
+    // buildcraftunofficial:fluid_container (FabricFluidContainerModel), whose codec is NeoForge's. Only the type id
+    // changes, and each NeoForge texture it names becomes the Fabric node's own texture for that role (drawn for
+    // BuildCraft, in src/main/resources-fabric; NeoForge's LGPL masks are not copied).
+
+    // NeoForge texture -> the Fabric node's own texture of the same role. Any other neoforge: texture fails.
+    private val FLUID_CONTAINER_TEXTURES = mapOf(
+        "neoforge:item/mask/bucket_fluid_drip" to "buildcraftunofficial:item/mask/bucket_fluid",
+    )
 
     @Suppress("UNCHECKED_CAST")
-    private fun rewriteFluidContainerModels(itemsDir: File, modelsItemDir: File) {
+    private fun rewriteFluidContainerModels(itemsDir: File) {
         if (!itemsDir.isDirectory) return
-        val namespace = itemsDir.parentFile.name
         itemsDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { f ->
             val root = parse(f) as? Map<String, Any?> ?: return@forEach
             val spec = root["model"] as? Map<String, Any?> ?: return@forEach
             if (spec["type"] != "neoforge:fluid_container") return@forEach
-            val base = (spec["textures"] as? Map<String, Any?>)?.get("base") as? String
-                ?: fail(f, "neoforge:fluid_container model has no base texture")
-            val name = f.relativeTo(itemsDir).invariantSeparatorsPath.removeSuffix(".json")
-            val model = modelsItemDir.resolve("$name.json")
-            if (model.exists()) fail(model, "a generated fluid-container model would overwrite an existing one")
-            write(model, linkedMapOf("parent" to "minecraft:item/generated", "textures" to linkedMapOf("layer0" to base)))
+            val textures = spec["textures"] as? Map<String, Any?>
+                ?: fail(f, "neoforge:fluid_container model has no textures")
+            val outTextures = LinkedHashMap<String, Any?>()
+            textures.forEach { (slot, tex) ->
+                outTextures[slot] = if (tex is String && tex.startsWith(NF)) {
+                    FLUID_CONTAINER_TEXTURES[tex] ?: fail(f, "no Fabric twin of fluid-container texture $tex")
+                } else tex
+            }
+            val model = LinkedHashMap(spec)
+            model["type"] = "buildcraftunofficial:fluid_container"
+            model["textures"] = outTextures
             val out = LinkedHashMap(root)
-            out["model"] = linkedMapOf("type" to "minecraft:model", "model" to "$namespace:item/$name")
+            out["model"] = model
             write(f, out)
         }
     }

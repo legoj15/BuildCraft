@@ -26,7 +26,7 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.item.PlayerInventoryStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.base.SingleStackStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
-import net.fabricmc.fabric.api.transfer.v1.storage.base.CombinedStorage;
+import net.fabricmc.fabric.api.transfer.v1.storage.base.CombinedSlottedStorage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 
 /^*
@@ -85,7 +85,11 @@ public final class FabricEntityItems {
      * {@link EquipmentSlot} of those types in {@link EquipmentSlot#VALUES} order. A slot takes what the entity can
      * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}); the stack is set without side
      * effects while the transaction is open and {@code onEquipItem} runs once the outer transaction commits.
-     *^/
+     *
+     * <p>Slotted on purpose: a plain {@code CombinedStorage} is no {@code SlottedStorage}, so the adapter
+     * ({@code FabricItemStorages.fromFabric}) would fall back to its one-virtual-slot view and lose the slot
+     * indices NeoForge's capability keeps.
+     ^/
     private static Storage<ItemVariant> equipment(LivingEntity entity) {
         List<SlotStorage> slots = new ArrayList<>();
         for (EquipmentSlot.Type type : List.of(EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR)) {
@@ -95,7 +99,7 @@ public final class FabricEntityItems {
                 }
             }
         }
-        return new CombinedStorage<>(slots);
+        return new CombinedSlottedStorage<>(slots);
     }
 
     private static final class SlotStorage extends SingleStackStorage {

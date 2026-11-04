@@ -238,6 +238,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_minecart_stuck_slot_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testSlotThatWillNotClearKeepsTheCartAndItsItem);
         reg.accept("buildcraftunofficial:stripes_minecart_no_pick_result_destroyed_its_own_way", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCartThatNamesNoItemIsDestroyedItsOwnWay);
         reg.accept("buildcraftunofficial:stripes_minecart_capability_only_cart_emptied", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCapabilityOnlyCartIsEmptiedBeforeItIsBroken);
+        // The living-entity item-storage fallback both loaders answer: an equine's chest inventory, any other living
+        // entity's hands then armour, each slot taking only what the entity can equip there.
+        reg.accept("buildcraftunofficial:entity_item_storage_living_fallback", () -> buildcraft.lib.test.EntityItemStorageTester::livingEntityItemStorageFallback);
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);

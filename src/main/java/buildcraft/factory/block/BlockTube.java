@@ -35,6 +35,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.PlayerBreakGuard;
 
 /**
  * The tube block placed below a mining well / quarry as it drills down.
@@ -46,7 +47,7 @@ import buildcraft.platform.LoaderHook;
  * {@link BCWaterlogging}.
  */
 @SuppressWarnings("this-escape")
-public class BlockTube extends Block implements SimpleWaterloggedBlock {
+public class BlockTube extends Block implements SimpleWaterloggedBlock, PlayerBreakGuard {
     private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 16, 12);
 
     //? if <26.3 {
@@ -129,26 +130,31 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock {
         return true;
     }
 
+    /** Don't allow breaking while a miner owns this tube. */
+    @Override
+    public boolean keepsBlockOnPlayerBreak(BlockState state, Level level, BlockPos pos, Player player) {
+        return isOwnedByMiner(level, pos);
+    }
+
+    // Fabric asks keepsBlockOnPlayerBreak from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes).
+    //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
     @Override
-    //? if >=1.21.10 {
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
             net.minecraft.world.item.ItemStack toolStack, boolean willHarvest,
             net.minecraft.world.level.material.FluidState fluid) {
-    //?} else {
-    /*public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
-            boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {*/
-    //?}
-        if (isOwnedByMiner(level, pos)) {
-            // Don't allow breaking — the miner owns this tube
-            return false;
-        }
-        //? if >=1.21.10 {
-        return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
-        //?} else {
-        /*return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);*/
-        //?}
+        return !keepsBlockOnPlayerBreak(state, level, pos, player)
+            && super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
     }
+    //?} elif neoforge {
+    /*@LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+            boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        return !keepsBlockOnPlayerBreak(state, level, pos, player)
+            && super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+    }*/
+    //?}
 
     /** True if a mining machine sits on top of the tube column holding {@code pos}. */
     private boolean isOwnedByMiner(Level level, BlockPos pos) {

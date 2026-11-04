@@ -29,6 +29,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.LevelLifecycleBlockEntity;
 
 /**
  * The thin base shared by ALL BuildCraft block entities — both {@link TileBC_Neptune} (the
@@ -50,7 +51,7 @@ import buildcraft.platform.LoaderHook;
  * {@link AbstractBCSyncedBlockEntity} subclass, which adds that pair (plus the {@code <1.21.10}
  * {@code onDataPacket} fix) in one place — {@link TileBC_Neptune} and the machine tiles do.
  */
-public abstract class AbstractBCBlockEntity extends BlockEntity implements Clearable {
+public abstract class AbstractBCBlockEntity extends BlockEntity implements Clearable, LevelLifecycleBlockEntity {
 
     @SuppressWarnings("this-escape")
     public AbstractBCBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -94,22 +95,36 @@ public abstract class AbstractBCBlockEntity extends BlockEntity implements Clear
     // --- Level lifecycle ---
     // The loader's load/chunk-unload hooks land here once; subclasses override the common onLoaded/onChunkUnloading.
 
+    // Fabric calls onJoinedLevel/onChunkUnload from its block-entity load and chunk-unload events
+    // (FabricLoaderHookRoutes); NeoForge's own hooks call them here.
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockEntityExtension#onLoad")
     @Override
     public final void onLoad() {
         super.onLoad();
-        onLoaded();
+        onJoinedLevel();
     }
-
-    /** Runs when this tile joins a level: placed, or its chunk loaded. Subclasses call {@code super.onLoaded()}. */
-    protected void onLoaded() {}
 
     @LoaderHook("neoforge:IBlockEntityExtension#onChunkUnloaded")
     @Override
     public final void onChunkUnloaded() {
         super.onChunkUnloaded();
+        onChunkUnload();
+    }
+    //?}
+
+    @Override
+    public final void onJoinedLevel() {
+        onLoaded();
+    }
+
+    @Override
+    public final void onChunkUnload() {
         onChunkUnloading();
     }
+
+    /** Runs when this tile joins a level: placed, or its chunk loaded. Subclasses call {@code super.onLoaded()}. */
+    protected void onLoaded() {}
 
     /** Runs when the chunk holding this tile unloads (not when the tile is broken). Subclasses call super. */
     protected void onChunkUnloading() {}

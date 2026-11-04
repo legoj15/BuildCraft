@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.Block;
 
 import buildcraft.lib.misc.MachineEnchantments;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.EnchantmentFilterItem;
 
 /**
  * The item of a mining machine that takes Silk Touch, Fortune and Efficiency at an anvil (the Quarry and the Mining
@@ -21,19 +22,27 @@ import buildcraft.platform.LoaderHook;
  * enchanting table offers it nothing.
  *
  * <p>The anvil, {@code /enchant} and every other mechanism that applies an enchantment ask
- * {@link #supportsEnchantment}, which says yes to those three while the {@code machineEnchantments} option is on and
+ * {@link #acceptsEnchantment}, which says yes to those three while the {@code machineEnchantments} option is on and
  * no to everything else (Unbreaking and Mending included). A creative-mode anvil ignores the answer, as it does for
  * every item.
  */
-public class ItemEnchantableMachine extends BlockItem {
+public class ItemEnchantableMachine extends BlockItem implements EnchantmentFilterItem {
 
     public ItemEnchantableMachine(Block block, Properties properties) {
         super(block, properties);
     }
 
+    @Override
+    public boolean acceptsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
+        return MachineEnchantments.enabled() && MachineEnchantments.isUseful(enchantment);
+    }
+
+    // Fabric asks acceptsEnchantment through EnchantmentEvents.ALLOW_ENCHANTING (FabricLoaderHookRoutes).
+    //? if neoforge {
     @LoaderHook("neoforge:IItemExtension#supportsEnchantment")
     @Override
     public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
-        return MachineEnchantments.enabled() && MachineEnchantments.isUseful(enchantment);
+        return acceptsEnchantment(stack, enchantment);
     }
+    //?}
 }

@@ -31,10 +31,11 @@ import buildcraft.platform.menu.BufferMenuFactory;
  * {@link ByteBufCodecs#BYTE_ARRAY} and unwrapped into a {@link RegistryFriendlyByteBuf} for the factory, so the
  * factory reads the same bytes it reads on NeoForge.
  *
- * <p>Gap: Fabric refuses to open an extended menu type through a provider that is not an {@link ExtendedMenuProvider},
- * and vanilla's spectator path ({@code ServerPlayerGameMode} calling {@code openMenu(blockEntity)}) hands it the block
- * entity itself. A spectator right-clicking a BuildCraft machine therefore throws there instead of opening the GUI
- * read-only, until the block entities' NeoForge {@code writeClientSideData} hook gets a Fabric route.
+ * <p>Fabric refuses to open an extended menu type through a provider that is not an {@link ExtendedMenuProvider}, and
+ * vanilla's spectator path ({@code ServerPlayerGameMode} calling {@code openMenu(blockEntity)}) hands it the block
+ * entity itself. The {@code ServerPlayer#openMenu} mixin ({@code mixin.ServerPlayerMixin}, the route of NeoForge's
+ * {@code writeClientSideData}) wraps such a provider with {@link #withOpeningData} first, so a spectator opens the GUI
+ * read-only as on NeoForge.
  *^/
 public final class FabricMenus implements BCMenus {
     @Override
@@ -46,7 +47,13 @@ public final class FabricMenus implements BCMenus {
 
     @Override
     public void open(ServerPlayer player, MenuProvider provider, Consumer<RegistryFriendlyByteBuf> writer) {
-        player.openMenu(new ExtendedMenuProvider<byte[]>() {
+        player.openMenu(withOpeningData(provider, writer));
+    }
+
+    /^* {@code provider}, opening its menu with {@code writer}'s bytes as the extended menu type's data. *^/
+    public static ExtendedMenuProvider<byte[]> withOpeningData(MenuProvider provider,
+                                                               Consumer<RegistryFriendlyByteBuf> writer) {
+        return new ExtendedMenuProvider<byte[]>() {
             @Override
             public Component getDisplayName() {
                 return provider.getDisplayName();
@@ -74,7 +81,7 @@ public final class FabricMenus implements BCMenus {
                     buf.release();
                 }
             }
-        });
+        };
     }
 }
 *///?}

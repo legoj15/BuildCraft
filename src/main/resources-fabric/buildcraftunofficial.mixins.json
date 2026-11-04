@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "buildcraft.platform.fabric.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "EntityMixin",
+    "ExplosionDamageCalculatorMixin",
+    "FireBlockMixin",
+    "LavaFluidMixin",
+    "LivingEntityMixin",
+    "ServerPlayerGameModeMixin",
+    "ServerPlayerMixin"
+  ],
+  "client": [
+    "client.MultiPlayerGameModeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

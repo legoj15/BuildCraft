@@ -24,12 +24,14 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.SneakBypassItem;
+import buildcraft.platform.hook.UseFirstItem;
 
 /**
  * The basic wrench, and a real tool: it has durability, can be enchanted and mended, and hits like a light tool.
  * Every {@link #wrenchUsed} costs one use; the {@link WrenchTier} says what else it is made of.
  */
-public class ItemWrench_Neptune extends Item implements IToolWrench {
+public class ItemWrench_Neptune extends Item implements IToolWrench, SneakBypassItem, UseFirstItem {
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:wrenched");
 
     //? if <1.21.10 {
@@ -97,11 +99,20 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
     // true = sneak-clicks pass through to the block's useItemOn. Required so
     // engine/dynamo blocks can intercept crouch+wrench and open the GUI instead
     // of being short-circuited to the wrench's own rotation path.
+    @Override
+    public boolean sneakBypassesUse(ItemStack stack, net.minecraft.world.level.LevelReader level,
+            net.minecraft.core.BlockPos pos, Player player) {
+        return true;
+    }
+
+    // NeoForge's patched item hooks. Fabric reaches sneakBypassesUse through its game-mode mixins and useBeforeBlock
+    // through UseBlockCallback (FabricLoaderHookRoutes).
+    //? if neoforge {
     @LoaderHook("neoforge:IItemExtension#doesSneakBypassUse")
     @Override
     public boolean doesSneakBypassUse(ItemStack stack, net.minecraft.world.level.LevelReader level,
             net.minecraft.core.BlockPos pos, Player player) {
-        return true;
+        return sneakBypassesUse(stack, level, pos, player);
     }
 
     @LoaderHook("neoforge:IItemExtension#onItemUseFirst")
@@ -109,6 +120,7 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         return useBeforeBlock(stack, context);
     }
+    //?}
 
     /**
      * Crouch+wrench on a vanilla block invokes rotation; non-crouch+wrench falls
@@ -133,6 +145,7 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
      * directly and keep their existing UX through {@link #useOn} and their own
      * {@code useItemOn}: non-crouch wrench rotates, crouch wrench opens the GUI.
      */
+    @Override
     public InteractionResult useBeforeBlock(ItemStack stack, UseOnContext context) {
         Player player = context.getPlayer();
         if (player == null || !player.isShiftKeyDown()) {

@@ -124,12 +124,15 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
     }*/
     //?}
 
-    /** The block, or — with the preview on — the block and the whole box, so the frustum test keeps the renderer alive. */
+    // The block, or (with the preview on) the block and the whole box, so NeoForge's frustum test keeps the renderer
+    // alive. Vanilla, and so Fabric, has no per-renderer frustum test: shouldRenderOffScreen above already keeps it.
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockEntityRendererExtension#getRenderBoundingBox")
     @Override
     public AABB getRenderBoundingBox(TileFiller tile) {
         return tile.getRenderBounds();
     }
+    //?}
 
     /** Every node's dispatcher asks this before drawing a BER, globally rendered or not (checked in each node's
      *  {@code BlockEntityRenderDispatcher}), so the distance gate below applies to the preview too. */

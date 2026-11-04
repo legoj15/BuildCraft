@@ -33,17 +33,12 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.LevelResource;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.ChunkEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
-
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.misc.RegistryKeyUtil;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 
 /**
  * The server's record of what one level's terrain looks like from above, for the Zone Planner's survey view past the
@@ -101,54 +96,49 @@ public final class ZoneSurveyMap {
     }
 
     public static void register() {
-        NeoForge.EVENT_BUS.addListener((ChunkEvent.Load event) -> {
+        Platform.gameHooks().onChunkLoad((server, loaded) -> {
             // The chunk is not FULL yet and the level must not be touched now (NeoForge's note on the event): it is
             // sampled from the level on a later tick, if it is still there. Posted on the server thread (the FULL
             // status task runs on the main-thread executor, every node), so no guard is needed here.
-            if (event.getLevel() instanceof ServerLevel server && of(server).pending.size() < MAX_PENDING) {
-                of(server).pending.add(key(event.getChunk().getPos().getMinBlockX() >> 4,
-                        event.getChunk().getPos().getMinBlockZ() >> 4));
+            if (of(server).pending.size() < MAX_PENDING) {
+                of(server).pending.add(key(loaded.getPos().getMinBlockX() >> 4, loaded.getPos().getMinBlockZ() >> 4));
             }
         });
-        NeoForge.EVENT_BUS.addListener((ChunkEvent.Unload event) -> {
+        Platform.gameHooks().onChunkUnload((server, unloaded) -> {
             // Saved and about to go: its blocks are still all there, and it is read on its own, not through the level.
             // (1.21.1 types the event's chunk as a ChunkAccess; it is a LevelChunk on every node.)
             // (ChunkMap's unload task runs on the main-thread executor; the guard only keeps a stray caller out.)
-            if (event.getLevel() instanceof ServerLevel server && server.getServer().isSameThread()) {
+            if (server.getServer().isSameThread()) {
                 ZoneSurveyMap map = of(server);
-                int cx = event.getChunk().getPos().getMinBlockX() >> 4;
-                int cz = event.getChunk().getPos().getMinBlockZ() >> 4;
+                int cx = unloaded.getPos().getMinBlockX() >> 4;
+                int cz = unloaded.getPos().getMinBlockZ() >> 4;
                 map.pending.remove(key(cx, cz));
-                if (event.getChunk() instanceof LevelChunk chunk) {
+                if (unloaded instanceof LevelChunk chunk) {
                     map.record(chunk, cx, cz);
                 }
             }
         });
-        NeoForge.EVENT_BUS.addListener((LevelTickEvent.Post event) -> {
-            if (event.getLevel() instanceof ServerLevel server) {
-                ZoneSurveyMap map = MAPS.get(server);
-                if (map != null) {
-                    map.tick();
-                }
+        Platform.gameHooks().onLevelTickEnd(server -> {
+            ZoneSurveyMap map = MAPS.get(server);
+            if (map != null) {
+                map.tick();
             }
         });
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Save event) -> {
-            if (event.getLevel() instanceof ServerLevel server) {
-                ZoneSurveyMap map = MAPS.get(server);
-                if (map != null) {
-                    map.saveDirty();
-                }
+        Platform.lifecycle().onLevelSave(server -> {
+            ZoneSurveyMap map = MAPS.get(server);
+            if (map != null) {
+                map.saveDirty();
             }
         });
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
-            if (event.getLevel() instanceof ServerLevel server) {
+        Platform.gameHooks().onLevelUnload(unloaded -> {
+            if (unloaded instanceof ServerLevel server) {
                 ZoneSurveyMap map = MAPS.remove(server);
                 if (map != null) {
                     map.saveDirty();
                 }
             }
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
+        Platform.lifecycle().onServerStopped(server -> {
             MAPS.clear();
             LAST_SEND.clear();
         });

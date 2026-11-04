@@ -6,17 +6,9 @@
 
 package buildcraft.robotics;
 
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.level.ExplosionEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
-import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +18,7 @@ import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.HookOrder;
 import buildcraft.robotics.ai.AIRobotAttack;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
@@ -166,12 +159,12 @@ public class BCRobotics {
         // server's world graph would stay pinned by this static table while the player sits on the title
         // screen. (ServerStoppedEvent fires from MinecraftServer.run's finally, so crashes are covered too.
         // Claims held by robots that have left a running world already expire on their own.)
-        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.clearTargets());
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> BoardRobotPicker.clearTargets());
+        Platform.lifecycle().onServerAboutToStart(server -> BoardRobotPicker.clearTargets());
+        Platform.lifecycle().onServerStopped(server -> BoardRobotPicker.clearTargets());
         // ...and when a single level unloads (a server stop posts this per level, before ServerStopped): the claims
         // of that level's robots go with it. Server levels only — the table is server-thread state.
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
-            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+        Platform.gameHooks().onLevelUnload(unloaded -> {
+            if (unloaded instanceof Level level && !level.isClientSide()) {
                 BoardRobotPicker.releaseClaimsIn(level);
             }
         });
@@ -180,18 +173,14 @@ public class BCRobotics {
         // login) because the recipe objects build Ingredients in their constructors, which requires items to be
         // bound — not yet true at this constructor-time init. The API handle is safe to wire now.
         BuildcraftRecipeRegistry.programmingTable = ProgrammingRecipeRegistry.INSTANCE;
-        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BCRoboticsRecipes.ensureInitialized());
-        NeoForge.EVENT_BUS.addListener(ExplosionEvent.Detonate.class, RobotProtection::onExplosionDetonate);
-        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, RobotProtection::onEntityJoin);
-        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> RobotProtection.clearChained());
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> RobotProtection.clearChained());
+        Platform.lifecycle().onServerAboutToStart(server -> BCRoboticsRecipes.ensureInitialized());
+        Platform.gameHooks().onExplosionDetonate(HookOrder.DEFAULT, RobotProtection::onExplosionDetonate);
+        Platform.gameHooks().onEntityJoinLevel(RobotProtection::onEntityJoin);
+        Platform.gameHooks().onServerTickEnd(server -> RobotProtection.clearChained());
+        Platform.lifecycle().onServerStopped(server -> RobotProtection.clearChained());
 
         // Zone maps: a legacy map drops its own copy of its zone only once the store's file is seen holding it.
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Save event) -> {
-            if (event.getLevel() instanceof ServerLevel level) {
-                ZoneMapSavedData.onLevelSave(level);
-            }
-        });
+        Platform.lifecycle().onLevelSave(ZoneMapSavedData::onLevelSave);
 
         // The Zone Planner's far map: terrain sampled from chunks as the server loads and unloads them.
         ZoneSurveyMap.register();

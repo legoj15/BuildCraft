@@ -8,6 +8,7 @@ package buildcraft.robotics;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -27,11 +28,9 @@ import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.phys.Vec3;
-
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.level.ExplosionEvent;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
@@ -276,11 +275,11 @@ public final class RobotProtection {
      * ({@link #onEntityJoin}), so a chain of blasts is asked about link by link. Nobody is asked while
      * {@link BCCoreConfig#minePlayerProtected} is on.
      */
-    public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || BCCoreConfig.minePlayerProtected.get()) {
+    public static void onExplosionDetonate(Level detonating, Explosion explosion, List<BlockPos> affectedBlocks,
+            List<Entity> affectedEntities) {
+        if (!(detonating instanceof ServerLevel level) || BCCoreConfig.minePlayerProtected.get()) {
             return;
         }
-        Explosion explosion = event.getExplosion();
         // Only TNT carries the mark; asking any other source would give it an empty persistent tag that then saves
         if (!(explosion.getDirectSourceEntity() instanceof PrimedTnt source)) {
             return;
@@ -291,11 +290,11 @@ public final class RobotProtection {
         }
         GameProfile deployer = markedPlayer(players, "deployer");
         GameProfile stationOwner = markedPlayer(players, "stationOwner");
-        keepPermitted(level, event, explosion, deployer);
+        keepPermitted(level, affectedBlocks, affectedEntities, explosion, deployer);
         if (!Objects.equals(GameProfileUtil.getId(deployer), GameProfileUtil.getId(stationOwner))) {
-            keepPermitted(level, event, explosion, stationOwner);
+            keepPermitted(level, affectedBlocks, affectedEntities, explosion, stationOwner);
         }
-        for (BlockPos pos : event.getAffectedBlocks()) {
+        for (BlockPos pos : affectedBlocks) {
             if (level.getBlockState(pos).getBlock() instanceof TntBlock) {
                 CHAINED.computeIfAbsent(level, l -> new HashMap<>()).put(pos.immutable(), players.copy());
             }
@@ -303,9 +302,8 @@ public final class RobotProtection {
     }
 
     /** Marks TNT that a robot's blast primed out of a TNT block ({@link #CHAINED}) with the players of that blast. */
-    public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (CHAINED.isEmpty() || !(event.getEntity() instanceof PrimedTnt tnt)
-                || !(event.getLevel() instanceof ServerLevel level)) {
+    public static void onEntityJoin(Entity entity, ServerLevel level, boolean loadedFromDisk) {
+        if (CHAINED.isEmpty() || !(entity instanceof PrimedTnt tnt)) {
             return;
         }
         Map<BlockPos, CompoundTag> primed = CHAINED.get(level);
@@ -330,16 +328,16 @@ public final class RobotProtection {
 
     /** Drops from the blast every block {@code profile} may not break and every entity it would hurt that
      *  {@code profile} may not attack. */
-    private static void keepPermitted(ServerLevel level, ExplosionEvent.Detonate event, Explosion explosion,
-            GameProfile profile) {
+    private static void keepPermitted(ServerLevel level, List<BlockPos> affectedBlocks, List<Entity> affectedEntities,
+            Explosion explosion, GameProfile profile) {
         Vec3 center = explosion.center();
         // Vanilla hurts an entity only within twice the radius; the event's list is the whole box around that
         double reach = explosion.radius() * 2.0;
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, null)) {
             ServerPlayer player = lease.player();
-            event.getAffectedBlocks().removeIf(pos -> !BlockUtil.canMachineBreakAs(level, pos, player));
+            affectedBlocks.removeIf(pos -> !BlockUtil.canMachineBreakAs(level, pos, player));
             FakePlayerUtil.pose(player, center, 0, 0);
-            event.getAffectedEntities().removeIf(entity -> !entity.ignoreExplosion(explosion)
+            affectedEntities.removeIf(entity -> !entity.ignoreExplosion(explosion)
                     && entity.distanceToSqr(center) <= reach * reach
                     && !Platform.protection().canAttack(player, entity));
         }

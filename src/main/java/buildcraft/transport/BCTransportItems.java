@@ -16,7 +16,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredItem;
 
 import buildcraft.api.transport.pipe.PipeDefinition;
 
@@ -76,7 +75,7 @@ public class BCTransportItems {
 
     // -- Pipe Items --
     // Every pipe is the same ItemPipeHolder registration differing only by (registry id, PipeDefinition).
-    // The named DeferredItem fields below are the public API — recipes (DyedPipeRecipe passes the holder
+    // The named BCItemHolder fields below are the public API — recipes (DyedPipeRecipe passes the holder
     // itself), the guide, creative tabs, and tests all reference them by name — so they stay, but the
     // repeated 3-line lambda body collapses into the pipe(id, def) helper. Registration order is preserved,
     // and each holder is recorded in PIPE_ITEMS so callers can look one up from its PipeDefinition (the

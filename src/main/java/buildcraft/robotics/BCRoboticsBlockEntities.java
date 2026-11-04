@@ -11,15 +11,15 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.robotics.tile.TileRequester;
 import buildcraft.robotics.tile.TileZonePlanner;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCRoboticsBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCRobotics.MODID);
+    public static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCRobotics.MODID);
 
     // Block entity for the Zone Planner — mirrors BCRoboticsBlocks.ZONE_PLANNER.
     public static final Supplier<BlockEntityType<TileZonePlanner>> ZONE_PLANNER;
@@ -35,6 +35,6 @@ public class BCRoboticsBlockEntities {
     }
 
     public static void init(IEventBus modEventBus) {
-        BLOCK_ENTITIES.register(modEventBus);
+        BLOCK_ENTITIES.subscribe();
     }
 }

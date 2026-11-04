@@ -6,57 +6,56 @@
 
 package buildcraft.robotics;
 
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 
-import buildcraft.lib.misc.RegistrationUtilBC;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.item.ItemPluggableSimple;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCItemHolder;
 
 public class BCRoboticsItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCRobotics.MODID);
+    public static final BCRegistrar.Items ITEMS = BCRegistrar.createItems(BCRobotics.MODID);
 
     // BlockItem for the Zone Planner — mirrors BCRoboticsBlocks.ZONE_PLANNER.
-    public static final DeferredItem<?> ZONE_PLANNER;
+    public static final BCItemHolder<?> ZONE_PLANNER;
 
     // BlockItem for the Requester — mirrors BCRoboticsBlocks.REQUESTER.
-    public static final DeferredItem<?> REQUESTER;
+    public static final BCItemHolder<?> REQUESTER;
 
     /** Docking Station Plug — the simple {@link PluggableDefinition.IPluggableCreator} path suffices
      *  (the pluggable itself writes no persistent NBT; the {@code DockingStationPipe} it registers is
      *  tracked separately by the {@code RobotRegistry}), so no bespoke {@code ItemRobotStation} class
      *  is needed — matches {@code PLUG_BLOCKER}/{@code PLUG_POWER_ADAPTOR} in transport. */
-    public static final DeferredItem<ItemPluggableSimple> ROBOT_STATION;
+    public static final BCItemHolder<ItemPluggableSimple> ROBOT_STATION;
 
     /** The robot itself. A blank robot (no board, or the empty board) stacks to 16; a programmed robot stays at 1,
      *  because its board and charge live in the stack's CUSTOM_DATA and two such robots are almost never
      *  interchangeable. The item registers the blank limit; each programmed stack carries
      *  {@code MAX_STACK_SIZE = 1}, stamped by {@code ItemRobot#createRobotStack}. */
-    public static final DeferredItem<ItemRobot> ROBOT;
+    public static final BCItemHolder<ItemRobot> ROBOT;
 
     /** The standalone board item: the Programming Table turns a board into any other, and the Integration Table
      *  fits one into a robot. Crafted blank from paper and a redstone dust (the {@code redstone_board} recipe). A
      *  blank board stacks to 16; a programmed board stays at 1, since its id lives in the stack's CUSTOM_DATA (each
      *  programmed stack carries {@code MAX_STACK_SIZE = 1}, stamped by {@code ItemRedstoneBoard#createStack}). */
-    public static final DeferredItem<ItemRedstoneBoard> REDSTONE_BOARD;
+    public static final BCItemHolder<ItemRedstoneBoard> REDSTONE_BOARD;
 
     static {
         ZONE_PLANNER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.ZONE_PLANNER);
         REQUESTER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.REQUESTER);
-        ROBOT_STATION = RegistrationUtilBC.registerItem(ITEMS, "robot_station",
+        ROBOT_STATION = ITEMS.registerItem("robot_station",
             props -> new ItemPluggableSimple(props, BCRoboticsPlugs.robotStation, null,
                 buildcraft.robotics.RobotStationPluggable::boundingBoxFor));
         // Both stack to 16 as the BLANK template (7.1.x's getItemStackLimit rule, audit-decided): every
         // PROGRAMMED stack carries MAX_STACK_SIZE 1, stamped by the create*Stack factories.
-        ROBOT = RegistrationUtilBC.registerItem(ITEMS, "robot", ItemRobot::new,
+        ROBOT = ITEMS.registerItem("robot", ItemRobot::new,
             props -> props.stacksTo(16));
-        REDSTONE_BOARD = RegistrationUtilBC.registerItem(ITEMS, "redstone_board", ItemRedstoneBoard::new,
+        REDSTONE_BOARD = ITEMS.registerItem("redstone_board", ItemRedstoneBoard::new,
             props -> props.stacksTo(16));
     }
 
     public static void init(IEventBus modEventBus) {
-        ITEMS.register(modEventBus);
+        ITEMS.subscribe();
     }
 }

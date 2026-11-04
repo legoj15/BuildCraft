@@ -288,13 +288,13 @@ class GuideTxtSystemTagTest {
         }
         // Ids come from the live registrations, so a rename in code fails here instead of leaving a dead entry.
         List<String> expected = List.of(
-            BCRoboticsItems.ROBOT.getId().toString(),
-            BCRoboticsItems.REDSTONE_BOARD.getId().toString(),
-            BCRoboticsItems.ROBOT_STATION.getId().toString(),
+            BCRoboticsItems.ROBOT.id().toString(),
+            BCRoboticsItems.REDSTONE_BOARD.id().toString(),
+            BCRoboticsItems.ROBOT_STATION.id().toString(),
             BCSiliconBlocks.PROGRAMMING_TABLE.id().toString(),
             BCSiliconBlocks.INTEGRATION_TABLE.id().toString(),
-            BCRoboticsBlocks.ZONE_PLANNER.getId().toString(),
-            BCRoboticsBlocks.REQUESTER.getId().toString());
+            BCRoboticsBlocks.ZONE_PLANNER.id().toString(),
+            BCRoboticsBlocks.REQUESTER.id().toString());
         for (String id : expected) {
             assertTrue(stacks.contains(id), "guide.txt does not register " + id);
         }

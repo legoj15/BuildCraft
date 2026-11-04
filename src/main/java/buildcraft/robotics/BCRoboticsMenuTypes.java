@@ -11,16 +11,16 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.platform.Platform;
 import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.ContainerRequester;
 import buildcraft.robotics.container.ContainerZonePlanner;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCRoboticsMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, BCRobotics.MODID);
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+            BCRegistrar.create(Registries.MENU, BCRobotics.MODID);
 
     // Menu type for the Zone Planner GUI — mirrors BCRoboticsBlocks.ZONE_PLANNER.
     public static final Supplier<MenuType<ContainerZonePlanner>> ZONE_PLANNER;
@@ -41,6 +41,6 @@ public class BCRoboticsMenuTypes {
                     () -> Platform.menus().create(ContainerRequester::new));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }

@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
@@ -215,17 +214,6 @@ public final class LegacyAliases {
             String key, String... oldNamespaces) {
         for (var holder : source.getEntries()) {
             Identifier to = holder.id();
-            for (String ns : oldNamespaces) {
-                add(aliasRegister, registry, key, id(ns, to.getPath()), to);
-            }
-        }
-    }
-
-    // TEMPORARY (platform S9): the subsystems still on DeferredRegister.
-    private static void flip(DeferredRegister<?> source, BCRegistrar<?> aliasRegister, Registry<?> registry,
-            String key, String... oldNamespaces) {
-        for (var holder : source.getEntries()) {
-            Identifier to = holder.getId();
             for (String ns : oldNamespaces) {
                 add(aliasRegister, registry, key, id(ns, to.getPath()), to);
             }

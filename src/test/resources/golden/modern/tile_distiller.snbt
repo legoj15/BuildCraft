@@ -1,0 +1,11 @@
+{
+  blockers: 0,
+  containerSlots: {items:[{},{},{}]},
+  distillPower: 0L,
+  fluidGasOut: {amount:300,id:"minecraft:water"},
+  fluidIn: {amount:1500,id:"minecraft:lava"},
+  fluidLiquidOut: {amount:40,id:"minecraft:lava"},
+  isActive: 0b,
+  mjStored: 0L,
+  powerAvgClient: 0L
+}

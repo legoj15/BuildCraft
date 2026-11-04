@@ -1,0 +1,7 @@
+{
+  battery: {stored:0L},
+  boardId: "",
+  inv: {items:[{},{},{},{}]},
+  robotId: 9223372036854775807L,
+  tank: {amount:2750,id:"minecraft:lava"}
+}

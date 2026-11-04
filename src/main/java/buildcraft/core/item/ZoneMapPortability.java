@@ -337,11 +337,11 @@ public final class ZoneMapPortability {
     }
 
     private static String mapLocationId() {
-        return BCCoreItems.MAP_LOCATION.getId().toString();
+        return BCCoreItems.MAP_LOCATION.id().toString();
     }
 
     private static String zoneKey() {
-        return BCCore.ZONE_MAP_ID.getId().toString();
+        return BCCore.ZONE_MAP_ID.id().toString();
     }
 
     private static String customKey() {

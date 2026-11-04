@@ -9,7 +9,6 @@ package buildcraft.core;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
@@ -19,10 +18,11 @@ import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.core.tile.TileEngineRedstone_BC8;
 import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.core.tile.TilePowerConsumerTester;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCCoreBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
+    public static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
 
     public static final Supplier<BlockEntityType<TileMarkerVolume>> MARKER_VOLUME = BLOCK_ENTITIES.register(
             "marker_volume",
@@ -45,6 +45,6 @@ public class BCCoreBlockEntities {
             () -> BlockEntityTypeUtilBC.create(TilePowerConsumerTester::new, BCCoreBlocks.POWER_TESTER.get()));
 
     public static void init(IEventBus modEventBus) {
-        BLOCK_ENTITIES.register(modEventBus);
+        BLOCK_ENTITIES.subscribe();
     }
 }

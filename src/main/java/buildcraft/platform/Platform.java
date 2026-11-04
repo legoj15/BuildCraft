@@ -13,6 +13,7 @@ import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
+import buildcraft.platform.registry.RegistryServices;
 
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
@@ -90,6 +91,11 @@ public final class Platform {
     /** Loot context parameters the loader adds. */
     public static LootServices loot() {
         return LootHolder.INSTANCE;
+    }
+
+    /** Registries: registrars and the holders they hand back. */
+    public static RegistryServices registries() {
+        return RegistriesHolder.INSTANCE;
     }
 
     private static final class LoaderHolder {
@@ -256,6 +262,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLootServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?}
+        }
+    }
+
+    private static final class RegistriesHolder {
+        static final RegistryServices INSTANCE = create();
+
+        private static RegistryServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeRegistryServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricRegistryServices();
             *///?}
         }
     }

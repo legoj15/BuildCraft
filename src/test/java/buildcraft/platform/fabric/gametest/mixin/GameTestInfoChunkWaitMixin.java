@@ -24,6 +24,11 @@ import net.minecraft.network.chat.Component;
  * {@link #MAX_CHUNK_WAIT_SECONDS} seconds of waiting, so the run ends and says which test it was. Wall-clock, not
  * ticks: the game-test server runs ticks as fast as it can, and chunk generation on the worker threads can take
  * thousands of those (1200 ticks passed in under a second at the start of a loaded run).
+ *
+ * <p>Only the time between two of this test's ticks counts, and at most {@link #MAX_TICK_GAP_NANOS} of each gap. A
+ * synchronous chunk load on the server thread (a structure placed on fresh ground, a test that loads a far chunk)
+ * stops every test's ticks at once, and on a loaded machine one such load took 109 s: counted whole, it would fail
+ * every test of the batch whose chunks had not been seen loaded before it, though nothing was wrong with them (#114).
  *^/
 @Mixin(GameTestInfo.class)
 abstract class GameTestInfoChunkWaitMixin {
@@ -31,11 +36,19 @@ abstract class GameTestInfoChunkWaitMixin {
     @Unique
     private static final long MAX_CHUNK_WAIT_SECONDS = 120;
 
+    /^* The most one gap between two of this test's ticks adds to its wait: a longer gap is a blocked server thread. ^/
+    @Unique
+    private static final long MAX_TICK_GAP_NANOS = 1_000_000_000L;
+
     @Shadow
     private boolean chunksLoaded;
 
+    /^* When this test last ticked while waiting, or 0 before its first tick. ^/
     @Unique
-    private long buildcraft$chunkWaitStart;
+    private long buildcraft$lastWaitTick;
+
+    @Unique
+    private long buildcraft$waitedNanos;
 
     @Shadow
     public abstract boolean isDone();
@@ -49,11 +62,13 @@ abstract class GameTestInfoChunkWaitMixin {
             return;
         }
         long now = System.nanoTime();
-        if (buildcraft$chunkWaitStart == 0) {
-            buildcraft$chunkWaitStart = now;
-        } else if (now - buildcraft$chunkWaitStart > MAX_CHUNK_WAIT_SECONDS * 1_000_000_000L) {
+        if (buildcraft$lastWaitTick != 0) {
+            buildcraft$waitedNanos += Math.min(now - buildcraft$lastWaitTick, MAX_TICK_GAP_NANOS);
+        }
+        buildcraft$lastWaitTick = now;
+        if (buildcraft$waitedNanos > MAX_CHUNK_WAIT_SECONDS * 1_000_000_000L) {
             fail(Component.literal("the test's structure chunks were not entity-ticking after " + MAX_CHUNK_WAIT_SECONDS
-                    + " s, so it never started (Fabric run watchdog)"));
+                    + " s of ticking, so it never started (Fabric run watchdog)"));
         }
     }
 }

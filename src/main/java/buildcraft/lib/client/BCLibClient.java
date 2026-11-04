@@ -9,17 +9,7 @@ package buildcraft.lib.client;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
-//?}
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
-//?}
-//? if >=1.21.10 {
-import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
-//?}
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
@@ -31,6 +21,8 @@ import buildcraft.lib.client.sprite.DyeReplaceSpriteSource;
 import buildcraft.lib.client.sprite.FluidLerpSpriteSource;
 import buildcraft.lib.misc.data.ModelVariableData;
 import buildcraft.platform.Platform;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCLibClient {
     public static void initClient(IEventBus modEventBus) {
@@ -46,10 +38,9 @@ public class BCLibClient {
         // Register custom render pipelines (LED indicator pipeline, etc.). Must fire on the
         // mod event bus during the registration phase so the pipeline is known to the
         // rendering engine before any RenderType referencing it is queried.
+        ClientRegistrationSinks sinks = ClientPlatform.sinks();
         //? if >=1.21.10 {
-        modEventBus.addListener(RegisterRenderPipelinesEvent.class, event ->
-            event.registerPipeline(BCLibRenderTypes.LED_PIPELINE)
-        );
+        sinks.renderPipeline(() -> BCLibRenderTypes.LED_PIPELINE);
         //?}
         // (1.21.1 has no RenderPipeline GPU API — the LED RenderType is built directly in
         // BCLibRenderTypes via the classic CompositeState, so there is nothing to register here.)
@@ -59,17 +50,13 @@ public class BCLibClient {
         // each fluid-pipe base sprite; fluid_lerp recolors the grayscale heat
         // base into every energy-fluid sprite.
         //? if >=1.21.10 {
-        modEventBus.addListener(RegisterSpriteSourcesEvent.class, event -> {
-            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
-            event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
-        });
+        sinks.spriteSource(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
+        sinks.spriteSource(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
         //?} else {
-        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterSpriteSourceTypesEvent.class, event -> {
-            DyeReplaceSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(DyeReplaceSpriteSource.MAP_CODEC);
-            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.TYPE);
-            FluidLerpSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(FluidLerpSpriteSource.MAP_CODEC);
-            event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.TYPE);
-        });*/
+        /*DyeReplaceSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(DyeReplaceSpriteSource.MAP_CODEC);
+        sinks.spriteSourceType(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.TYPE);
+        FluidLerpSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(FluidLerpSpriteSource.MAP_CODEC);
+        sinks.spriteSourceType(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.TYPE);*/
         //?}
 
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
@@ -86,22 +73,10 @@ public class BCLibClient {
         // resource pack contents. Without this, GuideManager#onResourceManagerReload is
         // never invoked — so editing a guide .md file in the resource pack and pressing
         // F3+T appeared to be a no-op. The cast routes through the
-        // ResourceManagerReloadListener single-method form (the event takes the broader
+        // ResourceManagerReloadListener single-method form (the sink takes the broader
         // PreparableReloadListener interface, which would otherwise be ambiguous).
-        //? if >=1.21.10 {
-        modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
-            event.addListener(
-                Identifier.fromNamespaceAndPath("buildcraftunofficial", "guide"),
-                (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
-            )
-        );
-        //?} else {
-        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent.class, event ->
-            event.registerReloadListener(
-                (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
-            )
-        );*/
-        //?}
+        sinks.clientReloadListener(Identifier.fromNamespaceAndPath("buildcraftunofficial", "guide"),
+                (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload);
 
         // Catch BC-registry reloads (anything routed through ReloadableRegistryManager) so
         // the guide regenerates against the new entries. Guarded internally by isInReload
@@ -129,46 +104,26 @@ public class BCLibClient {
         // correctly degrading to no recipe panels. On 1.21.1 vanilla still syncs the full
         // recipe list to every client itself, and RecipesUpdatedEvent fires once it has been
         // received (same join + /reload lifecycle).
-        //? if >=1.21.10 {
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.client.event.RecipesReceivedEvent.class,
-            event -> {
-                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .hasSeenSyncThisConnection();
-                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .setSynced(event.getRecipeMap().values());
-                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
-            }
-        );
-        //?} else {
-        /*NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.client.event.RecipesUpdatedEvent.class,
-            event -> {
-                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .hasSeenSyncThisConnection();
-                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .setSynced(event.getRecipeManager().getRecipes());
-                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
-            }
-        );*/
-        //?}
+        ClientPlatform.hooks().onRecipesReceived(recipes -> {
+            boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                .hasSeenSyncThisConnection();
+            buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.setSynced(recipes);
+            GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
+        });
 
         // Forget the previous server's recipes on disconnect (the next join re-fills the store;
         // recommended cleanup per RecipesReceivedEvent's own javadoc).
-        NeoForge.EVENT_BUS.addListener(
-            ClientPlayerNetworkEvent.LoggingOut.class,
-            event -> buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.clear()
-        );
+        ClientPlatform.hooks().onLoggingOut(buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache::clear);
 
         // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
         // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which
         // already renders the same info plus the server/client diff. Both were registered, so the F3
         // overlay showed the client info twice. DebugOverlayRenderer (RegisterGuiLayersEvent) is the keeper.)
-        NeoForge.EVENT_BUS.register(BCTooltips.class);
+        ClientPlatform.hooks().onItemTooltip(BCTooltips::onItemTooltip);
 
         // Advanced-debug overlay: draws the in-world highlight for whatever tile the player last
         // right-clicked with the Debugger item. Client-authoritative, no networking.
-        NeoForge.EVENT_BUS.register(buildcraft.lib.debug.AdvDebugRenderer.class);
+        ClientPlatform.hooks().onLevelRender(buildcraft.lib.debug.AdvDebugRenderer::onRenderLevel);
     }
 
     public static void openGuideScreen(String bookName) {

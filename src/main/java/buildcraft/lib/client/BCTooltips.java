@@ -11,9 +11,9 @@ import java.util.Map;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 public class BCTooltips {
 
@@ -23,9 +23,9 @@ public class BCTooltips {
         TOOLTIPS.put(item.asItem(), translationKey);
     }
 
-    @SubscribeEvent
-    public static void onItemTooltip(ItemTooltipEvent event) {
-        String key = TOOLTIPS.get(event.getItemStack().getItem());
+    /** Appends an item's registered static tooltip (a ClientHooks item-tooltip listener). */
+    public static void onItemTooltip(ItemStack stack, Player player, java.util.List<Component> tooltip) {
+        String key = TOOLTIPS.get(stack.getItem());
         if (key != null) {
             // Prefer an RF-naming sibling (key + ".rf") if the user has the toggle on
             // AND that variant exists in the lang file. Falls back to the base key otherwise.
@@ -33,10 +33,10 @@ public class BCTooltips {
             if (net.minecraft.locale.Language.getInstance().has(resolved)) {
                 String translated = net.minecraft.client.resources.language.I18n.get(resolved);
                 for (String line : translated.split("\n")) {
-                    event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
+                    tooltip.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
                 }
             } else {
-                event.getToolTip().add(Component.translatable(resolved).withStyle(ChatFormatting.GRAY));
+                tooltip.add(Component.translatable(resolved).withStyle(ChatFormatting.GRAY));
             }
         }
     }

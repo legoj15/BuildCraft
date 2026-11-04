@@ -7,17 +7,15 @@
 package buildcraft.energy.client;
 
 import net.minecraft.resources.Identifier;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 /**
- * Client-side fluid rendering extensions for all BuildCraft energy fluids.
- * Registered manually on the mod event bus from BCEnergy.
+ * Client-side appearance of every BuildCraft energy fluid: its still/flow sprites (for buckets, fluid shards and, from
+ * 26.1, its world model) and its camera-inside fog. Registered from BCEnergyClient.
  *
  * The {@code <fluid>_heat_<n>_still/_flow} sprites are recolored from one
  * grayscale heat base at atlas-stitch time by
@@ -25,113 +23,22 @@ import buildcraft.energy.BCEnergyFluids;
  * AtlasSpriteFluid per-pixel lerp), which also explains why each heat tier
  * needs its own sprite. Colors are baked into the sprites, so no runtime tint
  * is needed.
- *
- * <p>Below 26.1 world fluids take their textures from the
- * {@code getStillTexture}/{@code getFlowingTexture}/{@code getTintColor}
- * extension methods; 26.1 dropped those hooks in favour of the
- * {@code FluidModel} registered in {@code onRegisterFluidModels}, so on 26.x
- * the three methods are inert. They carry no {@code @Override} so the one
- * class compiles on every node.
  */
 public class BCEnergyFluidsClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BCEnergyFluidsClient.class);
 
-    /**
-     * Register IClientFluidTypeExtensions for every BC energy fluid so that
-     * DynamicFluidContainerModel (used by buckets and fluid shards) can find
-     * the correct still/flow textures and tint color.
-     */
-    @SubscribeEvent
-    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
-        LOGGER.info("[BCEnergyFluidsClient] Registering IClientFluidTypeExtensions for {} fluid entries.", BCEnergyFluids.ALL.size());
-        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            String spriteName = entry.baseName() + "_heat_" + entry.heat();
-            final Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_still");
-            final Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_flow");
-
-            event.registerFluidType(new IClientFluidTypeExtensions() {
-                public Identifier getStillTexture() {
-                    return stillId;
-                }
-
-                public Identifier getFlowingTexture() {
-                    return flowId;
-                }
-
-                public int getTintColor() {
-                    // No tint — colors are baked into the pre-recolored sprites
-                    return 0xFFFFFFFF;
-                }
-
-                @Override
-                //? if >=26.1 {
-                public void modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {
-                //?} elif >=1.21.10 {
-                /*public org.joml.Vector4f modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {*/
-                //?} else {
-                /*public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector3f fluidFogColor) {*/
-                //?}
-                    int color = entry.tintColor();
-                    float r = ((color >> 16) & 0xFF) / 255.0F;
-                    float g = ((color >> 8) & 0xFF) / 255.0F;
-                    float b = (color & 0xFF) / 255.0F;
-                    //? if >=26.1 {
-                    fluidFogColor.set(r, g, b, 1.0F);
-                    //?} elif >=1.21.10 {
-                    /*return fluidFogColor.set(r, g, b, 1.0F);*/
-                    //?} else {
-                    /*return fluidFogColor.set(r, g, b);*/
-                    //?}
-                }
-
-                @Override
-                //? if >=1.21.10 {
-                public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.fog.environment.FogEnvironment environment, float renderDistance, float partialTick, net.minecraft.client.renderer.fog.FogData fogData) {
-                    float distance = entry.gaseous() ? 5.0F : 3.0F;
-                    fogData.environmentalStart = 0.0F;
-                    fogData.environmentalEnd = distance;
-                    fogData.renderDistanceStart = 0.0F;
-                    fogData.renderDistanceEnd = distance;
-                }
-                //?} else {
-                /*public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode, float renderDistance, float partialTick, float nearDistance, float farDistance, com.mojang.blaze3d.shaders.FogShape shape) {
-                    float distance = entry.gaseous() ? 5.0F : 3.0F;
-                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(0.0F);
-                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(distance);
-                }*/
-                //?}
-            }, entry.fluidType().get());
-        }
-    }
-
-    // RegisterFluidModelsEvent is 26.1+. Below 26.1 fluids render from the
-    // IClientFluidTypeExtensions still/flow textures registered above — no separate model reg.
-    //? if >=26.1 {
-    @SubscribeEvent
-    public static void onRegisterFluidModels(net.neoforged.neoforge.client.event.RegisterFluidModelsEvent event) {
-        LOGGER.info("[BCEnergyFluidsClient] RegisterFluidModelsEvent fired! Registering {} fluid entries.", BCEnergyFluids.ALL.size());
+    /** Registers every energy fluid's appearance. */
+    public static void register(ClientRegistrationSinks sinks) {
+        LOGGER.info("[BCEnergyFluidsClient] Registering the appearance of {} fluid entries.", BCEnergyFluids.ALL.size());
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             // Reference the stitch-time recolored sprites (FluidLerpSpriteSource):
             // "buildcraftunofficial:block/fluids/<baseName>_heat_<heat>_still"
             String spriteName = entry.baseName() + "_heat_" + entry.heat();
             Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_still");
             Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_flow");
-
-            net.minecraft.client.resources.model.sprite.Material stillMat =
-                new net.minecraft.client.resources.model.sprite.Material(stillId);
-            net.minecraft.client.resources.model.sprite.Material flowMat =
-                new net.minecraft.client.resources.model.sprite.Material(flowId);
-
-            // No tint needed — colors are baked into the recolored sprites
-            LOGGER.info("[BCEnergyFluidsClient] Registering fluid model for: {} (still={}, flow={})",
-                entry.name(), stillId, flowId);
-            event.register(
-                new net.minecraft.client.renderer.block.FluidModel.Unbaked(stillMat, flowMat, null, null),
-                entry.source().get(), entry.flowing().get()
-            );
+            sinks.fluidAppearance(entry.source(), entry.flowing(), stillId, flowId, entry.tintColor(),
+                    entry.gaseous() ? 5.0F : 3.0F);
         }
-        LOGGER.info("[BCEnergyFluidsClient] All fluid models registered successfully.");
     }
-    //?}
 }

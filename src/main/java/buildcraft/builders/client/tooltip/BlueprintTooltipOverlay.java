@@ -20,7 +20,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositione
 import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.client.event.RenderTooltipEvent;
+import buildcraft.platform.client.BCTooltipPreContext;
 
 import buildcraft.builders.client.render.BlueprintRenderer;
 import buildcraft.builders.item.ItemSnapshot;
@@ -36,13 +36,13 @@ import buildcraft.builders.snapshot.Snapshot;
  * {@code RenderTooltipEvent.PostText} and drew its own purple-gradient tooltip frame at
  * {@code (event.getX(), event.getY() + event.getHeight() + 10)} — a fixed offset below the main
  * tooltip with no screen-bound check. NeoForge 26.1 <b>removed</b> {@code PostText}; the closest
- * modern equivalent is {@link RenderTooltipEvent.Pre}, at which point we can:
+ * modern equivalent is the loader's tooltip-pre hook ({@link buildcraft.platform.client.ClientHooks#onTooltipPre}), at which point we can:
  * <ul>
  *   <li>Reach the raw component list, the font, and the screen dimensions.</li>
  *   <li>Re-run the same layout math {@code BCGraphics#tooltip} does to compute the
  *       content width and height.</li>
  *   <li>Invoke the positioner ourselves to resolve the final on-screen tooltip position (which
- *       is what {@code event.getX()/getY()} <i>would</i> return — except at Pre time those are
+ *       is what {@code ctx.x()/getY()} <i>would</i> return — except at Pre time those are
  *       the pre-positioning inputs, not the resolved coordinates).</li>
  *   <li>Paint our panel using {@link TooltipRenderUtil#extractTooltipBackground} — matches
  *       whatever background style the user has themed, rather than hardcoding the 1.12.2
@@ -94,11 +94,11 @@ public final class BlueprintTooltipOverlay {
     private static final Set<String> LOGGED_KEYS = Collections.synchronizedSet(new HashSet<>());
 
     /**
-     * Entry point — registered on {@code NeoForge.EVENT_BUS} (the runtime/game event bus, not
-     * the mod bus; {@link RenderTooltipEvent} is a per-frame rendering event).
+     * Entry point — registered through {@link buildcraft.platform.client.ClientHooks#onTooltipPre}
+     * (a per-frame rendering hook).
      */
-    public static void onPreTooltip(RenderTooltipEvent.Pre event) {
-        ItemStack stack = event.getItemStack();
+    public static void onPreTooltip(BCTooltipPreContext ctx) {
+        ItemStack stack = ctx.stack();
         if (!(stack.getItem() instanceof ItemSnapshot)) {
             return;
         }
@@ -114,8 +114,8 @@ public final class BlueprintTooltipOverlay {
         // and fills in once the data lands — rather than appearing only after round-trip.
         Snapshot snapshot = ClientSnapshots.INSTANCE.getSnapshot(header.key);
 
-        Font font = event.getFont();
-        List<ClientTooltipComponent> components = event.getComponents();
+        Font font = ctx.font();
+        List<ClientTooltipComponent> components = ctx.components();
         if (components.isEmpty()) {
             return;
         }
@@ -139,13 +139,13 @@ public final class BlueprintTooltipOverlay {
         }
 
         // Run the positioner to find the final on-screen coordinate. We have to do this
-        // ourselves because RenderTooltipEvent.Pre fires BEFORE vanilla runs the positioner,
-        // so event.getX()/event.getY() return pre-positioning inputs (typically the raw mouse
+        // ourselves because the tooltip-pre hook fires BEFORE vanilla runs the positioner,
+        // so ctx.x()/ctx.y() return pre-positioning inputs (typically the raw mouse
         // coordinates), not the final tooltip origin.
-        ClientTooltipPositioner positioner = event.getTooltipPositioner();
+        ClientTooltipPositioner positioner = ctx.positioner();
         Vector2ic finalPos = positioner.positionTooltip(
-                event.getScreenWidth(), event.getScreenHeight(),
-                event.getX(), event.getY(), textWidth, contentHeight);
+                ctx.screenWidth(), ctx.screenHeight(),
+                ctx.x(), ctx.y(), textWidth, contentHeight);
         int finalX = finalPos.x();
         int finalY = finalPos.y();
 
@@ -168,13 +168,13 @@ public final class BlueprintTooltipOverlay {
         // and honors the user's resource-pack tooltip theme, if any.
         //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
         //?} elif >=1.21.10 {
         /*TooltipRenderUtil.renderTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
         //?} else {
         /*TooltipRenderUtil.renderTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
         //?}
 
         // Hand the 3D rendering off to the PiP pipeline. Both snapshot kinds render: Blueprints as
@@ -183,7 +183,7 @@ public final class BlueprintTooltipOverlay {
         // — the frame was already drawn above, so the panel pops in now and fills once data lands.
         if (snapshot != null) {
             BlueprintRenderer.renderSnapshot(
-                    new buildcraft.lib.gui.BCGraphics(event.getGraphics()), snapshot, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
+                    new buildcraft.lib.gui.BCGraphics(ctx.graphics()), snapshot, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
         }
 
         logOnce(header.key, snapshot, pX, pY);

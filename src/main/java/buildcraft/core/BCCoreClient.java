@@ -10,8 +10,12 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.common.NeoForge;
 
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
+
 public class BCCoreClient {
     public static void init(ModContainer modContainer, IEventBus modEventBus) {
+        ClientRegistrationSinks sinks = ClientPlatform.sinks();
         // Per-player display preferences — registered client-side only so each client owns its own copy.
         buildcraft.platform.Platform.configRegistrar().register(buildcraft.platform.config.BCConfigType.CLIENT,
                 BCUnifiedClientConfig.SPEC, null);
@@ -23,61 +27,29 @@ public class BCCoreClient {
         buildcraft.platform.Platform.configHooks().onReload(BCUnifiedClientConfig.SPEC,
                 buildcraft.transport.client.model.PipeBaseModelGenStandard::onColorBlindToggle);
 
-        buildcraft.platform.client.ClientPlatform.configScreens().registerConfigScreen();
+        ClientPlatform.configScreens().registerConfigScreen();
 
-        NeoForge.EVENT_BUS.addListener(
-                //? if >=26.1 {
-                net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
-                //?} elif >=1.21.10 {
-                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,*/
-                //?} else {
-                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.class,*/
-                //?}
-                event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
-        );
-        // Register engine BERs on the mod bus
-        modEventBus.addListener(
-                net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers.class,
-                event -> {
-                    event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE.get(),
-                            ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
-                                    BCCoreModels::getWoodEngineQuads));
-                    event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE.get(),
-                            ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
-                                    BCCoreModels::getCreativeEngineQuads));
-                }
-        );
+        ClientPlatform.hooks().onLevelRender(buildcraft.lib.client.render.MarkerRenderer::onRenderLevelStage);
+        // Engine BERs
+        sinks.blockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE,
+                ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(BCCoreModels::getWoodEngineQuads));
+        sinks.blockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE,
+                ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(BCCoreModels::getCreativeEngineQuads));
         // F3 debug overlay: tick handler for polling IDebuggable + sending server requests
-        NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
-        );
+        ClientPlatform.hooks().onClientTick(buildcraft.core.client.DebugOverlayHelper::onClientTick);
         // Marker laser length and the volume marker distance readout under the crosshair: work out per tick, draw per frame
-        NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> {
-                    buildcraft.core.client.MarkerLengthIndicator.onClientTick();
-                    buildcraft.core.client.MarkerDistanceTracker.onClientTick();
-                }
-        );
+        ClientPlatform.hooks().onClientTick(() -> {
+            buildcraft.core.client.MarkerLengthIndicator.onClientTick();
+            buildcraft.core.client.MarkerDistanceTracker.onClientTick();
+        });
         // Register the fluid shard tint source for fragile fluid containers
         //? if >=1.21.10 {
-        modEventBus.addListener(
-                net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources.class,
-                event -> event.register(
-                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
-                        buildcraft.core.client.FluidShardTintSource.MAP_CODEC
-                )
-        );
+        sinks.itemTintSource(net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
+                buildcraft.core.client.FluidShardTintSource.MAP_CODEC);
         //?} else {
         /*// 1.21.1 has no data-driven ItemTintSource — register the equivalent ItemColor on the item.
-        modEventBus.addListener(
-                net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item.class,
-                event -> event.register(
-                        buildcraft.core.client.FluidShardTintSource.INSTANCE,
-                        buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()
-                )
-        );*/
+        sinks.itemColor(buildcraft.core.client.FluidShardTintSource.INSTANCE,
+                () -> new net.minecraft.world.level.ItemLike[] {buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()});*/
         //?}
         // 1.21.1 only: swap the shard's neoforge:fluid_container model for one that pushes the fluid
         // layer clear of the frame, fixing the base/fluid z-fight. The vanilla FLUID_TRANSFORM gap
@@ -100,43 +72,27 @@ public class BCCoreClient {
                 }
         );*/
         //?}
-        // F3 debug overlay: register the overlay layer on the mod bus
-        modEventBus.addListener(
-                net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,
-                event -> {
-                    event.registerAboveAll(
-                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:debug_overlay"),
-                        buildcraft.core.client.DebugOverlayRenderer::render
-                    );
-                    event.registerAbove(
-                        net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR,
-                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_length"),
-                        buildcraft.core.client.MarkerLengthIndicator::render
-                    );
-                }
-        );
-        // Register List GUI screen
-        modEventBus.addListener(
-                net.neoforged.neoforge.client.event.RegisterMenuScreensEvent.class,
-                event -> event.register(BCCoreMenuTypes.LIST.get(),
-                        buildcraft.core.list.GuiList::new)
-        );
+        // F3 debug overlay layer, and the marker length readout just above the crosshair
+        sinks.guiLayerAboveAll(net.minecraft.resources.Identifier.parse("buildcraftunofficial:debug_overlay"),
+                buildcraft.core.client.DebugOverlayRenderer::render);
+        sinks.guiLayerAbove(ClientRegistrationSinks.VanillaGuiLayer.CROSSHAIR,
+                net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_length"),
+                buildcraft.core.client.MarkerLengthIndicator::render);
+        // List GUI screen
+        sinks.menuScreen(BCCoreMenuTypes.LIST, buildcraft.core.list.GuiList::new);
         // Register static tooltips, and the Curios head renderer for the Robot Goggles
-        modEventBus.addListener(
-                net.neoforged.fml.event.lifecycle.FMLClientSetupEvent.class,
-                event -> event.enqueueWork(() -> {
-                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_CREATIVE.get(), "tip.block.engine_creative");
-                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
-                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
-                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
-                        // Curios draws nothing for a curio without a renderer; Accessories has a default one.
-                        if (buildcraft.platform.Platform.loader().isModLoaded("curios")) {
-                            buildcraft.lib.compat.client.CuriosHeadItemRenderer.register(BCCoreItems.GOGGLES.get());
-                        }
-                })
-        );
+        sinks.clientSetup(() -> {
+            buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_CREATIVE.get(), "tip.block.engine_creative");
+            buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
+            buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
+            buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
+            // Curios draws nothing for a curio without a renderer; Accessories has a default one.
+            if (buildcraft.platform.Platform.loader().isModLoaded("curios")) {
+                buildcraft.lib.compat.client.CuriosHeadItemRenderer.register(BCCoreItems.GOGGLES.get());
+            }
+        });
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
-        NeoForge.EVENT_BUS.register(buildcraft.core.list.ListTooltipHandler.INSTANCE);
+        ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 
         // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
         NeoForge.EVENT_BUS.addListener(

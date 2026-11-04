@@ -17,12 +17,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.bus.api.SubscribeEvent;
-//? if >=26.1 {
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
-//?}
+import buildcraft.platform.client.BCLevelRenderContext;
 
 import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
@@ -60,15 +55,7 @@ public class RenderLaser {
         return ACTIVE_LASERS.size();
     }
 
-    @SubscribeEvent
-    //? if >=26.1 {
-    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public static void onRenderLevel(BCLevelRenderContext ctx) {
         if (ACTIVE_LASERS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -80,14 +67,10 @@ public class RenderLaser {
         // a world reload leaves a ghost laser stuck at its pre-save laserPos.
         ACTIVE_LASERS.removeIf(laser -> laser.isRemoved() || laser.getLevel() != mc.level);
 
-        PoseStack poseStack = event.getPoseStack();
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
+        PoseStack poseStack = ctx.poseStack();
+        Vec3 cameraPos = ctx.cameraPos();
         //? if >=26.1 {
-        SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        SubmitNodeCollector collector = ctx.collector();
         //?}
 
         for (TileLaser laser : ACTIVE_LASERS) {

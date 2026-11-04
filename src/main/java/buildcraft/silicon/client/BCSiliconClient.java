@@ -14,10 +14,8 @@ import net.minecraft.client.renderer.item.ItemModel;
 //?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 
@@ -31,6 +29,8 @@ import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAssemblyTable;
 import buildcraft.silicon.gui.GuiIntegrationTable;
 import buildcraft.silicon.plug.FacadeStateManager;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCSiliconClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft");
@@ -45,12 +45,11 @@ public class BCSiliconClient {
             /*net.minecraft.client.resources.model.BakedModel> cachedBlockStateModels;*/
             //?}
 
-    @SubscribeEvent
-    public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(BCSiliconMenuTypes.ASSEMBLY_TABLE.get(), GuiAssemblyTable::new);
-        event.register(BCSiliconMenuTypes.INTEGRATION_TABLE.get(), GuiIntegrationTable::new);
-        event.register(BCSiliconMenuTypes.ADVANCED_CRAFTING_TABLE.get(), GuiAdvancedCraftingTable::new);
-        event.register(BCSiliconMenuTypes.GATE.get(), buildcraft.silicon.gui.GuiGate::new);
+    private static void registerScreens(ClientRegistrationSinks sinks) {
+        sinks.menuScreen(BCSiliconMenuTypes.ASSEMBLY_TABLE, GuiAssemblyTable::new);
+        sinks.menuScreen(BCSiliconMenuTypes.INTEGRATION_TABLE, GuiIntegrationTable::new);
+        sinks.menuScreen(BCSiliconMenuTypes.ADVANCED_CRAFTING_TABLE, GuiAdvancedCraftingTable::new);
+        sinks.menuScreen(BCSiliconMenuTypes.GATE, buildcraft.silicon.gui.GuiGate::new);
     }
 
 
@@ -183,11 +182,7 @@ public class BCSiliconClient {
         }
     }
 
-    /**
-     * Game-bus (NeoForge.EVENT_BUS) listeners for the silicon client. Kept in a separate
-     * inner class so the mod-event-bus and game-event-bus listener sets don't share a
-     * @SubscribeEvent surface — each registration goes to exactly the right bus.
-     */
+    /** The silicon client's game hooks. */
     public static final class GameBus {
         /**
          * Run facade dedup at world-join time so it doesn't happen lazily inside JEI's
@@ -218,8 +213,7 @@ public class BCSiliconClient {
         // guide would see a null FacadeStateManager.defaultState and an empty assembly registry.
         // (Naming is also null-guarded in ItemPluggableFacade as a backstop; this keeps the
         // names correct, not just crash-free.)
-        @SubscribeEvent(priority = EventPriority.HIGH)
-        public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+        public static void onClientLoggingIn() {
             FacadeStateManager.ensureInitialized();
             // Assembly recipes (gates, chipsets, lenses, wires, facades): populated at
             // ServerAboutToStartEvent on servers; multiplayer clients populate here so the
@@ -232,8 +226,9 @@ public class BCSiliconClient {
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCSiliconClient.class);
+        registerScreens(ClientPlatform.sinks());
         buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.init();
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
+        ClientPlatform.hooks().onLevelRender(buildcraft.silicon.client.RenderLaser::onRenderLevel);
+        ClientPlatform.hooks().onLoggingInEarly(GameBus::onClientLoggingIn);
     }
 }

@@ -19,12 +19,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=26.1 {
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
-//?}
-
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
@@ -32,10 +26,11 @@ import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.misc.VecUtil;
+import buildcraft.platform.client.BCLevelRenderContext;
 
 /**
  * Renders all marker connections and volume boxes in the world.
- * Hooked into NeoForge's RenderLevelStageEvent.AfterTranslucentBlocks.
+ * Hooked into the per-frame world overlay pass, {@link buildcraft.platform.client.ClientHooks#onLevelRender}.
  */
 public class MarkerRenderer {
     public static final MarkerRenderer INSTANCE = new MarkerRenderer();
@@ -52,26 +47,16 @@ public class MarkerRenderer {
      *  immediate-mode rendering, so every overlay drawn within this event's scope must queue
      *  onto this collector (see {@link #getCollector()}). */
     private static SubmitNodeCollector currentCollector;
-
-    public static void onRenderLevelStage(SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
     //?}
+
+    public static void onRenderLevelStage(BCLevelRenderContext ctx) {
         Player player = Minecraft.getInstance().player;
         if (player == null) return;
 
-        // Get camera position from the level render state (1.21.11 pattern)
-        //? if >=1.21.10 {
-        currentCameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*currentCameraPos = event.getCamera().getPosition();*/
-        //?}
-        currentPoseStack = event.getPoseStack();
+        currentCameraPos = ctx.cameraPos();
+        currentPoseStack = ctx.poseStack();
         //? if >=26.1 {
-        currentCollector = event.getSubmitNodeCollector();
+        currentCollector = ctx.collector();
         //?}
 
         // Render all active connections across all marker cache types

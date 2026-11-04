@@ -2,7 +2,8 @@
 #
 # neoforge-version-check.sh
 #   Reports whether any Stonecutter node's pinned NeoForge build is behind the
-#   latest upstream build on that node's line.
+#   latest upstream build on that node's line, and whether a Fabric node's Fabric
+#   Loader or Fabric API pin is behind (bumping those: edit versions/<id>/gradle.properties).
 #
 #   Node-aware: it enumerates every versions/<id>/gradle.properties (one node per
 #   MC line) and checks each line INDEPENDENTLY. The line is derived from the
@@ -126,13 +127,63 @@ for i in "${!node_ids[@]}"; do
     behind_ctx+=("$id [MC $mc]: $neo -> $latest ($nbehind behind) -- $changelog")
 done
 
+# -- Fabric nodes: Fabric Loader and Fabric API pins ----------------------------
+# A node whose loader is fabric pins fabric_loader_version (one global line) and fabric_api_version (one line per
+# MC version, "<x.y.z>+<mc>"). Each is compared with upstream by version sort; any failure only skips that check.
+newest() { printf '%s\n' "$@" | sort -V | tail -n1; }
+shopt -s nullglob
+fabric_props=("$project_dir"/versions/*/gradle.properties)
+shopt -u nullglob
+loader_xml=""; api_xml=""
+for f in "${fabric_props[@]}"; do
+    id="$(basename "$(dirname "$f")")"
+    ld="$(get_prop "$f" loader)"; [ -n "$ld" ] || ld="$(get_prop "$root_props" loader)"
+    [ "$ld" = fabric ] || continue
+    mc="$(get_prop "$f" minecraft_version)"
+    fl="$(get_prop "$f" fabric_loader_version)"
+    fa="$(get_prop "$f" fabric_api_version)"
+    if [ -n "$fl" ]; then
+        [ -n "$loader_xml" ] || loader_xml="$(curl -fsS --max-time 10 https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml 2>/dev/null)"
+        mapfile -t lv < <(printf '%s' "$loader_xml" | grep -oE '<version>[0-9]+\.[0-9]+\.[0-9]+</version>' | sed -E 's:</?version>::g')
+        if [ "${#lv[@]}" -gt 0 ]; then
+            latest="$(newest "${lv[@]}")"
+            if [ "$latest" != "$fl" ] && [ "$(newest "$latest" "$fl")" = "$latest" ]; then
+                any_behind=1
+                behind_msgs+=("node $id (Fabric, Minecraft $mc): Fabric Loader $fl -> latest $latest")
+                behind_ctx+=("$id [Fabric Loader]: $fl -> $latest")
+            else
+                note "node $id: Fabric Loader $fl current."
+            fi
+        else
+            note "node $id: could not read Fabric Loader versions"
+        fi
+    fi
+    if [ -n "$fa" ] && [ -n "$mc" ]; then
+        [ -n "$api_xml" ] || api_xml="$(curl -fsS --max-time 10 https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml 2>/dev/null)"
+        mc_re="${mc//./\.}"
+        mapfile -t av < <(printf '%s' "$api_xml" | grep -oE "<version>[0-9.]+\+${mc_re}</version>" | sed -E 's:</?version>::g')
+        if [ "${#av[@]}" -gt 0 ]; then
+            latest="$(newest "${av[@]}")"
+            if [ "$latest" != "$fa" ] && [ "$(newest "$latest" "$fa")" = "$latest" ]; then
+                any_behind=1
+                behind_msgs+=("node $id (Fabric, Minecraft $mc): Fabric API $fa -> latest $latest")
+                behind_ctx+=("$id [Fabric API]: $fa -> $latest")
+            else
+                note "node $id: Fabric API $fa current."
+            fi
+        else
+            note "node $id: no Fabric API builds for Minecraft $mc"
+        fi
+    fi
+done
+
 if [ "$any_behind" = 0 ]; then
     note "All nodes current."
     exit 0
 fi
 
 if [ "$plain" = 1 ]; then
-    echo "NeoForge updates available:"
+    echo "Loader updates available:"
     for m in "${behind_msgs[@]}"; do echo "  $m"; done
     exit 0
 fi

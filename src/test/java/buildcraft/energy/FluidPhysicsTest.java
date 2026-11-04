@@ -20,6 +20,9 @@ import buildcraft.lib.test.EntityArenaUtil;
 
 public class FluidPhysicsTest {
 
+    /** How long the pig is watched in the oil shaft before the test passes. */
+    private static final int BOB_SETTLE_TICKS = 100;
+
     public static void testOilBobbing(GameTestHelper helper) {
         // Crude oil's buoyancy is resolved the SAME way on every line now: isInWater() gates on
         // FluidType.getIsWaterLike(), NOT the minecraft:water tag. NeoForge PR #3249 re-implemented
@@ -71,9 +74,9 @@ public class FluidPhysicsTest {
 
         // Spawn a pig at the bottom with AI intact (FloatGoal only drives the bob while AI is enabled).
         //? if >=26.2 {
-        helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 1, 1);
+        Mob pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 1, 1);
         //?} else {
-        /*helper.spawn(EntityType.PIG, 1, 1, 1);
+        /*Mob pig = helper.spawn(EntityType.PIG, 1, 1, 1);
         *///?}
 
         // Surface region of the oil column (upper blocks, relative y 2..4). A region — not the single block
@@ -81,23 +84,28 @@ public class FluidPhysicsTest {
         // (1,2,1) and never reliably touches block 3, and the position is sampled at an arbitrary tick.
         AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
 
-        //? if >=26.2 {
-        // FluidType-gated water physics (PR #3249; 26.1.x identical via the PR #3303 backport): crude oil
-        // isn't water-like, so prove the pig did NOT float — after a settle window it remains out of the
-        // surface region (resting on the floor at the bottom).
-        helper.runAtTickTime(100, () -> {
-            helper.assertEntityNotPresent(net.minecraft.world.entity.EntityTypes.PIG, surface);
-            helper.succeed();
+        //? if >=1.21.10 {
+        // FluidType-gated water physics (26.2 since PR #3249, 26.1.x since the PR #3303 backport,
+        // 26.1.2.95): crude oil isn't water-like, so the pig must never count as in water or swimming, which
+        // is what keeps FloatGoal (the bob) off. That is asserted on every tick rather than read off its
+        // position: since 26.1.2 a mob can wade in crude oil (FluidType.move, #117) and, as in lava, climb out
+        // at a wall it presses against, so in this 1-wide shaft it may reach the surface region by climbing
+        // without ever floating.
+        // Checked before the success tick only: on that tick the framework discards the test's entities.
+        helper.onEachTick(() -> {
+            if (helper.getTick() >= BOB_SETTLE_TICKS) {
+                return;
+            }
+            if (!pig.isAlive()) {
+                helper.fail("the pig must stay alive in the oil shaft");
+            }
+            if (pig.isInWater() || pig.isSwimming()) {
+                helper.fail("crude oil must not count as water for the pig (isInWater=" + pig.isInWater()
+                    + ", isSwimming=" + pig.isSwimming() + ")");
+            }
         });
-        //?} elif >=1.21.10 {
-        /*// FluidType-gated water physics (26.2 since PR #3249, 26.1.x since the PR #3303 backport,
-        // 26.1.2.95): crude oil isn't water-like, so prove the pig did NOT float — after a settle window
-        // it remains out of the surface region (resting on the floor at the bottom).
-        helper.runAtTickTime(100, () -> {
-            helper.assertEntityNotPresent(EntityType.PIG, surface);
-            helper.succeed();
-        });
-        *///?} else {
+        helper.runAtTickTime(BOB_SETTLE_TICKS, helper::succeed);
+        //?} else {
         /*// 1.21.1: GameTestHelper has no assertEntityNotPresent(EntityType, AABB) overload yet — use the
         // (EntityType, Vec3 min, Vec3 max) corner form against the same surface region.
         helper.runAtTickTime(100, () -> {

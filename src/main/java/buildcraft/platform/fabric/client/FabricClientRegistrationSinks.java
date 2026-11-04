@@ -39,7 +39,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.world.level.material.Fluid;
+
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
@@ -132,6 +137,20 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public void clientSetup(Runnable work) {
         work.run();
+    }
+
+    @Override
+    public void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles) {
+        // Gap: Fabric API 26.3 has no per-block hit/break particle hook (NeoForge's IClientBlockExtensions); it would
+        // take a mixin on ParticleEngine. The block keeps vanilla's particles.
+    }
+
+    @Override
+    public void fluidAppearance(Supplier<? extends Fluid> source, Supplier<? extends Fluid> flowing,
+            Identifier stillTexture, Identifier flowingTexture, int fogColor, float fogDistance) {
+        FluidRenderingRegistry.register(source.get(), flowing.get(),
+                new FluidModel.Unbaked(new Material(stillTexture), new Material(flowingTexture), null, null));
+        // Gap: Fabric API 26.3 has no fluid fog hook, so the camera-inside fog stays vanilla's.
     }
 }
 *///?}

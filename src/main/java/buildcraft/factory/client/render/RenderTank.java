@@ -39,7 +39,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import net.minecraft.client.renderer.rendertype.RenderType;
 
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileTank;

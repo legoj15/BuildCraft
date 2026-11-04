@@ -71,8 +71,8 @@ public class BCEnergyClient {
     }
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
-        modEventBus.register(buildcraft.energy.client.BCEnergyFluidsClient.class);
         ClientRegistrationSinks sinks = ClientPlatform.sinks();
+        BCEnergyFluidsClient.register(sinks);
         registerScreens(sinks);
         registerRenderers(sinks);
         setupClient(sinks);

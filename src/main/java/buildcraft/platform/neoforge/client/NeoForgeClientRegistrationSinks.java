@@ -206,6 +206,31 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
         queue(FMLClientSetupEvent.class, event -> event.enqueueWork(work));
     }
 
+    @Override
+    public void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles) {
+        queue(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent.class,
+                event -> event.registerBlock(new NeoForgeBlockParticleExtensions(particles), block.get()));
+    }
+
+    @Override
+    public void fluidAppearance(Supplier<? extends net.minecraft.world.level.material.Fluid> source,
+            Supplier<? extends net.minecraft.world.level.material.Fluid> flowing, Identifier stillTexture,
+            Identifier flowingTexture, int fogColor, float fogDistance) {
+        queue(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent.class,
+                event -> event.registerFluidType(
+                        new NeoForgeFluidTypeExtensions(stillTexture, flowingTexture, fogColor, fogDistance),
+                        source.get().getFluidType()));
+        // Below 26.1 world fluids take their textures from the extension above; 26.1 dropped those hooks in favour
+        // of a FluidModel registered here.
+        //? if >=26.1 {
+        queue(net.neoforged.neoforge.client.event.RegisterFluidModelsEvent.class, event -> event.register(
+                new net.minecraft.client.renderer.block.FluidModel.Unbaked(
+                        new net.minecraft.client.resources.model.sprite.Material(stillTexture),
+                        new net.minecraft.client.resources.model.sprite.Material(flowingTexture), null, null),
+                source.get(), flowing.get()));
+        //?}
+    }
+
     private synchronized <E extends Event & IModBusEvent> void queue(Class<E> type, Consumer<E> registration) {
         List<Consumer<?>> registrations = pending.get(type);
         if (registrations == null) {

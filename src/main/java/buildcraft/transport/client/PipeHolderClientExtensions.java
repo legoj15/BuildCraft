@@ -25,7 +25,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
 //?}
-import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 import org.jspecify.annotations.Nullable;
 
@@ -40,7 +40,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  * Overrides break/hit/sprint particle effects to use the correct pipe or
  * pluggable texture instead of the static default (pipe_holder.json particle).
  */
-public class PipeHolderClientExtensions implements IClientBlockExtensions {
+public class PipeHolderClientExtensions implements ClientRegistrationSinks.BlockParticleOverride {
     public static final PipeHolderClientExtensions INSTANCE = new PipeHolderClientExtensions();
 
 

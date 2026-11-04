@@ -6,9 +6,6 @@
 
 package buildcraft.factory.client;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
-
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.BCFactoryMenuTypes;
@@ -41,18 +38,14 @@ public class BCFactoryClient {
         sinks.blockEntityRenderer(BCFactoryBlockEntities.HEAT_EXCHANGE, RenderHeatExchange::new);
         sinks.blockEntityRenderer(BCFactoryBlockEntities.PUMP, RenderPump::new);
         sinks.blockEntityRenderer(BCFactoryBlockEntities.MINING_WELL, RenderMiningWell::new);
-    }
 
-    // Tube blocks are RenderShape.INVISIBLE; their visuals come from TubeRenderer's
-    // laser system, not a block model. Without this, vanilla would still spawn
-    // particles from the tube model's particle texture on break/hit/run/land.
-    @SubscribeEvent
-    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerBlock(buildcraft.lib.client.NoParticleClientExtensions.INSTANCE, BCFactoryBlocks.TUBE.get());
+        // Tube blocks are RenderShape.INVISIBLE; their visuals come from TubeRenderer's
+        // laser system, not a block model. Without this, vanilla would still spawn
+        // particles from the tube model's particle texture on break/hit.
+        sinks.blockParticles(BCFactoryBlocks.TUBE, buildcraft.lib.client.NoParticleClientExtensions.INSTANCE);
     }
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
-        modEventBus.register(BCFactoryClient.class);
         registerClientContent(ClientPlatform.sinks());
         ClientPlatform.hooks().onLevelRender(buildcraft.factory.client.render.TubeRenderer::onRenderLevel);
     }

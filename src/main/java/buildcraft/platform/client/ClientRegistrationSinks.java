@@ -126,6 +126,42 @@ public interface ClientRegistrationSinks {
      */
     void clientSetup(Runnable work);
 
+    /**
+     * Replaces the block's hit and break particles (NeoForge: the block's {@code IClientBlockExtensions}). Fabric API
+     * 26.3 has no per-block hook for these, so there the block keeps vanilla's particles.
+     */
+    void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles);
+
+    /**
+     * How a fluid looks outside its block model: the still and flowing sprites (for buckets, containers and, from
+     * 26.1, its world model) and, with the camera inside it, the fog colour and distance.
+     *
+     * @param fogColor the fog colour as 0xRRGGBB
+     * @param fogDistance the distance at which the fog is opaque, in blocks
+     */
+    void fluidAppearance(Supplier<? extends net.minecraft.world.level.material.Fluid> source,
+            Supplier<? extends net.minecraft.world.level.material.Fluid> flowing, Identifier stillTexture,
+            Identifier flowingTexture, int fogColor, float fogDistance);
+
+    /**
+     * A block's own hit and break particles. Each method returns true when it handled the effect (spawning nothing
+     * silences it), false to let vanilla spawn its default particles.
+     */
+    interface BlockParticleOverride {
+        //? if >=26.3 {
+        boolean addHitEffects(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+                net.minecraft.core.BlockPos pos, net.minecraft.core.Direction face,
+                net.minecraft.client.particle.ParticleEngine engine);
+        //?} else {
+        /*boolean addHitEffects(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+                net.minecraft.world.phys.HitResult target, net.minecraft.client.particle.ParticleEngine engine);*/
+        //?}
+
+        boolean addDestroyEffects(net.minecraft.world.level.block.state.BlockState state,
+                net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.client.particle.ParticleEngine engine);
+    }
+
     /** A HUD layer: draws one frame of an overlay. */
     @FunctionalInterface
     interface GuiLayer {

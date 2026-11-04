@@ -25,6 +25,20 @@ public interface ClientModels {
     BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3);
     //?}
 
+    //? if >=26.3 {
+    /**
+     * A quad's material: vanilla's eight components ({@code shadeOverride} null to light by the quad's own face).
+     * NeoForge adds an ambient-occlusion flag and deprecates the constructor without it; BC's quads always take
+     * ambient occlusion, which is what that constructor passes.
+     */
+    BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet,
+            net.minecraft.client.renderer.rendertype.RenderType glintSheet,
+            net.minecraft.client.renderer.rendertype.RenderType glintSpecialSheet, int tintIndex,
+            net.minecraft.core.Direction shadeOverride, int lightEmission);
+    //?}
+
     //? if <1.21.10 {
     /*/^*
      * A leaf item model serving {@code quads} (on the general, null-side pass only) on one {@code renderType} sheet:

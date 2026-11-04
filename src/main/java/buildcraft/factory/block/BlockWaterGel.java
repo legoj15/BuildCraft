@@ -229,11 +229,7 @@ public class BlockWaterGel extends Block {
         }
         // Replicate vanilla logic: 1 / (hardness * 30) if canHarvest, else 1 / (hardness * 100) — with the same
         // position-aware calls NeoForge's BlockBehaviour#getDestroyProgress makes (BreakSpeed / HarvestCheck events).
-        //? if >=1.21.10 {
-        float speed = player.getDestroySpeed(state, pos);
-        //?} else {
-        /*float speed = player.getDigSpeed(state, pos);*/
-        //?}
+        float speed = Platform.extensions().destroySpeed(player, state, pos);
         boolean canHarvest = Platform.protection().canHarvest(player, state, level, pos);
         if (canHarvest) {
             return speed / hardness / 30.0F;

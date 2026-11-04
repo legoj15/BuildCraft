@@ -162,6 +162,13 @@ public interface ClientRegistrationSinks {
     void clientSetup(Runnable work);
 
     /**
+     * Draws {@code item} on the wearer's head when it is worn in an accessory mod's slot, the way vanilla draws a
+     * non-armour item in the helmet slot (NeoForge: a Curios renderer, registered at client setup when Curios is
+     * loaded). Fabric has no such mod on 26.3, so there it does nothing.
+     */
+    void headAccessoryRenderer(Supplier<? extends net.minecraft.world.item.Item> item);
+
+    /**
      * Replaces the block's hit and break particles (NeoForge: the block's {@code IClientBlockExtensions}). Fabric API
      * 26.3 has no per-block hook for these, so there the block keeps vanilla's particles.
      */

@@ -19,6 +19,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.silicon.BCSiliconCreativeTabs;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
@@ -38,7 +39,7 @@ public class BCRoboticsCreativeTabs {
     // PCB and show a second, wrong "empty board" look.
     public static final BCHolder<CreativeModeTab, CreativeModeTab> ROBOTS_TAB =
             CREATIVE_MODE_TABS.register("robots", () ->
-                    CreativeModeTab.builder()
+                    Platform.registries().creativeTabBuilder(BCSiliconCreativeTabs.FACADE_TAB_KEY)
                             .title(Component.translatable("itemGroup.buildcraft.robots"))
                             .icon(() -> {
                                 RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
@@ -46,7 +47,6 @@ public class BCRoboticsCreativeTabs {
                                         ? BCRoboticsItems.REDSTONE_BOARD.get().getDefaultInstance()
                                         : ItemRedstoneBoard.createStack(registry.getEmptyRobotBoard());
                             })
-                            .withTabsBefore(BCSiliconCreativeTabs.FACADE_TAB_KEY)
                             .displayItems((parameters, output) -> {
                                 // Zone Planner (deliberate deviation from 7.1.10)
                                 output.accept(BCRoboticsItems.ZONE_PLANNER.get());

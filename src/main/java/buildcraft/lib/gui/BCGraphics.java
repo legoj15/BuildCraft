@@ -38,8 +38,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * (1.21.10, 1.21.1) extend the directives in this one class rather than across the GUI tree.
  *
  * <p>The wrapped vanilla object is exposed as {@link #raw} for the handful of methods whose signatures
- * reference node-divergent or rarely-used types ({@code pose}, {@code peekScissorStack},
- * {@code textRendererForWidget}, {@code submitPictureInPictureRenderState}); call those via {@code g.raw}.
+ * reference node-divergent or rarely-used types ({@code pose}, {@code ClientPlatform.extensions().peekScissor},
+ * {@code textRendererForWidget}, {@code ClientPlatform.extensions().submitPictureInPicture}); call those via {@code g.raw}.
  */
 public final class BCGraphics {
 

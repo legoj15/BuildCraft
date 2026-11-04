@@ -27,5 +27,13 @@ public final class NeoForgeCraftingServices implements CraftingServices {
             /*stack.getComponents(), stack.getItem());*/
             //?}
     }
+
+    //? if >=1.21.10 {
+    @Override
+    public net.minecraft.world.item.crafting.RecipeMap recipeMap(
+            net.minecraft.world.item.crafting.RecipeManager manager) {
+        return manager.recipeMap();
+    }
+    //?}
 }
 //?}

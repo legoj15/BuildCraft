@@ -5,8 +5,6 @@
  */
 package buildcraft.platform.fabric.client;
 
-// Written but not compiled yet: it names BuildCraft's client init (buildcraft.core), which the 26.3-fabric node does
-// not compile until Phase 2, so bc.fabric.gradle.kts excludes this file from that node's source filter.
 //? if fabric {
 /*import net.fabricmc.api.ClientModInitializer;
 

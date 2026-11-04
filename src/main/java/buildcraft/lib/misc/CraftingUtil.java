@@ -62,7 +62,7 @@ public final class CraftingUtil {
             return List.of();
         }
         //? if >=1.21.10 {
-        return serverLevel.recipeAccess().recipeMap()
+        return buildcraft.platform.Platform.crafting().recipeMap(serverLevel.recipeAccess())
             .getRecipesFor(RecipeType.CRAFTING, input, serverLevel)
             .sorted(Comparator.comparing(CraftingUtil::recipeId))
             .toList();

@@ -17,7 +17,9 @@ import me.shedaniel.rei.api.client.registry.screen.ExclusionZones;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.client.registry.transfer.TransferHandlerRegistry;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginClient;
+//?}
 
 import buildcraft.lib.compat.rei.ReiCraftingTableSupport;
 import buildcraft.lib.compat.rei.ReiRecipeTransferHandler;
@@ -42,7 +44,10 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * {@link ReiCraftingTableSupport}), the Assembly Table category with its workstation, click area and "+" transfer, and
  * the gate GUI's statement panels as exclusion zones. The item comparators are in {@link BCSiliconReiCommonPlugin}.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_client entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginClient
+//?}
 public class BCSiliconReiPlugin implements REIClientPlugin {
 
     // Click area: the progress arrow between the blueprint grid and the output slot.

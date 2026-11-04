@@ -8,6 +8,7 @@ package buildcraft.platform.fabric;
 //? if fabric {
 /*import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,6 +24,8 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.FluidProperties;
 import buildcraft.platform.FluidServices;
 import buildcraft.platform.registry.BCFluidRegistrar;
+import buildcraft.platform.registry.BCHolder;
+import buildcraft.platform.registry.BCRegistrar;
 
 /^*
  * {@link FluidServices} on Fabric, and the one place a {@link BCFluidStack} becomes a Fabric {@link FluidVariant} plus
@@ -77,6 +80,32 @@ public final class FabricFluids implements FluidServices {
     @Override
     public Component description(Fluid fluid) {
         return FluidVariantAttributes.getName(stillVariant(fluid));
+    }
+
+    @Override
+    public BCHolder<DataComponentType<?>, DataComponentType<FabricFluidContent>> registerFluidContent(
+            BCRegistrar.DataComponents components, String name) {
+        return components.registerComponentType(name, builder -> builder.persistent(FabricFluidContent.CODEC)
+                .networkSynchronized(FabricFluidContent.STREAM_CODEC));
+    }
+
+    @Override
+    public BCFluidStack getFluidContent(ItemStack stack, DataComponentType<?> type) {
+        return stack.getOrDefault(contentType(type), FabricFluidContent.EMPTY).copy();
+    }
+
+    @Override
+    public void setFluidContent(ItemStack stack, DataComponentType<?> type, BCFluidStack fluid) {
+        if (fluid.isEmpty()) {
+            stack.remove(contentType(type));
+        } else {
+            stack.set(contentType(type), FabricFluidContent.of(fluid));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static DataComponentType<FabricFluidContent> contentType(DataComponentType<?> type) {
+        return (DataComponentType<FabricFluidContent>) type;
     }
 
     /^* The variant of a bare fluid, a flowing form taken as its source (variants are of still fluids). ^/

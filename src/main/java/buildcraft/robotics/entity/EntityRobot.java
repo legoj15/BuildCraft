@@ -63,9 +63,6 @@ import net.minecraft.world.entity.LinearInterpolationHandler;
 import net.minecraft.world.entity.PositionPath;
 //?}
 
-import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
-import net.neoforged.neoforge.fluids.FluidType;
-
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobot;
@@ -102,6 +99,7 @@ import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.LevelRemovalEntity;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
@@ -142,7 +140,13 @@ import buildcraft.robotics.statements.ActionRobotWorkInArea;
  * so a robot placed today registers, docks, charges, takes damage, drops correctly and idles. Ph4 fills the AI
  * tree in behind the seams already present here.
  */
-public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSpawn, IDebuggable {
+// NeoForge sends the extra spawn data through this interface (Fabric gap: none is sent, and none exists yet).
+//? if neoforge {
+public class EntityRobot extends EntityRobotBase
+        implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn, IDebuggable, LevelRemovalEntity {
+//?} else {
+/*public class EntityRobot extends EntityRobotBase implements IDebuggable, LevelRemovalEntity {
+*///?}
 
     /** Wearable slots. Wearables never enter play before Ph9, but the list, its NBT and its spawn-sync land
      *  now so the save format never has to change. */
@@ -536,6 +540,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** Carries the wearables list. Uniform across all five nodes. Nothing can put a wearable on a robot until
      *  Ph9, so this is an empty list today — it ships now purely so the spawn payload never changes shape. */
+    //? if neoforge {
     @LoaderHook("neoforge:IEntityWithComplexSpawn#writeSpawnData")
     @Override
     public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
@@ -547,6 +552,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     public void readSpawnData(RegistryFriendlyByteBuf additionalData) {
         readWearables(additionalData);
     }
+    //?}
 
     private void writeWearables(RegistryFriendlyByteBuf buffer) {
         buffer.writeVarInt(wearables.size());
@@ -1014,11 +1020,19 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *  {@code isAffectedByBlocks()} is false on 26.x). Clearing {@code noPhysics} would bring them back, and every
      *  other block effect with them; the {@code robot_ignores_flowing_water} game test holds a robot in a rising and
      *  a sinking column to catch that. */
+    //? if neoforge {
     @LoaderHook("neoforge:IEntityExtension#isPushedByFluid")
     @Override
-    public boolean isPushedByFluid(FluidType type) {
+    public boolean isPushedByFluid(net.neoforged.neoforge.fluids.FluidType type) {
         return false;
     }
+    //?} else {
+    /*// Fabric has no fluid types: vanilla's own test, which NeoForge deprecates for the one above.
+    @Override
+    public boolean isPushedByFluid() {
+        return false;
+    }
+    *///?}
 
     // ── Tick ────────────────────────────────────────────────────────────────
 
@@ -1239,11 +1253,18 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
+    //? if neoforge {
     @LoaderHook("neoforge:IEntityExtension#onRemovedFromLevel")
     @Override
     public void onRemovedFromLevel() {
-        deregister(true);
+        onLeftLevel();
         super.onRemovedFromLevel();
+    }
+    //?}
+
+    @Override
+    public void onLeftLevel() {
+        deregister(true);
     }
 
     private void deregister(boolean unload) {

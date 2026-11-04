@@ -851,10 +851,10 @@ public class BlockUtil {
                 ? new ArrayList<>()
                 : new ArrayList<>(Block.getDrops(state, world, pos, be, breaker, tool));
 
-        // XP via NeoForge's IBlockStateExtension.getExpDrop — same tool/breaker shape as
+        // XP via NeoForge's IBlockStateExtension.getExpDrop (Platform.extensions) — same tool/breaker shape as
         // getDrops above. Zeroed under a tier-gated break to parallel the empty drops list
         // (no harvest, no XP), matching the order vanilla `Block.dropFromBlock` uses.
-        int xp = tierGated ? 0 : state.getExpDrop(world, pos, be, breaker, tool);
+        int xp = tierGated ? 0 : Platform.extensions().expDrop(state, world, pos, be, breaker, tool);
 
         // Pure-fluid blocks (LiquidBlock instances — Blocks.WATER, Blocks.LAVA, BC oil/fuel,
         // etc.) need a hard setBlock(AIR), NOT world.destroyBlock(). Vanilla destroyBlock calls

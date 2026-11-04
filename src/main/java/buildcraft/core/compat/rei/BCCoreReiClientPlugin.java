@@ -18,7 +18,9 @@ import me.shedaniel.rei.api.client.registry.screen.ExclusionZones;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.common.entry.EntryStack;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginClient;
+//?}
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
@@ -39,7 +41,10 @@ import buildcraft.lib.gui.ledger.Ledger_Neptune;
  * BuildCraft items tagged {@code c:hidden_from_recipe_viewers} (the facade variants), which JEI leaves out of its
  * ingredient list, are removed from REI's, which does not read that tag.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_client entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginClient
+//?}
 public class BCCoreReiClientPlugin implements REIClientPlugin {
 
     @Override

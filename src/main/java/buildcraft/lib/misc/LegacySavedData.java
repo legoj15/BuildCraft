@@ -261,7 +261,7 @@ public final class LegacySavedData {
     static <T extends SavedData & Recoverable> SavedDataType<T> typeAt(Identifier id,
             Function<@Nullable ServerLevel, T> fresh, Function<@Nullable ServerLevel, Codec<T>> codec,
             DataFixTypes fixType, Function<@Nullable ServerLevel, @Nullable Layout> layoutOf) {
-        return new SavedDataType<>(id, level -> {
+        return Platform.extensions().levelSavedDataType(id, level -> {
             T migrated = readFromLegacyLocation(layoutOf.apply(level), codec.apply(level), id, fixType);
             return migrated != null ? migrated : fresh.apply(level);
         }, level -> recovering(id, codec.apply(level), fixType, () -> layoutOf.apply(level)), fixType);

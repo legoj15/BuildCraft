@@ -13,7 +13,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.DyeColor;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import net.minecraft.core.component.DataComponentType;
-import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
 import com.mojang.serialization.Codec;
 
@@ -49,9 +48,10 @@ public class BCCore {
 
     public static final BCRegistrar.DataComponents DATA_COMPONENTS = BCRegistrar
             .createDataComponents(BCCore.MODID);
-    public static final Supplier<DataComponentType<SimpleFluidContent>> FLUID_CONTENT = DATA_COMPONENTS
-            .registerComponentType("fluid_content", builder -> builder.persistent(SimpleFluidContent.CODEC)
-                    .networkSynchronized(SimpleFluidContent.STREAM_CODEC));
+    /** The fragile fluid shard's stored fluid: the loader's simple fluid-content component (NeoForge's
+     *  {@code SimpleFluidContent}), read and written through {@code Platform.fluids()}. */
+    public static final Supplier<? extends DataComponentType<?>> FLUID_CONTENT =
+            Platform.fluids().registerFluidContent(DATA_COMPONENTS, "fluid_content");
 
     /** Typed component for paintbrush colour. Present = coloured brush, absent = clean brush. */
     public static final BCHolder<DataComponentType<?>, DataComponentType<DyeColor>> BRUSH_COLOR =

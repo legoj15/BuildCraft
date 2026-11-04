@@ -16,6 +16,7 @@ import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
@@ -34,7 +35,7 @@ public class BCSiliconCreativeTabs {
 
     public static final BCHolder<CreativeModeTab, CreativeModeTab> FACADE_TAB =
             CREATIVE_MODE_TABS.register("facades", () ->
-                    CreativeModeTab.builder()
+                    Platform.registries().creativeTabBuilder(TRANSPORT_PLUGS_TAB_KEY)
                             .title(Component.translatable("itemGroup.buildcraft.facades"))
                             .icon(() -> {
                                 FacadeBlockStateInfo preview = FacadeStateManager.previewState;
@@ -44,7 +45,6 @@ public class BCSiliconCreativeTabs {
                                 }
                                 return BCSiliconItems.PLUG_FACADE.get().getDefaultInstance();
                             })
-                            .withTabsBefore(TRANSPORT_PLUGS_TAB_KEY)
                             .displayItems(CreativeTabContents.generator(FACADE_TAB_KEY))
                             .build());
 

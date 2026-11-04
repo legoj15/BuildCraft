@@ -24,7 +24,9 @@ import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginClient;
+//?}
 
 import buildcraft.api.fuels.IFuel;
 
@@ -48,7 +50,10 @@ import buildcraft.lib.compat.rei.ReiScreens;
  * dynamic generator that reads the latest list on every lookup instead of a fixed set of displays (JEI copies its own
  * furnace-fuel category instead, which REI does not have).
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_client entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginClient
+//?}
 public class BCEnergyReiPlugin implements REIClientPlugin {
 
     private static final CombustionFuelReiCategory COMBUSTION_FUEL = new CombustionFuelReiCategory();

@@ -6,7 +6,9 @@
 package buildcraft.core.compat.rei;
 
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginCommon;
+//?}
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
@@ -18,7 +20,10 @@ import buildcraft.lib.compat.rei.ReiSubtypes;
  * REI integration plugin for BuildCraft Core: the item comparators that tell apart stacks sharing an item id, with the
  * same keys JEI's subtype interpreters use ({@code BCCoreJeiPlugin}).
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_common entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginCommon
+//?}
 public class BCCoreReiPlugin implements BCReiCommonPlugin {
 
     @Override

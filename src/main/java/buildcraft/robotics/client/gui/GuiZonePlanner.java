@@ -207,7 +207,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                 x0, y0, x1, y1, scissor,
                 menu.tile.getBlockPos(), camera, menu.tile.layers,
                 bufferLayer, bufferColorIndex, hoverPos);
-        graphics.raw.submitPictureInPictureRenderState(state);
+        buildcraft.platform.client.ClientPlatform.extensions().submitPictureInPicture(graphics.raw, state);
         //?} else {
         /*ZoneMapGuiRenderer.render(graphics, camera, menu.tile.getBlockPos(), menu.tile.layers,
                 bufferLayer, bufferColorIndex, hoverPos, x0, y0, MAP_W, MAP_H);*/

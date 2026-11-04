@@ -262,7 +262,7 @@ public final class RobotProtection {
         CompoundTag players = new CompoundTag();
         players.put("deployer", deployer);
         players.put("stationOwner", stationOwner);
-        tnt.getPersistentData().put(BOMB_TAG, players);
+        Platform.extensions().persistentData(tnt).put(BOMB_TAG, players);
     }
 
     /**
@@ -284,7 +284,7 @@ public final class RobotProtection {
         if (!(explosion.getDirectSourceEntity() instanceof PrimedTnt source)) {
             return;
         }
-        CompoundTag players = NBTUtilBC.getCompoundOrNull(source.getPersistentData(), BOMB_TAG);
+        CompoundTag players = NBTUtilBC.getCompoundOrNull(Platform.extensions().persistentData(source), BOMB_TAG);
         if (players == null) {
             return;
         }
@@ -312,7 +312,7 @@ public final class RobotProtection {
         // the same tick is not the robot's
         if (players != null && tnt.getOwner() != null
                 && tnt.getOwner().getUUID().equals(GameProfileUtil.getId(markedPlayer(players, "deployer")))) {
-            tnt.getPersistentData().put(BOMB_TAG, players);
+            Platform.extensions().persistentData(tnt).put(BOMB_TAG, players);
         }
     }
 

@@ -21,7 +21,7 @@ public class BlockEntityTypeUtilBC {
     public static <T extends BlockEntity> BlockEntityType<T> create(
             BlockEntityType.BlockEntitySupplier<T> factory, Block... validBlocks) {
         //? if >=1.21.10 {
-        return new BlockEntityType<T>(factory, validBlocks);
+        return new BlockEntityType<T>(factory, java.util.Set.of(validBlocks));
         //?} else {
         /*return new BlockEntityType<T>(factory, java.util.Set.of(validBlocks), null);*/
         //?}

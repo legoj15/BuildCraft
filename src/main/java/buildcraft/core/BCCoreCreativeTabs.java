@@ -25,6 +25,7 @@ import buildcraft.energy.BCEnergyFluids;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
@@ -38,7 +39,7 @@ public class BCCoreCreativeTabs {
 
     public static final BCHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB =
             CREATIVE_MODE_TABS.register("main", () ->
-                    CreativeModeTab.builder()
+                    Platform.registries().creativeTabBuilder()
                             .title(Component.translatable("itemGroup.buildcraft.main"))
                             .icon(() -> BCCoreItems.WRENCH.get().getDefaultInstance())
                             .displayItems((parameters, output) -> {

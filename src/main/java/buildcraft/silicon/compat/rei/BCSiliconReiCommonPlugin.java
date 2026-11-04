@@ -7,7 +7,9 @@
 package buildcraft.silicon.compat.rei;
 
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginCommon;
+//?}
 
 import buildcraft.lib.compat.rei.BCReiCommonPlugin;
 import buildcraft.lib.compat.rei.ReiSubtypes;
@@ -19,7 +21,10 @@ import buildcraft.silicon.compat.viewer.SiliconSubtypes;
  * ({@link SiliconSubtypes}): without them every lens, gate and facade variant is one entry, and a lookup on any of
  * them shows the recipes of all.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_common entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginCommon
+//?}
 public class BCSiliconReiCommonPlugin implements BCReiCommonPlugin {
 
     @Override

@@ -159,7 +159,7 @@ public class MutableQuad {
         // 26.3 adds the two glint sheets and replaces the boolean shade with a nullable shade-direction override.
         // shade=true -> null (light by the quad's own face); shade=false -> UP, which is exactly the old unshaded
         // brightness (26.2's BlockModelLighter used cardinalLighting.up() for unshaded quads).
-        return new BakedQuad.MaterialInfo(
+        return buildcraft.platform.client.ClientPlatform.models().materialInfo(
             sprite, layer,
             translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
@@ -167,7 +167,7 @@ public class MutableQuad {
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSheet(),
             translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemGlintSpecialSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSpecialSheet(),
-            tintIndex, shade ? null : Direction.UP, lightEmission, true
+            tintIndex, shade ? null : Direction.UP, lightEmission
         );
         //?} else {
         /*// The 7-arg form has been in NeoForge's patch since 26.1-pre3, so it links on the whole 26.1.x jar range.

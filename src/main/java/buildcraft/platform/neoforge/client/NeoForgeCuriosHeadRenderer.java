@@ -3,8 +3,9 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.lib.compat.client;
+package buildcraft.platform.neoforge.client;
 
+//? if neoforge {
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.model.EntityModel;
@@ -38,16 +39,16 @@ import net.minecraft.world.entity.LivingEntity;*/
  * Curios draws nothing for an item without a renderer, so without this the Robot Goggles were worn but invisible.
  *
  * <p>Implements a Curios type, so this class may only be loaded when Curios is installed: callers check
- * {@code ModList.isLoaded("curios")} before touching it.
+ * that Curios is loaded before touching it ({@code NeoForgeClientRegistrationSinks.headAccessoryRenderer}).
  */
-public final class CuriosHeadItemRenderer implements ICurioRenderer {
+public final class NeoForgeCuriosHeadRenderer implements ICurioRenderer {
 
     /** Registers this renderer for {@code item}. Client setup only, and only with Curios loaded. */
     public static void register(Item item) {
         //? if >=1.21.10 {
-        ICurioRenderer.register(item, CuriosHeadItemRenderer::new);
+        ICurioRenderer.register(item, NeoForgeCuriosHeadRenderer::new);
         //?} else {
-        /*top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(item, CuriosHeadItemRenderer::new);*/
+        /*top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(item, NeoForgeCuriosHeadRenderer::new);*/
         //?}
     }
 
@@ -95,3 +96,4 @@ public final class CuriosHeadItemRenderer implements ICurioRenderer {
     }*/
     //?}
 }
+//?}

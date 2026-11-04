@@ -12,7 +12,9 @@ import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.client.registry.transfer.TransferHandlerRegistry;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginClient;
+//?}
 
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.energy.BCEnergyRecipes;
@@ -35,7 +37,10 @@ import buildcraft.lib.compat.rei.ReiScreens;
  * {@link ReiCraftingTableSupport}), and the Heat Exchanger and Distiller categories with their workstations, click
  * areas, and "+" transfers that move the input buckets into the machine.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_client entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginClient
+//?}
 public class BCFactoryReiPlugin implements REIClientPlugin {
 
     // Click area: the progress arrow, left of the 3x3 blueprint grid, aligned with row 2.

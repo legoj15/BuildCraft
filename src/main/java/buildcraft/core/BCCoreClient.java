@@ -81,11 +81,8 @@ public class BCCoreClient {
             buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
             buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
             buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
-            // Curios draws nothing for a curio without a renderer; Accessories has a default one.
-            if (buildcraft.platform.Platform.loader().isModLoaded("curios")) {
-                buildcraft.lib.compat.client.CuriosHeadItemRenderer.register(BCCoreItems.GOGGLES.get());
-            }
         });
+        sinks.headAccessoryRenderer(BCCoreItems.GOGGLES);
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
         ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 

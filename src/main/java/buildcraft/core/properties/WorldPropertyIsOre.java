@@ -49,15 +49,15 @@ public class WorldPropertyIsOre implements IWorldProperty {
     private static final TagKey<Block> IRON_ORES = BlockTags.IRON_ORES;
     private static final TagKey<Block> COPPER_ORES = BlockTags.COPPER_ORES;
 //? if >=26.1 {
-    private static final TagKey<Block> COAL_ORES = BlockTags.create(
+    private static final TagKey<Block> COAL_ORES = TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
             net.minecraft.resources.Identifier.withDefaultNamespace("coal_ores"));
-    private static final TagKey<Block> DIAMOND_ORES = BlockTags.create(
+    private static final TagKey<Block> DIAMOND_ORES = TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
             net.minecraft.resources.Identifier.withDefaultNamespace("diamond_ores"));
-    private static final TagKey<Block> EMERALD_ORES = BlockTags.create(
+    private static final TagKey<Block> EMERALD_ORES = TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
             net.minecraft.resources.Identifier.withDefaultNamespace("emerald_ores"));
-    private static final TagKey<Block> LAPIS_ORES = BlockTags.create(
+    private static final TagKey<Block> LAPIS_ORES = TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
             net.minecraft.resources.Identifier.withDefaultNamespace("lapis_ores"));
-    private static final TagKey<Block> REDSTONE_ORES = BlockTags.create(
+    private static final TagKey<Block> REDSTONE_ORES = TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
             net.minecraft.resources.Identifier.withDefaultNamespace("redstone_ores"));
 //?} else {
     /*private static final TagKey<Block> COAL_ORES = BlockTags.COAL_ORES;

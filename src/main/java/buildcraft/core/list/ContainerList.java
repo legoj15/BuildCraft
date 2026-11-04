@@ -87,7 +87,7 @@ public class ContainerList extends ContainerBC_Neptune {
 
         @Override
         public void set(@Nonnull ItemStack stack) {
-            int slotIndex = getSlotIndex();
+            int slotIndex = getContainerSlot();
             // Slots 1-8 in one-stack mode are read-only ghost previews of items the matcher
             // would accept — refuse the click so the player can't transiently overwrite the
             // ghost with a stack from their cursor (the in-memory display would change for

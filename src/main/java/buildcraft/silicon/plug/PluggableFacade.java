@@ -147,8 +147,8 @@ public class PluggableFacade extends PipePluggable implements IFacade {
         // facade's block is asked as if it stood at the pipe, which is where the blast actually meets it. Caveat: a
         // block whose context-aware override reads its own state/BE at that position sees the pipe holder there,
         // the same trade-off every "disguise" block makes. BlockPipeHolder#getExplosionResistance is the caller.
-        return states.phasedStates[activeState].stateInfo.state
-            .getExplosionResistance(holder.getPipeWorld(), holder.getPipePos(), explosion);
+        return buildcraft.platform.Platform.extensions().explosionResistance(
+            states.phasedStates[activeState].stateInfo.state, holder.getPipeWorld(), holder.getPipePos(), explosion);
     }
 
     @Override

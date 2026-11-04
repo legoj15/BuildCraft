@@ -79,12 +79,7 @@ public final class LedRenderUtil {
      * plus vanilla's cached occlusion-shape test, the same work the mesher already does.
      */
     public static boolean isFaceVisible(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
-        BlockPos neighbourPos = pos.relative(face);
-        //? if >=1.21.10 {
-        return Block.shouldRenderFace(level, pos, state, level.getBlockState(neighbourPos), face);
-        //?} else {
-        /*return Block.shouldRenderFace(state, level, pos, face, neighbourPos);*/
-        //?}
+        return buildcraft.platform.client.ClientPlatform.extensions().shouldRenderFace(level, pos, state, face);
     }
 
     private LedRenderUtil() {}

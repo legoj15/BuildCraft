@@ -97,6 +97,16 @@ public final class Platform {
         return ShearHolder.INSTANCE;
     }
 
+    /** The extra equipment slots accessory mods add (Curios, Accessories). */
+    public static AccessorySlotServices accessorySlots() {
+        return AccessorySlotsHolder.INSTANCE;
+    }
+
+    /** The context-aware twins NeoForge patches into vanilla calls (Fabric: vanilla's own answers). */
+    public static VanillaExtensions extensions() {
+        return ExtensionsHolder.INSTANCE;
+    }
+
     /** Loot context parameters the loader adds. */
     public static LootServices loot() {
         return LootHolder.INSTANCE;
@@ -303,6 +313,30 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeShearServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricShearServices();
+            *///?}
+        }
+    }
+
+    private static final class AccessorySlotsHolder {
+        static final AccessorySlotServices INSTANCE = create();
+
+        private static AccessorySlotServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeAccessorySlots();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricAccessorySlots();
+            *///?}
+        }
+    }
+
+    private static final class ExtensionsHolder {
+        static final VanillaExtensions INSTANCE = create();
+
+        private static VanillaExtensions create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeVanillaExtensions();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricVanillaExtensions();
             *///?}
         }
     }

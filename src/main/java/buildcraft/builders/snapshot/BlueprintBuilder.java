@@ -680,7 +680,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             BlockPos neighbour = blockPos.relative(direction);
             FluidState fluid = level.getFluidState(neighbour);
             if (!fluid.isSource() || !fluid.getType().isSame(type)) continue;
-            if (isUnmoppable(neighbour) && fluid.canConvertToSource(level, neighbour)) sources++;
+            if (isUnmoppable(neighbour) && buildcraft.platform.Platform.extensions().canConvertToSource(fluid, level, neighbour)) sources++;
         }
         return sources >= 2 && supportsInfiniteSource(blockPos.below(), type);
     }

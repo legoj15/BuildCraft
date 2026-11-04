@@ -85,8 +85,8 @@ public class BlueprintRenderer {
                 scale,
                 // Pass the current scissor rectangle so the blit respects tooltip clipping. The
                 // PiP base class intersects this with the full bounds internally.
-                graphics.raw.peekScissorStack());
-        graphics.raw.submitPictureInPictureRenderState(state);
+                buildcraft.platform.client.ClientPlatform.extensions().peekScissor(graphics.raw));
+        buildcraft.platform.client.ClientPlatform.extensions().submitPictureInPicture(graphics.raw, state);
         //?} else {
         /*// 1.21.1: no PiP pipeline — render the rotating 3D preview straight into the GUI buffer source
         // (GuiGraphics.pose() is a real 3D PoseStack on 1.21.1, not 26.1's 2D Matrix3x2fStack). The full

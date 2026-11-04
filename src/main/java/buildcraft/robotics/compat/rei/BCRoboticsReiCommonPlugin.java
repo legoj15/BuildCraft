@@ -7,7 +7,9 @@
 package buildcraft.robotics.compat.rei;
 
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginCommon;
+//?}
 
 import buildcraft.lib.compat.rei.BCReiCommonPlugin;
 import buildcraft.lib.compat.rei.ReiSubtypes;
@@ -19,7 +21,10 @@ import buildcraft.robotics.compat.viewer.RoboticsSubtypes;
  * ({@link RoboticsSubtypes}): by program, and robots also by charged vs drained. Without them every board is one
  * entry (and every robot another), because the program rides in {@code CUSTOM_DATA}.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_common entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginCommon
+//?}
 public class BCRoboticsReiCommonPlugin implements BCReiCommonPlugin {
 
     @Override

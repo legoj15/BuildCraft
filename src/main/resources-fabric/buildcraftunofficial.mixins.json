@@ -4,11 +4,15 @@
   "package": "buildcraft.platform.fabric.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "BlockExperienceMixin",
     "EntityMixin",
     "ExplosionDamageCalculatorMixin",
     "FireBlockMixin",
+    "FlowingFluidAccessor",
     "LavaFluidMixin",
     "LivingEntityMixin",
+    "SavedDataStorageMixin",
+    "ServerChunkCacheMixin",
     "ServerPlayerGameModeMixin",
     "ServerPlayerMixin"
   ],

@@ -7,12 +7,15 @@ package buildcraft.platform;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.registry.BCFluidRegistrar;
+import buildcraft.platform.registry.BCHolder;
+import buildcraft.platform.registry.BCRegistrar;
 
 /**
  * What the loader knows about a fluid stack that vanilla does not. The stack is passed as its vanilla parts (fluid,
@@ -46,4 +49,19 @@ public interface FluidServices {
 
     /** The fluid's display name, without a stack (NeoForge: the fluid type's description). */
     Component description(Fluid fluid);
+
+    /**
+     * Registers {@code name} on {@code components} as the loader's simple fluid-content item component, one stored
+     * fluid stack saved in the stack's {@code id}/{@code amount}/{@code components} shape (NeoForge: its
+     * {@code SimpleFluidContent}, which its item fluid handlers are built on). Read and write it only through
+     * {@link #getFluidContent} and {@link #setFluidContent}.
+     */
+    BCHolder<DataComponentType<?>, ? extends DataComponentType<?>> registerFluidContent(
+            BCRegistrar.DataComponents components, String name);
+
+    /** The fluid stored in {@code stack}'s fluid-content component {@code type}, or empty if none. */
+    BCFluidStack getFluidContent(ItemStack stack, DataComponentType<?> type);
+
+    /** Stores {@code fluid} (a copy) in {@code stack}'s fluid-content component {@code type}; empty removes it. */
+    void setFluidContent(ItemStack stack, DataComponentType<?> type, BCFluidStack fluid);
 }

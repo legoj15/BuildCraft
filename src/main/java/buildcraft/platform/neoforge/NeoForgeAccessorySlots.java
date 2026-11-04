@@ -3,18 +3,20 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.lib.compat;
+package buildcraft.platform.neoforge;
 
+//? if neoforge {
 import java.util.function.Predicate;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.platform.AccessorySlotServices;
 import buildcraft.platform.Platform;
 
 /**
- * Soft support for the mods that add extra equipment slots, so an item BC treats as worn (the Robot Goggles) also
- * counts when it sits in one of them. Which slot accepts which item is data, not code: the item tags under
+ * {@link AccessorySlotServices} on NeoForge: soft support for the mods that add extra equipment slots, so an item BC
+ * treats as worn (the Robot Goggles) also counts when it sits in one of them. Which slot accepts which item is data, not code: the item tags under
  * {@code data/curios/} and {@code data/accessories/}, plus the {@code curios/entities} file that gives players the
  * Curios head slot (Curios binds none of its preset slots by default).
  *
@@ -22,21 +24,21 @@ import buildcraft.platform.Platform;
  * only on those nodes. Each mod's API is named only inside its own nested class, which the JVM loads on first
  * call, so neither is needed at run time unless that mod is installed.
  */
-public final class AccessorySlots {
-    private AccessorySlots() {}
+public final class NeoForgeAccessorySlots implements AccessorySlotServices {
 
-    private static final boolean CURIOS = Platform.loader().isModLoaded("curios");
+    // Read once, when the binder first builds this service (the first goggles check), as the old static was.
+    private final boolean curios = Platform.loader().isModLoaded("curios");
     //? if <1.21.11 {
-    /*private static final boolean ACCESSORIES = Platform.loader().isModLoaded("accessories");*/
+    /*private final boolean accessories = Platform.loader().isModLoaded("accessories");*/
     //?}
 
-    /** Whether {@code entity} has a stack matching {@code filter} in any slot an installed accessory mod adds. */
-    public static boolean isEquipped(LivingEntity entity, Predicate<ItemStack> filter) {
-        if (CURIOS && CuriosLookup.isEquipped(entity, filter)) {
+    @Override
+    public boolean isEquipped(LivingEntity entity, Predicate<ItemStack> filter) {
+        if (curios && CuriosLookup.isEquipped(entity, filter)) {
             return true;
         }
         //? if <1.21.11 {
-        /*if (ACCESSORIES && AccessoriesLookup.isEquipped(entity, filter)) {
+        /*if (accessories && AccessoriesLookup.isEquipped(entity, filter)) {
             return true;
         }*/
         //?}
@@ -61,3 +63,4 @@ public final class AccessorySlots {
     }*/
     //?}
 }
+//?}

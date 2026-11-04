@@ -14,3 +14,21 @@ accessible	field	net/minecraft/client/multiplayer/ClientChunkCache	storage	Lnet/
 accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	chunkRadius	I
 accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterX	I
 accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterZ	I
+# Members NeoForge opens with its own access transformer, so META-INF/accesstransformer.cfg has no line for them.
+accessible	field	net/minecraft/world/item/crafting/ShapedRecipe	pattern	Lnet/minecraft/world/item/crafting/ShapedRecipePattern;
+accessible	method	net/minecraft/world/level/block/Block	popExperience	(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;I)V
+accessible	field	net/minecraft/world/level/block/LiquidBlock	fluid	Lnet/minecraft/world/level/material/FlowingFluid;
+accessible	method	net/minecraft/world/item/Item	getPlayerPOVHitResult	(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/ClipContext$Fluid;)Lnet/minecraft/world/phys/BlockHitResult;
+accessible	method	net/minecraft/client/gui/screens/recipebook/GhostSlots	setInput	(Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessible	method	net/minecraft/client/gui/screens/recipebook/GhostSlots	setResult	(Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessible	field	net/minecraft/client/gui/components/AbstractButton	SPRITES	Lnet/minecraft/client/gui/components/WidgetSprites;
+accessible	field	net/minecraft/world/item/component/CustomData	tag	Lnet/minecraft/nbt/CompoundTag;
+accessible	field	net/minecraft/client/gui/GuiGraphicsExtractor	guiRenderState	Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
+accessible	class	net/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack
+accessible	field	net/minecraft/client/gui/GuiGraphicsExtractor	scissorStack	Lnet/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack;
+accessible	class	net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture
+accessible	field	net/minecraft/client/renderer/texture/SpriteContents	animatedTexture	Lnet/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture;
+accessible	field	net/minecraft/client/renderer/texture/SpriteContents	originalImage	Lcom/mojang/blaze3d/platform/NativeImage;
+accessible	method	net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture	getFrameX	(I)I
+accessible	method	net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture	getFrameY	(I)I
+accessible	field	net/minecraft/world/item/crafting/RecipeManager	recipes	Lnet/minecraft/world/item/crafting/RecipeMap;

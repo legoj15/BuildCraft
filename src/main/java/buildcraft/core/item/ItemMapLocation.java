@@ -479,7 +479,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
     @Nullable
     static ZonePlan migrateLegacyZone(@Nonnull ItemStack stack, @Nullable ZoneMapSavedData store) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data == null || !data.contains(TAG_LEGACY_ZONE)) {
+        if (data == null || !buildcraft.platform.Platform.extensions().customDataContains(data, TAG_LEGACY_ZONE)) {
             return null;
         }
         ZoneMapRef ref = stack.get(BCCore.ZONE_MAP_ID.get());

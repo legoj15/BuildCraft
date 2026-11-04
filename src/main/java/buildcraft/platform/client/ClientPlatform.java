@@ -32,6 +32,23 @@ public final class ClientPlatform {
         return ModelsHolder.INSTANCE;
     }
 
+    /** The vanilla client calls NeoForge patches a twin into (Fabric: vanilla's own, class-tweaked members). */
+    public static ClientVanillaExtensions extensions() {
+        return ExtensionsHolder.INSTANCE;
+    }
+
+    private static final class ExtensionsHolder {
+        static final ClientVanillaExtensions INSTANCE = create();
+
+        private static ClientVanillaExtensions create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.client.NeoForgeClientVanillaExtensions();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.client.FabricClientVanillaExtensions();
+            *///?}
+        }
+    }
+
     private static final class ModelsHolder {
         static final ClientModels INSTANCE = create();
 

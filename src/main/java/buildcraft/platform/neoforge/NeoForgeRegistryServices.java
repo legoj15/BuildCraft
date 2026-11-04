@@ -15,6 +15,7 @@ import java.util.function.Function;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
 
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -32,6 +33,16 @@ public final class NeoForgeRegistryServices implements RegistryServices {
     @Override
     public <T> BCRegistrar<T> create(ResourceKey<? extends Registry<T>> registry, String namespace) {
         return new NeoForgeRegistrar<>(DeferredRegister.create(registry, namespace));
+    }
+
+    @Override
+    public CreativeModeTab.Builder creativeTabBuilder() {
+        return CreativeModeTab.builder();
+    }
+
+    @Override
+    public CreativeModeTab.Builder creativeTabBuilder(ResourceKey<CreativeModeTab> after) {
+        return CreativeModeTab.builder().withTabsBefore(after);
     }
 
     private static final class NeoForgeRegistrar<T> implements BCRegistrar<T> {

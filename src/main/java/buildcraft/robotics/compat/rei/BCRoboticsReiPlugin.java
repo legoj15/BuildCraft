@@ -12,7 +12,9 @@ import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.client.registry.transfer.TransferHandlerRegistry;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+//? if neoforge {
 import me.shedaniel.rei.forge.REIPluginClient;
+//?}
 
 import buildcraft.lib.compat.rei.ReiRecipeTransferHandler;
 import buildcraft.lib.compat.rei.ReiScreens;
@@ -35,7 +37,10 @@ import buildcraft.silicon.gui.GuiIntegrationTable;
  * (or a blank robot and a board) into the table. The board and robot comparators are in
  * {@link BCRoboticsReiCommonPlugin}.
  */
+// REI on NeoForge finds the plugin by this annotation; REI on Fabric by the rei_client entrypoint in fabric.mod.json.
+//? if neoforge {
 @REIPluginClient
+//?}
 public class BCRoboticsReiPlugin implements REIClientPlugin {
 
     private static final ProgrammingTableReiCategory PROGRAMMING = new ProgrammingTableReiCategory();

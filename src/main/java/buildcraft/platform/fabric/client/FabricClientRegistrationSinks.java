@@ -190,6 +190,11 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     }
 
     @Override
+    public void headAccessoryRenderer(Supplier<? extends net.minecraft.world.item.Item> item) {
+        // Gap: no accessory-slot mod has a Fabric 26.3 build (Curios is NeoForge-only), so there is nothing to draw.
+    }
+
+    @Override
     public void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles) {
         // Gap: Fabric API 26.3 has no per-block hit/break particle hook (NeoForge's IClientBlockExtensions); it would
         // take a mixin on ParticleEngine. The block keeps vanilla's particles.

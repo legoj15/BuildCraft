@@ -206,7 +206,10 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         int sharpness = 0;
         int knockback = 0;
         int fireAspect = 0;
-        ItemEnchantments enchants = held.getTagEnchantments();
+        // The stack's own enchantments component (NeoForge's getTagEnchantments reads the same; vanilla's
+        // getEnchantments is deprecated there).
+        ItemEnchantments enchants = held.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS,
+                ItemEnchantments.EMPTY);
         for (Holder<Enchantment> enchantment : enchants.keySet()) {
             if (enchantment.is(Enchantments.SHARPNESS)) {
                 sharpness = enchants.getLevel(enchantment);

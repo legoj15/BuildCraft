@@ -14,6 +14,7 @@ import net.minecraft.world.item.CreativeModeTab;
 
 import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.registry.CreativeTabContents;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
@@ -27,10 +28,9 @@ public class BCTransportCreativeTabs {
 
     public static final BCHolder<CreativeModeTab, CreativeModeTab> PIPES_TAB =
             CREATIVE_MODE_TABS.register("pipes", () ->
-                    CreativeModeTab.builder()
+                    Platform.registries().creativeTabBuilder(BCCoreCreativeTabs.MAIN_TAB_KEY)
                             .title(Component.translatable("itemGroup.buildcraft.pipes"))
                             .icon(() -> BCTransportItems.PIPE_DIAMOND_ITEM.get().getDefaultInstance())
-                            .withTabsBefore(BCCoreCreativeTabs.MAIN_TAB_KEY)
                             .displayItems(CreativeTabContents.generator(PIPES_TAB_KEY))
                             .build());
 
@@ -40,10 +40,9 @@ public class BCTransportCreativeTabs {
 
     public static final BCHolder<CreativeModeTab, CreativeModeTab> PLUGS_TAB =
             CREATIVE_MODE_TABS.register("plugs", () ->
-                    CreativeModeTab.builder()
+                    Platform.registries().creativeTabBuilder(PIPES_TAB_KEY)
                             .title(Component.translatable("itemGroup.buildcraft.plugs"))
                             .icon(() -> BCTransportItems.PLUG_BLOCKER.get().getDefaultInstance())
-                            .withTabsBefore(PIPES_TAB_KEY)
                             .displayItems(CreativeTabContents.generator(PLUGS_TAB_KEY))
                             .build());
 

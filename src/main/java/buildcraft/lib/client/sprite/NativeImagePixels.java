@@ -28,12 +28,11 @@ public final class NativeImagePixels {
      * {@code frameIndex} is the cell index into the sprite sheet (row-major, {@code index % cellsPerRow}), not a
      * position in the animation's frame order, so {@code 0} is always the top-left cell. */
     public static int getSpriteArgb(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
-        //? if >=26.3 {
-        return sprite.getPixelARGB(frameIndex, x, y);
-        //?} elif >=1.21.10 {
-        /*return sprite.getPixelRGBA(frameIndex, x, y);*/
+        int pixel = buildcraft.platform.client.ClientPlatform.extensions().spritePixel(sprite, frameIndex, x, y);
+        //? if >=1.21.10 {
+        return pixel;
         //?} else {
-        /*return swizzle(sprite.getPixelRGBA(frameIndex, x, y));*/
+        /*return swizzle(pixel);*/
         //?}
     }
 

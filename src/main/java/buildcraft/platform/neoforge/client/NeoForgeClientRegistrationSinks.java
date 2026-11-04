@@ -267,6 +267,16 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
     }
 
     @Override
+    public void headAccessoryRenderer(Supplier<? extends net.minecraft.world.item.Item> item) {
+        // Curios draws nothing for a curio without a renderer; Accessories has a default one.
+        clientSetup(() -> {
+            if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+                NeoForgeCuriosHeadRenderer.register(item.get());
+            }
+        });
+    }
+
+    @Override
     public void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles) {
         queue(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent.class,
                 event -> event.registerBlock(new NeoForgeBlockParticleExtensions(particles), block.get()));

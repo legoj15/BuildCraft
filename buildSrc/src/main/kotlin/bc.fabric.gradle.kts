@@ -1,11 +1,10 @@
 // The Fabric half of the per-node build: applied by build.gradle.kts as `bc.$loader` on every node whose `loader` is
 // fabric (today only 26.3-fabric). Loom's version is pinned in buildSrc/build.gradle.kts.
 //
-// Phase 2 spike (#100): COMPILE ONLY, NOTHING SHIPS. The node compiles buildcraft/platform/** from main (the
-// loader-neutral contracts, the binder with its fabric arm live, and buildcraft.platform.fabric) plus the vanilla-only
-// BCFluidStack in buildcraft/api/fluids and the BCCapability token in buildcraft/api/capability, and nothing else:
-// no tests, no jar, no buildAndCollect (its resources are processed and transformed, but ship nowhere).
-// Its share of the root fullTestSuite is compileJava plus processResources (the data transform and its guard).
+// Phase 2a (#98): the node compiles all of BuildCraft (src/main/java; NeoForge-only code sits in platform/neoforge,
+// whose files are empty on this node) and builds a jar, collected beside the NeoForge ones by buildAndCollect.
+// Nothing ships until the user says so. No tests (FML-JUnit has no Fabric twin). Its share of the root
+// fullTestSuite is the compile, the class-tweaker validation, the transformed resources and the jar.
 //
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
 // go on the plain Java configurations rather than the mod* remapping ones.
@@ -26,17 +25,8 @@ val reiVersion = property("rei_version") as String
 
 sourceSets {
     named("main") {
-        // Only the platform layer compiles here until the rest of BC has a Fabric route. The filter applies to
-        // whichever directory Stonecutter points the source set at (src/ raw, or this node's generated copy).
-        // buildcraft/api/fluids is the loader-neutral BCFluidStack the platform converts, buildcraft/api/capability the
-        // BCCapability token it resolves (vanilla types only).
-        java {
-            include("buildcraft/platform/**", "buildcraft/api/fluids/**", "buildcraft/api/capability/**")
-            // The Fabric entrypoints call BuildCraft's common and client init (buildcraft.core), which this node does
-            // not compile yet: written, but left out until Phase 2 widens the filter.
-            exclude("buildcraft/platform/fabric/BCFabricEntrypoint.java",
-                    "buildcraft/platform/fabric/client/BCFabricClientEntrypoint.java")
-        }
+        // All of src/main/java compiles here (whichever directory Stonecutter points the source set at: src/ raw, or
+        // this node's generated copy). NeoForge-only code sits in platform/neoforge, empty on this node.
         // BC's assets and data are shared; the loader metadata is not. src/main/resources-fabric adds this node's
         // own (fabric.mod.json, the class tweaker) and the NeoForge-only files are dropped. The NeoForge-shaped data
         // JSON is rewritten for Fabric after the copy (DataFabric, below).
@@ -115,6 +105,11 @@ dependencies {
     compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
     compileOnly("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")
     compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:$reiVersion")
+    // REI's Fabric api POM puts its own API's dependencies at runtime scope, so the compile names them: its geometry
+    // (cloth basic-math: Point, Rectangle) and architectury (CompoundEventResult, the FluidStack its fluid entries
+    // carry), the versions that POM pins.
+    compileOnly("me.shedaniel.cloth:basic-math:0.6.1") { isTransitive = false }
+    compileOnly("dev.architectury:architectury-fabric:22.0.3") { isTransitive = false }
     // Team Reborn Energy, Fabric's de-facto FE/RF API, compile-only and optional at runtime (FabricEnergyStorages
     // touches it only when the mod is loaded). 5.0.0 is the newest build; it was compiled against
     // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are
@@ -127,7 +122,7 @@ dependencies {
 // generated copy would pass this node's only gate vacuously.
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
-// No tests and no jar: the node exists only to prove the platform layer compiles against Fabric.
+// No tests and no jar yet.
 tasks.named("test") { enabled = false }
 tasks.named("jar") { enabled = false }
 

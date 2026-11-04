@@ -20,6 +20,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.PlayerPickItemEvents;
@@ -30,6 +31,7 @@ import net.fabricmc.fabric.api.util.TriState;
 
 import buildcraft.platform.hook.EnchantmentFilterItem;
 import buildcraft.platform.hook.LevelLifecycleBlockEntity;
+import buildcraft.platform.hook.LevelRemovalEntity;
 import buildcraft.platform.hook.PickStackBlock;
 import buildcraft.platform.hook.PlayerBreakGuard;
 import buildcraft.platform.hook.SneakBypassItem;
@@ -83,6 +85,12 @@ public final class FabricLoaderHookRoutes {
         });
         ServerTickEvents.START_SERVER_TICK.register(server -> runJoined(SERVER_JOINED));
         ServerChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> chunkUnloading(chunk));
+        // NeoForge's onRemovedFromLevel, server side (BuildCraft's only user, the robot, deregisters there alone).
+        ServerEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
+            if (entity instanceof LevelRemovalEntity removal) {
+                removal.onLeftLevel();
+            }
+        });
     }
 
     /^* Tells each queued block entity still in its level that it joined it (NeoForge's onLoad). *^/

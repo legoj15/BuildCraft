@@ -15,7 +15,26 @@
   "environment": "*",
   "entrypoints": {
     "main": ["buildcraft.platform.fabric.BCFabricEntrypoint"],
-    "client": ["buildcraft.platform.fabric.client.BCFabricClientEntrypoint"]
+    "client": ["buildcraft.platform.fabric.client.BCFabricClientEntrypoint"],
+    "jei_mod_plugin": [
+      "buildcraft.core.compat.jei.BCCoreJeiPlugin",
+      "buildcraft.energy.compat.jei.BCEnergyJeiPlugin",
+      "buildcraft.factory.compat.jei.BCFactoryJeiPlugin",
+      "buildcraft.robotics.compat.jei.BCRoboticsJeiPlugin",
+      "buildcraft.silicon.compat.jei.BCSiliconJeiPlugin"
+    ],
+    "rei_client": [
+      "buildcraft.core.compat.rei.BCCoreReiClientPlugin",
+      "buildcraft.energy.compat.rei.BCEnergyReiPlugin",
+      "buildcraft.factory.compat.rei.BCFactoryReiPlugin",
+      "buildcraft.robotics.compat.rei.BCRoboticsReiPlugin",
+      "buildcraft.silicon.compat.rei.BCSiliconReiPlugin"
+    ],
+    "rei_common": [
+      "buildcraft.core.compat.rei.BCCoreReiPlugin",
+      "buildcraft.robotics.compat.rei.BCRoboticsReiCommonPlugin",
+      "buildcraft.silicon.compat.rei.BCSiliconReiCommonPlugin"
+    ]
   },
   "mixins": [
     "buildcraftunofficial.mixins.json"

@@ -24,6 +24,19 @@ import buildcraft.platform.client.ClientModels;
  */
 public final class NeoForgeClientModels implements ClientModels {
     //? if >=26.1 {
+    //? if >=26.3 {
+    @Override
+    public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet,
+            net.minecraft.client.renderer.rendertype.RenderType glintSheet,
+            net.minecraft.client.renderer.rendertype.RenderType glintSpecialSheet, int tintIndex,
+            net.minecraft.core.Direction shadeOverride, int lightEmission) {
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
+                shadeOverride, lightEmission, true);
+    }
+    //?}
+
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
         return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),

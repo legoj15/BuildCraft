@@ -47,8 +47,8 @@ import buildcraft.platform.fabric.mixin.FlowingFluidAccessor;
 /^*
  * {@link VanillaExtensions} on Fabric, which patches none of these: each answers what vanilla does, plus BuildCraft's
  * own hook interfaces. The sound asks a {@link PositionalSoundBlock}, the resistance an {@code ExplosionArmouredBlock}
- * (other mods' blocks answer without the position); the dig speed fires no break-speed
- * event; the experience is what the block's own {@code spawnAfterBreak} would pop, caught before it spawns
+ * (other mods' blocks answer without the position); the dig speed tells BuildCraft's break-speed hook
+ * the position ({@code FabricGameHooks.digSpeedAt}); the experience is what the block's own {@code spawnAfterBreak} would pop, caught before it spawns
  * ({@code BlockExperienceMixin}); the persistent tag is a BuildCraft data attachment; the saved-data level is the one
  * the storage was made for ({@code SavedDataStorageMixin}).
  *^/
@@ -84,7 +84,7 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
 
     @Override
     public float destroySpeed(Player player, BlockState state, BlockPos pos) {
-        return player.getDestroySpeed(state);
+        return FabricGameHooks.digSpeedAt(pos, () -> player.getDestroySpeed(state));
     }
 
     @Override

@@ -70,7 +70,9 @@ import buildcraft.platform.event.HookOrder;
  * entity's drops ({@code LivingEntityMixin}, collected at the drop sites NeoForge captures), the neighbour notify
  * ({@code ServerLevelMixin}, {@code DiodeBlockMixin}), the explosion's lists ({@code ServerExplosionMixin}), each
  * player's own tick ({@code PlayerMixin}), a fake player's entity interaction ({@code PlayerMixin}, see
- * {@link #fireFakePlayerEntityInteract}) and the client level's unload ({@code client.MinecraftMixin}).
+ * {@link #fireFakePlayerEntityInteract}), the player's dig speed ({@code PlayerMixin}, told the dug position by
+ * {@code BlockBehaviourMixin} through {@link #digSpeedAt}, as NeoForge's position-aware {@code getDestroySpeed}) and the
+ * client level's unload ({@code client.MinecraftMixin}).
  *
  * <p><b>Gap</b> (the hook registers nothing): {@link #syncRecipeTypes} (Fabric syncs recipes per serializer, not per
  * type). Narrower than NeoForge: {@link #onBlockPlace} sees only the placements BuildCraft's machines make through
@@ -91,6 +93,9 @@ public final class FabricGameHooks implements GameHooks {
     private static final List<LivingDrops> LIVING_DROPS = new CopyOnWriteArrayList<>();
     private static final List<NeighborNotify> NEIGHBOR_NOTIFY = new CopyOnWriteArrayList<>();
     private static final List<Consumer<ServerPlayer>> PLAYER_TICK_END = new CopyOnWriteArrayList<>();
+    private static final List<BreakSpeed> BREAK_SPEED = new CopyOnWriteArrayList<>();
+    /^* The block whose dig speed this thread is working out ({@link #digSpeedAt}), or null. *^/
+    private static final ThreadLocal<BlockPos> DIG_POS = new ThreadLocal<>();
     private static final List<Consumer<LevelAccessor>> CLIENT_LEVEL_UNLOAD = new CopyOnWriteArrayList<>();
     /^* The {@code receiveCancelled} entity-interaction listeners, by order, told how a fake player's click ended. *^/
     private static final EnumMap<HookOrder, List<EntityInteract>> INTERACT_RECEIVE_CANCELLED = new EnumMap<>(
@@ -239,6 +244,11 @@ public final class FabricGameHooks implements GameHooks {
     }
 
     @Override
+    public void onBreakSpeed(BreakSpeed listener) {
+        BREAK_SPEED.add(listener);
+    }
+
+    @Override
     public void onNeighborNotify(NeighborNotify listener) {
         NEIGHBOR_NOTIFY.add(listener);
     }
@@ -290,6 +300,34 @@ public final class FabricGameHooks implements GameHooks {
     }
 
     /^* A block change at {@code pos} is about to notify its neighbours. *^/
+    /^*
+     * Works out a dig speed ({@code speed}, a call of vanilla's {@code Player.getDestroySpeed}) with {@code pos} as
+     * the block being dug, which {@link #fireBreakSpeed} hands the listeners: NeoForge's position-aware
+     * {@code getDestroySpeed(state, pos)}.
+     *^/
+    public static float digSpeedAt(@Nullable BlockPos pos, java.util.function.DoubleSupplier speed) {
+        BlockPos outer = DIG_POS.get();
+        DIG_POS.set(pos);
+        try {
+            return (float) speed.getAsDouble();
+        } finally {
+            DIG_POS.set(outer);
+        }
+    }
+
+    /^* {@code player}'s dig speed for {@code state} is {@code speed}; the listeners may change it ({@code PlayerMixin},
+     *  where NeoForge posts its break-speed event: the end of {@code getDestroySpeed}). *^/
+    public static float fireBreakSpeed(Player player, BlockState state, float speed) {
+        if (BREAK_SPEED.isEmpty()) {
+            return speed;
+        }
+        BlockPos pos = DIG_POS.get();
+        for (BreakSpeed listener : BREAK_SPEED) {
+            speed = listener.onBreakSpeed(player, state, pos, speed);
+        }
+        return speed;
+    }
+
     public static void fireNeighborNotify(Level level, BlockPos pos, BlockState state) {
         for (NeighborNotify listener : NEIGHBOR_NOTIFY) {
             listener.onNeighborNotify(level, pos, state);

@@ -50,8 +50,7 @@ import buildcraft.robotics.entity.EntityRobot;
  * hand, not the item stack the event carries.
  *
  * <p>The observers are the loader's own events ({@link LoaderTestEvents}); on Fabric the placement is a Common
- * Protection API provider's ask, and the swing, which fires no break-speed event there, is seen through the break asks
- * ({@link #observeSwings}).
+ * Protection API provider's ask, and the swing BuildCraft's break-speed hook ({@link #observeSwings}).
  */
 public class RobotOwnerIdentityTester {
 
@@ -76,37 +75,17 @@ public class RobotOwnerIdentityTester {
         return robot;
     }
 
-    /** Whether the loader posts an event for each of a robot's swings at a block ({@link #observeSwings}). */
-    //? if neoforge {
-    static final boolean SWINGS_POSTED = true;
-    //?} else {
-    /*static final boolean SWINGS_POSTED = false;*/
-    //?}
-
     /**
-     * Calls {@code swinger} with the player of each swing at {@code pos}: NeoForge's break-speed event, posted once per
-     * swing by vanilla's destroy-progress maths. Fabric posts no break-speed event (the dig-speed gap,
-     * docs/platform-layer.md), so there ({@link #SWINGS_POSTED} false) it is the break asks at {@code pos} instead, the
-     * player identity a Fabric claim mod sees for a break.
+     * Calls {@code swinger} with the player of each swing at {@code pos}: the break-speed hook
+     * ({@code GameHooks.onBreakSpeed}, NeoForge's break-speed event, BuildCraft's {@code PlayerMixin} on Fabric),
+     * which vanilla's destroy-progress maths asks once per swing.
      */
     static LoaderTestEvents.Observer observeSwings(BlockPos pos, Consumer<Player> swinger) {
-        //? if neoforge {
-        Consumer<net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed> observer = event -> {
-            if (event.getPosition().filter(pos::equals).isPresent()) {
-                swinger.accept(event.getEntity());
-            }
-        };
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed.class, observer);
-        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(observer);
-        //?} else {
-        /*buildcraft.platform.event.PlatformProtection.Registration registration = Platform.protection().onBreak(event -> {
-            if (event.pos().equals(pos) && event.player() != null) {
-                swinger.accept(event.player());
+        return LoaderTestEvents.observeBreakSpeeds((player, at) -> {
+            if (pos.equals(at)) {
+                swinger.accept(player);
             }
         });
-        return registration::close;*/
-        //?}
     }
 
     private static void requireActedAs(GameTestHelper helper, List<Entity> actors, GameProfile owner, String what) {
@@ -177,8 +156,7 @@ public class RobotOwnerIdentityTester {
     }
 
     /** The robot's swings at a block run as the owner: the break-speed event, posted once per cycle by vanilla's
-     *  destroy-progress maths, names the owner's fake player, never the generic "[BuildCraft]" one (on Fabric, which
-     *  posts none, the break's asks do: {@link #observeSwings}). */
+     *  destroy-progress maths, names the owner's fake player, never the generic "[BuildCraft]" one. */
     public static void breakActsAsTheStationOwner(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         GameProfile owner = ownerProfile("bc_robot_break_owner");

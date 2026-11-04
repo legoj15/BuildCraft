@@ -5,22 +5,21 @@
 
 package buildcraft.energy;
 
-import net.neoforged.neoforge.registries.DeferredRegister;
-import buildcraft.lib.misc.RegistrationUtilBC;
-import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCItemHolder;
 
 public class BCEnergyItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("buildcraftunofficial");
+    public static final BCRegistrar.Items ITEMS = BCRegistrar.createItems("buildcraftunofficial");
 
-    public static final DeferredItem<BlockItem> ENGINE_STONE = ITEMS.registerSimpleBlockItem(
+    public static final BCItemHolder<BlockItem> ENGINE_STONE = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_STONE);
 
-    public static final DeferredItem<BlockItem> ENGINE_IRON = ITEMS.registerSimpleBlockItem(
+    public static final BCItemHolder<BlockItem> ENGINE_IRON = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_IRON);
 
     /** FE/RF naming-aware BlockItem: flips display name based on {@link BCEnergyConfig#useRfNaming}.
@@ -30,8 +29,8 @@ public class BCEnergyItems {
      *  The name is decided lazily, in whichever JVM asks for it, never at registration: item names are drawn
      *  client-side, where the toggle exists. A server has no toggle and answers with the FE key, which only
      *  shows up if a server bakes the name into a message it sends (a chat item bracket, say). */
-    public static final DeferredItem<BlockItem> ENGINE_FE = RegistrationUtilBC.registerItem(ITEMS,
-            BCEnergyBlocks.ENGINE_FE.getId().getPath(),
+    public static final BCItemHolder<BlockItem> ENGINE_FE = ITEMS.registerItem(
+            BCEnergyBlocks.ENGINE_FE.id().getPath(),
             props -> new BlockItem(BCEnergyBlocks.ENGINE_FE.get(), props) {
                 @Override
                 public Component getName(ItemStack stack) {
@@ -44,12 +43,12 @@ public class BCEnergyItems {
             /*props -> props);*/
             //?}
 
-    public static final DeferredItem<BlockItem> DYNAMO_MJ = ITEMS.registerSimpleBlockItem(
+    public static final BCItemHolder<BlockItem> DYNAMO_MJ = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.DYNAMO_MJ);
 
-    public static final DeferredItem<Item> GLOB_OF_OIL = ITEMS.registerSimpleItem("glob_of_oil");
+    public static final BCItemHolder<Item> GLOB_OF_OIL = ITEMS.registerSimpleItem("glob_of_oil");
 
     public static void init(IEventBus modEventBus) {
-        ITEMS.register(modEventBus);
+        ITEMS.subscribe();
     }
 }

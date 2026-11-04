@@ -29,14 +29,15 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.fluids.BaseFlowingFluid;
 import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.energy.block.BCFluidBlock;
-import buildcraft.lib.misc.RegistrationUtilBC;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
+import buildcraft.platform.registry.BCBlockHolder;
+import buildcraft.platform.registry.BCItemHolder;
 
 /**
  * Registers all BuildCraft Energy fluids at 3 temperature levels.
@@ -57,14 +58,14 @@ public class BCEnergyFluids {
     public static final DeferredRegister<FluidType> FLUID_TYPES =
             DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, BCEnergy.MODID);
 
-    public static final DeferredRegister<Fluid> FLUIDS =
-            DeferredRegister.create(Registries.FLUID, BCEnergy.MODID);
+    public static final BCRegistrar<Fluid> FLUIDS =
+            BCRegistrar.create(Registries.FLUID, BCEnergy.MODID);
 
-    public static final DeferredRegister.Blocks BLOCKS =
-            DeferredRegister.createBlocks(BCEnergy.MODID);
+    public static final BCRegistrar.Blocks BLOCKS =
+            BCRegistrar.createBlocks(BCEnergy.MODID);
 
-    public static final DeferredRegister.Items ITEMS =
-            DeferredRegister.createItems(BCEnergy.MODID);
+    public static final BCRegistrar.Items ITEMS =
+            BCRegistrar.createItems(BCEnergy.MODID);
 
     // ─── Fluid entry record ───────────────────────────────────────────
 
@@ -82,10 +83,10 @@ public class BCEnergyFluids {
             int texLight,
             int texDark,
             DeferredHolder<FluidType, FluidType> fluidType,
-            DeferredHolder<Fluid, BaseFlowingFluid.Source> source,
-            DeferredHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
-            DeferredBlock<LiquidBlock> block,
-            DeferredItem<BucketItem> bucket
+            BCHolder<Fluid, BaseFlowingFluid.Source> source,
+            BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
+            BCBlockHolder<LiquidBlock> block,
+            BCItemHolder<BucketItem> bucket
     ) {}
 
     // ─── 1.12 fluid data table ────────────────────────────────────────
@@ -268,10 +269,10 @@ public class BCEnergyFluids {
                 ));
 
         // Source + Flowing (use Supplier indirection to avoid forward-reference issues)
-        DeferredHolder<Fluid, BaseFlowingFluid.Source>[] sourceHolder = new DeferredHolder[1];
-        DeferredHolder<Fluid, BaseFlowingFluid.Flowing>[] flowingHolder = new DeferredHolder[1];
-        DeferredBlock<LiquidBlock>[] blockHolder = new DeferredBlock[1];
-        DeferredItem<BucketItem>[] bucketHolder = new DeferredItem[1];
+        BCHolder<Fluid, BaseFlowingFluid.Source>[] sourceHolder = new BCHolder[1];
+        BCHolder<Fluid, BaseFlowingFluid.Flowing>[] flowingHolder = new BCHolder[1];
+        BCBlockHolder<LiquidBlock>[] blockHolder = new BCBlockHolder[1];
+        BCItemHolder<BucketItem>[] bucketHolder = new BCItemHolder[1];
 
         sourceHolder[0] = FLUIDS.register(regName,
                 () -> new BCCustomSourceFluid(makeProps(
@@ -285,7 +286,7 @@ public class BCEnergyFluids {
 
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
-        blockHolder[0] = RegistrationUtilBC.registerBlock(BLOCKS, regName,
+        blockHolder[0] = BLOCKS.registerBlock(regName,
                 props -> new BCFluidBlock(sourceHolder[0].get(), props
                         .mapColor(mapColor)
                         .replaceable()
@@ -302,7 +303,7 @@ public class BCEnergyFluids {
                 , heat, volatility, !crude), () -> BlockBehaviour.Properties.of());
 
         // Bucket
-        bucketHolder[0] = RegistrationUtilBC.registerItem(ITEMS, regName + "_bucket",
+        bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
                 props -> new BucketItem(sourceHolder[0].get(), props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
@@ -322,10 +323,10 @@ public class BCEnergyFluids {
 
     private static BaseFlowingFluid.Properties makeProps(
             DeferredHolder<FluidType, FluidType> type,
-            DeferredHolder<Fluid, BaseFlowingFluid.Source> source,
-            DeferredHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
-            DeferredBlock<LiquidBlock> block,
-            DeferredItem<BucketItem> bucket,
+            BCHolder<Fluid, BaseFlowingFluid.Source> source,
+            BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
+            BCBlockHolder<LiquidBlock> block,
+            BCItemHolder<BucketItem> bucket,
             int viscosity, int quanta) {
 
         // Derive tick rate from viscosity, matching Forge 1.12.2 BlockFluidBase formula:
@@ -361,9 +362,9 @@ public class BCEnergyFluids {
     /** Register all deferred registers on the mod event bus. */
     public static void init(IEventBus modEventBus) {
         FLUID_TYPES.register(modEventBus);
-        FLUIDS.register(modEventBus);
-        BLOCKS.register(modEventBus);
-        ITEMS.register(modEventBus);
+        FLUIDS.subscribe();
+        BLOCKS.subscribe();
+        ITEMS.subscribe();
     }
 
     // ─── Custom Fluid Classes ─────────────────────────────────────────

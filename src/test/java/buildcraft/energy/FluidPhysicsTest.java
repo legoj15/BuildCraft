@@ -10,11 +10,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.lib.test.EntityArenaUtil;
 
 public class FluidPhysicsTest {
 
@@ -103,6 +105,72 @@ public class FluidPhysicsTest {
             helper.succeed();
         });
         *///?}
+    }
+
+    /** The push given to the pig along +x: about a block of travel in crude oil's drag, two in water's. */
+    private static final double WADE_IMPULSE = 0.4;
+    /** How far the impulse must carry the pig, and how far it must sink, before the test passes. */
+    private static final double WADE_MIN_DX = 0.5;
+    private static final double SINK_MIN_DY = 0.25;
+    /** The poll's budget once the cell ticks: the impulse settles within ten ticks, and sinking a quarter block at
+     *  crude oil's slowest (about 0.006 blocks a tick) takes about 45. */
+    private static final int WADE_WORK_TICKS = 200;
+
+    /**
+     * Issue #117: a mob in crude oil must move. Crude oil is neither water-like nor lava, and from 26.1.2 on NeoForge's
+     * {@code travelInFluid} moves such a modded fluid only through its {@code FluidType.move}; without one the pig got
+     * no movement step at all, so an impulse never moved it and gravity never pulled it down. The fluid's type (and on
+     * Fabric {@code LivingEntityMixin}) now wades it through {@code ThickFluidMotion}. A pig with its goals removed
+     * (so nothing but the impulse and the fluid moves it) is put in the top layer of a sealed three-deep crude-oil
+     * pool and pushed along +x: it must travel at least {@link #WADE_MIN_DX} and sink at least {@link #SINK_MIN_DY}
+     * (crude oil is denser than water and not swimmable, so nothing holds it up). Gated on the cell ticking and on
+     * the pig's observed position, never on a fixed tick.
+     */
+    public static void crudeOilLetsMobsWadeAndSink(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
+        Mob[] pig = { null };
+        double[] start = new double[2];
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WADE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WADE_WORK_TICKS, () -> {
+                    if (pig[0] == null) {
+                        buildCrudePool(helper);
+                        //? if >=26.2 {
+                        pig[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 3, 3);
+                        //?} else {
+                        /*pig[0] = helper.spawn(EntityType.PIG, 1, 3, 3);
+                        *///?}
+                        pig[0].removeAllGoals(goal -> true);
+                        start[0] = pig[0].getX();
+                        start[1] = pig[0].getY();
+                        pig[0].setDeltaMovement(WADE_IMPULSE, 0.0, 0.0);
+                        return false;
+                    }
+                    return pig[0].getX() - start[0] >= WADE_MIN_DX && start[1] - pig[0].getY() >= SINK_MIN_DY;
+                }, () -> pig[0] == null ? "the pig was never spawned"
+                        : "the pig moved dx=" + (pig[0].getX() - start[0]) + " and sank dy=" + (start[1] - pig[0].getY())
+                        + " (needs dx>=" + WADE_MIN_DX + ", dy>=" + SINK_MIN_DY + "); still in crude oil: "
+                        + pig[0].level().getFluidState(pig[0].blockPosition()).is(BCEnergyFluids.OIL_COOL.source().get())),
+                helper::succeed, "a pig in crude oil never waded and sank", () -> EntityArenaUtil.discard(pig[0]));
+    }
+
+    /** A sealed pool of crude-oil sources, x 1..4, y 1..3, z 2..4, on a stone floor, walled one block higher. Every
+     *  block of the cell's x 0..5, z 1..5 box up to y 4 is written, which also replaces the barriers the framework
+     *  leaves in the origin corner. */
+    private static void buildCrudePool(GameTestHelper helper) {
+        for (int x = 0; x <= 5; x++) {
+            for (int z = 1; z <= 5; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                boolean wall = x == 0 || x == 5 || z == 1 || z == 5;
+                for (int y = 1; y <= 4; y++) {
+                    if (wall) {
+                        helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+                    } else {
+                        helper.setBlock(new BlockPos(x, y, z),
+                                y <= 3 ? BCEnergyFluids.OIL_COOL.block().get() : Blocks.AIR);
+                    }
+                }
+            }
+        }
     }
 
     /**

@@ -10,35 +10,95 @@ package buildcraft.platform.fabric.mixin;
 
 import javax.annotation.Nullable;
 
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityFluidInteraction;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
 
+import buildcraft.platform.fabric.FabricFluidPhysics;
 import buildcraft.platform.fabric.FabricGameHooks;
 import buildcraft.platform.hook.BlockParticleEffects;
 
 /^*
  * NeoForge's {@code addRunningEffects} on Fabric: a {@link BlockParticleEffects} block draws its own sprint particles.
  * Also NeoForge's {@code captureDrops} ({@link FabricGameHooks.DropCapture}): while the entity's death collects its
- * drops, what {@code spawnAtLocation} drops is collected instead of put in the level.
+ * drops, what {@code spawnAtLocation} drops is collected instead of put in the level. And NeoForge's fluid-type
+ * checks in {@code baseTick} and {@code updateFluidInteraction} for BuildCraft's fluids ({@link FabricFluidPhysics}):
+ * in water and eyes in water mean a water-like fluid, each fluid's own current pushes, and a fluid that is not
+ * water-like damps the fall distance.
  *^/
 @Mixin(Entity.class)
 abstract class EntityMixin implements FabricGameHooks.DropCapture {
 
+    @Shadow
+    @Final
+    private EntityFluidInteraction fluidInteraction;
+
+    @Shadow
+    public double fallDistance;
+
+    @Shadow
+    public abstract boolean isInWater();
+
+    @Shadow
+    public abstract boolean isInLava();
+
+    @Shadow
+    public abstract boolean isPushedByFluid();
+
     @Unique
     @Nullable
     private List<ItemEntity> buildcraft$capturedDrops;
+
+    @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    private boolean buildcraft$eyeInWater(Entity self, TagKey<Fluid> tag, Operation<Boolean> original) {
+        return tag == FluidTags.WATER
+                ? ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$eyeInWaterLike()
+                : original.call(self, tag);
+    }
+
+    @WrapOperation(method = "updateFluidInteraction", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/EntityFluidInteraction;isInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    private boolean buildcraft$inWater(EntityFluidInteraction interaction, TagKey<Fluid> tag,
+                                       Operation<Boolean> original) {
+        return tag == FluidTags.WATER
+                ? ((FabricFluidPhysics.Interaction) interaction).buildcraft$inWaterLike()
+                : original.call(interaction, tag);
+    }
+
+    @Inject(method = "updateFluidInteraction", at = @At("RETURN"))
+    private void buildcraft$applyFluidCurrents(CallbackInfoReturnable<Boolean> cir) {
+        if (isPushedByFluid()) {
+            ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$applyCurrents((Entity) (Object) this);
+        }
+    }
+
+    /^* NeoForge's {@code fallDistance *= getFallDistanceModifier}, after the lava halving and before the void check. *^/
+    @Inject(method = "baseTick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;checkBelowWorld()V"))
+    private void buildcraft$fluidFallDistance(CallbackInfo ci) {
+        if (!isInLava() && !isInWater()) {
+            fallDistance *= ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$fallDistanceModifier();
+        }
+    }
 
     @Inject(method = "spawnSprintParticle", at = @At("HEAD"), cancellable = true)
     private void buildcraft$runningEffects(CallbackInfo ci) {

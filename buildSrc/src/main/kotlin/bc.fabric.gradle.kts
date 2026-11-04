@@ -66,8 +66,6 @@ val fabricGameTestExcludes = listOf(
     // NeoForge's level-aware SavedDataType/SavedDataStorage API, driven directly (Fabric routes it through
     // SavedDataStorageMixin, which these do not reach).
     "buildcraft/lib/misc/LegacySavedDataTester.java",
-    // NeoForge's FluidType water physics (Fabric has no fluid type: docs/platform-layer.md, fluids).
-    "buildcraft/energy/FluidPhysicsTest.java",
     // Robot protection against claim mods written as NeoForge event listeners at chosen priorities (break speed,
     // placement, entity join, drops, attacks).
     "buildcraft/robotics/ai/RobotDeployerProtectionTester.java",

@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.energy.BCEnergyFluids;
@@ -110,59 +111,38 @@ public class FluidPhysicsTest {
      * so thick crude doesn't behave like swimmable water, and so is residue; every other refined fluid
      * (heavy/dense/distilled oil, fuels) stays water-like. {@code isInWater()} gates on {@code FluidType.getIsWaterLike()} on
      * every line (NeoForge PR #3249; the 26.1.x backport PR #3303 shipped in 26.1.2.95), so this flag,
-     * not the minecraft:water tag, decides whether mobs bob/swim. Deterministic; no entity physics.
+     * not the minecraft:water tag, decides whether mobs bob/swim. Fabric has no fluid type: its entity physics reads
+     * the same flags from the registered {@code FluidProperties} (FabricFluidPhysics). Deterministic; no entity physics.
      */
     public static void crudeOilIsNotWaterLike(GameTestHelper helper) {
-        net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.source().get().getFluidType();
-        //? if >=1.21.10 {
-        if (crude.getIsWaterLike() || crude.canSwim(null)) {
+        Fluid crude = BCEnergyFluids.OIL_COOL.source().get();
+        // 1.21.1: FluidType has no getIsWaterLike() (the isWaterLike property predates this NeoForge line), so only the
+        // swim flag is asserted there (waterLike answers null).
+        if (Boolean.TRUE.equals(waterLike(crude)) || canSwim(crude)) {
             helper.fail("crude oil must be non-water-like and non-swimmable: isWaterLike="
-                + crude.getIsWaterLike() + " canSwim=" + crude.canSwim(null));
+                + waterLike(crude) + " canSwim=" + canSwim(crude));
             return;
         }
-        //?} else {
-        /*// 1.21.1: FluidType has no getIsWaterLike() (the isWaterLike property predates this NeoForge line);
-        // assert only the swim flag that exists here. Crude must be non-swimmable.
-        if (crude.canSwim(null)) {
-            helper.fail("crude oil must be non-swimmable: canSwim=" + crude.canSwim(null));
-            return;
-        }*/
-        //?}
         // Residue is the other thick fluid, at every heat. Its base name is "oil_residue": a compare against
         // "residue" once silently left it water-like (issue #59).
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             if (!entry.baseName().equals("oil_residue")) {
                 continue;
             }
-            net.neoforged.neoforge.fluids.FluidType residue = entry.source().get().getFluidType();
-            //? if >=1.21.10 {
-            if (residue.getIsWaterLike() || residue.canSwim(null)) {
+            Fluid residue = entry.source().get();
+            if (Boolean.TRUE.equals(waterLike(residue)) || canSwim(residue)) {
                 helper.fail(entry.name() + " must be non-water-like and non-swimmable: isWaterLike="
-                    + residue.getIsWaterLike() + " canSwim=" + residue.canSwim(null));
+                    + waterLike(residue) + " canSwim=" + canSwim(residue));
                 return;
             }
-            //?} else {
-            /*if (residue.canSwim(null)) {
-                helper.fail(entry.name() + " must be non-swimmable: canSwim=" + residue.canSwim(null));
-                return;
-            }*/
-            //?}
         }
-        net.neoforged.neoforge.fluids.FluidType heavy = BCEnergyFluids.ALL.stream()
-            .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().source().get().getFluidType();
-        //? if >=1.21.10 {
-        if (!heavy.getIsWaterLike() || !heavy.canSwim(null)) {
+        Fluid heavy = BCEnergyFluids.ALL.stream()
+            .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().source().get();
+        if (Boolean.FALSE.equals(waterLike(heavy)) || !canSwim(heavy)) {
             helper.fail("refined oils must stay water-like/swimmable: heavy oil isWaterLike="
-                + heavy.getIsWaterLike() + " canSwim=" + heavy.canSwim(null));
+                + waterLike(heavy) + " canSwim=" + canSwim(heavy));
             return;
         }
-        //?} else {
-        /*// 1.21.1: no getIsWaterLike(); assert only the swim flag. Refined oils stay swimmable.
-        if (!heavy.canSwim(null)) {
-            helper.fail("refined oils must stay swimmable: heavy oil canSwim=" + heavy.canSwim(null));
-            return;
-        }*/
-        //?}
         helper.succeed();
     }
 
@@ -174,8 +154,7 @@ public class FluidPhysicsTest {
      */
     public static void energyFluidsMotionScaleIsWaterLike(GameTestHelper helper) {
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            net.neoforged.neoforge.fluids.FluidType type = entry.source().get().getFluidType();
-            double scale = type.motionScale(null);
+            double scale = motionScale(entry.source().get());
             if (!(scale > 0.0 && scale <= 0.1)) {
                 helper.fail(entry.name() + " motionScale=" + scale
                     + " — expected a water-like flow-push in (0, 0.1] (water is 0.014); a value near"
@@ -184,5 +163,34 @@ public class FluidPhysicsTest {
             }
         }
         helper.succeed();
+    }
+
+    // What the loader's entity physics reads for a BC fluid: NeoForge's FluidType, Fabric's registered properties.
+
+    /** The water-like flag, or null where the loader has none (NeoForge on 1.21.1). */
+    private static Boolean waterLike(Fluid fluid) {
+        //? if neoforge && >=1.21.10 {
+        return fluid.getFluidType().getIsWaterLike();
+        //?} elif neoforge {
+        /*return null;
+        *///?} else {
+        /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).waterLike();
+        *///?}
+    }
+
+    private static boolean canSwim(Fluid fluid) {
+        //? if neoforge {
+        return fluid.getFluidType().canSwim(null);
+        //?} else {
+        /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).canSwim();
+        *///?}
+    }
+
+    private static double motionScale(Fluid fluid) {
+        //? if neoforge {
+        return fluid.getFluidType().motionScale(null);
+        //?} else {
+        /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).motionScale().getAsDouble();
+        *///?}
     }
 }

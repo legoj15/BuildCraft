@@ -13,11 +13,16 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.entity.InsideBlockEffectType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
@@ -50,10 +55,10 @@ import buildcraft.platform.registry.BCRegistrar;
  * {@link FluidBehaviour} hooked into {@code tick}, {@code getSpread} and {@code canBeReplacedWith} as on NeoForge, and
  * a {@link FluidVariantAttributeHandler} carrying the temperature, viscosity, gas flag and bucket sounds.
  *
- * <p>Gaps: Fabric has no fluid type, so density, swimming, drowning, the current's push ({@code motionScale}),
- * extinguishing and the water-like flag have nowhere to go. Vanilla's entity fluid physics only knows the water and
- * lava tags, which BuildCraft's fluids are not in, so entities neither swim in, float on nor get carried by them.
- * BuildCraft's own reads ({@link FabricFluids#viscosity} and friends) still answer from the declared properties.
+ * <p>Fabric has no fluid type, so the entity physics NeoForge reads from it (the water-like flag, drowning, the
+ * current's push and {@code motionScale}, the fall-distance damping) come from the declared properties through
+ * {@link FabricFluidPhysics} and its mixins; extinguishing is {@link Base#entityInside}. BuildCraft's own reads
+ * ({@link FabricFluids#viscosity} and friends) answer from the declared properties too.
  ^/
 public final class FabricFlowingFluids implements BCFluidRegistrar {
     /^* The properties every BuildCraft fluid was registered with, both forms, for {@link FabricFluids}'s reads. ^/
@@ -84,6 +89,12 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
             FluidVariantAttributes.register(fluid.get(), attributes);
         }
         return new Entry(source[0], flowing[0]);
+    }
+
+    /^* The properties a BuildCraft fluid (either form) was registered with, or null for any other fluid. ^/
+    @Nullable
+    public static FluidProperties declared(Fluid fluid) {
+        return fluid instanceof Base base ? base.properties : null;
     }
 
     @Override
@@ -193,6 +204,14 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
         @Override
         public int getTickDelay(LevelReader level) {
             return properties.tickRate();
+        }
+
+        @Override
+        protected void entityInside(Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier effects) {
+            // NeoForge's Fluid.entityInside, with the type's canExtinguish (water's own override is WaterFluid's).
+            if (properties.canExtinguish()) {
+                effects.apply(InsideBlockEffectType.EXTINGUISH);
+            }
         }
 
         @Override

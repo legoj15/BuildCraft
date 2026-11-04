@@ -18,13 +18,21 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.Vec3;
 
+import buildcraft.platform.FluidProperties;
+import buildcraft.platform.fabric.FabricFlowingFluids;
+import buildcraft.platform.fabric.FabricFluidPhysics;
 import buildcraft.platform.fabric.FabricGameHooks;
 import buildcraft.platform.hook.BlockParticleEffects;
 
@@ -33,10 +41,36 @@ import buildcraft.platform.hook.BlockParticleEffects;
  * in place of vanilla's block-particle burst, with the same particle count. Also NeoForge's {@code LivingDropsEvent}
  * ({@link FabricGameHooks#onLivingDrops}): {@code dropAllDeathLoot} collects its drops (here, in
  * {@code EntityMixin}, {@code EntityEquipmentMixin} and {@code InventoryMixin}, NeoForge's capture sites), shows them to
- * the listeners, then puts them in the level.
+ * the listeners, then puts them in the level. And NeoForge's {@code onLivingBreathe} test for BuildCraft's fluids
+ * and {@code travel} ({@link FabricFluidPhysics}): the entity drowns with its eyes in a fluid it can drown in, and
+ * gets no movement step in one that is not water-like.
  *^/
 @Mixin(LivingEntity.class)
 abstract class LivingEntityMixin {
+
+    /^* NeoForge's {@code travel}: in a BuildCraft fluid that is not water-like it takes {@code travelInFluid}, which then
+     *  moves the entity neither as in water nor as in lava, so not at all. *^/
+    @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
+    private void buildcraft$travelInFluidType(Vec3 input, CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        FluidState state = self.level().getFluidState(self.blockPosition());
+        FluidProperties declared = FabricFlowingFluids.declared(state.getType());
+        if (declared != null && !declared.waterLike() && !self.isInWater() && !self.isInLava()
+                && self.isAffectedByFluids() && !self.canStandOnFluid(state)
+                && ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
+                        .buildcraft$inKindOf(declared)) {
+            ci.cancel();
+        }
+    }
+
+    @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    private boolean buildcraft$eyeInDrowningFluid(LivingEntity self, TagKey<Fluid> tag, Operation<Boolean> original) {
+        return tag == FluidTags.WATER
+                ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
+                        .buildcraft$eyeInDrowningFluid()
+                : original.call(self, tag);
+    }
 
     @WrapOperation(method = "checkFallDamage", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/level/ServerLevel;sendParticles(Lnet/minecraft/core/particles/ParticleOptions;DDDIDDDD)I"))

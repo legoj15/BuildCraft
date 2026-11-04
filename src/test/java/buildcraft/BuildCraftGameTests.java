@@ -1289,30 +1289,18 @@ public class BuildCraftGameTests {
         // ...and two robots never share an id: one arriving with a live robot's id is given a fresh one.
         reg.accept("buildcraftunofficial:robot_registry_id_collision_reissues_arriving", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne);
         reg.accept("buildcraftunofficial:robot_registry_id_of_dead_holder_is_kept", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithADeadRobotsIdKeepsIt);
-        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
-        //?}
         // ...but once a 26.1+ file exists it wins, and the pre-26.1 file is left on disk (recoverable).
-        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_both_files_current_wins", () -> buildcraft.lib.misc.LegacySavedDataTester::bothFilesPresentTheCurrentWinsAndTheLegacyIsKept);
-        //?}
         // Every real saved-data type against a temporary world layout: an EMPTY 26.1+ file (the one a 26.x build from
         // before the migration wrote) gives way to the 1.21.x data, a 26.1+ file with content never does, and a
         // 1.21.x file alone still migrates; the old file is retired once its data is written, so deleted data stays
         // deleted.
-        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_empty_current_is_recovered", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeRecoversTheLegacyDataOverAnEmptyCurrentFile);
         reg.accept("buildcraftunofficial:legacy_saved_data_content_current_wins_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeKeepsACurrentFileWithContent);
         reg.accept("buildcraftunofficial:legacy_saved_data_legacy_alone_migrates_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeMigratesALegacyFileAlone);
-        //?}
         // The volume boxes' 26.1+ type builds for the level the storage hands it, not the one its builder was given.
-        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_volume_boxes_use_storage_level", () -> buildcraft.lib.misc.LegacySavedDataTester::volumeBoxesTypeBuildsForTheStoragesLevel);
-        //?}
         // Removing a box that was on disk at load reaches the clients (no ghost box until rejoin).
         reg.accept("buildcraftunofficial:volume_box_loaded_removal_reaches_clients", () -> buildcraft.core.marker.volume.VolumeBoxSyncTester::removingABoxLoadedFromDiskReachesClients);
         reg.accept("buildcraftunofficial:volume_box_one_shot_taken_once", () -> buildcraft.core.marker.volume.VolumeBoxOneShotTester::markerBoxIsTakenOnceAfterTheMarkersBreak);

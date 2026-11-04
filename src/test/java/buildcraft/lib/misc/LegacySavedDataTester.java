@@ -39,15 +39,13 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.SavedDataStorage;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.core.marker.PathSavedData;
 import buildcraft.core.marker.VolumeSavedData;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.VolumeBox;
+import buildcraft.lib.test.LoaderTestEvents;
 import buildcraft.robotics.RobotRegistry;
 import buildcraft.transport.wire.SavedDataWireSystems;
 import buildcraft.transport.wire.WireSystem;
@@ -63,6 +61,10 @@ import buildcraft.transport.wire.WireSystem;
  * volume boxes) through a real {@code SavedDataStorage} over a temporary world layout: the world root is pointed at a
  * temporary folder for the length of the test ({@link LegacySavedData#worldRoot}), so the real types, with their real
  * codecs and rules for "holds no content", meet files the test controls and never the game test world's own.
+ *
+ * <p>The level-aware parts (a type's fresh data and codec for a level, a storage that knows its level) go through
+ * {@code newData}, {@code codec} and {@code newStorage}: NeoForge's patched {@code SavedDataType} and
+ * {@code SavedDataStorage}, or on Fabric the level its {@code SavedDataStorageMixin} hands a {@code levelSavedDataType}.
  */
 public class LegacySavedDataTester {
 
@@ -86,6 +88,49 @@ public class LegacySavedDataTester {
         public String describeContent() {
             return "value " + value;
         }
+    }
+
+    /** A fresh {@code type} data for {@code level}, as the level's storage would make it. */
+    static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
+        //? if neoforge {
+        return type.factory().create(level);
+        //?} else {
+        /*return buildcraft.platform.fabric.FabricSavedDataLevels.with(level, () -> type.constructor().get());*/
+        //?}
+    }
+
+    /** {@code type}'s codec as {@code level}'s storage would use it. */
+    static <T extends SavedData> Codec<T> codec(SavedDataType<T> type, ServerLevel level) {
+        //? if neoforge {
+        return type.codecFactory().create(level);
+        //?} else {
+        /*Codec<T> codec = type.codec();
+        return new Codec<T>() {
+            @Override
+            public <O> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<T, O>> decode(
+                    com.mojang.serialization.DynamicOps<O> ops, O input) {
+                return buildcraft.platform.fabric.FabricSavedDataLevels.with(level, () -> codec.decode(ops, input));
+            }
+
+            @Override
+            public <O> com.mojang.serialization.DataResult<O> encode(T input,
+                    com.mojang.serialization.DynamicOps<O> ops, O prefix) {
+                return buildcraft.platform.fabric.FabricSavedDataLevels.with(level,
+                        () -> codec.encode(input, ops, prefix));
+            }
+        };*/
+        //?}
+    }
+
+    /** A saved-data storage over {@code folder} that belongs to {@code level}, as the level's own does. */
+    static SavedDataStorage newStorage(ServerLevel level, Path folder) {
+        //? if neoforge {
+        return new SavedDataStorage(level, folder, DataFixers.getDataFixer(), level.registryAccess());
+        //?} else {
+        /*SavedDataStorage storage = new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+        ((buildcraft.platform.fabric.FabricSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
+        return storage;*/
+        //?}
     }
     //?}
 
@@ -147,7 +192,7 @@ public class LegacySavedDataTester {
         ServerLevel level = helper.getLevel();
         SavedDataType<LevelSavedDataVolumeBoxes> type = LevelSavedDataVolumeBoxes.createType(null);
 
-        LevelSavedDataVolumeBoxes fresh = type.factory().create(level);
+        LevelSavedDataVolumeBoxes fresh = newData(type, level);
         helper.assertTrue(fresh.world == level,
                 "fresh data must belong to the level the storage gave the factory, got " + fresh.world);
 
@@ -155,7 +200,7 @@ public class LegacySavedDataTester {
         net.minecraft.nbt.ListTag boxes = new net.minecraft.nbt.ListTag();
         boxes.add(new VolumeBox(level, new BlockPos(1, 64, 1)).writeToNBT());
         stored.put("volumeBoxes", boxes);
-        LevelSavedDataVolumeBoxes decoded = type.codecFactory().create(level).parse(NbtOps.INSTANCE, stored)
+        LevelSavedDataVolumeBoxes decoded = codec(type, level).parse(NbtOps.INSTANCE, stored)
                 .result().orElseThrow();
         helper.assertTrue(decoded.world == level,
                 "decoded data must belong to the level the storage gave the codec factory, got " + decoded.world);
@@ -297,15 +342,15 @@ public class LegacySavedDataTester {
         }
 
         SavedDataStorage storage() {
-            return new SavedDataStorage(level, currentFolder(), DataFixers.getDataFixer(), level.registryAccess());
+            return newStorage(level, currentFolder());
         }
 
-        /** Saves {@code storage} the way a level does: the storage first, then {@code LevelEvent.Save}, which is what
+        /** Saves {@code storage} the way a level does: the storage first, then the level-save event, which is what
          *  the migration's real listener answers by checking the write landed (it finds this temporary world through
          *  the redirected world root) - so this also proves the listener is registered. */
         void saveLikeALevel(SavedDataStorage storage) {
             storage.saveAndJoin();
-            NeoForge.EVENT_BUS.post(new LevelEvent.Save(level));
+            LoaderTestEvents.levelSave(level);
         }
     }
 
@@ -367,7 +412,7 @@ public class LegacySavedDataTester {
 
         /** A type's data with {@code entries} entries, built while no file for it exists in the temporary world. */
         final T instance(Env env, int entries) {
-            T data = type(env.level).factory().create(env.level);
+            T data = newData(type(env.level), env.level);
             fill(env.level, data, entries);
             return data;
         }
@@ -377,8 +422,8 @@ public class LegacySavedDataTester {
          *  loaded one is compared with. Call it while no file for the type exists in the temporary world. */
         final String savedDescription(Env env, T data) {
             SavedDataType<T> type = type(env.level);
-            Tag tag = type.codecFactory().create(env.level).encodeStart(env.ops, data).getOrThrow();
-            return type.codecFactory().create(env.level).parse(env.ops, tag).getOrThrow().describeContent();
+            Tag tag = codec(type, env.level).encodeStart(env.ops, data).getOrThrow();
+            return codec(type, env.level).parse(env.ops, tag).getOrThrow().describeContent();
         }
 
         final void check(Env env, boolean condition, String message) {
@@ -388,7 +433,7 @@ public class LegacySavedDataTester {
         }
 
         final void writeData(Env env, Path file, T data, int dataVersion) throws IOException {
-            Tag payload = type(env.level).codecFactory().create(env.level).encodeStart(env.ops, data).getOrThrow();
+            Tag payload = codec(type(env.level), env.level).encodeStart(env.ops, data).getOrThrow();
             Files.createDirectories(file.getParent());
             CompoundTag wrapper = new CompoundTag();
             wrapper.put("data", payload);

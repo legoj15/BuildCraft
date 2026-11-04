@@ -61,9 +61,6 @@ sourceSets {
 // its reason, and the manifests of tests not registered here are dropped from the resources (FabricGameTests).
 val fabricGameTestExcludes = listOf(
     "buildcraft/platform/neoforge/**",
-    // NeoForge's level-aware SavedDataType/SavedDataStorage API, driven directly (Fabric routes it through
-    // SavedDataStorageMixin, which these do not reach).
-    "buildcraft/lib/misc/LegacySavedDataTester.java",
     // Robot protection against claim mods written as NeoForge event listeners at chosen priorities (break speed,
     // placement, entity join, drops, attacks).
     "buildcraft/robotics/ai/RobotDeployerProtectionTester.java",

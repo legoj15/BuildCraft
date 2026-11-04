@@ -80,7 +80,8 @@ fabricApi {
         createSourceSet = true
         modId = "buildcraftunofficial_gametest"
         enableGameTests = true
-        enableClientGameTests = false
+        // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check.
+        enableClientGameTests = true
         eula = false
         clearRunDirectory = false
     }
@@ -166,6 +167,50 @@ tasks.named<JavaExec>("runGameTest") {
             throw GradleException(
                 "The Fabric game-test run exited 0 without 'All N required tests passed' (N > 0) in $serverLog; " +
                     "its console is in $consoleLog."
+            )
+        }
+    }
+}
+
+// ─── Client game test ────────────────────────────────────────────────────────
+// `:26.3-fabric:runClientGameTest`: Fabric API's client game-test runner (fabric-client-gametest-api-v1,
+// `-Dfabric.client.gametest`) boots the dev client, runs the game-test mod's `fabric-client-gametest` entrypoint
+// (BCFabricClientGameTest: a flat world, a rig of BuildCraft content, the held fluid items, two GUIs and the guide
+// book) and exits. Screenshots land in build/run/clientGameTest/screenshots/ for a person to look at; the test itself
+// fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
+// It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
+// hang it on `check`).
+loom {
+    runs {
+        named("clientGameTest") {
+            property("buildcraft.dev", "true")
+        }
+    }
+}
+tasks.named<JavaExec>("runClientGameTest") {
+    val runDir = project.file("build/run/clientGameTest")
+    val consoleLog = runDir.resolve("console.log")
+    val clientLog = runDir.resolve("logs/latest.log")
+    val shots = runDir.resolve("screenshots")
+    val loud = project.hasProperty("bcLoudGameTestLogs")
+    timeout.set(Duration.ofMinutes(15))
+    doFirst {
+        if (clientLog.exists() && !clientLog.delete()) {
+            throw GradleException("Cannot delete the previous client game-test log $clientLog (locked by another process?)")
+        }
+        // Screenshots carry a run-counter prefix; clear the last run's so the folder holds this run's alone.
+        shots.deleteRecursively()
+        if (!loud) {
+            runDir.mkdirs()
+            standardOutput = FileOutputStream(consoleLog)
+        }
+    }
+    doLast {
+        // The test logs this only after every check passed; an aborted run can still exit 0.
+        val text = if (clientLog.isFile) clientLog.readText() else ""
+        if (!text.contains("BuildCraft client game test: all checks passed")) {
+            throw GradleException(
+                "The Fabric client game test exited 0 without its pass line in $clientLog; its console is in $consoleLog."
             )
         }
     }

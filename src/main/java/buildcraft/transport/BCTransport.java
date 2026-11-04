@@ -8,13 +8,9 @@ package buildcraft.transport;
 
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.level.ChunkWatchEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,12 +62,10 @@ public class BCTransport {
 
         // Register power/RF/fluid transfer data for pipes (deferred to commonSetup
         // because config values aren't available during mod construction)
-        modEventBus.addListener((FMLCommonSetupEvent event) -> {
-            event.enqueueWork(() -> {
-                BCTransportConfig.registerPowerTransferData();
-                BCTransportConfig.registerRfTransferData();
-                BCTransportConfig.registerFluidTransferData();
-            });
+        Platform.lifecycle().onCommonSetupOnMain(() -> {
+            BCTransportConfig.registerPowerTransferData();
+            BCTransportConfig.registerRfTransferData();
+            BCTransportConfig.registerFluidTransferData();
         });
 
         // Initialize stripes registry and handlers
@@ -91,18 +85,11 @@ public class BCTransport {
         registerPayloads();
 
         // Register server tick event for flushing pipe item packets
-        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
-                event -> {
-                    PipeItemMessageQueue.serverTick();
-                });
+        Platform.gameHooks().onServerTickEnd(server -> PipeItemMessageQueue.serverTick());
 
         // Register server-side wire system tick
-        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.tick.LevelTickEvent.Post.class,
-                event -> {
-                    if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                        buildcraft.transport.wire.SavedDataWireSystems.get(serverLevel).tick();
-                    }
-                });
+        Platform.gameHooks().onLevelTickEnd(
+                serverLevel -> buildcraft.transport.wire.SavedDataWireSystems.get(serverLevel).tick());
 
         // A player whose client receives a wire-holding chunk gets every wire system they can see on a following
         // wire tick: the next one, or when the pacing interval since their last such send is up, so a stream of
@@ -110,8 +97,8 @@ public class BCTransport {
         // Sent, not Watch: Watch fires when the chunk is only queued, so a payload sent then could reach the
         // client before the chunk and its power update would find no pipe to land on. Fires on the server thread
         // once per chunk delivered — thousands at login — so this stays a cached data lookup plus a map probe.
-        NeoForge.EVENT_BUS.addListener(ChunkWatchEvent.Sent.class,
-                event -> SavedDataWireSystems.get(event.getLevel()).onChunkSent(event.getPlayer(), event.getPos()));
+        Platform.gameHooks().onChunkSent(
+                (level, player, pos) -> SavedDataWireSystems.get(level).onChunkSent(player, pos));
 
         LOGGER.info("BuildCraft Transport initialized");
     }

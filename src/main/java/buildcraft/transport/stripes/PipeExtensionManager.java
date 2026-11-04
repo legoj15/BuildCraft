@@ -27,6 +27,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -34,10 +35,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.transport.IStripesActivator;
@@ -54,6 +51,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 import buildcraft.transport.tile.TilePipeHolder;
 
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.GameHooks;
 import buildcraft.platform.event.PlatformProtection.CapturedBlock;
 
 /**
@@ -70,7 +68,6 @@ import buildcraft.platform.event.PlatformProtection.CapturedBlock;
  * placed by the owner's player clicking its cell (the right-click and placement events). A refusal anywhere puts the
  * line back as it was and sends the pipe stack back down the stripes pipe.
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public enum PipeExtensionManager implements IPipeExtensionManager {
     INSTANCE;
 
@@ -97,16 +94,14 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         }
     }
 
-    @SubscribeEvent
-    public static void onLevelTick(LevelTickEvent.Post event) {
-        if (event.getLevel() instanceof ServerLevel level) {
-            INSTANCE.tick(level);
-        }
+    /** Registers the end-of-level-tick driver and the unload cleanup. Called once from BCCore. */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onLevelTickEnd(INSTANCE::tick);
+        hooks.onLevelUnload(PipeExtensionManager::onLevelUnload);
     }
 
-    @SubscribeEvent
-    public static void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof Level level) {
+    public static void onLevelUnload(LevelAccessor unloaded) {
+        if (unloaded instanceof Level level) {
             INSTANCE.requests.remove(level);
         }
     }

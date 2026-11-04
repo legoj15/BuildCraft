@@ -217,6 +217,7 @@ public class BCCore {
         buildcraft.lib.misc.FakePlayerUtil.registerHooks(hooks);
         buildcraft.core.command.SoundTestCommand.registerHooks(hooks);
         buildcraft.core.item.ZombieWrenches.registerHooks(hooks);
+        buildcraft.transport.stripes.PipeExtensionManager.registerHooks(hooks);
     }
 
     /**

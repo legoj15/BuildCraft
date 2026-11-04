@@ -57,7 +57,7 @@ repositories {
 }
 
 sourceSets {
-    val main by getting
+    val main = getByName("main")
     named("test") {
         compileClasspath += main.compileClasspath + main.output
         runtimeClasspath += main.runtimeClasspath + main.output

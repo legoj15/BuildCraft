@@ -23,7 +23,6 @@ dependencies {
     // buildSrc classpath must be applied without a version, so the convention plugins say only `id(...)`.
     // ModDevGradle (NeoForge nodes).
     implementation("net.neoforged:moddev-gradle:2.0.147")
-    // Loom (Fabric nodes). 1.15.5 is the newest Loom whose Gradle API floor (9.2.0) the wrapper (9.3.1) meets:
-    // 1.16.x needs 9.4, 1.17.x 9.5, 1.18.x 9.7 and 1.19.x 9.8 (the version Fabric's own 26.3 template uses).
-    implementation("net.fabricmc:fabric-loom:1.15.5")
+    // Loom (Fabric nodes). 1.19.x needs Gradle 9.8 (the wrapper's version, and what Fabric's own 26.3 template uses).
+    implementation("net.fabricmc:fabric-loom:1.19.3")
 }

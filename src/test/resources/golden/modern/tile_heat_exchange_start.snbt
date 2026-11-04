@@ -1,0 +1,10 @@
+{
+  containerSlots: {items:[{},{},{},{}]},
+  hasSection: 1b,
+  isStart: 1b,
+  middleCount: 3,
+  progress: 0,
+  progressState: 1,
+  sectionInput: {amount:1200,id:"minecraft:lava"},
+  sectionOutput: {amount:80,id:"minecraft:water"}
+}

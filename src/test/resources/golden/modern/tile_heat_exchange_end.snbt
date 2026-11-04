@@ -1,0 +1,7 @@
+{
+  containerSlots: {items:[{},{},{},{}]},
+  hasSection: 1b,
+  isStart: 0b,
+  sectionInput: {amount:500,id:"minecraft:water"},
+  sectionOutput: {amount:900,id:"minecraft:lava"}
+}

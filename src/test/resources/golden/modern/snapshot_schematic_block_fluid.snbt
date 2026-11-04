@@ -1,0 +1,4 @@
+{
+  blockState: {Name:"minecraft:lava",Properties:{level:"3"}},
+  isFlowing: 1b
+}

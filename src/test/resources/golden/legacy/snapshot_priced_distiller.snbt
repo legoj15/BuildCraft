@@ -1,0 +1,3 @@
+{
+  fluids: [{amount:1500,id:"minecraft:lava"}]
+}

@@ -1,0 +1,5 @@
+{
+  amount: 250,
+  components: {"minecraft:rarity":"epic"},
+  id: "minecraft:water"
+}

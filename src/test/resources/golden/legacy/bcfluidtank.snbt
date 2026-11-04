@@ -1,0 +1,6 @@
+{
+  amount0: 4321,
+  amount1: 16000,
+  fluid0: "minecraft:lava",
+  fluid1: "minecraft:water"
+}

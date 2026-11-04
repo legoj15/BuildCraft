@@ -9,6 +9,7 @@ import buildcraft.platform.config.BCConfigType;
 import buildcraft.platform.config.ConfigHooks;
 import buildcraft.platform.config.ConfigRegistrar;
 import buildcraft.platform.event.PlatformProtection;
+import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
 
 /**
@@ -27,6 +28,11 @@ public final class Platform {
     /** Networking: payload registration and sending. */
     public static BCNetwork network() {
         return NetworkHolder.INSTANCE;
+    }
+
+    /** Menus: menu types that read opening data, and opening a menu with it. */
+    public static BCMenus menus() {
+        return MenusHolder.INSTANCE;
     }
 
     /** Protection: the permission events a machine posts for its fake player (break, place, attack, clicks). */
@@ -94,6 +100,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeNetwork();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricNetwork();
+            *///?}
+        }
+    }
+
+    private static final class MenusHolder {
+        static final BCMenus INSTANCE = create();
+
+        private static BCMenus create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeMenus();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricMenus();
             *///?}
         }
     }

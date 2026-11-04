@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.api.items.IList;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.list.ListHandler;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -94,18 +95,9 @@ public class ItemList_BC8 extends Item implements IList {
         if (!level.isClientSide()) {
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
-                    @Override
-                    public net.minecraft.network.chat.Component getDisplayName() {
-                        return Component.translatable("gui.buildcraftunofficial.list");
-                    }
-
-                    @Override
-                    public net.minecraft.world.inventory.AbstractContainerMenu createMenu(
-                            int containerId, net.minecraft.world.entity.player.Inventory playerInv, Player p) {
-                        return new buildcraft.core.list.ContainerList(containerId, playerInv, hand);
-                    }
-                }, buf -> buf.writeByte(hand.ordinal()));
+                IBCMenuProvider.of(Component.translatable("gui.buildcraftunofficial.list"),
+                        (containerId, playerInv, p) -> new buildcraft.core.list.ContainerList(containerId, playerInv, hand),
+                        buf -> buf.writeByte(hand.ordinal())).openFor(serverPlayer);
             }
         }
         return InteractionResult.SUCCESS;

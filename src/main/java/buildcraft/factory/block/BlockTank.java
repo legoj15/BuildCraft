@@ -176,7 +176,7 @@ public class BlockTank extends BlockBCTile_Waterloggable<TileTank> implements IT
 
     // useWithoutItem is inherited (BlockBCTileSupport.openTileMenu) — TileTank is an IBCMenuProvider,
     // so the inherited body is equivalent: PASS on a missing tile, SUCCESS otherwise, opened through
-    // the one-arg openMenu so writeClientSideData still supplies the pos.
+    // IBCMenuProvider.openFor so the opening data is still the pos.
 
     @Override
     //? if >=1.21.10 {
@@ -209,7 +209,7 @@ public class BlockTank extends BlockBCTile_Waterloggable<TileTank> implements IT
         /*boolean isFluidContainer = stack.getCapability(Capabilities.FluidHandler.ITEM, null) != null;*/
         //?}
         if (!isFluidContainer && !level.isClientSide()) {
-            player.openMenu(tank);
+            tank.openFor(player);
         }
         return BlockUtil.itemUseSuccess();
     }

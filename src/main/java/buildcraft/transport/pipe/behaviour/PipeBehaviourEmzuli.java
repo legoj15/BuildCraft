@@ -18,10 +18,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
@@ -35,6 +32,7 @@ import buildcraft.api.transport.pipe.PipeEventActionActivate;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventStatement;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -257,19 +255,9 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
         }
         if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
             final PipeBehaviourEmzuli self = this;
-            serverPlayer.openMenu(new MenuProvider() {
-                @Override
-                public Component getDisplayName() {
-                    return Component.translatable("gui.pipes.emzuli.title");
-                }
-
-                @Override
-                public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
-                    return new ContainerEmzuliPipe(containerId, playerInv, self);
-                }
-            }, (buf) -> {
-                buf.writeBlockPos(pipe.getHolder().getPipePos());
-            });
+            IBCMenuProvider.of(Component.translatable("gui.pipes.emzuli.title"),
+                (containerId, playerInv, p) -> new ContainerEmzuliPipe(containerId, playerInv, self),
+                buf -> buf.writeBlockPos(pipe.getHolder().getPipePos())).openFor(serverPlayer);
         }
         return true;
     }

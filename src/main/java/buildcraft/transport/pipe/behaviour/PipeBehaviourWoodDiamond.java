@@ -12,10 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
@@ -29,6 +26,7 @@ import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
@@ -130,19 +128,9 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
         }
         if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
             final PipeBehaviourWoodDiamond self = this;
-            serverPlayer.openMenu(new MenuProvider() {
-                @Override
-                public Component getDisplayName() {
-                    return Component.translatable("gui.buildcraftunofficial.pipe_diamond_wood.title");
-                }
-
-                @Override
-                public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
-                    return new ContainerDiamondWoodPipe(containerId, playerInv, self);
-                }
-            }, (buf) -> {
-                buf.writeBlockPos(pipe.getHolder().getPipePos());
-            });
+            IBCMenuProvider.of(Component.translatable("gui.buildcraftunofficial.pipe_diamond_wood.title"),
+                (containerId, playerInv, p) -> new ContainerDiamondWoodPipe(containerId, playerInv, self),
+                buf -> buf.writeBlockPos(pipe.getHolder().getPipePos())).openFor(serverPlayer);
         }
         return true;
     }

@@ -53,12 +53,12 @@ final class BlockBCTileSupport {
     /**
      * Standard menu-open: if the tile is an {@link IBCMenuProvider}, open it (server-side) and report
      * SUCCESS on both sides; otherwise PASS (a block with no GUI keeps vanilla's default behaviour).
-     * Opening via the one-arg {@code openMenu(tile)} lets {@code writeClientSideData} supply the pos.
+     * {@link IBCMenuProvider#openFor} sends the tile's pos as the opening data.
      */
     static InteractionResult openTileMenu(Level level, BlockPos pos, Player player) {
         if (level.getBlockEntity(pos) instanceof IBCMenuProvider provider) {
             if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
-                serverPlayer.openMenu(provider);
+                provider.openFor(serverPlayer);
             }
             return InteractionResult.SUCCESS;
         }

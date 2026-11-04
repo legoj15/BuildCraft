@@ -119,7 +119,7 @@ public class BlockDistiller extends BlockBCTile_Waterloggable<TileDistiller_BC8>
                 if (!level.isClientSide()) {
                     BlockEntity be = level.getBlockEntity(pos);
                     if (be instanceof TileDistiller_BC8 distiller) {
-                        player.openMenu(distiller);
+                        distiller.openFor(player);
                     }
                 }
                 return BlockUtil.itemUseSuccess();
@@ -156,7 +156,7 @@ public class BlockDistiller extends BlockBCTile_Waterloggable<TileDistiller_BC8>
         }
         // No fluid interaction — open the GUI
         if (!level.isClientSide()) {
-            player.openMenu(distiller);
+            distiller.openFor(player);
         }
         return BlockUtil.itemUseSuccess();
     }

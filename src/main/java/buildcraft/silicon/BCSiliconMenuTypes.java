@@ -12,9 +12,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.platform.Platform;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.silicon.container.ContainerIntegrationTable;
@@ -24,17 +24,17 @@ public class BCSiliconMenuTypes {
         DeferredRegister.create(Registries.MENU, BCSilicon.MODID);
 
     public static final Supplier<MenuType<ContainerAssemblyTable>> ASSEMBLY_TABLE =
-        MENU_TYPES.register("assembly_table", () -> IMenuTypeExtension.create(ContainerAssemblyTable::new));
+        MENU_TYPES.register("assembly_table", () -> Platform.menus().create(ContainerAssemblyTable::new));
 
     // Shipped alongside the Programming Table since Ph7 registered the robot integration recipe.
     public static final Supplier<MenuType<ContainerIntegrationTable>> INTEGRATION_TABLE =
-        MENU_TYPES.register("integration_table", () -> IMenuTypeExtension.create(ContainerIntegrationTable::new));
+        MENU_TYPES.register("integration_table", () -> Platform.menus().create(ContainerIntegrationTable::new));
 
     public static final Supplier<MenuType<ContainerAdvancedCraftingTable>> ADVANCED_CRAFTING_TABLE =
-        MENU_TYPES.register("advanced_crafting_table", () -> IMenuTypeExtension.create(ContainerAdvancedCraftingTable::new));
+        MENU_TYPES.register("advanced_crafting_table", () -> Platform.menus().create(ContainerAdvancedCraftingTable::new));
 
     public static final Supplier<MenuType<buildcraft.silicon.container.ContainerGate>> GATE =
-        MENU_TYPES.register("gate", () -> IMenuTypeExtension.create(buildcraft.silicon.container.ContainerGate::new));
+        MENU_TYPES.register("gate", () -> Platform.menus().create(buildcraft.silicon.container.ContainerGate::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

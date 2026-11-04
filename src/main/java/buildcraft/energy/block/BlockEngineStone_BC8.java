@@ -120,7 +120,7 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineStone_BC8 engine && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(engine);
+            engine.openFor(serverPlayer);
         }
         return InteractionResult.SUCCESS;
     }

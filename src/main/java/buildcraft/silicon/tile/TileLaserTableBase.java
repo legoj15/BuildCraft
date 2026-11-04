@@ -45,7 +45,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     }
 
     // --- IBCMenuProvider (GUI) ---
-    // The tile is the sole MenuProvider (writeClientSideData supplies the pos on every open path). The
+    // The tile is the sole MenuProvider (IBCMenuProvider supplies the pos on every open path). The
     // display name matches the old block-side SimpleMenuProvider (the block's own name); each concrete
     // table (Assembly / Advanced Crafting / Integration) builds its own container in createMenu.
 

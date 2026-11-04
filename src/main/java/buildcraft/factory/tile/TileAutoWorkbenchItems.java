@@ -28,7 +28,7 @@ public class TileAutoWorkbenchItems extends TileAutoWorkbenchBase implements IBC
     }
 
     // --- IBCMenuProvider (GUI) ---
-    // The tile is the sole MenuProvider (writeClientSideData supplies the pos on every open path,
+    // The tile is the sole MenuProvider (IBCMenuProvider supplies the pos on every open path,
     // including vanilla's spectator path — this BaseEntityBlock now offers read-only spectator access
     // like its BuildCraft machine siblings and vanilla containers).
 

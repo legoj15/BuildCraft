@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
@@ -19,6 +18,7 @@ import buildcraft.factory.container.ContainerChute;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.factory.container.ContainerHeatExchange;
 import buildcraft.factory.container.ContainerTank;
+import buildcraft.platform.Platform;
 
 public class BCFactoryMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
@@ -26,23 +26,23 @@ public class BCFactoryMenuTypes {
 
     public static final Supplier<MenuType<ContainerAutoCraftItems>> AUTO_WORKBENCH_ITEMS =
             MENU_TYPES.register("auto_workbench_items",
-                    () -> IMenuTypeExtension.create(ContainerAutoCraftItems::new));
+                    () -> Platform.menus().create(ContainerAutoCraftItems::new));
 
     public static final Supplier<MenuType<ContainerTank>> TANK =
             MENU_TYPES.register("tank",
-                    () -> IMenuTypeExtension.create(ContainerTank::new));
+                    () -> Platform.menus().create(ContainerTank::new));
 
     public static final Supplier<MenuType<ContainerChute>> CHUTE =
             MENU_TYPES.register("chute",
-                    () -> IMenuTypeExtension.create(ContainerChute::new));
+                    () -> Platform.menus().create(ContainerChute::new));
 
     public static final Supplier<MenuType<ContainerDistiller>> DISTILLER =
             MENU_TYPES.register("distiller",
-                    () -> IMenuTypeExtension.create(ContainerDistiller::new));
+                    () -> Platform.menus().create(ContainerDistiller::new));
 
     public static final Supplier<MenuType<ContainerHeatExchange>> HEAT_EXCHANGE =
             MENU_TYPES.register("heat_exchange",
-                    () -> IMenuTypeExtension.create(ContainerHeatExchange::new));
+                    () -> Platform.menus().create(ContainerHeatExchange::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

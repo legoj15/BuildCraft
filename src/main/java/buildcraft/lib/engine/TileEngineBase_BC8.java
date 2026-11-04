@@ -80,7 +80,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
     public long getPower() { return power; }
 
     // --- IBCMenuProvider (GUI) ---
-    // The engine tile is the sole MenuProvider for its GUI (so writeClientSideData supplies the pos on
+    // The engine tile is the sole MenuProvider for its GUI (its opening data is the pos, written on
     // every open path, spectator-safe). The GUI-bearing engines (Stone / Iron / FE) override these; the
     // GUI-less engines (Redstone / Creative) inherit the null-menu default and are never opened.
 

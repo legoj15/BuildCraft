@@ -17,10 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
@@ -30,6 +27,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -112,19 +110,9 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
         EnumPipePart part) {
         if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
             final PipeBehaviourDiamond self = this;
-            serverPlayer.openMenu(new MenuProvider() {
-                @Override
-                public Component getDisplayName() {
-                    return Component.translatable("gui.buildcraftunofficial.pipe_diamond.title");
-                }
-
-                @Override
-                public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
-                    return new ContainerDiamondPipe(containerId, playerInv, self);
-                }
-            }, (buf) -> {
-                buf.writeBlockPos(pipe.getHolder().getPipePos());
-            });
+            IBCMenuProvider.of(Component.translatable("gui.buildcraftunofficial.pipe_diamond.title"),
+                (containerId, playerInv, p) -> new ContainerDiamondPipe(containerId, playerInv, self),
+                buf -> buf.writeBlockPos(pipe.getHolder().getPipePos())).openFor(serverPlayer);
         }
         return true;
     }

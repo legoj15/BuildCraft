@@ -6,37 +6,79 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.core.BlockPos;
+import java.util.function.Consumer;
+
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuConstructor;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import buildcraft.platform.Platform;
 
 /**
- * A {@link MenuProvider} backed by a block entity whose client-side container constructor rebuilds the
- * tile from a {@link BlockPos} read off the open-screen buffer.
+ * A {@link MenuProvider} whose client-side container is rebuilt from opening data it writes itself
+ * ({@link #writeOpeningData}), read back by the menu type's factory ({@code Platform.menus().create(...)}).
  *
- * <p>BuildCraft GUIs bind directly to the live tile, so the client menu factory (registered via
- * {@code IMenuTypeExtension.create(...)}) reads {@code buf.readBlockPos()} to locate it. Because
- * {@link #writeClientSideData} runs on <i>every</i> open path — the block's own single-arg
- * {@code player.openMenu(tile)} AND vanilla's <b>spectator</b> path, which bypasses the block and calls
- * {@code player.openMenu(menuProvider)} with no data writer — writing the pos here makes it the single uniform
- * source. Blocks therefore open these tiles with the <em>one-arg</em> {@code openMenu(tile)}: do NOT also route
- * the pos through the {@code openMenu(tile, pos)} / {@code openMenu(tile, writer)} overloads, whose writer runs
- * <i>after</i> {@code writeClientSideData} and would append a redundant SECOND {@code BlockPos} the client never
- * reads.
+ * <p>A block entity's GUI binds directly to the live tile, so its opening data is the tile's {@code BlockPos}
+ * (the default) and the client container reads {@code buf.readBlockPos()} to locate it. A provider that is not a
+ * block entity (the list item, the gate, the filter pipes) is built with {@link #of}, its writer supplying the data.
  *
- * <p>Without this, the spectator path hands the client factory a {@code null} buffer and {@code readBlockPos()}
- * NPEs on the client network thread — the "Network Protocol Error" disconnect a spectator hits on right-click.
- * Any block-entity menu whose client ctor reads a {@code BlockPos} should implement this instead of raw
- * {@link MenuProvider} to stay spectator-safe; opening the GUI then works read-only for spectators, matching how
- * vanilla treats chests and furnaces.
+ * <p>Open one with {@link #openFor}, which sends exactly {@link #writeOpeningData}'s bytes. The same data is also
+ * written by the {@code writeClientSideData} hook below, because vanilla's <b>spectator</b> path bypasses the block
+ * and calls {@code player.openMenu(blockEntity)} with no data writer; without the hook the client factory gets a
+ * {@code null} buffer and {@code readBlockPos()} NPEs on the client network thread (the "Network Protocol Error"
+ * disconnect a spectator hits on right-click). With it, a spectator opens the GUI read-only, matching how vanilla
+ * treats chests and furnaces. {@link #openFor} bypasses the hook, so the data is never written twice.
  */
 public interface IBCMenuProvider extends MenuProvider {
-    /** Supplied by {@link net.minecraft.world.level.block.entity.BlockEntity#getBlockPos()}. */
-    BlockPos getBlockPos();
 
+    /**
+     * Writes the opening data the client container reads. The default writes the position of this provider, which
+     * must then be a {@link BlockEntity}; any other provider overrides it.
+     */
+    default void writeOpeningData(RegistryFriendlyByteBuf buffer) {
+        if (!(this instanceof BlockEntity blockEntity)) {
+            throw new IllegalStateException(getClass().getName() + " is not a block entity and must override writeOpeningData");
+        }
+        buffer.writeBlockPos(blockEntity.getBlockPos());
+    }
+
+    /** Opens this provider's menu for {@code player} (server side only; a client player opens nothing). */
+    default void openFor(Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            Platform.menus().open(serverPlayer, this, this::writeOpeningData);
+        }
+    }
+
+    // @LoaderHook("neoforge:IMenuProviderExtension#writeClientSideData") (tag pending: the annotation lands with
+    // the override-tagging slice). The spectator path described above relies on it.
     @Override
     default void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
-        buffer.writeBlockPos(getBlockPos());
+        writeOpeningData(buffer);
+    }
+
+    /** A provider that is not a block entity: {@code title}, {@code constructor}, and {@code writer}'s data. */
+    static IBCMenuProvider of(Component title, MenuConstructor constructor, Consumer<RegistryFriendlyByteBuf> writer) {
+        return new IBCMenuProvider() {
+            @Override
+            public Component getDisplayName() {
+                return title;
+            }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+                return constructor.createMenu(containerId, inventory, player);
+            }
+
+            @Override
+            public void writeOpeningData(RegistryFriendlyByteBuf buffer) {
+                writer.accept(buffer);
+            }
+        };
     }
 }

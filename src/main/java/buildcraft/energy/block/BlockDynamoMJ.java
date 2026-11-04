@@ -104,7 +104,7 @@ public class BlockDynamoMJ extends BlockEngineBase_BC8 {
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileDynamoMJ dynamo && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(dynamo);
+            dynamo.openFor(serverPlayer);
         }
         return InteractionResult.SUCCESS;
     }

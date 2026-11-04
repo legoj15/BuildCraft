@@ -9,7 +9,6 @@ package buildcraft.energy;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
@@ -18,6 +17,7 @@ import buildcraft.energy.container.ContainerEngineStone;
 import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.energy.container.ContainerDynamoMJ;
+import buildcraft.platform.Platform;
 
 public class BCEnergyMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
@@ -25,19 +25,19 @@ public class BCEnergyMenuTypes {
 
     public static final Supplier<MenuType<ContainerEngineStone>> ENGINE_STONE = MENU_TYPES.register(
             "engine_stone",
-            () -> IMenuTypeExtension.create(ContainerEngineStone::new));
+            () -> Platform.menus().create(ContainerEngineStone::new));
 
     public static final Supplier<MenuType<ContainerEngineIron>> ENGINE_IRON = MENU_TYPES.register(
             "engine_iron",
-            () -> IMenuTypeExtension.create(ContainerEngineIron::new));
+            () -> Platform.menus().create(ContainerEngineIron::new));
 
     public static final Supplier<MenuType<ContainerEngineFE>> ENGINE_FE = MENU_TYPES.register(
             "engine_rf",
-            () -> IMenuTypeExtension.create(ContainerEngineFE::new));
+            () -> Platform.menus().create(ContainerEngineFE::new));
 
     public static final Supplier<MenuType<ContainerDynamoMJ>> DYNAMO_MJ = MENU_TYPES.register(
             "mj_dynamo",
-            () -> IMenuTypeExtension.create(ContainerDynamoMJ::new));
+            () -> Platform.menus().create(ContainerDynamoMJ::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

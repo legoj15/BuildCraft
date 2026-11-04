@@ -11,9 +11,9 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.platform.Platform;
 import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.ContainerRequester;
 import buildcraft.robotics.container.ContainerZonePlanner;
@@ -27,18 +27,18 @@ public class BCRoboticsMenuTypes {
 
     static {
         ZONE_PLANNER = MENU_TYPES.register("zone_planner",
-                () -> IMenuTypeExtension.create(ContainerZonePlanner::new));
+                () -> Platform.menus().create(ContainerZonePlanner::new));
     }
 
     // The robot Programming Table's menu — the tile is silicon's, the GUI is robotics content (8.0.x placement).
     public static final Supplier<MenuType<ContainerProgrammingTable>> PROGRAMMING_TABLE =
             MENU_TYPES.register("programming_table",
-                    () -> IMenuTypeExtension.create(ContainerProgrammingTable::new));
+                    () -> Platform.menus().create(ContainerProgrammingTable::new));
 
     // The Requester's menu (Ph8).
     public static final Supplier<MenuType<ContainerRequester>> REQUESTER =
             MENU_TYPES.register("requester",
-                    () -> IMenuTypeExtension.create(ContainerRequester::new));
+                    () -> Platform.menus().create(ContainerRequester::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

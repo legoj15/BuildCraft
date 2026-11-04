@@ -11,6 +11,7 @@ import java.io.IOException;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.silicon.item.ItemGateCopier;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -216,20 +217,12 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
             BlockPos pos = holder.getPipePos();
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
-                    @Override
-                    public Component getDisplayName() {
-                        return logic.variant.getLocalizedName();
-                    }
-
-                    @Override
-                    public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv, Player p) {
-                        return new buildcraft.silicon.container.ContainerGate(id, inv, PluggableGate.this);
-                    }
-                }, buf -> {
-                    buf.writeBlockPos(pos);
-                    NetEnumUtil.write(buf, side);
-                });
+                IBCMenuProvider.of(logic.variant.getLocalizedName(),
+                        (id, inv, p) -> new buildcraft.silicon.container.ContainerGate(id, inv, PluggableGate.this),
+                        buf -> {
+                            buf.writeBlockPos(pos);
+                            NetEnumUtil.write(buf, side);
+                        }).openFor(serverPlayer);
             }
         }
         return true;

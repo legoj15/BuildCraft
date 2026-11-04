@@ -257,7 +257,7 @@ public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchang
             return InteractionResult.PASS;
         }
         if (!level.isClientSide()) {
-            player.openMenu(start);
+            start.openFor(player);
         }
         return InteractionResult.SUCCESS;
     }

@@ -20,6 +20,7 @@ import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.tile.TileArchitectTable;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable> {
@@ -127,7 +128,7 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
     }
 
     @Override
-    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_SET_NAME && !isClient) {
             String newName = buffer.readUtf();
             setTileName(newName);

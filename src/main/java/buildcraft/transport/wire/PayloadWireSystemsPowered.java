@@ -16,10 +16,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.platform.network.PacketContext;
 
 public class PayloadWireSystemsPowered implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystemsPowered> TYPE =
@@ -56,8 +56,8 @@ public class PayloadWireSystemsPowered implements CustomPacketPayload {
         return TYPE;
     }
 
-    public static void handle(PayloadWireSystemsPowered message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(PayloadWireSystemsPowered message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Level world = ctx.player().level();
             for (Map.Entry<Integer, Boolean> hashPowered : message.hashesPowered.entrySet()) {
                 WireSystem wireSystem = ClientWireSystems.INSTANCE.wireSystems.get(hashPowered.getKey());

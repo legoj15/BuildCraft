@@ -19,9 +19,8 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 
-import net.neoforged.neoforge.network.connection.ConnectionType;
-
 import buildcraft.builders.snapshot.ArchitectScanPayload;
+import buildcraft.platform.Platform;
 
 /**
  * The decoders that pre-size or loop over a list from a wire VarInt check it first: a few bytes on the wire must never
@@ -112,7 +111,7 @@ public class NetCodecSanityTester {
 
     private static RegistryFriendlyByteBuf markerBuffer(int claimedCount, int actualPositions) {
         RegistryFriendlyByteBuf buf =
-            new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY, ConnectionType.NEOFORGE);
+            Platform.network().registryBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
         buf.writeBoolean(true);
         buf.writeBoolean(false);
         buf.writeShort(2);
@@ -133,7 +132,7 @@ public class NetCodecSanityTester {
 
     private static RegistryFriendlyByteBuf encodeMarker(MessageMarker message) {
         RegistryFriendlyByteBuf buf =
-            new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY, ConnectionType.NEOFORGE);
+            Platform.network().registryBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
         MessageMarker.STREAM_CODEC.encode(buf, message);
         return buf;
     }
@@ -218,7 +217,7 @@ public class NetCodecSanityTester {
 
     private static RegistryFriendlyByteBuf debugBuffer(int leftClaimed, int leftActual, int rightClaimed, int rightActual) {
         RegistryFriendlyByteBuf buf =
-            new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY, ConnectionType.NEOFORGE);
+            Platform.network().registryBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
         buf.writeVarInt(leftClaimed);
         for (int i = 0; i < leftActual; i++) {
             buf.writeUtf("l" + i);

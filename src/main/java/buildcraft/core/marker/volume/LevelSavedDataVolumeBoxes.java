@@ -38,7 +38,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.IAreaProvider;
 
@@ -51,6 +50,7 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.item.ItemMarkerWrench;
 import buildcraft.core.item.ItemVolumeWrench;
 import buildcraft.core.tile.TileMarkerVolume;
+import buildcraft.platform.Platform;
 
 public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedData.Recoverable {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
@@ -347,7 +347,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
 
         MessageVolumeBoxes delta = takeDelta();
         if (delta != null) {
-            PacketDistributor.sendToPlayersInDimension(sl, delta);
+            Platform.network().sendToDimension(sl, delta);
         }
     }
 
@@ -380,7 +380,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     /** Sends the full current set of VolumeBoxes to one specific player (initial tracking). Server-side only. */
     public void sendTo(ServerPlayer player) {
         List<CompoundTag> tags = volumeBoxes.stream().map(VolumeBox::writeToNBT).toList();
-        PacketDistributor.sendToPlayer(player, MessageVolumeBoxes.fullReplace(tags));
+        Platform.network().sendToPlayer(player, MessageVolumeBoxes.fullReplace(tags));
     }
 
     /**

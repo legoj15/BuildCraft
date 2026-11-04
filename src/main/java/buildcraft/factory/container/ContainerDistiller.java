@@ -14,7 +14,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileDistiller_BC8;
@@ -22,6 +21,7 @@ import buildcraft.lib.compat.viewer.TransferUtil;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerDistiller extends ContainerBCTile<TileDistiller_BC8> {
@@ -52,7 +52,7 @@ public class ContainerDistiller extends ContainerBCTile<TileDistiller_BC8> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_TRANSFER_BUCKETS && !isClient && tile != null) {
             // JEI "+" pressed on a distillation recipe: move a bucket of the input fluid into the
             // input container slot; the tile drains it into the input tank.

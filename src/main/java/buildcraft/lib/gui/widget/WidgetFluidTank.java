@@ -11,7 +11,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -28,6 +27,7 @@ import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.Widget_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Widget that allows clicking on a fluid tank in a GUI to fill/drain with the carried item.
@@ -46,7 +46,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
     }
 
     @Override
-    public void handleWidgetDataServer(IPayloadContext ctx, PacketBufferBC buffer) {
+    public void handleWidgetDataServer(PacketContext ctx, PacketBufferBC buffer) {
         byte id = buffer.readByte();
         if (id == NET_CLICK) {
             onGuiClicked();

@@ -16,12 +16,12 @@ import buildcraft.lib.gui.Widget_Neptune;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.net.PacketBufferBC;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
 import buildcraft.transport.tile.TilePipeHolder;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerEmzuliPipe extends ContainerBC_Neptune {
@@ -98,7 +98,7 @@ public class ContainerEmzuliPipe extends ContainerBC_Neptune {
         }
 
         @Override
-        public void handleWidgetDataServer(IPayloadContext ctx, PacketBufferBC buffer) {
+        public void handleWidgetDataServer(PacketContext ctx, PacketBufferBC buffer) {
             int c = buffer.readByte();
             DyeColor colour = (c >= 0 && c < 16) ? DyeColor.byId(c) : null;
             container.behaviour.setSlotColour(index, colour);

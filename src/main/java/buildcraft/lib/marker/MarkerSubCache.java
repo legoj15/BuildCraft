@@ -26,7 +26,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.resources.ResourceKey;
 
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
@@ -85,7 +84,7 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             return;
         }
         for (MessageMarker message : createJoinSyncMessages()) {
-            PacketDistributor.sendToPlayer(player, message);
+            Platform.network().sendToPlayer(player, message);
         }
     }
 
@@ -321,7 +320,7 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         if (server != null) {
             ServerLevel level = server.getLevel(dimensionId);
             if (level != null) {
-                PacketDistributor.sendToPlayersInDimension(level, message);
+                Platform.network().sendToDimension(level, message);
             }
         }
     }

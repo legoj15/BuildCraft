@@ -33,7 +33,6 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 import net.minecraft.util.datafix.DataFixTypes;
 
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.transport.EnumWirePart;
@@ -42,6 +41,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.platform.Platform;
 
 import org.jspecify.annotations.Nullable;
 
@@ -305,10 +305,10 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                         }
                     }
                     if (!changedWires.isEmpty()) {
-                        PacketDistributor.sendToPlayer(player, new PayloadWireSystems(changedWires));
+                        Platform.network().sendToPlayer(player, new PayloadWireSystems(changedWires));
                     }
                     if (!hashesPowered.isEmpty()) {
-                        PacketDistributor.sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
+                        Platform.network().sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
                     }
                 }
             }

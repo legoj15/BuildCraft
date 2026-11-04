@@ -17,7 +17,6 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 
@@ -32,6 +31,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.tile.TileElectronicLibrary;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLibrary> {
@@ -177,7 +177,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
 
         if (id == NET_SELECTED && !isClient) {

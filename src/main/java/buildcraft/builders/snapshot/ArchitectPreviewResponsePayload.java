@@ -21,6 +21,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.platform.network.PacketContext;
+
 /**
  * Server -> client: transient live preview of the Architect Table's scan-area contents. The
  * blueprint is ephemeral — not stored in {@link GlobalSavedDataSnapshots}, so it only lives in
@@ -78,8 +80,8 @@ public record ArchitectPreviewResponsePayload(BlockPos architectPos, @Nullable B
     }
 
     public static void handle(ArchitectPreviewResponsePayload payload,
-                              net.neoforged.neoforge.network.handling.IPayloadContext context) {
-        context.enqueueWork(() -> ClientArchitectPreviews.INSTANCE.onReceived(
+                              PacketContext context) {
+        context.runOnMain(() -> ClientArchitectPreviews.INSTANCE.onReceived(
                 payload.architectPos(), payload.blueprint()));
     }
 }

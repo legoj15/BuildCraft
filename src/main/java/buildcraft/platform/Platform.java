@@ -5,6 +5,8 @@
  */
 package buildcraft.platform;
 
+import buildcraft.platform.network.BCNetwork;
+
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
  * of its own lazy holder class, so asking for one service never loads another's implementation (see the package
@@ -18,6 +20,11 @@ public final class Platform {
         return LoaderHolder.INSTANCE;
     }
 
+    /** Networking: payload registration and sending. */
+    public static BCNetwork network() {
+        return NetworkHolder.INSTANCE;
+    }
+
     private static final class LoaderHolder {
         static final LoaderServices INSTANCE = create();
 
@@ -26,6 +33,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            *///?}
+        }
+    }
+
+    private static final class NetworkHolder {
+        static final BCNetwork INSTANCE = create();
+
+        private static BCNetwork create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeNetwork();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricNetwork();
             *///?}
         }
     }

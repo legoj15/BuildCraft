@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.item.ItemDebugger;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Sent from client to server to request debug info for the block entity at the given position.
@@ -53,7 +54,7 @@ public record MessageDebugRequest(
     }
 
     /** Server-side handler. Looks up the tile entity and sends back debug info. */
-    public static void handle(MessageDebugRequest message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+    public static void handle(MessageDebugRequest message, PacketContext ctx) {
         if (!(ctx.player() instanceof ServerPlayer player)) {
             return;
         }

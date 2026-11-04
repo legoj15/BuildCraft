@@ -13,13 +13,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.net.PacketBufferBC;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 import buildcraft.silicon.tile.TileAssemblyTable;
@@ -76,7 +76,7 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_TRANSFER_ITEMS && !isClient && tile != null) {
             // JEI/REI "+" pressed on an assembly recipe: move that recipe's ingredients (the stacks it accepts)
             // from the player's inventory into the table's input inv. Only stacks the player really holds move.

@@ -21,9 +21,9 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.SimpleContainerData;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
+import buildcraft.platform.network.PacketContext;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.tile.TileZonePlanner;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
@@ -316,7 +316,7 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_PAINT_RECT && !isClient) {
             receivePaint(buffer);
             return;

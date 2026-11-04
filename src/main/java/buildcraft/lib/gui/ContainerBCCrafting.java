@@ -31,10 +31,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * The tile-backed BuildCraft menu base for the two tables that genuinely use vanilla's recipe book —
@@ -123,7 +123,7 @@ public abstract class ContainerBCCrafting<T extends AbstractBCBlockEntity>
     // crafting table. These menus sync via vanilla DataSlots + the recipe book, not the widget channel.
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (support.readMessage(id, buffer, isClient, ctx)) {
             return;
         }

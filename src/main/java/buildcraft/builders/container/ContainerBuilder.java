@@ -23,13 +23,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.enums.EnumSnapshotType;
 
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.gui.BCContainerSupport;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
@@ -41,6 +40,7 @@ import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.EnumContainerContentsMode;
 import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.tile.TileBuilder;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
@@ -224,7 +224,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         // needs a registry-aware buffer, so wrap the plain payload buffer with the level's RegistryAccess.
         var registries = tile.getLevel().registryAccess();
         sendMessage(NET_DISPLAY_LIST, buf -> {
-            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buf, registries, ConnectionType.NEOFORGE);
+            RegistryFriendlyByteBuf rbuf = BCContainerSupport.registryBuf(buf, registries);
             rbuf.writeVarInt(snap.size());
             for (ItemStack stack : snap) {
                 ItemStack.OPTIONAL_STREAM_CODEC.encode(rbuf, stack);
@@ -274,7 +274,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_FLUID_MODE_CLICK && !isClient) {
             if (tile != null) {
                 tile.cycleFluidMode();
@@ -288,7 +288,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         if (id == NET_DISPLAY_LIST && isClient) {
-            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buffer, ctx.player().level().registryAccess(), ConnectionType.NEOFORGE);
+            RegistryFriendlyByteBuf rbuf = BCContainerSupport.registryBuf(buffer, ctx.player().level().registryAccess());
             // Decoded in full before the synced list is touched, so a refused message leaves the last good list up.
             List<ItemStack> newList = readDisplayList(rbuf);
             syncedDisplay.clear();

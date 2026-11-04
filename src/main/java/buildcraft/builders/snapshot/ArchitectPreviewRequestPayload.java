@@ -15,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.builders.tile.TileArchitectTable;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Client -> server: request a transient live preview of the Architect Table's current scan area
@@ -36,8 +37,8 @@ public record ArchitectPreviewRequestPayload(BlockPos architectPos) implements C
     }
 
     public static void handle(ArchitectPreviewRequestPayload payload,
-                              net.neoforged.neoforge.network.handling.IPayloadContext context) {
-        context.enqueueWork(() -> {
+                              PacketContext context) {
+        context.runOnMain(() -> {
             net.minecraft.world.entity.player.Player player = context.player();
             Level level = player.level();
 

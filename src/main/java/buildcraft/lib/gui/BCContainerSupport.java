@@ -24,15 +24,14 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.connection.ConnectionType;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.MessageContainerPayload;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * The per-instance state + shared logic behind the {@link BCContainer} mixin. Held as a field by the two
@@ -105,13 +104,9 @@ public class BCContainerSupport {
 
         MessageContainerPayload payload = new MessageContainerPayload(menu.containerId, id, bytes);
         if (player.level().isClientSide()) {
-            //? if >=1.21.10 {
-            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(payload);
-            //?} else {
-            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(payload);*/
-            //?}
+            Platform.network().sendToServer(payload);
         } else if (player instanceof ServerPlayer serverPlayer) {
-            PacketDistributor.sendToPlayer(serverPlayer, payload);
+            Platform.network().sendToPlayer(serverPlayer, payload);
         }
     }
 
@@ -120,7 +115,7 @@ public class BCContainerSupport {
      * {@code true} if it consumed the message; the calling base then handles its own IDs (recipe-book
      * placement on {@link ContainerBCCrafting}, machine-specific transfers on the subclasses).
      */
-    public boolean readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public boolean readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == ContainerBC_Neptune.NET_WIDGET) {
             int widgetId = buffer.readUnsignedShort();
             if (widgetId < 0 || widgetId >= widgets.size()) {
@@ -165,7 +160,7 @@ public class BCContainerSupport {
     /** Wraps {@code buf} so {@link ItemStack#OPTIONAL_STREAM_CODEC} can resolve registry-backed components
      *  (enchantments, ...): {@code registries} is the sender's level on the client, the player's on the server. */
     public static RegistryFriendlyByteBuf registryBuf(FriendlyByteBuf buf, RegistryAccess registries) {
-        return new RegistryFriendlyByteBuf(buf, registries, ConnectionType.NEOFORGE);
+        return Platform.network().registryBuf(buf, registries);
     }
 
     /** Writes a {@link ContainerBC_Neptune#NET_GHOST_SLOT_SET} payload: the slot index, then the WHOLE dragged stack

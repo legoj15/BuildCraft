@@ -31,6 +31,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.tile.TileFiller;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerFiller extends ContainerBCTile<TileFiller> implements IContainerFilling {
@@ -166,7 +167,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     public static final int NET_PREVIEW = 13;
 
     @Override
-    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_STATEMENT) {
             try {
                 if (isClient) {

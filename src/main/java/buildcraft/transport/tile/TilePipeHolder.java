@@ -65,6 +65,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
@@ -933,7 +934,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             MessagePipePayload payload = new MessagePipePayload(worldPosition, to.ordinal(), data);
             // Send to all players tracking this chunk
             if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                Platform.network().sendToTrackingChunk(
                         serverLevel, new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4), payload);
             }
         } catch (Exception e) {

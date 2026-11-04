@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import buildcraft.lib.net.PacketBufferBC;
 import io.netty.buffer.Unpooled;
 import buildcraft.lib.gui.ContainerBC_Neptune;

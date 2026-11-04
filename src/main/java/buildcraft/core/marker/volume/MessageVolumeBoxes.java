@@ -18,7 +18,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import buildcraft.platform.network.PacketContext;
+
 
 /**
  * Server → client VolumeBox sync. Two shapes:
@@ -85,8 +86,8 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
     }
 
     /** Client-side handler: apply the full snapshot or the incremental delta to ClientVolumeBoxes. */
-    public static void handle(MessageVolumeBoxes message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(MessageVolumeBoxes message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Level world = ctx.player().level();
             List<VolumeBox> boxes = ClientVolumeBoxes.INSTANCE.volumeBoxes;
 

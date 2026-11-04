@@ -11,6 +11,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.platform.network.PacketContext;
+
 public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SnapshotRequestPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:snapshot_request"));
@@ -49,8 +51,8 @@ public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPa
      *  of a player with an unfindable blueprint produces. */
     private static final SnapshotMissWarnings MISSES = new SnapshotMissWarnings(512);
 
-    public static void handle(SnapshotRequestPayload payload, net.neoforged.neoforge.network.handling.IPayloadContext context) {
-        context.enqueueWork(() -> {
+    public static void handle(SnapshotRequestPayload payload, PacketContext context) {
+        context.runOnMain(() -> {
             String hashHex = payload.key().hash == null ? "null"
                     : buildcraft.lib.misc.HashUtil.convertHashToString(payload.key().hash);
             // The store is a shared pool every player's uploads and architect tables write into, and nothing lists

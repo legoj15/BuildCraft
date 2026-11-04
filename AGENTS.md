@@ -69,7 +69,7 @@ Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSe
 
 **Snapshots/Blueprints** — `buildcraft.builders.snapshot`; `ISchematicBlock`/`ISchematicEntity` define save/place, the factory registries map types to schematic factories, `GlobalSavedDataSnapshots` persists server-side. Every inventory and tank key of a tile that some rule prices must be named in the rules under `assets/buildcraftunofficial/compat/buildcraft/builders/buildcraft/`: once any rule prices a block's contents the deny-by-default `clearContent` never runs for it. A tile no rule prices relies on its `clearContent` emptying its contents instead. `TileContentsPricingGuardTester` fills every BC tile and fails naming the unpriced key.
 
-**Networking** — custom payloads via `RegisterPayloadHandlersEvent`; `StreamCodec<RegistryFriendlyByteBuf, T>` serialization; handlers call `ctx.enqueueWork()`.
+**Networking** — custom payloads register during init through `Platform.network()` (`BCNetwork.clientbound`/`serverbound`/`bidirectional`; NeoForge replays them inside `RegisterPayloadHandlersEvent`) and send with its `sendTo*` methods, never `PacketDistributor`; `StreamCodec<RegistryFriendlyByteBuf, T>` serialization (`registryBuf` wraps a bare buffer); handlers take a `PacketContext` and call `ctx.runOnMain()`.
 
 **Config** — two specs: `BCUnifiedConfig` (COMMON) + `BCUnifiedClientConfig` (CLIENT), each wrapping per-subsystem configs via `.push()/.pop()`. The COMMON/CLIENT split is load-bearing (client-only render/display options must live on the CLIENT spec).
 

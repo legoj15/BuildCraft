@@ -14,10 +14,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.gui.BCContainer;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Network payload for sending arbitrary container-scoped messages between client and server.
@@ -65,8 +65,8 @@ public record MessageContainerPayload(
      * Validates the player's open container matches, then dispatches to
      * {@link BCContainer#readMessage}.
      */
-    public static void handle(MessageContainerPayload message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(MessageContainerPayload message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Player player = ctx.player();
             AbstractContainerMenu openContainer = player.containerMenu;
             if (openContainer == null) {

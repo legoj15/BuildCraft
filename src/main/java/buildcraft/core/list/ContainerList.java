@@ -14,7 +14,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.lists.ListMatchHandler;
 
@@ -30,6 +29,7 @@ import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreMenuTypes;
 import buildcraft.core.PaperAdvancement;
 import buildcraft.core.item.ItemList_BC8;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerList extends ContainerBC_Neptune {
@@ -164,7 +164,7 @@ public class ContainerList extends ContainerBC_Neptune {
     // --- Networking ---
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
         if (!isClient) {
             if (id == NET_BUTTON) {

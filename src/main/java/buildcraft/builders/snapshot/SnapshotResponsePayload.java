@@ -19,6 +19,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.builders.container.LibraryUploadBuffer;
+import buildcraft.platform.network.PacketContext;
 
 public record SnapshotResponsePayload(Snapshot snapshot) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SnapshotResponsePayload> TYPE =
@@ -54,8 +55,8 @@ public record SnapshotResponsePayload(Snapshot snapshot) implements CustomPacket
         return TYPE;
     }
 
-    public static void handle(SnapshotResponsePayload payload, net.neoforged.neoforge.network.handling.IPayloadContext context) {
-        context.enqueueWork(() -> {
+    public static void handle(SnapshotResponsePayload payload, PacketContext context) {
+        context.runOnMain(() -> {
             ClientSnapshots.INSTANCE.onSnapshotReceived(payload.snapshot());
         });
     }

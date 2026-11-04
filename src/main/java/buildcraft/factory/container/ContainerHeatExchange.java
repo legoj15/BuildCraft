@@ -18,7 +18,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileHeatExchange;
@@ -30,6 +29,7 @@ import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerHeatExchange extends ContainerBCTile<TileHeatExchange> {
@@ -72,7 +72,7 @@ public class ContainerHeatExchange extends ContainerBCTile<TileHeatExchange> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_TRANSFER_BUCKETS && !isClient && tile != null) {
             // JEI "+" pressed on a heat-exchanger pair: move hot/cold input buckets into the
             // container slots; the tile drains them into the section tanks.

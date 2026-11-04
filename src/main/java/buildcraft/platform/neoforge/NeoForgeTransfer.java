@@ -6,14 +6,38 @@
 package buildcraft.platform.neoforge;
 
 //? if neoforge {
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 //? if >=1.21.10 {
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?}
+//?} else {
+/*import net.neoforged.neoforge.items.IItemHandler;
+*///?}
 
+import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.BCLookupCache;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.platform.transfer.BCTransactionContext;
+import buildcraft.platform.transfer.CapabilityRegistrar;
 import buildcraft.platform.transfer.TransferServices;
 
 /**
@@ -21,6 +45,10 @@ import buildcraft.platform.transfer.TransferServices;
  * BuildCraft journal is a NeoForge {@code SnapshotJournal}, so BuildCraft state joins the transactions other mods open
  * (an adapter wraps the {@code TransactionContext} it is handed with {@link #wrap}). On 1.21.1 there is no NeoForge
  * transaction, so {@link LegacyTransactions} stands in and the classic handlers' simulate flag maps onto it.
+ *
+ * <p><b>Capabilities.</b> Each {@link #registerCapabilities} call subscribes its own {@code RegisterCapabilitiesEvent}
+ * listener on the mod bus of the mod being constructed, so registrations keep the order of the calls relative to
+ * every other listener of that event. Storages cross as {@link NeoForgeItemStorages} adapters, which unwrap each other.
  */
 public final class NeoForgeTransfer implements TransferServices {
     @Override
@@ -40,6 +68,72 @@ public final class NeoForgeTransfer implements TransferServices {
         //?} else {
         /*return LegacyTransactions.newJournal(callbacks);
         *///?}
+    }
+
+    @Override
+    public void registerCapabilities(Consumer<CapabilityRegistrar> registration) {
+        // Called from mod construction, where the active container is the registering mod's.
+        ModLoadingContext.get().getActiveContainer().getEventBus()
+            .addListener((RegisterCapabilitiesEvent event) -> registration.accept(new Registrar(event)));
+    }
+
+    private record Registrar(RegisterCapabilitiesEvent event) implements CapabilityRegistrar {
+        @Override
+        public <T extends BlockEntity> void blockItems(BlockEntityType<T> type, BlockProvider<T, BCItemStorage> provider) {
+            event.registerBlockEntity(itemBlockCap(), type,
+                (tile, side) -> NeoForgeItemStorages.toNeo(provider.get(tile, side)));
+        }
+    }
+
+    //? if >=1.21.10 {
+    private static BlockCapability<ResourceHandler<ItemResource>, Direction> itemBlockCap() {
+        return Capabilities.Item.BLOCK;
+    }
+    //?} else {
+    /*private static BlockCapability<IItemHandler, Direction> itemBlockCap() {
+        return Capabilities.ItemHandler.BLOCK;
+    }*/
+    //?}
+
+    @Override
+    @Nullable
+    public BCItemStorage findItem(Level level, BlockPos pos, @Nullable Direction side) {
+        return NeoForgeItemStorages.fromNeo(level.getCapability(itemBlockCap(), pos, side));
+    }
+
+    @Override
+    @Nullable
+    public BCItemStorage findItem(Entity entity) {
+        //? if >=1.21.10 {
+        return NeoForgeItemStorages.fromNeo(entity.getCapability(Capabilities.Item.ENTITY));
+        //?} else {
+        /*return NeoForgeItemStorages.fromNeo(entity.getCapability(Capabilities.ItemHandler.ENTITY));
+        *///?}
+    }
+
+    @Override
+    public Object toLoaderItemHandler(BCItemStorage storage) {
+        return NeoForgeItemStorages.toNeo(storage);
+    }
+
+    @Override
+    public BCLookupCache<BCItemStorage> itemCache(ServerLevel level, BlockPos pos, @Nullable Direction side) {
+        var cache = BlockCapabilityCache.create(itemBlockCap(), level, pos, side);
+        return new BCLookupCache<>() {
+            private Object handler;
+            private BCItemStorage view;
+
+            @Override
+            @Nullable
+            public BCItemStorage get() {
+                var current = cache.getCapability();
+                if (current != handler) {
+                    handler = current;
+                    view = NeoForgeItemStorages.fromNeo(current);
+                }
+                return view;
+            }
+        };
     }
 
     //? if >=1.21.10 {

@@ -27,6 +27,7 @@ import buildcraft.api.tiles.IHasWork;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.core.BCCoreStatements;
+import buildcraft.platform.transfer.TransferAccess;
 
 public enum CoreTriggerProvider implements ITriggerProvider {
     INSTANCE;
@@ -76,13 +77,8 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         // The container triggers read a block capability, which a block without a block entity (a vanilla cauldron
         // or composter) can expose too.
         if (!blockInventoryTriggers) {
-            //? if >=1.21.10 {
-            var itemHandler = level.getCapability(Capabilities.Item.BLOCK, pos, side.getOpposite());
+            var itemHandler = TransferAccess.findItem(level, pos, side.getOpposite());
             boolean hasInventory = itemHandler != null && itemHandler.size() > 0;
-            //?} else {
-            /*var itemHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side.getOpposite());
-            boolean hasInventory = itemHandler != null && itemHandler.getSlots() > 0;*/
-            //?}
             if (hasInventory) {
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_SPACE);

@@ -10,10 +10,6 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
-
 import buildcraft.api.core.IStackFilter;
 import buildcraft.lib.tile.item.IBCItemHandler;
 
@@ -28,26 +24,14 @@ public class DelegatingItemHandlerFilter implements IStackFilter {
 
     @Override
     public boolean matches(@Nonnull ItemStack stack) {
-        //? if >=1.21.10 {
         for (int slot = 0; slot < handler.size(); slot++) {
-            ItemResource res = handler.getResource(slot);
-            if (!res.isEmpty()) {
-                ItemStack slotStack = res.toStack(handler.getAmountAsInt(slot));
-                if (perStackFilter.matches(slotStack, stack)) {
-                    return true;
-                }
-            }
-        }
-        //?} else {
-        /*for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack slotStack = handler.getStackInSlot(slot);
+            ItemStack slotStack = handler.getStack(slot);
             if (!slotStack.isEmpty()) {
                 if (perStackFilter.matches(slotStack, stack)) {
                     return true;
                 }
             }
-        }*/
-        //?}
+        }
         return false;
     }
 }

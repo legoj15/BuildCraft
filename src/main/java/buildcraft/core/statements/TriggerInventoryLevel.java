@@ -15,10 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
 import buildcraft.api.statements.IStatement;
@@ -27,6 +23,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.platform.transfer.TransferAccess;
 
 import buildcraft.core.BCCoreSprites;
 import buildcraft.core.BCCoreStatements;
@@ -53,11 +50,7 @@ public class TriggerInventoryLevel extends AbstractContainerLevelTrigger {
     @Override
     public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
         IStatementContainer container, IStatementParameter[] parameters) {
-        //? if >=1.21.10 {
-        var itemHandler = level.getCapability(Capabilities.Item.BLOCK, pos, side != null ? side.getOpposite() : null);
-        //?} else {
-        /*var itemHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side != null ? side.getOpposite() : null);*/
-        //?}
+        var itemHandler = TransferAccess.findItem(level, pos, side != null ? side.getOpposite() : null);
         if (itemHandler == null) {
             return false;
         }
@@ -67,44 +60,24 @@ public class TriggerInventoryLevel extends AbstractContainerLevelTrigger {
 
         int itemSpace = 0;
         int foundItems = 0;
-        //? if >=1.21.10 {
         int slotCount = itemHandler.size();
-        //?} else {
-        /*int slotCount = itemHandler.getSlots();*/
-        //?}
         for (int slot = 0; slot < slotCount; slot++) {
-            //? if >=1.21.10 {
-            ItemResource res = itemHandler.getResource(slot);
-            ItemStack stackInSlot = res.isEmpty() ? ItemStack.EMPTY : res.toStack(itemHandler.getAmountAsInt(slot));
-            //?} else {
-            /*ItemStack stackInSlot = itemHandler.getStackInSlot(slot);*/
-            //?}
+            ItemStack stackInSlot = itemHandler.getStack(slot);
             if (stackInSlot.isEmpty()) {
                 if (searchStack.isEmpty()) {
-                    //? if >=1.21.10 {
-                    itemSpace += itemHandler.getCapacityAsInt(slot, ItemResource.EMPTY);
-                    //?} else {
-                    /*itemSpace += itemHandler.getSlotLimit(slot);*/
-                    //?}
+                    itemSpace += itemHandler.getCapacity(slot, ItemStack.EMPTY);
                 } else {
                     if (searchStack.getItem() instanceof IList) {
                         // Lists are too generic; skip without a filtered inventory
                     } else {
-                        //? if >=1.21.10 {
-                        int count = Math.min(itemHandler.getCapacityAsInt(slot, ItemResource.of(searchStack)), searchStack.getMaxStackSize());
-                        //?} else {
-                        /*int count = Math.min(itemHandler.getSlotLimit(slot), searchStack.getMaxStackSize());*/
-                        //?}
+                        int count = Math.min(itemHandler.getCapacity(slot, searchStack), searchStack.getMaxStackSize());
                         itemSpace += count;
                     }
                 }
             } else {
                 if (searchStack.isEmpty() || matchesStackOrList(searchStack, stackInSlot)) {
-                    //? if >=1.21.10 {
-                    itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getCapacityAsInt(slot, res));
-                    //?} else {
-                    /*itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getSlotLimit(slot));*/
-                    //?}
+                    itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getCapacity(slot, stackInSlot));
+
                     foundItems += stackInSlot.getCount();
                 }
             }

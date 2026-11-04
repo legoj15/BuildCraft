@@ -44,6 +44,7 @@ public class BCEnergy {
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
+        Platform.transfer().registerCapabilities(BCEnergy::registerTransfer);
 
         // Setup event for things that need registries to be frozen
         Platform.lifecycle().onCommonSetupOnMain(BCEnergy::commonSetup);
@@ -63,15 +64,19 @@ public class BCEnergy {
         LOGGER.info("BuildCraft Energy initialized");
     }
 
+    /** The item storages, through the platform layer's capability registrar. */
+    private static void registerTransfer(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        registrar.blockItems(BCEnergyBlockEntities.ENGINE_STONE.get(),
+            (engine, direction) -> direction == engine.getOrientation() ? null : engine.fuelItemHandler);
+    }
+
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var itemCap = Capabilities.Item.BLOCK;
         var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var itemCap = Capabilities.ItemHandler.BLOCK;
-        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         event.registerBlockEntity(
@@ -81,12 +86,6 @@ public class BCEnergy {
                 if (direction == engine.getOrientation()) return null;
                 return engine.combinedFluidHandler;
             }
-        );
-
-        event.registerBlockEntity(
-            itemCap,
-            BCEnergyBlockEntities.ENGINE_STONE.get(),
-            (engine, direction) -> direction == engine.getOrientation() ? null : engine.fuelItemHandler
         );
 
         event.registerBlockEntity(

@@ -6,12 +6,29 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+/*import java.util.function.Consumer;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 
+import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.BCLookupCache;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.platform.transfer.BCTransactionContext;
+import buildcraft.platform.transfer.CapabilityRegistrar;
 import buildcraft.platform.transfer.TransferServices;
 
 /^*
@@ -21,6 +38,10 @@ import buildcraft.platform.transfer.TransferServices;
  *
  * <p>Fabric's {@code onFinalCommit} does not pass the original state, so the participant keeps the first snapshot
  * taken since the outer transaction opened and hands that to {@code onRootCommit}, matching NeoForge.
+ *
+ * <p><b>Lookups.</b> Items go through {@link ItemStorage#SIDED}; registrations become
+ * {@code registerForBlockEntity} providers at once, since Fabric registers content eagerly. Gap: Fabric has no
+ * standard entity item lookup, so {@link #findItem(Entity)} finds nothing.
  ^/
 public final class FabricTransfer implements TransferServices {
     @Override
@@ -34,7 +55,54 @@ public final class FabricTransfer implements TransferServices {
         return tx -> participant.updateSnapshots(unwrap(tx));
     }
 
+    @Override
+    public void registerCapabilities(Consumer<CapabilityRegistrar> registration) {
+        registration.accept(new CapabilityRegistrar() {
+            @Override
+            public <T extends BlockEntity> void blockItems(BlockEntityType<T> type,
+                    BlockProvider<T, BCItemStorage> provider) {
+                ItemStorage.SIDED.registerForBlockEntity(
+                    (tile, side) -> FabricItemStorages.toFabric(provider.get(tile, side)), type);
+            }
+        });
+    }
+
+    @Override
+    public BCItemStorage findItem(Level level, BlockPos pos, Direction side) {
+        return FabricItemStorages.fromFabric(ItemStorage.SIDED.find(level, pos, side));
+    }
+
+    @Override
+    public BCItemStorage findItem(Entity entity) {
+        return null; // Gap: no standard Fabric entity item lookup (see the class notes).
+    }
+
+    @Override
+    public Object toLoaderItemHandler(BCItemStorage storage) {
+        return FabricItemStorages.toFabric(storage);
+    }
+
+    @Override
+    public BCLookupCache<BCItemStorage> itemCache(ServerLevel level, BlockPos pos, Direction side) {
+        BlockApiCache<Storage<ItemVariant>, Direction> cache = BlockApiCache.create(ItemStorage.SIDED, level, pos);
+        return new BCLookupCache<>() {
+            private Storage<ItemVariant> handler;
+            private BCItemStorage view;
+
+            @Override
+            public BCItemStorage get() {
+                Storage<ItemVariant> current = cache.find(side);
+                if (current != handler) {
+                    handler = current;
+                    view = FabricItemStorages.fromFabric(current);
+                }
+                return view;
+            }
+        };
+    }
+
     /^* The BuildCraft view of a Fabric transaction someone else opened: it can be nested into, never committed. ^/
+
     public static BCTransactionContext wrap(TransactionContext context) {
         return new Borrowed(context);
     }

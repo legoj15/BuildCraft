@@ -16,7 +16,6 @@ import net.minecraft.world.level.material.Fluids;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?} else {
 /*// 1.21.1: no Transfer API — the version-neutral BCFluidTank surface (fill/drain/
@@ -32,6 +31,8 @@ import buildcraft.factory.tile.TileHeatExchange.OutputTank;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.platform.transfer.BCTransaction;
+
 
 /**
  * Regression coverage for the heat exchanger fluid restrictions.
@@ -207,33 +208,25 @@ public class HeatExchangerTester {
      * always returned 64 — so the slot widget cheerfully accepted the full stack.
      */
     public static void testItemHandlerRespectsConfiguredMaxStackSize(GameTestHelper helper) {
-        //? if >=1.21.10 {
+        // The storage surface (what pipes and the slot widget read on every node) and the classic slot limit (1.21.1's
+        // SlotBase.getMaxStackSize) must both report 1, and insert must cap at 1 via the limited inserter.
         ItemHandlerSimple handler = new ItemHandlerSimple(4, 1);
-        long cap = handler.getCapacityAsLong(0, ItemResource.of(new ItemStack(Items.BUCKET)));
+        int cap = handler.getCapacity(0, new ItemStack(Items.BUCKET));
         assertTrue(cap == 1,
                 "Slot capacity should be 1 for ItemHandlerSimple(4, 1), got " + cap);
-        // insert() is also limited to 1 by the inserter
-        try (Transaction tx = Transaction.openRoot()) {
-            int inserted = handler.insert(0, ItemResource.of(new ItemStack(Items.BUCKET)), 5, tx);
+        assertTrue(handler.getSlotLimit(0) == 1,
+                "Slot limit should be 1 for ItemHandlerSimple(4, 1), got " + handler.getSlotLimit(0));
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int inserted = handler.insert(0, new ItemStack(Items.BUCKET), 5, tx);
             assertTrue(inserted == 1,
                     "insert() should cap at 1 even when 5 are offered, got " + inserted);
             tx.commit();
         }
-        assertTrue(handler.getAmountAsLong(0) == 1,
-                "After capped insert, slot should hold 1 bucket, got " + handler.getAmountAsLong(0));
-        //?} else {
-        /*// 1.21.1: the classic IItemHandler surface — getSlotLimit drives SlotBase.getMaxStackSize,
-        // and insertItem must cap at 1 via the limited inserter. getSlotLimit returning 64 (the
-        // pre-fix default) is exactly the data-loss regression this pins.
-        ItemHandlerSimple handler = new ItemHandlerSimple(4, 1);
-        assertTrue(handler.getSlotLimit(0) == 1,
-                "Slot limit should be 1 for ItemHandlerSimple(4, 1), got " + handler.getSlotLimit(0));
-        ItemStack remainder = handler.insertItem(0, new ItemStack(Items.BUCKET, 5), false);
+        assertTrue(handler.getStack(0).getCount() == 1,
+                "After capped insert, slot should hold 1 bucket, got " + handler.getStack(0).getCount());
+        ItemStack remainder = handler.insertItem(1, new ItemStack(Items.BUCKET, 5), false);
         assertTrue(remainder.getCount() == 4,
                 "insertItem should cap at 1 and return the 4 rejected, got remainder " + remainder.getCount());
-        assertTrue(handler.getStackInSlot(0).getCount() == 1,
-                "After capped insert, slot should hold 1 bucket, got " + handler.getStackInSlot(0).getCount());*/
-        //?}
         helper.succeed();
     }
 

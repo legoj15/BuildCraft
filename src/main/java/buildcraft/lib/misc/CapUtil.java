@@ -11,6 +11,9 @@ import javax.annotation.Nonnull;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
+import buildcraft.platform.transfer.BCCapability;
+import buildcraft.platform.transfer.BCItemStorage;
+
 /** Capability tokens for BuildCraft's internal capability routing.
  *
  * In NeoForge 1.21.11 the capability system uses typed BlockCapability tokens
@@ -23,11 +26,12 @@ import net.neoforged.neoforge.capabilities.Capabilities;
  * are the Transfer-API tokens (Capabilities.Item/Fluid/Energy.BLOCK); on 1.21.1
  * they are the classic handler tokens (Capabilities.ItemHandler/FluidHandler/EnergyStorage.BLOCK). */
 public class CapUtil {
-    //? if >=1.21.10 {
-    /** Token for item handler capability. Routes to Capabilities.Item.BLOCK. */
+    /** Token for item storages: the loader-neutral {@link BCCapability#ITEM}, which the pipe holder resolves through
+     *  {@link buildcraft.platform.transfer.TransferAccess} to a {@link buildcraft.platform.transfer.BCItemStorage}. */
     @Nonnull
-    public static final Object CAP_ITEMS = Capabilities.Item.BLOCK;
+    public static final BCCapability<BCItemStorage> CAP_ITEMS = BCCapability.ITEM;
 
+    //? if >=1.21.10 {
     /** Token for fluid handler capability. Routes to Capabilities.Fluid.BLOCK. */
     @Nonnull
     public static final Object CAP_FLUIDS = Capabilities.Fluid.BLOCK;
@@ -37,9 +41,6 @@ public class CapUtil {
     public static final Object CAP_ENERGY = Capabilities.Energy.BLOCK;
     //?} else {
     /*@Nonnull
-    public static final Object CAP_ITEMS = Capabilities.ItemHandler.BLOCK;
-
-    @Nonnull
     public static final Object CAP_FLUIDS = Capabilities.FluidHandler.BLOCK;
 
     @Nonnull

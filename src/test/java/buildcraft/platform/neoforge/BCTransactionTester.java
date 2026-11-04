@@ -35,28 +35,37 @@ import buildcraft.platform.transfer.TransferServices;
  * (what 1.21.1 uses), so the two cannot drift apart.
  */
 public class BCTransactionTester {
+    /** How an engine makes a journal. */
+    private interface Journals {
+        <S> TransferServices.JournalHandle newJournal(TransferServices.JournalCallbacks<S> callbacks);
+    }
+
     /** One engine under test: how it opens a root and makes a journal. */
-    private record Engine(String name, Supplier<BCTransaction> root, TransferServices services) {
+    private record Engine(String name, Supplier<BCTransaction> root, Journals services) {
         @Override
         public String toString() {
             return name;
         }
     }
 
-    static Stream<Arguments> engines() {
-        TransferServices legacy = new TransferServices() {
+    private static Engine platformEngine() {
+        return new Engine("platform", () -> Platform.transfer().openRoot(), new Journals() {
             @Override
-            public BCTransaction openRoot() {
-                return LegacyTransactions.openRoot();
+            public <S> TransferServices.JournalHandle newJournal(TransferServices.JournalCallbacks<S> callbacks) {
+                return Platform.transfer().newJournal(callbacks);
             }
+        });
+    }
 
+    static Stream<Arguments> engines() {
+        Journals legacy = new Journals() {
             @Override
-            public <S> JournalHandle newJournal(JournalCallbacks<S> callbacks) {
+            public <S> TransferServices.JournalHandle newJournal(TransferServices.JournalCallbacks<S> callbacks) {
                 return LegacyTransactions.newJournal(callbacks);
             }
         };
         return Stream.of(
-            Arguments.of(new Engine("platform", () -> Platform.transfer().openRoot(), Platform.transfer())),
+            Arguments.of(platformEngine()),
             Arguments.of(new Engine("legacy", LegacyTransactions::openRoot, legacy)));
     }
 
@@ -265,7 +274,8 @@ public class BCTransactionTester {
     @Test
     public void bcJournalJoinsANeoForgeTransaction() {
         // What a capability adapter does: NeoForge hands it a TransactionContext, BC state journals into it.
-        Engine platform = new Engine("platform", () -> Platform.transfer().openRoot(), Platform.transfer());
+        Engine platform = platformEngine();
+
         Cell cell = new Cell(platform, 1);
         try (Transaction neo = Transaction.openRoot()) {
             BCTransactionContext view = NeoForgeTransfer.wrap(neo);

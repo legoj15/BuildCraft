@@ -2,12 +2,8 @@ package buildcraft.lib.tile.item;
 
 import net.minecraft.world.item.ItemStack;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?}
-
 import buildcraft.api.inventory.IItemHandlerFiltered;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 /** Combines several {@link IBCItemHandler} into one class.
  * <p>
@@ -22,11 +18,7 @@ public class CombinedItemHandlerWrapper implements IBCItemHandler, IItemHandlerF
         this.baseIndex = new int[itemHandler.length];
         int index = 0;
         for (int i = 0; i < itemHandler.length; i++) {
-            //? if >=1.21.10 {
             index += itemHandler[i].size();
-            //?} else {
-            /*index += itemHandler[i].getSlots();*/
-            //?}
             baseIndex[i] = index;
         }
         this.slotCount = index;
@@ -55,94 +47,45 @@ public class CombinedItemHandlerWrapper implements IBCItemHandler, IItemHandlerF
         return index == 0 ? slot : slot - baseIndex[index - 1];
     }
 
-    //? if >=1.21.10 {
     @Override
     public int size() {
         return slotCount;
     }
 
     @Override
-    public ItemResource getResource(int index) {
+    public ItemStack getStack(int index) {
         int handlerIndex = getIndexForSlot(index);
         int localSlot = getSlotFromIndex(index, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).getResource(localSlot);
+        return getHandlerFromIndex(handlerIndex).getStack(localSlot);
     }
 
     @Override
-    public long getAmountAsLong(int index) {
+    public int getCapacity(int index, ItemStack resource) {
         int handlerIndex = getIndexForSlot(index);
         int localSlot = getSlotFromIndex(index, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).getAmountAsLong(localSlot);
+        return getHandlerFromIndex(handlerIndex).getCapacity(localSlot, resource);
     }
 
     @Override
-    public long getCapacityAsLong(int index, ItemResource resource) {
-        int handlerIndex = getIndexForSlot(index);
-        int localSlot = getSlotFromIndex(index, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).getCapacityAsLong(localSlot, resource);
-    }
-
-    @Override
-    public boolean isValid(int index, ItemResource resource) {
+    public boolean isValid(int index, ItemStack resource) {
         int handlerIndex = getIndexForSlot(index);
         int localSlot = getSlotFromIndex(index, handlerIndex);
         return getHandlerFromIndex(handlerIndex).isValid(localSlot, resource);
     }
 
     @Override
-    public int insert(int index, ItemResource resource, int amount, TransactionContext tx) {
+    public int insert(int index, ItemStack resource, int amount, BCTransactionContext tx) {
         int handlerIndex = getIndexForSlot(index);
         int localSlot = getSlotFromIndex(index, handlerIndex);
         return getHandlerFromIndex(handlerIndex).insert(localSlot, resource, amount, tx);
     }
 
     @Override
-    public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
+    public int extract(int index, ItemStack resource, int amount, BCTransactionContext tx) {
         int handlerIndex = getIndexForSlot(index);
         int localSlot = getSlotFromIndex(index, handlerIndex);
         return getHandlerFromIndex(handlerIndex).extract(localSlot, resource, amount, tx);
     }
-    //?} else {
-    /*@Override
-    public int getSlots() {
-        return slotCount;
-    }
-
-    @Override
-    public ItemStack getStackInSlot(int slot) {
-        int handlerIndex = getIndexForSlot(slot);
-        int localSlot = getSlotFromIndex(slot, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).getStackInSlot(localSlot);
-    }
-
-    @Override
-    public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-        int handlerIndex = getIndexForSlot(slot);
-        int localSlot = getSlotFromIndex(slot, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).insertItem(localSlot, stack, simulate);
-    }
-
-    @Override
-    public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        int handlerIndex = getIndexForSlot(slot);
-        int localSlot = getSlotFromIndex(slot, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).extractItem(localSlot, amount, simulate);
-    }
-
-    @Override
-    public int getSlotLimit(int slot) {
-        int handlerIndex = getIndexForSlot(slot);
-        int localSlot = getSlotFromIndex(slot, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).getSlotLimit(localSlot);
-    }
-
-    @Override
-    public boolean isItemValid(int slot, ItemStack stack) {
-        int handlerIndex = getIndexForSlot(slot);
-        int localSlot = getSlotFromIndex(slot, handlerIndex);
-        return getHandlerFromIndex(handlerIndex).isItemValid(localSlot, stack);
-    }*/
-    //?}
 
     @Override
     public ItemStack getFilter(int slot) {
@@ -152,10 +95,6 @@ public class CombinedItemHandlerWrapper implements IBCItemHandler, IItemHandlerF
         if (handler instanceof IItemHandlerFiltered) {
             return ((IItemHandlerFiltered) handler).getFilter(slot);
         }
-        //? if >=1.21.10 {
-        return handler.getResource(slot).toStack(handler.getAmountAsInt(slot));
-        //?} else {
-        /*return handler.getStackInSlot(slot);*/
-        //?}
+        return handler.getStack(slot);
     }
 }

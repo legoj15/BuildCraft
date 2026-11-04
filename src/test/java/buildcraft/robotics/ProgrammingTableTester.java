@@ -27,8 +27,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
 import buildcraft.api.boards.RedstoneBoardNBT;
@@ -39,6 +37,7 @@ import buildcraft.core.BCCoreItems;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.tile.item.IBCItemHandler;
+import buildcraft.platform.transfer.BCTransaction;
 
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
@@ -690,35 +689,26 @@ public class ProgrammingTableTester {
         //?}
     }
 
-    /** How many items of {@code stack} a pipe-side handler takes into {@code slot} (node-neutral: Transfer API on
-     *  1.21.10+, classic handler on 1.21.1). */
+    /** How many items of {@code stack} a pipe-side handler takes into {@code slot}. */
     private static int pipeInsert(IBCItemHandler handler, int slot, ItemStack stack) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.openRoot()) {
-            int inserted = handler.insert(slot, ItemResource.of(stack), stack.getCount(), tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int inserted = handler.insert(slot, stack, stack.getCount(), tx);
             tx.commit();
             return inserted;
         }
-        //?} else {
-        /*return stack.getCount() - handler.insertItem(slot, stack.copy(), false).getCount();*/
-        //?}
     }
 
     /** How many items a pipe-side handler yields from {@code slot}, up to {@code amount}. */
     private static int pipeExtract(IBCItemHandler handler, int slot, int amount) {
-        //? if >=1.21.10 {
-        ItemResource resource = handler.getResource(slot);
+        ItemStack resource = handler.getStack(slot);
         if (resource.isEmpty()) {
             return 0;
         }
-        try (Transaction tx = Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int extracted = handler.extract(slot, resource, amount, tx);
             tx.commit();
             return extracted;
         }
-        //?} else {
-        /*return handler.extractItem(slot, amount, false).getCount();*/
-        //?}
     }
 
     private static String boardIdOf(ItemStack board) {

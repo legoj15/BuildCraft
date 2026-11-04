@@ -22,11 +22,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 //?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;*/
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
+
+import buildcraft.platform.transfer.BCItemStorage;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
@@ -301,11 +301,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // extraction face. A docked robot LOADS from here (D6). Read through the item capability, as the
         // wooden pipe itself extracts: requiring a vanilla Container hid Provide Items, and starved the
         // robots, on every modded inventory and BuildCraft machine the pipe happily pulled from (#74).
-        //? if >=1.21.10 {
-        ResourceHandler<ItemResource> handler = h.getCapabilityFromPipe(facing, CapUtil.CAP_ITEMS);
-        //?} else {
-        /*IItemHandler handler = h.getCapabilityFromPipe(facing, CapUtil.CAP_ITEMS);*/
-        //?}
+        BCItemStorage handler = h.getCapabilityFromPipe(facing, CapUtil.CAP_ITEMS);
         return handler == null ? null : new ItemHandlerTransactor(handler);
     }
 

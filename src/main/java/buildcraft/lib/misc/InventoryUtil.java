@@ -21,16 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
-//? if <1.21.10 {
-/*import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;*/
-//?}
 
 import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.pipe.PipeApi;
@@ -38,30 +28,19 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.tile.item.IBCItemHandler;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.lib.transfer.ItemStorageUtil;
+import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.TransferAccess;
 
 public class InventoryUtil {
     /** Extracts all items from the handler and adds them to the given list. */
     public static void addAll(IBCItemHandler handler, List<ItemStack> list) {
-        //? if >=1.21.10 {
-        for (int i = 0; i < handler.size(); i++) {
-            ItemResource res = handler.getResource(i);
-            if (!res.isEmpty()) {
-                list.add(res.toStack(handler.getAmountAsInt(i)));
-            }
-        }
-        //?} else {
-        /*for (int i = 0; i < handler.getSlots(); i++) {
-            ItemStack stack = handler.getStackInSlot(i);
-            if (!stack.isEmpty()) {
-                list.add(stack.copy());
-            }
-        }*/
-        //?}
+        ItemStorageUtil.addAll(handler, list);
     }
 
     /** Attempts to add the given stack to the best acceptor, in this order:
      * {@link IInjectable} instances (BuildCraft pipes),
-     * {@link ResourceHandler} instances on adjacent blocks (chests, hoppers, etc.),
+     * item storages on adjacent blocks (chests, hoppers, etc.),
      * and finally dropping it on the ground. */
     public static void addToBestAcceptor(Level level, BlockPos pos, @Nullable Direction ignore, @Nonnull ItemStack stack) {
         if (stack.isEmpty()) return;
@@ -120,8 +99,8 @@ public class InventoryUtil {
         return null;
     }
 
-    /** Tries to insert the stack into adjacent ResourceHandler inventories (chests, hoppers, etc).
-     * Uses NeoForge 1.21.x Capabilities.Item.BLOCK with ResourceHandler + Transaction API.
+    /** Tries to insert the stack into adjacent inventories (chests, hoppers, etc), found through the platform
+     * layer's item lookup.
      * @return The leftover stack that could not be inserted. */
     @Nonnull
     public static ItemStack addToRandomInventory(Level level, BlockPos pos, @Nonnull ItemStack stack) {
@@ -133,34 +112,18 @@ public class InventoryUtil {
 
         int remaining = stack.getCount();
 
-        //? if >=1.21.10 {
-        ItemResource resource = ItemResource.of(stack);
         for (Direction face : toTry) {
             if (remaining <= 0) return ItemStack.EMPTY;
 
             BlockPos adjPos = pos.relative(face);
-            // Query the adjacent block for item handler capability on the side facing us
-            ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, adjPos, face.getOpposite());
+            // Query the adjacent block for its item storage on the side facing us
+            BCItemStorage handler = TransferAccess.findItem(level, adjPos, face.getOpposite());
             if (handler == null) continue;
 
             // insertStacking prefers filled slots first, then empty — passing null opens and auto-commits a transaction
-            int inserted = ResourceHandlerUtil.insertStacking(handler, resource, remaining, null);
+            int inserted = ItemStorageUtil.insertStacking(handler, stack, remaining, null);
             remaining -= inserted;
         }
-        //?} else {
-        /*for (Direction face : toTry) {
-            if (remaining <= 0) return ItemStack.EMPTY;
-
-            BlockPos adjPos = pos.relative(face);
-            // Query the adjacent block for the classic item handler capability on the side facing us
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, adjPos, face.getOpposite());
-            if (handler == null) continue;
-
-            // insertItemStacked prefers filled slots first, then empty — mirrors insertStacking on modern
-            ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, stack.copyWithCount(remaining), false);
-            remaining = leftover.getCount();
-        }*/
-        //?}
 
         if (remaining <= 0) return ItemStack.EMPTY;
         return stack.copyWithCount(remaining);

@@ -49,6 +49,7 @@ public class BCFactory {
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
+        Platform.transfer().registerCapabilities(BCFactory::registerTransfer);
 
         // Notify TilePump when COMMON config reloads so running pumps re-evaluate
         // pumpsConsumeWater on the next tick instead of waiting for natural queue
@@ -59,16 +60,27 @@ public class BCFactory {
         LOGGER.info("BuildCraft Factory initialized");
     }
 
+    /** The item storages, through the platform layer's capability registrar. */
+    private static void registerTransfer(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        registrar.blockItems(BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            (workbench, direction) -> workbench.getItemHandler(direction));
+        // Mining Well has no internal item buffer — it pushes mined drops straight into adjacent
+        // pipes via InventoryUtil.addToBestAcceptor. Expose an empty item storage (like the Quarry)
+        // purely so item pipes render a connection to it; in 1.12.2 the AutomaticProvidingTransactor
+        // capability served that role.
+        registrar.blockItems(BCFactoryBlockEntities.MINING_WELL.get(),
+            (miner, direction) -> buildcraft.lib.transfer.ItemStorageUtil.EMPTY);
+        registrar.blockItems(BCFactoryBlockEntities.CHUTE.get(), (chute, direction) -> chute.getItemHandler(direction));
+    }
+
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability-token locals: the Transfer-API tokens on 1.21.10+, the classic
         // handler tokens on 1.21.1. Used as the BlockCapability for every registerBlockEntity below.
         //? if >=1.21.10 {
-        var itemCap = Capabilities.Item.BLOCK;
         var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var itemCap = Capabilities.ItemHandler.BLOCK;
-        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         // The Auto Workbench now backs its craft progress with a real MjBattery, so it exposes the
@@ -76,22 +88,9 @@ public class BCFactory {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             workbench -> workbench.getMjReceiver(), energyCap,
             workbench -> MjBatteryEnergyHandler.createIfRfEnabled(workbench.getBattery()));
-        event.registerBlockEntity(itemCap, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            (workbench, direction) -> workbench.getItemHandler(direction));
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.MINING_WELL.get(),
             miner -> miner.getMjReceiver(), energyCap,
             miner -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
-        // Mining Well has no internal item buffer — it pushes mined drops straight into adjacent
-        // pipes via InventoryUtil.addToBestAcceptor. Expose an empty item handler (like the Quarry)
-        // purely so item pipes render a connection to it; in 1.12.2 the AutomaticProvidingTransactor
-        // capability served that role.
-        //? if >=1.21.10 {
-        event.registerBlockEntity(itemCap, BCFactoryBlockEntities.MINING_WELL.get(),
-            (miner, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
-        //?} else {
-        /*event.registerBlockEntity(itemCap, BCFactoryBlockEntities.MINING_WELL.get(),
-            (miner, direction) -> net.neoforged.neoforge.items.wrapper.EmptyItemHandler.INSTANCE);*/
-        //?}
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.PUMP.get(),
             pump -> pump.getMjReceiver(), energyCap,
             pump -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
@@ -128,8 +127,6 @@ public class BCFactory {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.CHUTE.get(),
             chute -> chute.getMjReceiver(), energyCap,
             chute -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
-        event.registerBlockEntity(itemCap, BCFactoryBlockEntities.CHUTE.get(),
-            (chute, direction) -> chute.getItemHandler(direction));
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.DISTILLER.get(),
             distiller -> distiller.getMjReceiver(), energyCap,
             distiller -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));

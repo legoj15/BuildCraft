@@ -52,6 +52,7 @@ public class BCSilicon {
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
+        Platform.transfer().registerCapabilities(BCSilicon::registerTransfer);
         Platform.lifecycle().onCommonSetupOnMain(BCSilicon::commonSetup);
         modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (BuildCreativeModeTabContentsEvent event) -> {
             addCreativeTabItems(event);
@@ -68,26 +69,27 @@ public class BCSilicon {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var itemCap = Capabilities.Item.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var itemCap = Capabilities.ItemHandler.BLOCK;
-        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCSiliconBlockEntities.LASER.get(),
             laser -> laser.getMjReceiver(), energyCap,
             laser -> MjBatteryEnergyHandler.createIfRfEnabled(laser.getBattery()));
+    }
 
-        // Item handlers — lets item pipes connect to and exchange items with the laser tables.
-        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
+    /** Item storages — lets item pipes connect to and exchange items with the laser tables. */
+    private static void registerTransfer(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        registrar.blockItems(BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
-        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
+        registrar.blockItems(BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
-        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.PROGRAMMING_TABLE.get(),
+        registrar.blockItems(BCSiliconBlockEntities.PROGRAMMING_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
-        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
+        registrar.blockItems(BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
     }
+
 
     /** Common setup, on the main thread. */
     private static void commonSetup() {

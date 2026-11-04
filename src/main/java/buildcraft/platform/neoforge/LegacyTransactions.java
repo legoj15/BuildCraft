@@ -31,6 +31,16 @@ public final class LegacyTransactions {
         return MANAGERS.get().open(null);
     }
 
+    /**
+     * Opens a transaction nested in the one open on this thread, or a root if none is: what a classic-handler call
+     * (which carries only a simulate flag) runs in, so a handler reached from inside a BuildCraft transaction joins it
+     * rather than failing to open a second root.
+     */
+    public static BCTransaction openInCurrent() {
+        Manager manager = MANAGERS.get();
+        return manager.open(manager.currentDepth >= 0 ? manager.stack.get(manager.currentDepth) : null);
+    }
+
     /** A journal driving {@code callbacks} under this manager's transactions. */
     public static <S> TransferServices.JournalHandle newJournal(TransferServices.JournalCallbacks<S> callbacks) {
         return new Journal<>(callbacks);

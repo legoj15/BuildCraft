@@ -19,17 +19,12 @@ import net.minecraft.gametest.framework.GameTestHelper;
  *
  *  <p>This pins {@link PipeFlowRedstoneFlux#queryEnergyDemand}: it must report positive demand
  *  for a zero-capacity receiver that still accepts power, and zero for one that accepts nothing.
- *  Runs in the game-test runtime because the modern path opens a NeoForge {@code Transaction}. */
+ *  Runs in the game-test runtime because the probe opens a platform transaction. */
 public class PipeFlowRedstoneFluxDemandTester {
 
     public static void testBufferlessReceiverReportsDemand(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        net.neoforged.neoforge.transfer.energy.EnergyHandler hungry = new MockSink(64);
-        net.neoforged.neoforge.transfer.energy.EnergyHandler full = new MockSink(0);
-        //?} else {
-        /*net.neoforged.neoforge.energy.IEnergyStorage hungry = new MockSink(64);
-        net.neoforged.neoforge.energy.IEnergyStorage full = new MockSink(0);
-        *///?}
+        buildcraft.platform.transfer.BCEnergyStorage hungry = new MockSink(64);
+        buildcraft.platform.transfer.BCEnergyStorage full = new MockSink(0);
 
         int demand = PipeFlowRedstoneFlux.queryEnergyDemand(hungry, 100);
         helper.assertTrue(demand == 64,
@@ -45,8 +40,7 @@ public class PipeFlowRedstoneFluxDemandTester {
 
     /** Mimics AE2's bufferless Energy Acceptor: zero capacity/amount, but accepts up to
      *  {@code accepts} energy per insert (its grid's current demand). */
-    //? if >=1.21.10 {
-    private static final class MockSink implements net.neoforged.neoforge.transfer.energy.EnergyHandler {
+    private static final class MockSink implements buildcraft.platform.transfer.BCEnergyStorage {
         private final int accepts;
 
         MockSink(int accepts) {
@@ -54,12 +48,12 @@ public class PipeFlowRedstoneFluxDemandTester {
         }
 
         @Override
-        public int insert(int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        public int insert(int amount, buildcraft.platform.transfer.BCTransactionContext tx) {
             return Math.min(amount, accepts);
         }
 
         @Override
-        public int extract(int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        public int extract(int amount, buildcraft.platform.transfer.BCTransactionContext tx) {
             return 0;
         }
 
@@ -73,43 +67,4 @@ public class PipeFlowRedstoneFluxDemandTester {
             return 0;
         }
     }
-    //?} else {
-    /*private static final class MockSink implements net.neoforged.neoforge.energy.IEnergyStorage {
-        private final int accepts;
-
-        MockSink(int accepts) {
-            this.accepts = accepts;
-        }
-
-        @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
-            return Math.min(maxReceive, accepts);
-        }
-
-        @Override
-        public int extractEnergy(int maxExtract, boolean simulate) {
-            return 0;
-        }
-
-        @Override
-        public int getEnergyStored() {
-            return 0;
-        }
-
-        @Override
-        public int getMaxEnergyStored() {
-            return 0;
-        }
-
-        @Override
-        public boolean canExtract() {
-            return false;
-        }
-
-        @Override
-        public boolean canReceive() {
-            return true;
-        }
-    }
-    *///?}
 }

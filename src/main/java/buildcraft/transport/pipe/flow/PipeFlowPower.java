@@ -69,12 +69,12 @@ public class PipeFlowPower extends AbstractPipeFlowPower implements IFlowPower {
             net.minecraft.world.level.Level level = pipe.getHolder().getPipeWorld();
             net.minecraft.core.BlockPos neighborPos = pipe.getHolder().getPipePos().relative(face);
             // Check for MJ receiver (engines, machines)
-            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, neighborPos, face.getOpposite());
+            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_RECEIVER, level, neighborPos, face.getOpposite());
             if (receiver != null) {
                 return true;
             }
             // Check for MJ connector (other power entities)
-            IMjConnector connector = level.getCapability(MjAPI.CAP_CONNECTOR, neighborPos, face.getOpposite());
+            IMjConnector connector = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_CONNECTOR, level, neighborPos, face.getOpposite());
             if (connector != null && connector.canConnect(getSection(face))) {
                 return true;
             }

@@ -16,6 +16,7 @@ import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.test.FeHandlerAccess;
+import buildcraft.platform.transfer.BCTransaction;
 
 /**
  * Pins {@link MjReceiverEnergyHandler}, the FE-in / MJ-out converter that lets a docking station on an RF kinesis
@@ -181,16 +182,14 @@ public class MjReceiverEnergyHandlerTest {
             "a bufferless receiver is still fed: demand is learned by trying, not by reading a buffer");
     }
 
-    //? if >=1.21.10 {
     /** Two inserts inside ONE transaction share the receiver's headroom and are paid in a single delivery on
-     *  commit; an abort pays nothing. (1.21.10+ only: the classic 1.21.1 API has no transactions.) */
+     *  commit; an abort pays nothing. */
     @Test
     public void insertsInOneTransactionShareHeadroomAndCommitOnce() {
         FakeReceiver receiver = new FakeReceiver(0, 15 * MjAPI.MJ); // 150 FE of room
         MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
 
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             Assertions.assertEquals(100, handler.insert(100, tx));
             Assertions.assertEquals(50, handler.insert(100, tx), "only 50 FE of the 150 are left");
             Assertions.assertEquals(0, handler.insert(1, tx), "now it is full");
@@ -202,8 +201,7 @@ public class MjReceiverEnergyHandlerTest {
 
         FakeReceiver other = new FakeReceiver(0, 15 * MjAPI.MJ);
         MjReceiverEnergyHandler aborted = new MjReceiverEnergyHandler(other);
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             Assertions.assertEquals(100, aborted.insert(100, tx));
             // no commit: close() aborts
         }
@@ -221,8 +219,7 @@ public class MjReceiverEnergyHandlerTest {
         FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
         MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
 
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             Assertions.assertEquals(100, handler.insert(100, tx), "10 MJ accepted against 20 MJ of room");
             receiver.stored = 15 * MjAPI.MJ; // the receiver's free room shrinks to 5 MJ before the commit
             tx.commit();
@@ -241,8 +238,7 @@ public class MjReceiverEnergyHandlerTest {
     public void whatIsOwedCountsAgainstTheHeadroomOfLaterInserts() {
         FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
         MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             handler.insert(100, tx);
             receiver.stored = 15 * MjAPI.MJ;
             tx.commit();
@@ -263,8 +259,7 @@ public class MjReceiverEnergyHandlerTest {
     public void anAbortedTransactionLeavesWhatIsOwedAlone() {
         FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
         MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             handler.insert(100, tx);
             receiver.stored = 15 * MjAPI.MJ;
             tx.commit();
@@ -277,5 +272,4 @@ public class MjReceiverEnergyHandlerTest {
         Assertions.assertEquals(10, FeHandlerAccess.insert(handler, 10, true));
         Assertions.assertEquals(6 * MjAPI.MJ, receiver.stored, "the debt survived the abort and is paid now");
     }
-    //?}
 }

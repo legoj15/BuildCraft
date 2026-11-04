@@ -73,7 +73,7 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
         // (which implements IMjReadable) via RegisterCapabilitiesEvent
         Level level = tile.getLevel();
         if (level != null) {
-            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, tile.getBlockPos(), face);
+            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_RECEIVER, level, tile.getBlockPos(), face);
             if (receiver instanceof IMjReadable) return true;
         }
         return false;
@@ -82,8 +82,8 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
     private static IMjReadable resolveReadable(Object tile, EnumPipePart side) {
         if (tile instanceof IMjReadable readable) return readable;
         if (tile instanceof BlockEntity be && be.getLevel() != null) {
-            IMjReceiver receiver = be.getLevel().getCapability(
-                MjAPI.CAP_RECEIVER, be.getBlockPos(), side.face);
+            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(
+                MjAPI.CAP_RECEIVER, be.getLevel(), be.getBlockPos(), side.face);
             if (receiver instanceof IMjReadable readable) return readable;
         }
         return null;

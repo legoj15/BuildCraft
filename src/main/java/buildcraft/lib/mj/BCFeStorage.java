@@ -6,72 +6,110 @@
 
 package buildcraft.lib.mj;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
-//?} else {
-/*import net.neoforged.neoforge.energy.EnergyStorage;*/
-//?}
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransactionContext;
 
-/** Version-neutral FE/RF battery used by the FE engine and the MJ dynamo.
+/** The FE/RF battery the FE engine and the MJ dynamo share: a loader-neutral {@link BCEnergyStorage} with NeoForge's
+ * {@code SimpleEnergyHandler} semantics on every node (the 1.21.1 classic {@code EnergyStorage} it used to be there
+ * agrees on every call BuildCraft and a classic caller make).
  *
- * <p>On 1.21.10+ it is a Transfer-API {@code SimpleEnergyHandler} (exposed to neighbours as an
- * {@code EnergyHandler} capability); on 1.21.1 (no Transfer API) it is a classic
- * {@code net.neoforged.neoforge.energy.EnergyStorage} (an {@code IEnergyStorage}). Both honour the same
- * {@code (capacity, maxInsert, maxExtract)} construction and expose {@code getAmountAsLong()} /
- * {@code set(int)} plus an {@link #onFeChanged()} hook, so the engine/dynamo bodies stay identical across
- * nodes — only the neighbour-facing cap fetch (which differs by node) gates its body. */
-//? if >=1.21.10 {
-public class BCFeStorage extends SimpleEnergyHandler {
+ * <p>{@code (capacity, maxInsert, maxExtract)} limit it as they did; {@link #set} changes the amount at once and calls
+ * {@link #onFeChanged()} straight away, while an insert or extract journals the amount and calls it when the root
+ * transaction commits (never when it aborts). */
+public class BCFeStorage implements BCEnergyStorage {
+    private final int capacity;
+    private final int maxInsert;
+    private final int maxExtract;
+    private int energy;
+
+    private final BCSnapshotJournal<Integer> journal = new BCSnapshotJournal<>() {
+        @Override
+        protected Integer createSnapshot() {
+            return energy;
+        }
+
+        @Override
+        protected void revertToSnapshot(Integer snapshot) {
+            energy = snapshot;
+        }
+
+        @Override
+        protected void onRootCommit(Integer originalState) {
+            if (energy != originalState) {
+                onFeChanged();
+            }
+        }
+    };
+
     public BCFeStorage(int capacity, int maxInsert, int maxExtract) {
-        super(capacity, maxInsert, maxExtract);
+        checkNonNegative(capacity);
+        checkNonNegative(maxInsert);
+        checkNonNegative(maxExtract);
+        this.capacity = capacity;
+        this.maxInsert = maxInsert;
+        this.maxExtract = maxExtract;
     }
 
-    @Override
-    protected void onEnergyChanged(int previousAmount) {
-        onFeChanged();
+    private static void checkNonNegative(int value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Expected value to be non-negative: " + value);
+        }
+    }
+
+    /** Overwrites the stored amount; calls {@link #onFeChanged()} at once if it changed. */
+    public void set(int amount) {
+        checkNonNegative(amount);
+        if (energy != amount) {
+            energy = amount;
+            onFeChanged();
+        }
     }
 
     /** Called whenever the stored amount changes (via {@code set}, insert, or extract). Override to react. */
     protected void onFeChanged() {}
-}
-//?} else {
-/*public class BCFeStorage extends EnergyStorage {
-    public BCFeStorage(int capacity, int maxInsert, int maxExtract) {
-        super(capacity, maxInsert, maxExtract);
-    }
 
+    @Override
     public long getAmountAsLong() {
-        return this.energy;
-    }
-
-    public void set(int amount) {
-        if (amount < 0) {
-            throw new IllegalArgumentException("amount must be non-negative");
-        }
-        if (this.energy != amount) {
-            this.energy = amount;
-            onFeChanged();
-        }
+        return energy;
     }
 
     @Override
-    public int receiveEnergy(int toReceive, boolean simulate) {
-        int received = super.receiveEnergy(toReceive, simulate);
-        if (received > 0 && !simulate) {
-            onFeChanged();
-        }
-        return received;
+    public long getCapacityAsLong() {
+        return capacity;
     }
 
     @Override
-    public int extractEnergy(int toExtract, boolean simulate) {
-        int extracted = super.extractEnergy(toExtract, simulate);
-        if (extracted > 0 && !simulate) {
-            onFeChanged();
+    public int insert(int amount, BCTransactionContext transaction) {
+        checkNonNegative(amount);
+        int inserted = Math.min(capacity - energy, Math.min(amount, maxInsert));
+        if (inserted > 0) {
+            journal.updateSnapshots(transaction);
+            energy += inserted;
+            return inserted;
         }
-        return extracted;
+        return 0;
     }
 
-    protected void onFeChanged() {}
-}*/
-//?}
+    @Override
+    public int extract(int amount, BCTransactionContext transaction) {
+        checkNonNegative(amount);
+        int extracted = Math.min(energy, Math.min(amount, maxExtract));
+        if (extracted > 0) {
+            journal.updateSnapshots(transaction);
+            energy -= extracted;
+            return extracted;
+        }
+        return 0;
+    }
+
+    @Override
+    public boolean canInsert() {
+        return maxInsert > 0;
+    }
+
+    @Override
+    public boolean canExtract() {
+        return maxExtract > 0;
+    }
+}

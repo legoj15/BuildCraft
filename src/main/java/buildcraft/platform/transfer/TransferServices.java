@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.fluids.BCFluidStack;
 
 /**
@@ -50,6 +51,15 @@ public interface TransferServices {
      * calls a loader fluid-container API on an item slot uses it, until that code moves behind the fluid seam.
      */
     Object toLoaderItemHandler(BCItemStorage storage);
+
+    /** The energy storage of the block at {@code pos}, seen from {@code side} (null: unsided), or null if none. */
+    BCEnergyStorage findEnergy(Level level, BlockPos pos, Direction side);
+
+    /**
+     * The object the loader's capability of {@code capability}'s id and type holds for the block at {@code pos}, seen
+     * from {@code side} (null: unsided), as it is (no adapter), or null. Never a storage token ({@link StorageTokens}).
+     */
+    <T> T findDirect(BCCapability<T> capability, Level level, BlockPos pos, Direction side);
 
     /** The fluid storage of the block at {@code pos}, seen from {@code side} (null: unsided), or null if none. */
     BCFluidStorage findFluid(Level level, BlockPos pos, Direction side);

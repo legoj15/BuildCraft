@@ -3,7 +3,7 @@
 //
 // Phase 2 spike (#100): COMPILE ONLY, NOTHING SHIPS. The node compiles buildcraft/platform/** from main (the
 // loader-neutral contracts, the binder with its fabric arm live, and buildcraft.platform.fabric) plus the vanilla-only
-// BCFluidStack in buildcraft/api/fluids, and nothing else:
+// BCFluidStack in buildcraft/api/fluids and the BCCapability token in buildcraft/api/capability, and nothing else:
 // no tests, no jar, no buildAndCollect (its resources are processed and transformed, but ship nowhere).
 // Its share of the root fullTestSuite is compileJava plus processResources (the data transform and its guard).
 //
@@ -28,9 +28,10 @@ sourceSets {
     named("main") {
         // Only the platform layer compiles here until the rest of BC has a Fabric route. The filter applies to
         // whichever directory Stonecutter points the source set at (src/ raw, or this node's generated copy).
-        // buildcraft/api/fluids is the loader-neutral BCFluidStack the platform converts (vanilla types only).
+        // buildcraft/api/fluids is the loader-neutral BCFluidStack the platform converts, buildcraft/api/capability the
+        // BCCapability token it resolves (vanilla types only).
         java {
-            include("buildcraft/platform/**", "buildcraft/api/fluids/**")
+            include("buildcraft/platform/**", "buildcraft/api/fluids/**", "buildcraft/api/capability/**")
             // The Fabric entrypoints call BuildCraft's common and client init (buildcraft.core), which this node does
             // not compile yet: written, but left out until Phase 2 widens the filter.
             exclude("buildcraft/platform/fabric/BCFabricEntrypoint.java",
@@ -92,6 +93,11 @@ repositories {
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
     }
+    // modmuss50's maven, for Team Reborn Energy alone.
+    exclusiveContent {
+        forRepository { maven("https://maven.modmuss50.me/") }
+        filter { includeGroup("teamreborn") }
+    }
 }
 
 dependencies {
@@ -109,6 +115,11 @@ dependencies {
     compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
     compileOnly("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")
     compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:$reiVersion")
+    // Team Reborn Energy, Fabric's de-facto FE/RF API, compile-only and optional at runtime (FabricEnergyStorages
+    // touches it only when the mod is loaded). 5.0.0 is the newest build; it was compiled against
+    // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are
+    // unchanged in the 8.x this node has, so its own transitive transfer-api pin is left out.
+    compileOnly("teamreborn:energy:5.0.0") { isTransitive = false }
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

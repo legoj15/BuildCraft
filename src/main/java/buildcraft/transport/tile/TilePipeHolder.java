@@ -868,22 +868,12 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (!level.isLoaded(neighborPos)) {
             return null;
         }
-        if (capability instanceof buildcraft.platform.transfer.BCCapability<?> bcCap) {
-            // BuildCraft's loader-neutral storage tokens: the platform layer's lookup, as a BuildCraft view
+        if (capability instanceof buildcraft.api.capability.BCCapability<?> bcCap) {
+            // BuildCraft's loader-neutral tokens: the platform layer's lookup (a BuildCraft view for the storage
+            // tokens, the loader capability of the same id for the MJ ones)
             return (T) buildcraft.platform.transfer.TransferAccess.find(bcCap, level, neighborPos, side.getOpposite());
         }
-        if (capability instanceof net.neoforged.neoforge.capabilities.BlockCapability<?, ?> blockCap) {
-            // Route block capabilities to the NeoForge capability system
-            try {
-                return (T) level.getCapability(
-                    (net.neoforged.neoforge.capabilities.BlockCapability) blockCap,
-                    neighborPos, side.getOpposite());
-            } catch (ClassCastException e) {
-                return null;
-            }
-        }
-        // For non-BlockCapability tokens (e.g. MjAPI.CAP_RECEIVER),
-        // check if the neighboring tile implements the requested interface directly
+        // For any other token, check if the neighbouring pipe's flow exposes it
         BlockEntity neighbor = level.getBlockEntity(neighborPos);
         if (neighbor == null) return null;
         // MJ capabilities: check if the neighbor pipe's flow exposes them

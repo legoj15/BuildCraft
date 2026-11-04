@@ -38,7 +38,7 @@ import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.api.mj.MjToRfAutoConvertor;
+import buildcraft.lib.mj.MjToRfAutoConvertor;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.BCLibConfig;
@@ -50,13 +50,8 @@ import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.OwnerData;
-
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.TransferAccess;
 
 /**
  * Abstract base class for all BuildCraft engines.
@@ -422,7 +417,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
     public IMjReceiver getReceiverToPower(Direction side) {
         return walkChain(side, targetPos -> {
             // 1. Try the native MJ capability.
-            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, targetPos, side.getOpposite());
+            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_RECEIVER, level, targetPos, side.getOpposite());
             if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
                 return receiver;
             }
@@ -430,11 +425,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
             if (!couldPowerRf()) {
                 return null;
             }
-            //? if >=1.21.10 {
-            EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
-            //?} else {
-            /*IEnergyStorage feHandler = level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, side.getOpposite());*/
-            //?}
+            BCEnergyStorage feHandler = TransferAccess.findEnergy(level, targetPos, side.getOpposite());
             if (feHandler != null) {
                 IMjReceiver feReceiver = MjToRfAutoConvertor.createReceiver(feHandler);
                 if (feReceiver != null && feReceiver.canConnect(getMjConnector())) {

@@ -9,13 +9,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.TransferAccess;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
@@ -77,13 +73,11 @@ public class TileEngineFE extends TileEngineGearBase {
             if (dir == orientation) continue; // facing side is MJ output
             if (currentFe >= MAX_FE) break;
             BlockPos neighborPos = getBlockPos().relative(dir);
-            //? if >=1.21.10 {
-            EnergyHandler handler = level.getCapability(
-                Capabilities.Energy.BLOCK, neighborPos, dir.getOpposite());
+            BCEnergyStorage handler = TransferAccess.findEnergy(level, neighborPos, dir.getOpposite());
             if (handler == null) continue;
             int want = MAX_FE - currentFe;
             if (want <= 0) break;
-            try (Transaction transaction = Transaction.openRoot()) {
+            try (BCTransaction transaction = BCTransaction.openRoot()) {
                 int extracted = handler.extract(want, transaction);
                 if (extracted > 0) {
                     currentFe += extracted;
@@ -91,18 +85,6 @@ public class TileEngineFE extends TileEngineGearBase {
                     transaction.commit();
                 }
             }
-            //?} else {
-            /*net.neoforged.neoforge.energy.IEnergyStorage handler = level.getCapability(
-                Capabilities.EnergyStorage.BLOCK, neighborPos, dir.getOpposite());
-            if (handler == null) continue;
-            int want = MAX_FE - currentFe;
-            if (want <= 0) break;
-            int extracted = handler.extractEnergy(want, false);
-            if (extracted > 0) {
-                currentFe += extracted;
-                energyStorage.set(currentFe);
-            }*/
-            //?}
         }
     }
 

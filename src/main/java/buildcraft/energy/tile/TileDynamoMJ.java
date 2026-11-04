@@ -13,13 +13,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.TransferAccess;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -106,43 +102,23 @@ public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider 
     private void sendFeToReceiver() {
         int currentFe = getCurrentFe();
         if (level == null || currentFe <= 0) return;
-        //? if >=1.21.10 {
-        EnergyHandler receiver = getFeReceiver(orientation);
+        BCEnergyStorage receiver = getFeReceiver(orientation);
         if (receiver == null) return;
-        // Because EnergyHandler strictly requires a transaction context:
-        try (Transaction transaction = Transaction.openRoot()) {
+        try (BCTransaction transaction = BCTransaction.openRoot()) {
             int accepted = receiver.insert(currentFe, transaction);
             if (accepted > 0) {
                 energyStorage.set(currentFe - accepted);
                 transaction.commit();
             }
         }
-        //?} else {
-        /*net.neoforged.neoforge.energy.IEnergyStorage receiver = getFeReceiver(orientation);
-        if (receiver == null) return;
-        int accepted = receiver.receiveEnergy(currentFe, false);
-        if (accepted > 0) {
-            energyStorage.set(currentFe - accepted);
-        }*/
-        //?}
     }
 
     @Nullable
-    //? if >=1.21.10 {
-    public EnergyHandler getFeReceiver(Direction side) {
-    //?} else {
-    /*public net.neoforged.neoforge.energy.IEnergyStorage getFeReceiver(Direction side) {*/
-    //?}
+    public BCEnergyStorage getFeReceiver(Direction side) {
         // Engine chaining (1.12.2 parity): hop through up to getMaxChainLength() further Dynamos facing this
         // same way to reach the FE receiver at the end of the line. Same walk as the base engine's MJ
         // getReceiverToPower — only the terminus lookup differs (raw FE handler, no canConnect check).
-        return walkChain(side, targetPos -> {
-            //? if >=1.21.10 {
-            return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
-            //?} else {
-            /*return level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, side.getOpposite());*/
-            //?}
-        });
+        return walkChain(side, targetPos -> TransferAccess.findEnergy(level, targetPos, side.getOpposite()));
     }
 
     @Nullable

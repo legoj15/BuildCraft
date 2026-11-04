@@ -9,8 +9,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.DyeColor;
 import buildcraft.core.item.ItemPaintbrush_BC8;
@@ -125,7 +123,7 @@ public class BCCore {
         Platform.lifecycle().onCommonSetup(this::commonInit);
         // Last, after every listener the other mods registered while loading: see the method's javadoc.
         Platform.lifecycle().onLoadCompleteOnMain(buildcraft.lib.misc.MachineRefusals::registerRecorder);
-        buildcraft.lib.misc.CapabilityListeners.add(this::registerCapabilities);
+        Platform.transfer().registerCapabilities(this::registerCapabilities);
         registerPayloads();
 
         // Block-break notifier: the break-event class differs across 26.1.x, so register it
@@ -379,96 +377,25 @@ public class BCCore {
         );
     }
 
-    private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        //? if >=1.21.10 {
-        event.registerItem(
-                Capabilities.Fluid.ITEM,
-                (stack, ctx) -> new net.neoforged.neoforge.transfer.fluid.ItemAccessFluidHandler(ctx,
-                        FLUID_CONTENT.get(), buildcraft.core.item.ItemFragileFluidContainer.MAX_FLUID_HELD) {
-                    @Override
-                    public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                            int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-                        return 0; // cannot fill!
-                    }
-
-                    @Override
-                    public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-                        java.util.Objects.checkIndex(index, size());
-                        net.neoforged.neoforge.transfer.TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
-
-                        int accessAmount = itemAccess.getAmount();
-                        if (accessAmount == 0) {
-                            return 0;
-                        }
-
-                        net.neoforged.neoforge.transfer.item.ItemResource accessResource = itemAccess.getResource();
-                        net.neoforged.neoforge.transfer.fluid.FluidResource currentResource = getResourceFrom(accessResource, index);
-
-                        if (resource.equals(currentResource)) {
-                            int currentAmountPerItem = getAmountFrom(accessResource, index);
-                            int extractedPerItem = Math.min(amount / accessAmount, currentAmountPerItem);
-
-                            if (extractedPerItem > 0) {
-                                net.neoforged.neoforge.transfer.item.ItemResource emptiedResource = update(accessResource, index, resource, currentAmountPerItem - extractedPerItem);
-
-                                if (!emptiedResource.isEmpty()) {
-                                    return extractedPerItem * itemAccess.exchange(emptiedResource, accessAmount, transaction);
-                                } else if (currentAmountPerItem - extractedPerItem == 0) {
-                                    // Fully consume the item since it has no valid remaining state
-                                    int extractedItems = itemAccess.extract(accessResource, accessAmount, transaction);
-                                    if (extractedItems == accessAmount) {
-                                        return extractedPerItem * accessAmount;
-                                    }
-                                }
-                            }
-                        }
-                        return 0;
-                    }
-
-                    @Override
-                    protected net.neoforged.neoforge.transfer.item.ItemResource update(
-                            net.neoforged.neoforge.transfer.item.ItemResource accessResource,
-                            int index,
-                            net.neoforged.neoforge.transfer.fluid.FluidResource newResource,
-                            int newAmount) {
-                        if (newAmount == 0) {
-                            return net.neoforged.neoforge.transfer.item.ItemResource.EMPTY;
-                        }
-                        return super.update(accessResource, index, newResource, newAmount);
-                    }
-                },
-                BCCoreItems.FRAGILE_FLUID_CONTAINER);
-        //?} else {
-        /*// 1.21.1: the fragile container is an extract-only, consume-on-empty fluid item. The classic
-        // FluidHandlerItemStack.Consumable already shatters the shard when drained (setContainerToEmpty
-        // -> container.shrink(1)); overriding canFillFluidType to false makes it un-fillable (the modern
-        // ItemAccessFluidHandler override returned 0 from insert for the same reason).
-        event.registerItem(
-                Capabilities.FluidHandler.ITEM,
-                (stack, ctx) -> new net.neoforged.neoforge.fluids.capability.templates.FluidHandlerItemStack.Consumable(
-                        FLUID_CONTENT, stack, buildcraft.core.item.ItemFragileFluidContainer.MAX_FLUID_HELD) {
-                    @Override
-                    public boolean canFillFluidType(net.neoforged.neoforge.fluids.FluidStack fluid) {
-                        return false;
-                    }
-                },
-                BCCoreItems.FRAGILE_FLUID_CONTAINER);*/
-        //?}
+    private void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        // The fragile fluid shard: drain-only, used up once empty.
+        registrar.itemFluidsDrainOnlyConsumable(BCCoreItems.FRAGILE_FLUID_CONTAINER, FLUID_CONTENT,
+                buildcraft.core.item.ItemFragileFluidContainer.MAX_FLUID_HELD);
 
         // MJ connector capability for engines
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCCoreBlockEntities.ENGINE_REDSTONE.get(),
             (engine, direction) -> engine.getMjConnector()
         );
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCCoreBlockEntities.ENGINE_CREATIVE.get(),
             (engine, direction) -> engine.getMjConnector()
         );
 
         // The power tester's tile implements IMjReceiver on every side.
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_RECEIVER,
             BCCoreBlockEntities.POWER_TESTER.get(),
             (tester, direction) -> tester

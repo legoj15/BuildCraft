@@ -5,8 +5,6 @@
 package buildcraft.builders;
 
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
@@ -57,9 +55,7 @@ public class BCBuilders {
             // READ_DOMAINS with "minecraft".
             RulesLoader.loadAll();
         });
-        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
-            registerCapabilities(event);
-        });
+        Platform.transfer().registerCapabilities(BCBuilders::registerCapabilities);
         Platform.transfer().registerCapabilities(BCBuilders::registerTransfer);
 
         // Per-server-tick driver for BCBuildersEventDist.onServerTick, which throttles
@@ -72,31 +68,25 @@ public class BCBuilders {
         }
     }
 
-    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
-        //? if >=1.21.10 {
-        var energyCap = Capabilities.Energy.BLOCK;
-        //?} else {
-        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
-        //?}
+    private static void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
         // Quarry — advertises as an MJ connector too so kinesis pipes route power to it (a receiver IS a
         // connector), and gates FE insertion on the same wantsPower predicate as the MJ receiver, so a
         // finished quarry refuses FE pushes instead of topping its battery off, unless a Pump on it is
         // drawing on that battery (MJ/FE parity).
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.QUARRY.get(),
-            quarry -> quarry.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCBuildersBlockEntities.QUARRY.get(),
+            quarry -> quarry.getMjReceiver(),
             quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::wantsPower));
 
         // Filler
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.FILLER.get(),
-            filler -> filler.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCBuildersBlockEntities.FILLER.get(),
+            filler -> filler.getMjReceiver(),
             filler -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
 
         // Builder — wires it into the same pipe/engine capability surfaces as the Filler so MJ
         // engines push power into the battery, pipes push resources into the 27-slot grid, and
         // fluid pipes can top off the 4 tanks for fluid-block placement.
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.BUILDER.get(),
-            builder -> builder.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCBuildersBlockEntities.BUILDER.get(),
+            builder -> builder.getMjReceiver(),
             builder -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
     }
 

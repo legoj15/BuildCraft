@@ -11,13 +11,9 @@ import java.util.function.BooleanSupplier;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
  * Wraps an {@link MjBattery} as a Forge energy handler, enabling FE/RF mods
@@ -26,17 +22,12 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * <p>Conversion uses the configurable ratio from {@link MjAPI#getRfConversion()}.
  * Default: 1 MJ = 10 RF (i.e., {@code mjPerRf = MJ / 10}).
  *
- * <p>On 1.21.10+ this is a NeoForge Transfer-API {@code EnergyHandler} backed by a
- * {@code SnapshotJournal} (snapshots capture the battery's stored power so transactional
- * changes can be rolled back); on 1.21.1 the Transfer API does not exist, so it is a classic
- * {@code IEnergyStorage} whose transaction context collapses to a {@code boolean simulate}.
- * The {@code >=1.21.10} code is exactly today's, so the released nodes are behaviour-identical.
+ * <p>A loader-neutral {@link BCEnergyStorage} backed by a {@link BCSnapshotJournal} (snapshots capture the
+ * battery's stored power so transactional changes can be rolled back); the platform layer hands it to
+ * other mods as the loader's energy handler (on 1.21.1 a classic {@code IEnergyStorage}, whose
+ * {@code simulate} flag is a transaction that is never committed).
  */
-//? if >=1.21.10 {
-public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements EnergyHandler {
-//?} else {
-/*public class MjBatteryEnergyHandler implements IEnergyStorage {*/
-//?}
+public class MjBatteryEnergyHandler implements BCEnergyStorage {
     private final MjBattery battery;
     /** Insertion gate: FE pushes are refused while this returns false (e.g. a finished quarry that
      *  has no work to spend power on — parity with the MJ receiver's {@code getPowerRequested == 0}).
@@ -74,31 +65,25 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
         return MjAPI.getRfConversion().mjPerRf;
     }
 
-    //? if >=1.21.10 {
-    // --- SnapshotJournal ---
-
-    @Override
-    protected Long createSnapshot() {
-        return battery.getStored();
-    }
-
-    @Override
-    protected void revertToSnapshot(Long snapshot) {
-        // Restore the battery to the snapshotted level
-        long current = battery.getStored();
-        if (current > snapshot) {
-            battery.extractPower(current - snapshot, current - snapshot);
-        } else if (current < snapshot) {
-            battery.addPower(snapshot - current, false);
+    private final BCSnapshotJournal<Long> journal = new BCSnapshotJournal<>() {
+        @Override
+        protected Long createSnapshot() {
+            return battery.getStored();
         }
-    }
 
-    @Override
-    protected void releaseSnapshot(Long snapshot) {
-        // No caching needed
-    }
+        @Override
+        protected void revertToSnapshot(Long snapshot) {
+            // Restore the battery to the snapshotted level
+            long current = battery.getStored();
+            if (current > snapshot) {
+                battery.extractPower(current - snapshot, current - snapshot);
+            } else if (current < snapshot) {
+                battery.addPower(snapshot - current, false);
+            }
+        }
+    };
 
-    // --- EnergyHandler ---
+    // --- BCEnergyStorage ---
 
     @Override
     public long getAmountAsLong() {
@@ -115,7 +100,7 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
     }
 
     @Override
-    public int insert(int amount, TransactionContext transaction) {
+    public int insert(int amount, BCTransactionContext transaction) {
         if (amount <= 0 || !acceptInsert.getAsBoolean()) return 0;
         long mjpr = mjPerRf();
         if (mjpr <= 0) return 0;
@@ -131,14 +116,14 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
         long finalMj = (long) actualRf * mjpr;
 
         // Take a snapshot before modifying state
-        updateSnapshots(transaction);
+        journal.updateSnapshots(transaction);
         battery.addPower(finalMj, false);
 
         return actualRf;
     }
 
     @Override
-    public int extract(int amount, TransactionContext transaction) {
+    public int extract(int amount, BCTransactionContext transaction) {
         if (amount <= 0) return 0;
         long mjpr = mjPerRf();
         if (mjpr <= 0) return 0;
@@ -146,7 +131,7 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
         long mjToExtract = (long) amount * mjpr;
 
         // Take a snapshot before modifying state
-        updateSnapshots(transaction);
+        journal.updateSnapshots(transaction);
 
         long extracted = battery.extractPower(0, mjToExtract);
         int extractedRf = (int) (extracted / mjpr);
@@ -165,76 +150,9 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
 
         return extractedRf;
     }
-    //?} else {
-    /*// --- IEnergyStorage (classic; the boolean replaces the transaction snapshot) ---
 
     @Override
-    public int getEnergyStored() {
-        long mjpr = mjPerRf();
-        if (mjpr <= 0) return 0;
-        return (int) Math.min(Integer.MAX_VALUE, battery.getStored() / mjpr);
-    }
-
-    @Override
-    public int getMaxEnergyStored() {
-        long mjpr = mjPerRf();
-        if (mjpr <= 0) return 0;
-        return (int) Math.min(Integer.MAX_VALUE, battery.getCapacity() / mjpr);
-    }
-
-    @Override
-    public boolean canReceive() {
+    public boolean canInsert() {
         return acceptInsert.getAsBoolean();
     }
-
-    @Override
-    public boolean canExtract() {
-        return true;
-    }
-
-    @Override
-    public int receiveEnergy(int amount, boolean simulate) {
-        if (amount <= 0 || !acceptInsert.getAsBoolean()) return 0;
-        long mjpr = mjPerRf();
-        if (mjpr <= 0) return 0;
-
-        long mjToAdd = (long) amount * mjpr;
-        long space = battery.getCapacity() - battery.getStored();
-        if (space <= 0) return 0;
-
-        long actualMj = Math.min(mjToAdd, space);
-        int actualRf = (int) (actualMj / mjpr);
-        if (actualRf <= 0) return 0;
-
-        if (!simulate) {
-            long finalMj = (long) actualRf * mjpr;
-            battery.addPower(finalMj, false);
-        }
-        return actualRf;
-    }
-
-    @Override
-    public int extractEnergy(int amount, boolean simulate) {
-        if (amount <= 0) return 0;
-        long mjpr = mjPerRf();
-        if (mjpr <= 0) return 0;
-
-        long mjToExtract = (long) amount * mjpr;
-        long extracted = battery.extractPower(0, mjToExtract);
-        int extractedRf = (int) (extracted / mjpr);
-        long actualMj = (long) extractedRf * mjpr;
-        long remainder = extracted - actualMj;
-
-        // Always return the rounding remainder.
-        if (remainder > 0) {
-            battery.addPower(remainder, false);
-        }
-        // On simulate, also return the converted portion so the battery nets out unchanged
-        // (mirrors the 1.21.10+ snapshot rollback).
-        if (simulate && actualMj > 0) {
-            battery.addPower(actualMj, false);
-        }
-        return extractedRf;
-    }*/
-    //?}
 }

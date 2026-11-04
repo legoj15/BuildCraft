@@ -59,8 +59,9 @@ give them the standard pair. Block-side boilerplate (owner forward, menu open, t
 defaults it to `INVISIBLE` on the 1.21.1 node only (dropped at 1.21.10), so omitting it
 compiles clean and looks correct everywhere except that one node; enforced by the
 `BlockRenderShapeTester` game test, which walks the live block registry. Capability attachment
-uses NeoForge's `RegisterCapabilitiesEvent`; MJ-consumer machines register through the
-`MjCapabilities.registerMjConsumer` bundle.
+goes through the platform layer's `CapabilityRegistrar` (`Platform.transfer().registerCapabilities`,
+replayed into NeoForge's `RegisterCapabilitiesEvent`), keyed by `BCCapability` tokens; MJ-consumer
+machines register through the `MjCapabilities.registerMjConsumer` bundle.
 
 **Menus/GUI**: `ContainerBC_Neptune` is a plain `AbstractContainerMenu`; the shared
 shift-click/phantom-slot/widget-message machinery lives in `BCContainerSupport` behind the

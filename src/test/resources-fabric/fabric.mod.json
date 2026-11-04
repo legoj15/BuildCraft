@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "buildcraftunofficial_gametest",
+  "version": "0",
+  "name": "BuildCraft Redux game tests",
+  "description": "BuildCraft's game tests on Fabric (dev only, never shipped).",
+  "license": "MPL-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["buildcraft.platform.fabric.BCFabricGameTestEntrypoint"]
+  },
+  "mixins": ["buildcraftunofficial_gametest.mixins.json"],
+  "depends": {
+    "buildcraftunofficial": "*",
+    "fabric-gametest-api-v1": "*"
+  }
+}

@@ -3,13 +3,16 @@
 //
 // Phase 2a (#98): the node compiles all of BuildCraft (src/main/java; NeoForge-only code sits in platform/neoforge,
 // whose files are empty on this node) and builds a jar, collected beside the NeoForge ones by buildAndCollect.
-// Nothing ships until the user says so. No tests (FML-JUnit has no Fabric twin). Its share of the root
-// fullTestSuite is the compile, the class-tweaker validation, the transformed resources and the jar.
+// Nothing ships until the user says so. No unit tests (FML-JUnit has no Fabric twin); Phase 2c added the game tests
+// (below). Its share of the root fullTestSuite is the compile, the class-tweaker validation, the transformed
+// resources, the jar and the game tests.
 //
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
 // go on the plain Java configurations rather than the mod* remapping ones.
 
 import buildcraft.gradle.DataFabric
+import java.io.FileOutputStream
+import java.time.Duration
 
 plugins {
     id("net.fabricmc.fabric-loom")
@@ -39,6 +42,132 @@ sourceSets {
         // Unit tests stay NeoForge-only: FML-JUnit has no Fabric twin (docs/platform-layer.md, test plan).
         java { exclude("**") }
         resources { exclude("**") }
+    }
+}
+
+// ─── Game tests ──────────────────────────────────────────────────────────────
+// Fabric API's game-test runner (fabric-gametest-api-v1, `-Dfabric-api.gametest`) over the SAME game-test bodies the
+// NeoForge nodes run: Loom's `gametest` source set compiles this node's view of src/test/java (Stonecutter's copy, so
+// the `//? if fabric` arms are live) and src/test/resources, as a second mod (buildcraftunofficial_gametest,
+// src/test/resources-fabric/fabric.mod.json) whose entrypoint registers the tests through BuildCraft's own registrar
+// (BuildCraftGameTests.register). `runGameTest` is the task; nodeVerification runs it.
+//
+// What the Fabric set leaves out, by file (the set is curated here, never by per-file loader wrappers):
+// - every JUnit file: unit tests stay NeoForge-only (FML-JUnit has no Fabric twin; docs/platform-layer.md test plan);
+// - buildcraft/platform/neoforge/**: tests of the NeoForge implementations, and NeoForgeGameTestHooks, the NeoForge
+//   hook that makes the same registration from FMLConstructModEvent;
+// - NeoForge-typed test fixtures, each named below with why.
+// A game test the Fabric node cannot run sits in a `//? if neoforge {` arm of BuildCraftGameTests.registerAll with
+// its reason, and the manifests of tests not registered here are dropped from the resources (FabricGameTests).
+val fabricGameTestExcludes = listOf(
+    "buildcraft/platform/neoforge/**",
+    // An IShearable block (Fabric has no shearable-block extension; FabricShearServices).
+    "buildcraft/lib/test/UnshearableBlock.java",
+    // NeoForge's level-aware SavedDataType/SavedDataStorage API, driven directly (Fabric routes it through
+    // SavedDataStorageMixin, which these do not reach).
+    "buildcraft/lib/misc/LegacySavedDataTester.java",
+    // NeoForge's FluidType water physics (Fabric has no fluid type: docs/platform-layer.md, fluids).
+    "buildcraft/energy/FluidPhysicsTest.java",
+    // Robot protection against claim mods written as NeoForge event listeners at chosen priorities (break speed,
+    // placement, entity join, drops, attacks).
+    "buildcraft/robotics/ai/RobotDeployerProtectionTester.java",
+    "buildcraft/robotics/ai/RobotOwnerIdentityTester.java",
+    // The entity-interaction refusal, against NeoForge's cancellation result and listener priorities.
+    "buildcraft/transport/pipe/behaviour/PipeBehaviourStripesEntityClaimTester.java",
+)
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = "buildcraftunofficial_gametest"
+        enableGameTests = true
+        enableClientGameTests = false
+        eula = false
+        clearRunDirectory = false
+    }
+}
+sourceSets {
+    named("gametest") {
+        val testSet = sourceSets["test"]
+        java {
+            setSrcDirs(testSet.java.srcDirs)
+            fabricGameTestExcludes.forEach { exclude(it) }
+            // JUnit files, by content: the unit tests import org.junit, no game-test body does.
+            exclude { !it.isDirectory && it.file.readText().contains("import org.junit") }
+        }
+        resources {
+            // golden/ included: the golden save-format game tests read it too.
+            setSrcDirs(testSet.resources.srcDirs + rootProject.file("src/test/resources-fabric"))
+        }
+    }
+}
+dependencies {
+    // javax.annotation and the config API, as for main.
+    "gametestCompileOnly"("com.google.code.findbugs:jsr305:3.0.2")
+    "gametestCompileOnly"("com.electronwill.night-config:core:3.8.4")
+    "gametestCompileOnly"("com.electronwill.night-config:toml:3.8.4")
+    // Team Reborn Energy at run time, so the FE tests exercise FabricEnergyStorages (it is optional in the jar).
+    "gametestRuntimeOnly"("teamreborn:energy:5.0.0") { isTransitive = false }
+}
+// The gametest set reads the TEST source set's Stonecutter copy, so it waits for that copy, not its own.
+tasks.named<JavaCompile>("compileGametestJava") {
+    dependsOn("stonecutterGenerateTest")
+    options.compilerArgs.addAll(listOf("-Xmaxerrs", "2000"))
+}
+tasks.named<ProcessResources>("processGametestResources") {
+    dependsOn("stonecutterGenerateTest")
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    // The registrations this node compiles (BuildCraftGameTests as Stonecutter wrote it for this node): a manifest
+    // naming a test function this node does not register would fail that test at run time, so it is dropped.
+    val registrar = sourceSets["test"].java.srcDirs.map { it.resolve("buildcraft/BuildCraftGameTests.java") }
+    inputs.files(registrar).optional()
+    doLast {
+        buildcraft.gradle.FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
+    }
+}
+loom {
+    runs {
+        named("gameTest") {
+            // Dev workspace, like every BC run (BCLib.DEV-gated affordances).
+            property("buildcraft.dev", "true")
+            // No fabric-api.gametest.report-file: its XML reporter replaces vanilla's log reporter, so a failure would
+            // reach no log until the run ends. A failed required test fails the task through the exit code.
+            // Optional filter, as on NeoForge: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's test selector glob).
+            if (project.hasProperty("bcTests")) {
+                property("fabric-api.gametest.filter", project.property("bcTests").toString())
+            }
+        }
+    }
+}
+// The quiet console of bc.neoforge's gameTestServer: the server's stdout (INFO, and a progress bar line per test
+// tick, tens of MB for the whole suite) goes to build/run/gameTest/console.log instead of Gradle's output, and
+// latest.log/debug.log are untouched. `-PbcLoudGameTestLogs` keeps it on the console. Then the pass check: a run must
+// end with vanilla's "All N required tests passed" (N > 0), so an empty or aborted run cannot pass on its exit code.
+// The closures use only local Files: the configuration cache cannot serialise script-level values.
+tasks.named<JavaExec>("runGameTest") {
+    val runDir = project.file("build/run/gameTest")
+    val consoleLog = runDir.resolve("console.log")
+    val serverLog = runDir.resolve("logs/latest.log")
+    val loud = project.hasProperty("bcLoudGameTestLogs")
+    // A wall-clock guard: the whole suite runs in a few minutes, so a run still going after 20 has hung (a test that
+    // never starts is failed by the game-test mod's GameTestInfoChunkWaitMixin; this catches anything else).
+    timeout.set(Duration.ofMinutes(20))
+    doFirst {
+        if (serverLog.exists() && !serverLog.delete()) {
+            throw GradleException("Cannot delete the previous game-test log $serverLog (locked by another process?)")
+        }
+        if (!loud) {
+            runDir.mkdirs()
+            standardOutput = FileOutputStream(consoleLog)
+        }
+    }
+    doLast {
+        val text = if (serverLog.isFile) serverLog.readText() else ""
+        if (!Regex("""All [1-9]\d* required tests passed""").containsMatchIn(text)) {
+            throw GradleException(
+                "The Fabric game-test run exited 0 without 'All N required tests passed' (N > 0) in $serverLog; " +
+                    "its console is in $consoleLog."
+            )
+        }
     }
 }
 
@@ -150,9 +279,9 @@ tasks.register<Copy>("buildAndCollect") {
 }
 
 // What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the class tweaker, the
-// transformed resources and the collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests.
+// transformed resources, the collected jar and the game tests. The NeoForge twin in bc.neoforge adds unit tests.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation, the Fabric data transform and the collected jar."
-    dependsOn("compileJava", "validateAccessWidener", "processResources", "jar", "buildAndCollect")
+    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation, the Fabric data transform, the collected jar and the game tests."
+    dependsOn("compileJava", "validateAccessWidener", "processResources", "jar", "buildAndCollect", "runGameTest")
 }

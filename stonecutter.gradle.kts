@@ -41,9 +41,9 @@ tasks.register<Exec>("runReleaseMatrix") {
 // game-test crash went unnoticed — a `:<node>:` qualifier (or a broken node) quietly dropped coverage.
 // Here every node's share is a hard dependency; drop a node only by removing it from the tree. A node's share is
 // its `nodeVerification` task, which its loader convention plugin registers: unit tests + headless game tests + jar
-// build on a NeoForge node (bc.neoforge); the compile, the class-tweaker check, the transformed resources and the
-// jar on the Fabric node (bc.fabric), which has no tests yet. The node owns the list because only the node knows its
-// loader.
+// build on a NeoForge node (bc.neoforge); the compile, the class-tweaker check, the transformed resources, the
+// jar and the headless game tests on the Fabric node (bc.fabric), which has no unit tests. The node owns the list
+// because only the node knows its loader.
 //
 // No active-node switching is needed: each node compiles its OWN stonecutterGenerate output, so
 // `:1.21.1:test` and `:26.2:test` are correct in one invocation regardless of which node is "active"
@@ -58,7 +58,7 @@ tasks.register<Exec>("runReleaseMatrix") {
 val perNodeVerification = subprojects.map { node -> "${node.path}:nodeVerification" }
 tasks.register("fullTestSuite") {
     group = "verification"
-    description = "ALL nodes: unit tests + headless game tests + jar build (no tests on a Fabric node), then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
+    description = "ALL nodes: unit tests + headless game tests + jar build (no unit tests on a Fabric node), then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
     dependsOn(perNodeVerification)
     dependsOn(tasks.named("runReleaseMatrix"))
 }

@@ -30,16 +30,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
-
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreItems;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.block.BlockDistiller;
 import buildcraft.transport.BCTransportBlocks;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * The wrenches as tools (issue #34): what they mine, what wears them, and the zombies that carry or drop one.
@@ -258,7 +254,7 @@ public class WrenchToolTester {
         List<ItemStack> wrenches = new ArrayList<>();
         for (int i = 0; i < TRIALS; i++) {
             List<ItemEntity> drops = new ArrayList<>();
-            NeoForge.EVENT_BUS.post(new LivingDropsEvent(victim, source, drops, recentlyHit));
+            LoaderTestEvents.livingDrops(victim, source, drops, recentlyHit);
             for (ItemEntity drop : drops) {
                 wrenches.add(drop.getItem());
             }
@@ -267,17 +263,11 @@ public class WrenchToolTester {
     }
 
     private static void join(ServerLevel level, Mob mob) {
-        NeoForge.EVENT_BUS.post(new EntityJoinLevelEvent(mob, level));
+        LoaderTestEvents.entityJoin(mob, level);
     }
 
     private static void finalizeSpawn(ServerLevel level, Mob mob) {
-        //? if >=1.21.10 {
-        net.minecraft.world.entity.EntitySpawnReason reason = net.minecraft.world.entity.EntitySpawnReason.NATURAL;
-        //?} else {
-        /*net.minecraft.world.entity.MobSpawnType reason = net.minecraft.world.entity.MobSpawnType.NATURAL;*/
-        //?}
-        NeoForge.EVENT_BUS.post(new FinalizeSpawnEvent(mob, level, mob.getX(), mob.getY(), mob.getZ(),
-            level.getCurrentDifficultyAt(mob.blockPosition()), reason, null, null));
+        LoaderTestEvents.finalizeSpawn(level, mob);
     }
 
     /** A zombie that stays put. Each test runs in one tick, so it never gets to burn in the sun. */

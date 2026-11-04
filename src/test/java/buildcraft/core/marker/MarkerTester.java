@@ -21,9 +21,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileMarkerPath;
@@ -35,6 +32,7 @@ import buildcraft.lib.test.FakeLevels;
 import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil.Session;
 import buildcraft.lib.test.MarkerArenaUtil.Stray;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * Marker connection tests.
@@ -264,7 +262,7 @@ public class MarkerTester {
                     }
 
                     // Leaving the world: nothing of it may be shown in the next one.
-                    NeoForge.EVENT_BUS.post(new LevelEvent.Unload(client));
+                    LoaderTestEvents.levelUnload(client);
                     VolumeSubCache nextWorld = VolumeCache.INSTANCE.getSubCache(client);
                     if (nextWorld == joined || nextWorld.getConnection(abs1) != null || nextWorld.hasLoadedOrUnloadedMarker(abs1)) {
                         throw new IllegalStateException("The client cache outlived its level's unload");

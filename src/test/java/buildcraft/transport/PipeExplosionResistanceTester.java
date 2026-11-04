@@ -28,6 +28,7 @@ import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
 import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.transport.tile.TilePipeHolder;
+import buildcraft.platform.Platform;
 
 /**
  * A facade armours the side of the pipe it covers: an explosion on that side meets the facade's block, so the
@@ -53,7 +54,7 @@ public class PipeExplosionResistanceTester {
         Explosion fromEast = explosionAt(level, Vec3.atCenterOf(abs).add(2.5, 0.4, -0.3));
         Explosion fromWest = explosionAt(level, Vec3.atCenterOf(abs).add(-2.5, 0.4, 0.3));
 
-        float bare = level.getBlockState(abs).getExplosionResistance(level, abs, fromEast);
+        float bare = Platform.extensions().explosionResistance(level.getBlockState(abs), level, abs, fromEast);
         helper.assertTrue(bare > 0 && bare < 100, "sanity: a bare pipe has its own modest resistance, got " + bare);
 
         FacadeStateManager.ensureInitialized();
@@ -62,13 +63,13 @@ public class PipeExplosionResistanceTester {
         tile.replacePluggable(Direction.EAST, new PluggableFacade(BCSiliconPlugs.facade, tile, Direction.EAST,
             FacadeInstance.createSingle(obsidian, false)));
 
-        float covered = level.getBlockState(abs).getExplosionResistance(level, abs, fromEast);
-        float obsidianResistance = Blocks.OBSIDIAN.defaultBlockState().getExplosionResistance(level, abs, fromEast);
+        float covered = Platform.extensions().explosionResistance(level.getBlockState(abs), level, abs, fromEast);
+        float obsidianResistance = Platform.extensions().explosionResistance(Blocks.OBSIDIAN.defaultBlockState(), level, abs, fromEast);
         helper.assertTrue(covered == obsidianResistance,
             "a blast on the facade's side must meet the obsidian facade (" + obsidianResistance + "), got " + covered);
         helper.assertTrue(covered > bare, "the facade-covered side must resist more than a bare pipe");
 
-        float uncovered = level.getBlockState(abs).getExplosionResistance(level, abs, fromWest);
+        float uncovered = Platform.extensions().explosionResistance(level.getBlockState(abs), level, abs, fromWest);
         helper.assertTrue(uncovered == bare,
             "a blast on the uncovered side must meet the bare pipe (" + bare + "), got " + uncovered);
 
@@ -77,7 +78,7 @@ public class PipeExplosionResistanceTester {
         helper.assertTrue(glass != null, "glass must be a valid facade state");
         tile.replacePluggable(Direction.WEST, new PluggableFacade(BCSiliconPlugs.facade, tile, Direction.WEST,
             FacadeInstance.createSingle(glass, false)));
-        float glassSide = level.getBlockState(abs).getExplosionResistance(level, abs, fromWest);
+        float glassSide = Platform.extensions().explosionResistance(level.getBlockState(abs), level, abs, fromWest);
         helper.assertTrue(glassSide == bare,
             "a glass facade must not make the pipe weaker than bare (" + bare + "), got " + glassSide);
 

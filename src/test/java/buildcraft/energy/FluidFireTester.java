@@ -432,8 +432,11 @@ public class FluidFireTester {
     private static void catchFire(ServerLevel level, GameTestHelper helper, BlockPos rel) {
         BlockPos abs = helper.absolutePos(rel);
         BlockState state = level.getBlockState(abs);
-        //? if >=26.3 {
+        // On Fabric FireBlockMixin calls the block's catchFire at the same point.
+        //? if neoforge && >=26.3 {
         state.onCaughtFire(level, abs, Direction.UP, null, net.minecraft.world.item.ItemStack.EMPTY);
+        //?} elif fabric {
+        /*((buildcraft.platform.hook.FireReactiveBlock) state.getBlock()).catchFire(state, level, abs);*/
         //?} else {
         /*state.onCaughtFire(level, abs, Direction.UP, null);*/
         //?}
@@ -446,16 +449,30 @@ public class FluidFireTester {
             .orElseThrow(() -> new IllegalStateException("no BuildCraft energy fluid named " + name));
     }
 
+    // NeoForge's context-aware fire odds; on Fabric FireBlockMixin and LavaFluidMixin return the block's own
+    // FireReactiveBlock answers, which is what these read there.
     private static int flammability(ServerLevel level, BlockPos pos, Block block) {
+        //? if neoforge {
         return block.defaultBlockState().getFlammability(level, pos, Direction.UP);
+        //?} else {
+        /*return ((buildcraft.platform.hook.FireReactiveBlock) block).fireBurnOdds(block.defaultBlockState());*/
+        //?}
     }
 
     private static boolean lavaIgnites(ServerLevel level, BlockPos pos, Block block) {
+        //? if neoforge {
         return block.defaultBlockState().ignitedByLava(level, pos, Direction.UP);
+        //?} else {
+        /*return ((buildcraft.platform.hook.FireReactiveBlock) block).lavaIgnites(block.defaultBlockState());*/
+        //?}
     }
 
     private static int fireSpread(ServerLevel level, BlockPos pos, Block block) {
+        //? if neoforge {
         return block.defaultBlockState().getFireSpreadSpeed(level, pos, Direction.UP);
+        //?} else {
+        /*return ((buildcraft.platform.hook.FireReactiveBlock) block).fireIgniteOdds(block.defaultBlockState());*/
+        //?}
     }
 
     /** Throws (failing the test) when {@code condition} is false. Not {@code helper.assertTrue}: that call is

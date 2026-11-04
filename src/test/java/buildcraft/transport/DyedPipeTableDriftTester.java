@@ -99,8 +99,11 @@ public class DyedPipeTableDriftTester {
     }
 
     private static Set<Item> itemsOf(Ingredient ingredient) {
-        //? if >=1.21.10 {
+        // NeoForge deprecates vanilla's items() for getValues(); vanilla (Fabric) has only items().
+        //? if neoforge && >=1.21.10 {
         return ingredient.getValues().stream().map(net.minecraft.core.Holder::value).collect(Collectors.toSet());
+        //?} elif fabric {
+        /*return ingredient.items().map(net.minecraft.core.Holder::value).collect(Collectors.toSet());*/
         //?} else {
         /*return java.util.Arrays.stream(ingredient.getItems())
                 .map(ItemStack::getItem).collect(Collectors.toSet());*/

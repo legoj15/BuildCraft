@@ -23,9 +23,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.ChunkWatchEvent;
-
 import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.lib.misc.FakePlayerUtil;
@@ -43,6 +40,7 @@ import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.SavedDataWireSystems;
 import buildcraft.transport.wire.WireSystem;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * Wire-system signaling regression tests.
@@ -405,7 +403,7 @@ public class WireSystemTester {
                 helper.assertFalse(wireSystems.isResendQueued(player),
                     "Precondition: the player is not queued before the chunk is sent");
 
-                NeoForge.EVENT_BUS.post(new ChunkWatchEvent.Sent(player, chunk, level));
+                LoaderTestEvents.chunkSent(player, chunk, level);
 
                 helper.assertTrue(wireSystems.isResendQueued(player),
                     "ChunkWatchEvent.Sent for a wire-holding chunk must queue the player through the BCTransport listener");

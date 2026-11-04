@@ -30,8 +30,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
-
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.events.RobotEvent;
@@ -400,11 +398,16 @@ public class ItemRobotPlacementTester {
         });
     }
 
-    /** A {@link FakePlayer} (a real {@code ServerPlayer}, unlike {@code makeMockPlayer}'s bare {@code Player})
+    /** A loader fake player (a real {@code ServerPlayer}, unlike {@code makeMockPlayer}'s bare {@code Player})
      *  that keeps every action-bar message it is sent, so the refusal's "Not programmed" line is observable.
      *  The overlay entry point is {@code displayClientMessage(msg, true)} below 26.1 and
      *  {@code sendOverlayMessage} from 26.1 on — the same split {@code MessageUtil.sendOverlayMessage} hides. */
-    private static final class RecordingPlayer extends FakePlayer {
+    private static final class RecordingPlayer
+            //? if neoforge {
+            extends net.neoforged.neoforge.common.util.FakePlayer {
+            //?} else {
+            /*extends net.fabricmc.fabric.api.entity.FakePlayer {*/
+            //?}
         final List<Component> overlay = new ArrayList<>();
 
         RecordingPlayer(ServerLevel level) {

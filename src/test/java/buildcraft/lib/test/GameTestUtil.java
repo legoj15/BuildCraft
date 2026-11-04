@@ -16,6 +16,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.platform.Platform;
 
 /**
  * Cross-version shims for game-test assertions, plus the one survival block-break driver the drop tests share.
@@ -86,7 +87,7 @@ public final class GameTestUtil {
             ServerPlayer player = lease.player();
             player.setGameMode(GameType.SURVIVAL);
             player.setItemInHand(InteractionHand.MAIN_HAND, heldItem);
-            boolean canHarvest = state.canHarvestBlock(level, absPos, player);
+            boolean canHarvest = Platform.protection().canHarvest(player, state, level, absPos);
             state.getBlock().playerWillDestroy(level, absPos, state, player);
             level.removeBlock(absPos, false);
             if (canHarvest) {

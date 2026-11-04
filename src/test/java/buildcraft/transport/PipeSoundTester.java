@@ -44,6 +44,6 @@ public class PipeSoundTester {
         TilePipeHolder tile = (TilePipeHolder) level.getBlockEntity(abs);
         helper.assertTrue(tile != null, "pipe holder must have a block entity");
         tile.onPlacedBy(null, new ItemStack(pipe));
-        return level.getBlockState(abs).getSoundType(level, abs, null);
+        return buildcraft.platform.Platform.extensions().soundType(level.getBlockState(abs), level, abs, null);
     }
 }

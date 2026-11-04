@@ -12,9 +12,11 @@ import java.util.function.Predicate;
 
 import net.minecraft.core.BlockPos;
 
+//? if neoforge {
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+//?}
 
 /**
  * A stand-in for a claim/protection mod that guards what a hoe and a seed do rather than what a pickaxe does: a
@@ -30,15 +32,45 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  *
  * <p>Positions are those the events carry: the CLICKED (to-be-tilled) block for a right-click, the block PLACED
  * (the crop cell, above the soil) for a placement, the block the using player STANDS in for an item right-click.
+ *
+ * <p>On Fabric the right-click is {@code UseBlockCallback} and the item use {@code UseItemCallback}, each registered
+ * once (Fabric events cannot be unregistered) and handed to the open claims. Fabric API has no placement event, so
+ * there a claim never sees a placement (FabricProtection.canPlace's gap) and a test of a placement refusal is not in
+ * the Fabric set.
  */
 public final class WorkClaimMod implements AutoCloseable {
 
     private final Map<BlockPos, Integer> toolAsks = new HashMap<>();
     private final Map<BlockPos, Integer> placeAsks = new HashMap<>();
     private final Map<BlockPos, Integer> itemAsks = new HashMap<>();
+    private final Predicate<BlockPos> watched;
+    private final Predicate<BlockPos> clickRefused;
+    private final Predicate<BlockPos> placeRefused;
+    private final Predicate<BlockPos> itemRefused;
+    //? if neoforge {
     private final Consumer<PlayerInteractEvent.RightClickBlock> toolListener;
     private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
     private final Consumer<PlayerInteractEvent.RightClickItem> itemListener;
+    //?} else {
+    /*private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    static {
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+            boolean refused = false;
+            for (WorkClaimMod claim : OPEN) {
+                refused |= claim.toolAsk(hit.getBlockPos());
+            }
+            return refused ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS;
+        });
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) -> {
+            boolean refused = false;
+            for (WorkClaimMod claim : OPEN) {
+                refused |= claim.itemAsk(player.blockPosition());
+            }
+            return refused ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS;
+        });
+    }*/
+    //?}
 
     /**
      * A claim that refuses right-clicks and placements alike (and lets item uses through).
@@ -59,36 +91,55 @@ public final class WorkClaimMod implements AutoCloseable {
      */
     public WorkClaimMod(Predicate<BlockPos> watched, Predicate<BlockPos> clickRefused,
             Predicate<BlockPos> placeRefused, Predicate<BlockPos> itemRefused) {
+        this.watched = watched;
+        this.clickRefused = clickRefused;
+        this.placeRefused = placeRefused;
+        this.itemRefused = itemRefused;
+        //? if neoforge {
         toolListener = event -> {
-            BlockPos pos = event.getPos();
-            if (watched.test(pos)) {
-                toolAsks.merge(pos.immutable(), 1, Integer::sum);
-                if (clickRefused.test(pos)) {
-                    event.setCanceled(true);
-                }
+            if (toolAsk(event.getPos())) {
+                event.setCanceled(true);
             }
         };
         placeListener = event -> {
-            BlockPos pos = event.getPos();
-            if (watched.test(pos)) {
-                placeAsks.merge(pos.immutable(), 1, Integer::sum);
-                if (placeRefused.test(pos)) {
-                    event.setCanceled(true);
-                }
+            if (placeAsk(event.getPos())) {
+                event.setCanceled(true);
             }
         };
         itemListener = event -> {
-            BlockPos pos = event.getPos();
-            if (watched.test(pos)) {
-                itemAsks.merge(pos.immutable(), 1, Integer::sum);
-                if (itemRefused.test(pos)) {
-                    event.setCanceled(true);
-                }
+            if (itemAsk(event.getPos())) {
+                event.setCanceled(true);
             }
         };
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, toolListener);
         NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem.class, itemListener);
+        //?} else {
+        /*OPEN.add(this);*/
+        //?}
+    }
+
+    /** Counts a right-click at {@code pos} if watched; true if it is refused. */
+    private boolean toolAsk(BlockPos pos) {
+        return ask(toolAsks, clickRefused, pos);
+    }
+
+    /** Counts a placement at {@code pos} if watched; true if it is refused. */
+    private boolean placeAsk(BlockPos pos) {
+        return ask(placeAsks, placeRefused, pos);
+    }
+
+    /** Counts an item use by a player standing at {@code pos} if watched; true if it is refused. */
+    private boolean itemAsk(BlockPos pos) {
+        return ask(itemAsks, itemRefused, pos);
+    }
+
+    private boolean ask(Map<BlockPos, Integer> asks, Predicate<BlockPos> refused, BlockPos pos) {
+        if (!watched.test(pos)) {
+            return false;
+        }
+        asks.merge(pos.immutable(), 1, Integer::sum);
+        return refused.test(pos);
     }
 
     /** How many tool uses (right-clicks) were attempted at {@code pos}. */
@@ -123,8 +174,12 @@ public final class WorkClaimMod implements AutoCloseable {
 
     @Override
     public void close() {
+        //? if neoforge {
         NeoForge.EVENT_BUS.unregister(toolListener);
         NeoForge.EVENT_BUS.unregister(placeListener);
         NeoForge.EVENT_BUS.unregister(itemListener);
+        //?} else {
+        /*OPEN.remove(this);*/
+        //?}
     }
 }

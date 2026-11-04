@@ -332,7 +332,12 @@ public class VanillaRotationTester {
                 new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), nonCrouch,
                         InteractionHand.MAIN_HAND, wrench, hit);
 
+        // Fabric runs the same method from UseBlockCallback (FabricLoaderHookRoutes).
+        //? if neoforge {
         InteractionResult r1 = wrenchItem.onItemUseFirst(wrench, nonCrouchCtx);
+        //?} else {
+        /*InteractionResult r1 = wrenchItem.useBeforeBlock(wrench, nonCrouchCtx);*/
+        //?}
         assertTrue(r1 == InteractionResult.PASS,
                 "non-crouch wrench on trapdoor must PASS so block's useWithoutItem runs, got " + r1);
         assertTrue(helper.getBlockState(pos).getValue(TrapDoorBlock.FACING) == Direction.NORTH,
@@ -347,7 +352,11 @@ public class VanillaRotationTester {
                 new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), crouch,
                         InteractionHand.MAIN_HAND, wrench, hit);
 
+        //? if neoforge {
         InteractionResult r2 = wrenchItem.onItemUseFirst(wrench, crouchCtx);
+        //?} else {
+        /*InteractionResult r2 = wrenchItem.useBeforeBlock(wrench, crouchCtx);*/
+        //?}
         assertTrue(r2 == InteractionResult.SUCCESS,
                 "crouch wrench on trapdoor must SUCCEED via onItemUseFirst, got " + r2);
         BlockState after = helper.getBlockState(pos);

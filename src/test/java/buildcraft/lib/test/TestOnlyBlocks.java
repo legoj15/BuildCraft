@@ -5,21 +5,19 @@
  */
 package buildcraft.lib.test;
 
-import net.minecraft.core.registries.Registries;
+import java.util.function.Function;
+
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.registries.RegisterEvent;
+import buildcraft.platform.registry.BCRegistrar;
 
 /**
  * Blocks that exist only so tests can reach code paths no vanilla or BuildCraft block can. They live in the
  * {@code buildcrafttest} namespace, so every registry sweep that filters on {@code buildcraftunofficial}
  * (waterlogging, blockstate coverage) skips them, and they ship in no jar (the jar holds the main source set only).
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public final class TestOnlyBlocks {
 
     public static final String NAMESPACE = "buildcrafttest";
@@ -34,7 +32,7 @@ public final class TestOnlyBlocks {
      *  {@link WaterSensitiveBlock}. */
     public static final Identifier WET_FRAGILE_ID = Identifier.parse(NAMESPACE + ":wet_fragile");
 
-    /** A shearable block that is never ready for shears; see {@link UnshearableBlock}. */
+    /** A shearable block that is never ready for shears (NeoForge's {@code UnshearableBlock}). */
     public static final Identifier UNSHEARABLE_ID = Identifier.parse(NAMESPACE + ":unshearable");
 
     private TestOnlyBlocks() {}
@@ -57,53 +55,38 @@ public final class TestOnlyBlocks {
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, WET_FRAGILE_ID);
     }
 
-    /** The registered {@link UnshearableBlock} (valid once registries are populated). */
+    /** The registered unshearable block (valid once registries are populated; NeoForge game-test runs only). */
     public static Block unshearable() {
         return buildcraft.lib.misc.RegistryUtilBC.getValue(
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, UNSHEARABLE_ID);
     }
 
     /**
-     * Registers the test blocks, but only in a game-test run ({@code neoforge.enableGameTest}, set by the
-     * {@code gameTestServer} run in build.gradle.kts). The test source set is also on the dev client's and the unit
-     * tests' classpath, where a block with no model or blockstate would only add noise (and a registry entry for
-     * the sweeps to trip over) for nothing that uses it.
+     * Registers the loader-neutral test blocks through BuildCraft's registrar, during mod construction. Only a
+     * game-test run calls it (the loader hook knows which run that is): the test source set is also on the NeoForge
+     * dev client's and unit tests' classpath, where a block with no model or blockstate would only add noise (and a
+     * registry entry for the sweeps to trip over) for nothing that uses it.
      */
-    @SubscribeEvent
-    public static void onRegister(RegisterEvent event) {
-        if (Boolean.getBoolean("neoforge.enableGameTest") && event.getRegistryKey().equals(Registries.BLOCK)) {
-            event.register(Registries.BLOCK, REFUSING_SOURCE_ID, () -> new RefusingSourceBlock(
-                    //? if >=1.21.10 {
-                    BlockBehaviour.Properties.of()
-                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, REFUSING_SOURCE_ID))
-                            .noOcclusion()));
-                    //?} else {
-                    /*BlockBehaviour.Properties.of().noOcclusion()));*/
-                    //?}
-            event.register(Registries.BLOCK, DRY_FRAGILE_ID, () -> new WaterSensitiveBlock(
-                    //? if >=1.21.10 {
-                    BlockBehaviour.Properties.of()
-                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, DRY_FRAGILE_ID))
-                            .noOcclusion(), true));
-                    //?} else {
-                    /*BlockBehaviour.Properties.of().noOcclusion(), true));*/
-                    //?}
-            event.register(Registries.BLOCK, WET_FRAGILE_ID, () -> new WaterSensitiveBlock(
-                    //? if >=1.21.10 {
-                    BlockBehaviour.Properties.of()
-                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, WET_FRAGILE_ID))
-                            .noOcclusion(), false));
-                    //?} else {
-                    /*BlockBehaviour.Properties.of().noOcclusion(), false));*/
-                    //?}
-            event.register(Registries.BLOCK, UNSHEARABLE_ID, () -> new UnshearableBlock(
-                    //? if >=1.21.10 {
-                    BlockBehaviour.Properties.of()
-                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, UNSHEARABLE_ID))
-                            .noOcclusion()));
-                    //?} else {
-                    /*BlockBehaviour.Properties.of().noOcclusion()));*/
-                    //?}
-        }
+    public static void register() {
+        BCRegistrar.Blocks blocks = BCRegistrar.createBlocks(NAMESPACE);
+        blocks.registerBlock(REFUSING_SOURCE_ID.getPath(), RefusingSourceBlock::new, TestOnlyBlocks::properties);
+        blocks.registerBlock(DRY_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, true), TestOnlyBlocks::properties);
+        blocks.registerBlock(WET_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, false), TestOnlyBlocks::properties);
+        blocks.subscribe();
+    }
+
+    /**
+     * Registers {@link #UNSHEARABLE_ID}, built by {@code factory}. That block implements NeoForge's
+     * {@code IShearable}, so only the NeoForge hook (which may name it) calls this: Fabric has no shearable-block
+     * extension to test (FabricShearServices).
+     */
+    public static void registerUnshearable(Function<BlockBehaviour.Properties, ? extends Block> factory) {
+        BCRegistrar.Blocks blocks = BCRegistrar.createBlocks(NAMESPACE);
+        blocks.registerBlock(UNSHEARABLE_ID.getPath(), factory, TestOnlyBlocks::properties);
+        blocks.subscribe();
+    }
+
+    private static BlockBehaviour.Properties properties() {
+        return BlockBehaviour.Properties.of().noOcclusion();
     }
 }

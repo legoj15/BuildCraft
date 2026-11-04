@@ -16,15 +16,15 @@ package buildcraft;
  * The mapping lives in this class (not in the 1.21.1-only registration branch, which is commented out on every
  * other node) so a unit test can pin it on any node.
  */
-final class GameTestBatchNames {
+public final class GameTestBatchNames {
 
     /** The batch every test without a private environment shares (the 1.21.1 {@code @GameTest} default). */
-    static final String DEFAULT = "defaultBatch";
+    public static final String DEFAULT = "defaultBatch";
 
     private GameTestBatchNames() {}
 
     /** @param environment the manifest's {@code environment} value, or null if it has none */
-    static String forEnvironment(String environment) {
+    public static String forEnvironment(String environment) {
         if (environment == null || environment.isBlank() || environment.equals("minecraft:default")) {
             return DEFAULT;
         }

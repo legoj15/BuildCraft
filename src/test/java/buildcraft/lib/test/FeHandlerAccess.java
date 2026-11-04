@@ -5,15 +5,8 @@
  */
 package buildcraft.lib.test;
 
-import buildcraft.platform.neoforge.NeoForgeEnergyStorages;
 import buildcraft.platform.transfer.BCEnergyStorage;
 import buildcraft.platform.transfer.BCTransaction;
-
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
 
 /**
  * Access to an energy handler for tests: a BuildCraft {@link BCEnergyStorage} (what BuildCraft's own pipes, stations
@@ -30,10 +23,15 @@ public final class FeHandlerAccess {
         if (handler instanceof BCEnergyStorage storage) {
             return storage;
         }
-        //? if >=1.21.10 {
-        return NeoForgeEnergyStorages.fromNeo((EnergyHandler) handler);
+        // Fabric's lookup (TransferAccess.findEnergy) already hands out BuildCraft storages.
+        //? if neoforge && >=1.21.10 {
+        return buildcraft.platform.neoforge.NeoForgeEnergyStorages.fromNeo(
+                (net.neoforged.neoforge.transfer.energy.EnergyHandler) handler);
+        //?} elif neoforge {
+        /*return buildcraft.platform.neoforge.NeoForgeEnergyStorages.fromNeo(
+                (net.neoforged.neoforge.energy.IEnergyStorage) handler);*/
         //?} else {
-        /*return NeoForgeEnergyStorages.fromNeo((IEnergyStorage) handler);*/
+        /*throw new IllegalArgumentException("not a BuildCraft energy storage: " + handler);*/
         //?}
     }
 

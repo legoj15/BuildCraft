@@ -16,8 +16,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.Tags;
-
 import buildcraft.api.properties.BuildCraftProperties;
 
 import buildcraft.core.BCCoreBlocks;
@@ -55,13 +53,13 @@ public class WrenchTagTester {
         if (!EntityUtil.isWrench(bcWrench)) {
             throw new IllegalStateException("BuildCraft wrench must be detected as a wrench");
         }
-        if (!bcWrench.is(Tags.Items.TOOLS_WRENCH)) {
+        if (!bcWrench.is(CommonTags.TOOLS_WRENCH)) {
             throw new IllegalStateException(
                     "BuildCraft wrench must be a member of c:tools/wrench (data/c/tags/item/tools/wrench.json)");
         }
 
         // A foreign tool that is ONLY in the tag (not an IToolWrench) is accepted by default.
-        if (!shears.is(Tags.Items.TOOLS_WRENCH)) {
+        if (!shears.is(CommonTags.TOOLS_WRENCH)) {
             throw new IllegalStateException(
                     "Test precondition: shears must be in c:tools/wrench (test datapack tag did not load/merge)");
         }

@@ -24,6 +24,7 @@ import buildcraft.lib.net.MessageMarker;
 import buildcraft.lib.test.FakeLevels;
 import buildcraft.lib.test.StubMarkerCache;
 import buildcraft.platform.RecordingHooks;
+import buildcraft.platform.client.ClientHooks;
 import buildcraft.platform.event.GameHooks;
 
 /**
@@ -116,6 +117,30 @@ public class MarkerCacheClientResetTester {
 
             NeoForge.EVENT_BUS.post(new LevelEvent.Unload(server));
             Assertions.assertNotSame(serverSub, cache.getSubCache(server), "a server unload still drops its own");
+        } finally {
+            cache.unregister();
+        }
+    }
+
+    /** The client level-unload hook (Fabric's only client reset: its level change and disconnect name no level)
+     *  drops every client table and leaves the server's alone. */
+    @Test
+    void theClientLevelCloseHookDropsEveryClientSubCacheOnly() {
+        StubMarkerCache cache = StubMarkerCache.register();
+        Level server = FakeLevels.fake(false, Level.OVERWORLD);
+        try {
+            StubMarkerCache.SubCache serverSub = cache.getSubCache(server);
+            StubMarkerCache.SubCache overworld = cache.getSubCache(clientA);
+            StubMarkerCache.SubCache nether = cache.getSubCache(clientB);
+
+            RecordingHooks<ClientHooks> recorder = RecordingHooks.of(ClientHooks.class);
+            MarkerCacheEvents.registerClientHooks(recorder.hooks());
+            recorder.listener("onClientLevelUnload", Runnable.class).run();
+
+            Assertions.assertNotSame(overworld, cache.getSubCache(clientA), "the closed level's client table is dropped");
+            Assertions.assertNotSame(nether, cache.getSubCache(clientB), "...and every other client table with it");
+            Assertions.assertSame(serverSub, cache.getSubCache(server),
+                    "...but the server table of the same dimension key survives (integrated server)");
         } finally {
             cache.unregister();
         }

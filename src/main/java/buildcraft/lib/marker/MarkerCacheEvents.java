@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 
+import buildcraft.platform.client.ClientHooks;
 import buildcraft.platform.event.GameHooks;
 
 /**
@@ -27,6 +28,8 @@ import buildcraft.platform.event.GameHooks;
  *     it was handed the old world's markers and connections instead of its own. NeoForge posts this event for
  *     a client level when it is replaced ({@code Minecraft.setLevel}: dimension change, new connection) and when
  *     the connection closes ({@code Minecraft.disconnect}), which covers every way a client leaves a world.
+ *     Fabric posts no unload for a client level, so the client also drops all its sub-caches on the client
+ *     level-unload hook ({@link #registerClientHooks}: a level change or a disconnect there).
  *     Nothing here touches a client-only class; on a dedicated server a client level never exists.</li>
  * <li><b>Join</b> refills what the unload dropped: the live {@code MessageMarker} updates only reach players
  *     already in the dimension, so a player entering a level (login, dimension change, respawn) is sent every
@@ -43,6 +46,16 @@ public final class MarkerCacheEvents {
     public static void registerHooks(GameHooks hooks) {
         hooks.onLevelUnload(MarkerCacheEvents::onLevelUnload);
         hooks.onEntityJoinLevel(MarkerCacheEvents::onEntityJoinLevel);
+    }
+
+    /**
+     * Registers the client half of the unload: every client sub-cache is dropped when the client's level closes.
+     * Called once from BCCoreClient, on a physical client only. On NeoForge {@link #onLevelUnload} has already dropped
+     * the closing level's own sub-cache (the client holds one level, so no other client table has anything in it); on
+     * Fabric the level-unload hook sees server levels only, so this is the client's reset there.
+     */
+    public static void registerClientHooks(ClientHooks hooks) {
+        hooks.onClientLevelUnload(MarkerCache::onClientWorldClosed);
     }
 
     public static void onLevelUnload(LevelAccessor unloaded) {

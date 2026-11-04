@@ -70,6 +70,15 @@ public abstract class MarkerCache<S extends MarkerSubCache<?>> {
         }
     }
 
+    /** Drops every client sub-cache: the client has closed its level (disconnect, or the old dimension on a
+     *  dimension change). Wired by {@link MarkerCacheEvents#registerClientHooks}, for a loader whose client
+     *  level-unload names no level. The server tables are left alone (an integrated server keeps running). */
+    public static void onClientWorldClosed() {
+        for (MarkerCache<?> cache : CACHES) {
+            cache.cacheClient.clear();
+        }
+    }
+
     private void onWorldUnloadImpl(Level world) {
         Map<ResourceKey<Level>, S> cache = world.isClientSide() ? cacheClient : cacheServer;
         ResourceKey<Level> key = world.dimension();

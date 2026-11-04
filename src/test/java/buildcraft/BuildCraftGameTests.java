@@ -296,7 +296,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_volume_triangulation_2d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
         // Join resync: what a joining client is sent, and that a player joining a level triggers it.
-        // Not on Fabric: posts a level unload for a stand-in client level; Fabric has no client level-unload event.
+        // Not on Fabric: posts a level unload for a stand-in client level; Fabric has no client level-unload event, and its client reset (MarkerCacheEvents.registerClientHooks, pinned by MarkerCacheClientResetTester) is a client hook the dedicated game-test server never loads.
         //? if neoforge {
         reg.accept("buildcraftunofficial:marker_join_sync_replays_markers_and_connections", () -> buildcraft.core.marker.MarkerTester::testJoinSyncReplaysMarkersAndConnections);
         //?}

@@ -23,7 +23,6 @@ import me.shedaniel.rei.forge.REIPluginClient;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.core.BCCore;
@@ -47,7 +46,7 @@ public class BCCoreReiClientPlugin implements REIClientPlugin {
     @Override
     public void registerEntries(EntryRegistry registry) {
         Predicate<EntryStack<?>> hidden = entry -> entry.getValue() instanceof ItemStack stack
-                && stack.is(Tags.Items.HIDDEN_FROM_RECIPE_VIEWERS)
+                && stack.is(buildcraft.lib.misc.CommonTags.HIDDEN_FROM_RECIPE_VIEWERS_ITEM)
                 && BCCore.MODID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace());
         registry.removeEntryIf(hidden);
     }

@@ -18,13 +18,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.IShearable;
-
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.MachineRefusals;
+import buildcraft.platform.Platform;
 
 public enum StripesHandlerShears implements IStripesHandlerItem {
     INSTANCE;
@@ -44,8 +43,8 @@ public enum StripesHandlerShears implements IStripesHandlerItem {
         BlockState state = world.getBlockState(target);
         Block block = state.getBlock();
 
-        if (block instanceof IShearable shearableBlock) {
-            if (shearableBlock.isShearable(player, stack, world, target)) {
+        if (Platform.shearing().isShearableBlock(block)) {
+            if (Platform.shearing().isShearableAt(player, stack, world, target)) {
                 // Shearing takes the block away, so break protection decides first, as it does for the pipe's own
                 // digging. A refusal is a refused click: it ends the dispatch, so the dispenser fallback after this
                 // handler does not right-click the same block with the same shears. It is recorded as a refused break
@@ -57,7 +56,7 @@ public enum StripesHandlerShears implements IStripesHandlerItem {
                     MachineRefusals.recordBreak(player);
                     return false;
                 }
-                List<ItemStack> drops = shearableBlock.onSheared(player, stack, world, target);
+                List<ItemStack> drops = Platform.shearing().shear(player, stack, world, target);
                 stack.hurtAndBreak(1, player, player.getEquipmentSlotForItem(stack));
                 world.setBlock(target, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                 for (ItemStack dropStack : drops) {

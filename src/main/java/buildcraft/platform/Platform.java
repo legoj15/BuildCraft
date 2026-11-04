@@ -29,4 +29,84 @@ public final class Platform {
             *///?}
         }
     }
+
+    public static SoundServices sounds() {
+        return SoundHolder.INSTANCE;
+    }
+
+    private static final class SoundHolder {
+        static final SoundServices INSTANCE = create();
+
+        private static SoundServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeSoundServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricSoundServices();
+            *///?}
+        }
+    }
+
+    public static ChunkTickets chunkTickets() {
+        return ChunkTicketsHolder.INSTANCE;
+    }
+
+    private static final class ChunkTicketsHolder {
+        static final ChunkTickets INSTANCE = create();
+
+        private static ChunkTickets create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeChunkTickets();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricChunkTickets();
+            *///?}
+        }
+    }
+
+    public static CraftingServices crafting() {
+        return CraftingHolder.INSTANCE;
+    }
+
+    private static final class CraftingHolder {
+        static final CraftingServices INSTANCE = create();
+
+        private static CraftingServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeCraftingServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricCraftingServices();
+            *///?}
+        }
+    }
+
+    public static ShearServices shearing() {
+        return ShearHolder.INSTANCE;
+    }
+
+    private static final class ShearHolder {
+        static final ShearServices INSTANCE = create();
+
+        private static ShearServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeShearServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricShearServices();
+            *///?}
+        }
+    }
+
+    public static LootServices loot() {
+        return LootHolder.INSTANCE;
+    }
+
+    private static final class LootHolder {
+        static final LootServices INSTANCE = create();
+
+        private static LootServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeLootServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?}
+        }
+    }
 }

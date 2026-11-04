@@ -17,7 +17,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
-import net.neoforged.neoforge.common.Tags;
 
 import buildcraft.api.tools.IToolWrench;
 
@@ -38,7 +37,7 @@ public class EntityUtil {
         if (stack.getItem() instanceof IToolWrench) {
             return true;
         }
-        return BCLibConfig.allowForeignWrenches.get() && stack.is(Tags.Items.TOOLS_WRENCH);
+        return BCLibConfig.allowForeignWrenches.get() && stack.is(CommonTags.TOOLS_WRENCH);
     }
 
     /** Returns the hand holding a {@linkplain #isWrench wrench}, or {@code null} if neither hand holds one. */

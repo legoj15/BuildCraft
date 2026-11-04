@@ -36,7 +36,6 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
-import net.neoforged.neoforge.common.util.DeferredSoundType;
 import net.neoforged.neoforge.event.EventHooks;
 
 import buildcraft.lib.misc.SoundUtil;
@@ -65,8 +64,8 @@ public class BlockWaterGel extends Block {
         public final float hardness;
 
         GelStage(float pitch, boolean spreading, float hardness) {
-            // NeoForge's supplier-backed SoundType (the raw SoundType constructor is deprecated in its favour).
-            this.soundType = new DeferredSoundType(
+            // A supplier-backed SoundType (the raw SoundType constructor is deprecated in NeoForge's favour).
+            this.soundType = buildcraft.platform.Platform.sounds().deferredSoundType(
                 SoundType.SLIME_BLOCK.volume,
                 pitch,
                 () -> SoundEvents.SLIME_BLOCK_BREAK,

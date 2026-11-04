@@ -25,7 +25,6 @@ import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.IShearable;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.IMjConnector;
@@ -54,6 +53,7 @@ import buildcraft.lib.misc.MachineRefusals;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.misc.UseInAirProbe;
+import buildcraft.platform.Platform;
 
 import buildcraft.transport.BCTransportStatements;
 
@@ -327,7 +327,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         // Shears asks the same break question the digging does, about the same block: a refusal either one met is
         // remembered for the cell, so neither re-asks it every drop inside the refusal window.
         boolean breakAsk = event.getStack().getItem() instanceof ShearsItem
-                && world.getBlockState(target).getBlock() instanceof IShearable;
+                && Platform.shearing().isShearableBlock(world.getBlockState(target).getBlock());
         if (breakAsk && refusals.isRefused(world, target, owner)) {
             return;
         }

@@ -18,7 +18,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipeBasic;
@@ -31,6 +30,7 @@ import buildcraft.factory.BCFactoryBlocks;
 
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
+import buildcraft.platform.Platform;
 
 import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
@@ -336,12 +336,7 @@ public class BCSiliconRecipes {
             // patch, and PatchedDataComponentMap.equals compares patches structurally — so the
             // rebuilt stack is !equals to the canonical gate stack JEI keeps in its ingredient
             // list, and R/U lookup on the basic-gate variants stops finding the recipe.
-            inputBuilder.add(new IngredientStack(DataComponentIngredient.of(false,
-                //? if >=26.1 {
-                toUpgrade.getComponentsPatch(), toUpgrade.getItem())));
-                //?} else {
-                /*toUpgrade.getComponents(), toUpgrade.getItem())));*/
-                //?}
+            inputBuilder.add(new IngredientStack(Platform.crafting().componentsIngredient(toUpgrade)));
             for (IngredientStack mod : mods) {
                 inputBuilder.add(mod);
             }

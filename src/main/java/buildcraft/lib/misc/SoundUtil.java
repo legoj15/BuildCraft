@@ -17,14 +17,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.SoundActions;
-import net.neoforged.neoforge.common.util.DeferredSoundType;
 import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.platform.Platform;
 
 public class SoundUtil {
     /** A copy of {@code base} with its pitch scaled by {@code factor} (above 1 is higher). */
     public static SoundType pitched(SoundType base, float factor) {
-        return new DeferredSoundType(base.getVolume(), base.getPitch() * factor, base::getBreakSound, base::getStepSound,
+        return Platform.sounds().deferredSoundType(base.getVolume(), base.getPitch() * factor, base::getBreakSound, base::getStepSound,
                 base::getPlaceSound, base::getHitSound, base::getFallSound);
     }
 
@@ -68,12 +68,12 @@ public class SoundUtil {
     }
 
     public static void playBucketEmpty(Level world, BlockPos pos, FluidStack fluid) {
-        SoundEvent sound = fluid.getFluid().getFluidType().getSound(fluid, SoundActions.BUCKET_EMPTY);
+        SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), false);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     public static void playBucketFill(Level world, BlockPos pos, FluidStack fluid) {
-        SoundEvent sound = fluid.getFluid().getFluidType().getSound(fluid, SoundActions.BUCKET_FILL);
+        SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), true);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 }

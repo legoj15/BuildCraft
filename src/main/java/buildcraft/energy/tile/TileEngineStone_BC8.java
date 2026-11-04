@@ -30,7 +30,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.loot.NeoForgeLootContextParams;
+import buildcraft.platform.Platform;
 //?}
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -246,14 +246,13 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     // container, so the CONTAINER parameter exposes no slots; the queried stack is the fuel itself.
     private static LootContext createFuelContext(ServerLevel serverLevel, TileEngineStone_BC8 engine,
             ItemStack stack) {
+        LootParams.Builder params = new LootParams.Builder(serverLevel)
+                .withParameter(LootContextParams.BLOCK_STATE, engine.getBlockState())
+                .withParameter(LootContextParams.BLOCK_ENTITY, engine)
+                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(engine.getBlockPos()))
+                .withParameter(LootContextParams.CONTAINER, slot -> null);
         return new LootContext.Builder(
-                new LootParams.Builder(serverLevel)
-                        .withParameter(LootContextParams.BLOCK_STATE, engine.getBlockState())
-                        .withParameter(LootContextParams.BLOCK_ENTITY, engine)
-                        .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(engine.getBlockPos()))
-                        .withParameter(LootContextParams.CONTAINER, slot -> null)
-                        .withOptionalParameter(NeoForgeLootContextParams.QUERIED_STACK, stack)
-                        .create(LootContextParamSets.CONTAINER_PROCESS))
+                Platform.loot().withQueriedStack(params, stack).create(LootContextParamSets.CONTAINER_PROCESS))
                 .create(Optional.empty());
     }
     //?}

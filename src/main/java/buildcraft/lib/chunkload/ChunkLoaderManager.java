@@ -11,30 +11,20 @@ import java.util.HashSet;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
-import net.neoforged.neoforge.common.world.chunk.TicketController;
+import buildcraft.lib.misc.PositionUtil;
+import buildcraft.platform.Platform;
 
 /**
  * Keeps chunks force-loaded for tiles implementing {@link IChunkLoadingTile} (e.g. the Quarry),
- * using NeoForge's {@link TicketController} API. Tickets are owned by the tile's {@link BlockPos}
- * and persist across save/load; {@link #releaseChunksFor} drops them when the tile is removed.
+ * through the platform's chunk tickets. Tickets are owned by the tile's {@link BlockPos}
+ * (and persist across save/load where the loader supports it); {@link #releaseChunksFor} drops them when the tile is
+ * removed.
  */
 public class ChunkLoaderManager {
-
-    /** Ticket controller for all BuildCraft chunk-loading tiles. Must be registered on the mod
-     *  event bus (see {@link #registerTicketController}) or NeoForge discards its tickets on load. */
-    public static final TicketController CONTROLLER =
-        new TicketController(Identifier.fromNamespaceAndPath("buildcraftunofficial", "chunkloader"));
-
-    public static void registerTicketController(IEventBus modEventBus) {
-        modEventBus.addListener((RegisterTicketControllersEvent event) -> event.register(CONTROLLER));
-    }
 
     public static <T extends BlockEntity & IChunkLoadingTile> void loadChunksForTile(T tile) {
         if (!canLoadFor(tile)) {
@@ -58,7 +48,7 @@ public class ChunkLoaderManager {
         }
         BlockPos owner = tile.getBlockPos();
         for (ChunkPos chunk : getChunksToLoad(tile)) {
-            CONTROLLER.forceChunk(serverLevel, owner, buildcraft.lib.misc.PositionUtil.chunkX(chunk), buildcraft.lib.misc.PositionUtil.chunkZ(chunk), add, false);
+            Platform.chunkTickets().forceChunk(serverLevel, owner, PositionUtil.chunkX(chunk), PositionUtil.chunkZ(chunk), add);
         }
     }
 

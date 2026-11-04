@@ -6,6 +6,7 @@
 package buildcraft.lib.registry;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -45,6 +46,8 @@ import buildcraft.silicon.BCSiliconItems;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
+import buildcraft.platform.registry.BCFluidRegistrar;
+import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
 
 /**
@@ -211,7 +214,18 @@ public final class LegacyAliases {
     /** Re-namespaces every entry of {@code source} under each of {@code oldNamespaces}, aliasing it to its current id. */
     private static void flip(BCRegistrar<?> source, BCRegistrar<?> aliasRegister, Registry<?> registry,
             String key, String... oldNamespaces) {
-        for (var holder : source.getEntries()) {
+        flip(source.getEntries(), aliasRegister, registry, key, oldNamespaces);
+    }
+
+    /** {@link #flip(BCRegistrar, BCRegistrar, Registry, String, String...)} for a fluid registrar. */
+    private static void flip(BCFluidRegistrar source, BCRegistrar<?> aliasRegister, Registry<?> registry,
+            String key, String... oldNamespaces) {
+        flip(source.getEntries(), aliasRegister, registry, key, oldNamespaces);
+    }
+
+    private static void flip(Collection<? extends BCHolder<?, ?>> entries, BCRegistrar<?> aliasRegister,
+            Registry<?> registry, String key, String... oldNamespaces) {
+        for (var holder : entries) {
             Identifier to = holder.id();
             for (String ns : oldNamespaces) {
                 add(aliasRegister, registry, key, id(ns, to.getPath()), to);

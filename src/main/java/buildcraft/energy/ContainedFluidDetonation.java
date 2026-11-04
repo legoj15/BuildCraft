@@ -18,7 +18,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.energy.BCEnergyConfig.ContainedDetonation;

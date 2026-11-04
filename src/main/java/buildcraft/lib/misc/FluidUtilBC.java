@@ -100,9 +100,9 @@ public class FluidUtilBC {
         }
         // Mojang split source/flowing into separate Fluid instances in 1.13, so
         // strict `==` returns false between Fluids.WATER and Fluids.FLOWING_WATER.
-        // Compare by FluidType, which is shared between the two variants of the
-        // same base fluid (e.g. NeoForgeMod.WATER_TYPE for both water variants).
-        return a == b || a.getFluidType() == b.getFluidType();
+        // Compare by kind (NeoForge: the FluidType), which the two variants of the
+        // same base fluid share (e.g. NeoForgeMod.WATER_TYPE for both water variants).
+        return a == b || Platform.fluids().isSameKind(a, b);
     }
 
     /**
@@ -134,17 +134,17 @@ public class FluidUtilBC {
 
     /**
      * Returns whether the given fluid is gaseous (lighter than air).
-     * In NeoForge 1.21.11 this checks {@code FluidType.isLighterThanAir()},
+     * On NeoForge this is {@code FluidType.isLighterThanAir()},
      * which returns true when density ≤ 0 — equivalent to the old
      * {@code Fluid.isGaseous()} from Forge 1.12.2.
      */
     public static boolean isGaseous(BCFluidStack fluid) {
-        return !fluid.isEmpty() && fluid.getFluid().getFluidType().isLighterThanAir();
+        return !fluid.isEmpty() && Platform.fluids().isLighterThanAir(fluid.getFluid());
     }
 
     /** Overload for bare {@link Fluid} instances. */
     public static boolean isGaseous(Fluid fluid) {
-        return fluid != null && fluid.getFluidType().isLighterThanAir();
+        return fluid != null && Platform.fluids().isLighterThanAir(fluid);
     }
 
     /**

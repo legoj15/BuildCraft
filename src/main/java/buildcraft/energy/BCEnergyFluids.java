@@ -9,28 +9,30 @@ package buildcraft.energy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.neoforge.common.SoundActions;
-import net.neoforged.neoforge.fluids.BaseFlowingFluid;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.energy.block.BCFluidBlock;
+import buildcraft.platform.FluidBehaviour;
+import buildcraft.platform.FluidFlow;
+import buildcraft.platform.FluidProperties;
+import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCBlockHolder;
@@ -52,11 +54,8 @@ public class BCEnergyFluids {
 
     // ─── Deferred Registers ───────────────────────────────────────────
 
-    public static final BCRegistrar<FluidType> FLUID_TYPES =
-            BCRegistrar.create(NeoForgeRegistries.Keys.FLUID_TYPES, BCEnergy.MODID);
-
-    public static final BCRegistrar<Fluid> FLUIDS =
-            BCRegistrar.create(Registries.FLUID, BCEnergy.MODID);
+    /** The fluids, and on NeoForge their fluid types (registered under the same names). */
+    public static final BCFluidRegistrar FLUIDS = BCFluidRegistrar.create(BCEnergy.MODID);
 
     public static final BCRegistrar.Blocks BLOCKS =
             BCRegistrar.createBlocks(BCEnergy.MODID);
@@ -79,9 +78,8 @@ public class BCEnergyFluids {
             int tintColor,
             int texLight,
             int texDark,
-            BCHolder<FluidType, FluidType> fluidType,
-            BCHolder<Fluid, BaseFlowingFluid.Source> source,
-            BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
+            BCHolder<Fluid, FlowingFluid> source,
+            BCHolder<Fluid, FlowingFluid> flowing,
             BCBlockHolder<LiquidBlock> block,
             BCItemHolder<BucketItem> bucket
     ) {}
@@ -229,6 +227,7 @@ public class BCEnergyFluids {
 
         // 1.12 quanta formula: baseSpread + heat bonus
         int quanta = baseSpread + (baseSpread > 6 ? heat : heat / 2);
+        int[] flow = flowParameters(viscosity, quanta);
 
         // Tint: average of light and dark, slightly brighter per heat level
         int tintR = (((texLight >> 16) & 0xFF) + ((texDark >> 16) & 0xFF)) / 2 + heat * 0x10;
@@ -247,9 +246,11 @@ public class BCEnergyFluids {
         boolean crude = baseName.equals("oil");
         boolean waterLike = !crude && !baseName.equals("oil_residue");
 
-        // FluidType
-        BCHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
-                () -> new BCCustomFluidType(FluidType.Properties.create()
+        // Source + Flowing (block and bucket through Supplier indirection: they are registered below)
+        BCBlockHolder<LiquidBlock>[] blockHolder = new BCBlockHolder[1];
+        BCItemHolder<BucketItem>[] bucketHolder = new BCItemHolder[1];
+
+        BCFluidRegistrar.Entry fluids = FLUIDS.register(regName, FluidProperties.builder()
                         .density(density)
                         .viscosity(viscosity)
                         .temperature(temperature)
@@ -258,33 +259,20 @@ public class BCEnergyFluids {
                         .canSwim(waterLike)
                         .canPushEntity(true)
                         .canDrown(true)
-                        //? if >=1.21.10 {
-                        .isWaterLike(waterLike)
-                        //?}
-                        .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
-                        .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)
-                ));
-
-        // Source + Flowing (use Supplier indirection to avoid forward-reference issues)
-        BCHolder<Fluid, BaseFlowingFluid.Source>[] sourceHolder = new BCHolder[1];
-        BCHolder<Fluid, BaseFlowingFluid.Flowing>[] flowingHolder = new BCHolder[1];
-        BCBlockHolder<LiquidBlock>[] blockHolder = new BCBlockHolder[1];
-        BCItemHolder<BucketItem>[] bucketHolder = new BCItemHolder[1];
-
-        sourceHolder[0] = FLUIDS.register(regName,
-                () -> new BCCustomSourceFluid(makeProps(
-                        fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0], viscosity, quanta), volatility, dense));
-
-        flowingHolder[0] = FLUIDS.register(regName + "_flowing",
-                () -> new BCCustomFlowingFluid(makeProps(
-                        fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0], viscosity, quanta), dense));
+                        .waterLike(waterLike)
+                        .motionScale(BCEnergyFluids::motionScale)
+                        .bucketSounds(SoundEvents.BUCKET_FILL, SoundEvents.BUCKET_EMPTY)
+                        .slopeFindDistance(flow[0])
+                        .levelDecreasePerBlock(flow[1])
+                        .tickRate(flow[2])
+                        .build(),
+                new OilBehaviour(volatility, dense), () -> blockHolder[0].get(), () -> bucketHolder[0].get());
+        BCHolder<Fluid, FlowingFluid> source = fluids.source();
 
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
         blockHolder[0] = BLOCKS.registerBlock(regName,
-                props -> new BCFluidBlock(sourceHolder[0].get(), props
+                props -> new BCFluidBlock(source.get(), props
                         .mapColor(mapColor)
                         .replaceable()
                         .strength(100.0F)
@@ -301,7 +289,7 @@ public class BCEnergyFluids {
 
         // Bucket
         bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
-                props -> new BucketItem(sourceHolder[0].get(), props
+                props -> new BucketItem(source.get(), props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
                 ), () -> new Item.Properties());
@@ -309,7 +297,7 @@ public class BCEnergyFluids {
         return new FluidEntry(
                 regName, baseName, heat, density, viscosity, temperature, gaseous, volatility, tintColor,
                 texLight, texDark,
-                fluidType, sourceHolder[0], flowingHolder[0], blockHolder[0], bucketHolder[0]);
+                source, fluids.flowing(), blockHolder[0], bucketHolder[0]);
     }
 
     /** The dense oils sink through water ({@link #displaceWaterBelow}) instead of floating on it: heavy oil, dense oil
@@ -318,13 +306,9 @@ public class BCEnergyFluids {
         return baseName.equals("oil_heavy") || baseName.equals("oil_dense") || baseName.equals("oil_residue");
     }
 
-    private static BaseFlowingFluid.Properties makeProps(
-            BCHolder<FluidType, FluidType> type,
-            BCHolder<Fluid, BaseFlowingFluid.Source> source,
-            BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
-            BCBlockHolder<LiquidBlock> block,
-            BCItemHolder<BucketItem> bucket,
-            int viscosity, int quanta) {
+    /** The flow parameters {slopeFindDistance, levelDecreasePerBlock, tickRate} of a fluid of this viscosity and
+     *  1.12 quanta. */
+    private static int[] flowParameters(int viscosity, int quanta) {
 
         // Derive tick rate from viscosity, matching Forge 1.12.2 BlockFluidBase formula:
         // tickRate = fluid.viscosity / 200
@@ -348,166 +332,106 @@ public class BCEnergyFluids {
             levelDecreasePerBlock = 1;
         }
 
-        return new BaseFlowingFluid.Properties(type, source, flowing)
-                .block(block)
-                .bucket(bucket)
-                .slopeFindDistance(slopeFindDistance)
-                .levelDecreasePerBlock(levelDecreasePerBlock)
-                .tickRate(tickRate);
+        return new int[] {slopeFindDistance, levelDecreasePerBlock, tickRate};
     }
 
     /** Register all deferred registers on the mod event bus. */
     public static void init() {
-        FLUID_TYPES.subscribe();
         FLUIDS.subscribe();
         BLOCKS.subscribe();
         ITEMS.subscribe();
     }
 
-    // ─── Custom Fluid Classes ─────────────────────────────────────────
-    
-    public static class BCCustomFlowingFluid extends BaseFlowingFluid.Flowing {
-        private final boolean dense;
-
-        public BCCustomFlowingFluid(Properties properties, boolean dense) {
-            super(properties);
-            this.dense = dense;
+    /**
+     * The flow-push scalar of every energy fluid: the per-tick scalar applied to the fluid FLOW velocity that carries
+     * entities along a current, NOT friction. Vanilla water is 0.014; the old 0.8/0.5 here were ~40-57x too strong and
+     * launched entities downstream in flowing fluid. Oil stays a touch weaker than water (denser/sluggish) but in the
+     * correct range. Read on every use, so the config may change it at runtime.
+     */
+    private static double motionScale() {
+        if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+            return 0.007D; // sticky: sluggish, ~half of water's current
         }
-
-        private boolean isDenseFluid() {
-            return dense;
-        }
-
-        @Override
-        //? if >=1.21.10 {
-        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
-        //?} else {
-        /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
-        //?}
-            // Never a source, so never a detonation of its own (FluidVolatility.igniteExposedGas): flowing gas burns
-            // or is cleared by a neighbouring blast.
-            if (isDenseFluid()) {
-                displaceWaterBelow(level, pos);
-            }
-            //? if >=1.21.10 {
-            super.tick(level, pos, state, fluidState);
-            //?} else {
-            /*super.tick(level, pos, fluidState);*/
-            //?}
-
-            if (!isDenseFluid() && !fluidState.isSource()) {
-                BlockPos below = pos.below();
-                FluidState belowFluid = level.getFluidState(below);
-                if (belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
-                    BlockState currentState = level.getBlockState(pos);
-                    FluidState currentFluid = currentState.getFluidState();
-                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
-                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
-                        if (currentFluid.getValue(FALLING)) {
-                            neighborAmount = 7;
-                        }
-                        
-                        if (neighborAmount > 0) {
-                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
-                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
-                                Direction dir = entry.getKey();
-                                FluidState targetFluid = entry.getValue();
-                                BlockPos targetPos = pos.relative(dir);
-                                BlockState targetState = level.getBlockState(targetPos);
-                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        @Override
-        //? if >=1.21.10 {
-        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
-        //?} else {
-        /*protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.world.level.Level level, BlockPos pos, BlockState state) {*/
-        //?}
-            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
-            FluidState belowFluid = level.getFluidState(pos.below());
-            if (!isDenseFluid() && belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
-                 for (Direction dir : Direction.Plane.HORIZONTAL) {
-                      if (!map.containsKey(dir)) {
-                           BlockPos targetPos = pos.relative(dir);
-                           BlockState targetState = level.getBlockState(targetPos);
-                           if (targetState.isAir() || targetState.canBeReplaced()) {
-                               FluidState targetFluidState = targetState.getFluidState();
-                               // A same-fluid neighbour needs no skip here: its canBeReplacedWith refuses any
-                               // horizontal replacement (BaseFlowingFluid: only DOWN, and never the same family).
-                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
-                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
-                                   map.put(dir, newFluid);
-                               }
-                           }
-                      }
-                 }
-            }
-            return map;
-        }
+        return 0.012D; // dense oil: a slightly weaker current than water (0.014)
     }
 
-    public static class BCCustomSourceFluid extends BaseFlowingFluid.Source {
+    // ─── Fluid behaviour ──────────────────────────────────────────────
+
+    /**
+     * What every energy fluid adds to plain flowing: an explosive gas source detonates near ignition, the dense oils
+     * sink through water ({@link #displaceWaterBelow}), the rest spread across a water surface instead of stopping at
+     * it, and a source is never washed away by water.
+     */
+    static final class OilBehaviour implements FluidBehaviour {
         private final FluidVolatility.Band volatility;
         private final boolean dense;
 
-        public BCCustomSourceFluid(Properties properties, FluidVolatility.Band volatility, boolean dense) {
-            super(properties);
+        OilBehaviour(FluidVolatility.Band volatility, boolean dense) {
             this.volatility = volatility;
             this.dense = dense;
         }
 
-        private boolean isDenseFluid() {
-            return dense;
-        }
-
-        /** How this fluid behaves around fire, the same band its block carries. */
-        public FluidVolatility.Band volatility() {
-            return volatility;
+        @Override
+        public boolean beforeTick(FluidFlow flow, Level level, BlockPos pos, FluidState fluidState) {
+            // Only a source detonates (FluidVolatility.igniteExposedGas): flowing gas burns or is cleared by a
+            // neighbouring blast.
+            if (fluidState.isSource() && FluidVolatility.igniteExposedGas(level, pos, fluidState, volatility)) {
+                return true;
+            }
+            if (dense) {
+                displaceWaterBelow(level, pos);
+            }
+            return false;
         }
 
         @Override
-        //? if >=1.21.10 {
-        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
-        //?} else {
-        /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
-        //?}
-            if (FluidVolatility.igniteExposedGas(level, pos, fluidState, volatility)) {
+        public void afterTick(FluidFlow flow, Level level, BlockPos pos, FluidState fluidState) {
+            if (dense || fluidState.isSource()) {
                 return;
             }
-            if (isDenseFluid()) {
-                displaceWaterBelow(level, pos);
+            FlowingFluid self = flow.fluid();
+            FluidState belowFluid = level.getFluidState(pos.below());
+            if (!belowFluid.is(FluidTags.WATER) || belowFluid.getType().isSame(self)) {
+                return;
             }
-            //? if >=1.21.10 {
-            super.tick(level, pos, state, fluidState);
-            //?} else {
-            /*super.tick(level, pos, fluidState);*/
-            //?}
+            BlockState currentState = level.getBlockState(pos);
+            FluidState currentFluid = currentState.getFluidState();
+            if (currentFluid.isEmpty() || !currentFluid.getType().isSame(self)) {
+                return;
+            }
+            int neighborAmount = currentFluid.getAmount() - flow.dropOffPerBlock(level);
+            if (currentFluid.getValue(FlowingFluid.FALLING)) {
+                neighborAmount = 7;
+            }
+            if (neighborAmount > 0) {
+                Map<Direction, FluidState> map = flow.spreadTargets(level, pos, currentState);
+                for (Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                    Direction dir = entry.getKey();
+                    BlockPos targetPos = pos.relative(dir);
+                    flow.spreadInto(level, targetPos, level.getBlockState(targetPos), dir, entry.getValue());
+                }
+            }
+        }
 
-            if (!isDenseFluid() && !fluidState.isSource()) {
-                BlockPos below = pos.below();
-                if (level.getFluidState(below).is(FluidTags.WATER)) {
-                    BlockState currentState = level.getBlockState(pos);
-                    FluidState currentFluid = currentState.getFluidState();
-                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
-                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
-                        if (currentFluid.getValue(FALLING)) {
-                            neighborAmount = 7;
-                        }
-                        
-                        if (neighborAmount > 0) {
-                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
-                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
-                                Direction dir = entry.getKey();
-                                FluidState targetFluid = entry.getValue();
-                                BlockPos targetPos = pos.relative(dir);
-                                BlockState targetState = level.getBlockState(targetPos);
-                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
-                            }
+        @Override
+        public void adjustSpread(FluidFlow flow, Level level, BlockPos pos, BlockState state,
+                Map<Direction, FluidState> map) {
+            FluidState belowFluid = level.getFluidState(pos.below());
+            if (dense || !belowFluid.is(FluidTags.WATER) || belowFluid.getType().isSame(flow.fluid())) {
+                return;
+            }
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                if (!map.containsKey(dir)) {
+                    BlockPos targetPos = pos.relative(dir);
+                    BlockState targetState = level.getBlockState(targetPos);
+                    if (targetState.isAir() || targetState.canBeReplaced()) {
+                        FluidState targetFluidState = targetState.getFluidState();
+                        // A same-fluid neighbour needs no skip here: its canBeReplacedWith refuses any
+                        // horizontal replacement (BaseFlowingFluid: only DOWN, and never the same family).
+                        FluidState newFluid = flow.newLiquidAt(level, targetPos, targetState);
+                        if (!newFluid.isEmpty()
+                                && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
+                            map.put(dir, newFluid);
                         }
                     }
                 }
@@ -515,56 +439,10 @@ public class BCEnergyFluids {
         }
 
         @Override
-        //? if >=1.21.10 {
-        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
-        //?} else {
-        /*protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.world.level.Level level, BlockPos pos, BlockState state) {*/
-        //?}
-            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
-            if (!isDenseFluid() && level.getFluidState(pos.below()).is(FluidTags.WATER)) {
-                 for (Direction dir : Direction.Plane.HORIZONTAL) {
-                      if (!map.containsKey(dir)) {
-                           BlockPos targetPos = pos.relative(dir);
-                           BlockState targetState = level.getBlockState(targetPos);
-                           if (targetState.isAir() || targetState.canBeReplaced()) {
-                               FluidState targetFluidState = targetState.getFluidState();
-                               // A same-fluid neighbour needs no skip here: its canBeReplacedWith refuses any
-                               // horizontal replacement (BaseFlowingFluid: only DOWN, and never the same family).
-                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
-                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
-                                   map.put(dir, newFluid);
-                               }
-                           }
-                      }
-                 }
-            }
-            return map;
-        }
-
-        @Override
-        protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
-            if (fluidIn.defaultFluidState().is(FluidTags.WATER)) {
-                return false;
-            }
-            return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
-        }
-    }
-
-    public static class BCCustomFluidType extends FluidType {
-        public BCCustomFluidType(Properties properties) {
-            super(properties);
-        }
-
-        @Override
-        public double motionScale(net.minecraft.world.entity.Entity entity) {
-            // motionScale is the per-tick scalar applied to the fluid FLOW velocity that carries
-            // entities along a current — NOT friction. Vanilla water is 0.014; the old 0.8/0.5 here
-            // were ~40-57x too strong and launched entities downstream in flowing fluid. Keep oil a
-            // touch weaker than water (denser/sluggish) but in the correct range.
-            if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
-                return 0.007D; // sticky: sluggish, ~half of water's current
-            }
-            return 0.012D; // dense oil: a slightly weaker current than water (0.014)
+        public boolean refusesReplacement(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn,
+                Direction direction) {
+            // Water never washes a source away; the flowing form keeps the default rule.
+            return state.isSource() && fluidIn.defaultFluidState().is(FluidTags.WATER);
         }
     }
 }

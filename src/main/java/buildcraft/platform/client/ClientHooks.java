@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -59,6 +60,12 @@ public interface ClientHooks {
     /** Adds lines to an item's tooltip as it is built. */
     void onItemTooltip(ItemTooltipListener listener);
 
+    /**
+     * Runs on the client for every tick an entity of the client level keeps using an item (eating, drawing a bow,
+     * brushing), before the use ticks down.
+     */
+    void onClientItemUseTick(ItemUseTickListener listener);
+
     /** Runs just before an item tooltip is drawn, to draw beside it. */
     void onTooltipPre(Consumer<BCTooltipPreContext> listener);
 
@@ -83,6 +90,13 @@ public interface ClientHooks {
     interface ItemTooltipListener {
         /** @param player the player the tooltip is built for, or null (a tooltip built with no player, e.g. search) */
         void onTooltip(ItemStack stack, Player player, List<Component> lines);
+    }
+
+    /** Sees one tick of an item use. */
+    @FunctionalInterface
+    interface ItemUseTickListener {
+        /** @param remainingTicks the use ticks left, counting this one */
+        void onUseTick(LivingEntity entity, ItemStack stack, int remainingTicks);
     }
 
     /** Picks the outline drawn for the block under the crosshair. */

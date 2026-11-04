@@ -216,7 +216,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
 
             List<Component> lines = new java.util.ArrayList<>();
             if (fluid != null && fluid != Fluids.EMPTY && amount > 0) {
-                lines.add(fluid.getFluidType().getDescription());
+                lines.add(buildcraft.platform.Platform.fluids().description(fluid));
                 lines.add(Component.literal(buildcraft.lib.misc.LocaleUtil.localizeFluidTank(amount, maxAmount))
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
             } else {

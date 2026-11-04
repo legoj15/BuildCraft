@@ -6,7 +6,6 @@
 
 package buildcraft.core;
 
-import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
@@ -91,24 +90,23 @@ public class BCCoreClient {
         ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 
         // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick.class,
-            event -> {
-                if (event.getEntity().level().isClientSide() && event.getItem().is(net.minecraft.world.item.Items.BRUSH)) {
-                    int maxDuration = event.getItem().getUseDuration(event.getEntity());
-                    int used = maxDuration - event.getDuration();
+        ClientPlatform.hooks().onClientItemUseTick(
+            (entity, item, remaining) -> {
+                if (item.is(net.minecraft.world.item.Items.BRUSH)) {
+                    int maxDuration = item.getUseDuration(entity);
+                    int used = maxDuration - remaining;
                     // BrushItem spawns dust every 10 ticks
                     if (used > 0 && (used % 10) == 0) {
                         net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
                         if (hit instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
                             net.minecraft.core.BlockPos pos = blockHit.getBlockPos();
-                            net.minecraft.world.level.block.state.BlockState state = event.getEntity().level().getBlockState(pos);
+                            net.minecraft.world.level.block.state.BlockState state = entity.level().getBlockState(pos);
                             if (state.getBlock() instanceof buildcraft.transport.block.BlockPipeHolder) {
                                 buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addHitEffects(
                                     //? if <26.3 {
-                                    /*state, event.getEntity().level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
+                                    /*state, entity.level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
                                     *///?} else {
-                                    state, event.getEntity().level(), pos, blockHit.getDirection(),
+                                    state, entity.level(), pos, blockHit.getDirection(),
                                     net.minecraft.client.Minecraft.getInstance().particleEngine
                                     //?}
                                 );

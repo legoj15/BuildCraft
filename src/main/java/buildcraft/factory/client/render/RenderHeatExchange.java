@@ -46,7 +46,6 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 /*import net.minecraft.client.renderer.rendertype.RenderType;*/
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.block.BlockHeatExchange;

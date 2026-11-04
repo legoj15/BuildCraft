@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
@@ -87,6 +88,23 @@ public final class FabricClientHooks implements ClientHooks {
         // Fabric's callback carries no player; the local player is the one the tooltip is built for.
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) ->
                 listener.onTooltip(stack, Minecraft.getInstance().player, lines));
+    }
+
+    @Override
+    public void onClientItemUseTick(ItemUseTickListener listener) {
+        // Gap: Fabric API has no item-use tick event. The closest sound route is the end of each client tick, over the
+        // players of the client level that are using an item, so other living entities (a drowned's trident, a
+        // skeleton's bow) are not seen and the call comes after the entity ticked rather than inside its use tick.
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.level == null || client.isPaused()) {
+                return;
+            }
+            for (AbstractClientPlayer player : client.level.players()) {
+                if (player.isUsingItem()) {
+                    listener.onUseTick(player, player.getUseItem(), player.getUseItemRemainingTicks());
+                }
+            }
+        });
     }
 
     @Override

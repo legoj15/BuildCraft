@@ -773,7 +773,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
 
     /**
      * True when the cell at the given palette coordinate holds a fluid schematic of the same
-     * {@link net.neoforged.neoforge.fluids.FluidType} as {@code fluid}. Out-of-bounds cells
+     * kind as {@code fluid} (one fluid's source and flowing forms match). Out-of-bounds cells
      * return false so exterior faces of the bounding box always render.
      */
     private static boolean neighborIsSameFluid(
@@ -792,7 +792,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         FluidState nFluid = nState.getFluidState();
         // FluidType equality treats FLOWING_X and X as the same fluid for adjacency purposes,
         // so a source next to its own flow doesn't render an interior wall.
-        return !nFluid.isEmpty() && nFluid.getType().getFluidType() == fluid.getFluidType();
+        return !nFluid.isEmpty() && buildcraft.platform.Platform.fluids().isSameKind(nFluid.getType(), fluid);
     }
 
     private static void putFluidVertex(

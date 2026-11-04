@@ -359,7 +359,7 @@ public final class BlueprintGuiRenderer {
             return false;
         }
         FluidState nFluid = nState.getFluidState();
-        return !nFluid.isEmpty() && nFluid.getType().getFluidType() == fluid.getFluidType();
+        return !nFluid.isEmpty() && buildcraft.platform.Platform.fluids().isSameKind(nFluid.getType(), fluid);
     }
 
     private static void putFluidVertex(VertexConsumer vc, PoseStack.Pose pose,

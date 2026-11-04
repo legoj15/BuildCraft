@@ -16,6 +16,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.FluidServices;
+import buildcraft.platform.registry.BCFluidRegistrar;
 
 /**
  * {@link FluidServices} on NeoForge, and the one place a {@link BCFluidStack} becomes a NeoForge {@link FluidStack}
@@ -32,6 +33,31 @@ public final class NeoForgeFluids implements FluidServices {
     @Override
     public ItemStack filledBucket(BCFluidStack stack) {
         return stack.getFluid().getFluidType().getBucket(toNeo(stack));
+    }
+
+    @Override
+    public BCFluidRegistrar createRegistrar(String namespace) {
+        return new NeoForgeFlowingFluids(namespace);
+    }
+
+    @Override
+    public int viscosity(Fluid fluid) {
+        return fluid.getFluidType().getViscosity();
+    }
+
+    @Override
+    public boolean isLighterThanAir(Fluid fluid) {
+        return fluid.getFluidType().isLighterThanAir();
+    }
+
+    @Override
+    public boolean isSameKind(Fluid a, Fluid b) {
+        return a == b || a.getFluidType() == b.getFluidType();
+    }
+
+    @Override
+    public Component description(Fluid fluid) {
+        return fluid.getFluidType().getDescription();
     }
 
     /** The NeoForge twin of a BuildCraft stack ({@link FluidStack#EMPTY} for an empty one). */

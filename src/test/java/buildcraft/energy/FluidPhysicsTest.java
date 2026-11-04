@@ -113,7 +113,7 @@ public class FluidPhysicsTest {
      * not the minecraft:water tag, decides whether mobs bob/swim. Deterministic; no entity physics.
      */
     public static void crudeOilIsNotWaterLike(GameTestHelper helper) {
-        net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.fluidType().get();
+        net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.source().get().getFluidType();
         //? if >=1.21.10 {
         if (crude.getIsWaterLike() || crude.canSwim(null)) {
             helper.fail("crude oil must be non-water-like and non-swimmable: isWaterLike="
@@ -134,7 +134,7 @@ public class FluidPhysicsTest {
             if (!entry.baseName().equals("oil_residue")) {
                 continue;
             }
-            net.neoforged.neoforge.fluids.FluidType residue = entry.fluidType().get();
+            net.neoforged.neoforge.fluids.FluidType residue = entry.source().get().getFluidType();
             //? if >=1.21.10 {
             if (residue.getIsWaterLike() || residue.canSwim(null)) {
                 helper.fail(entry.name() + " must be non-water-like and non-swimmable: isWaterLike="
@@ -149,7 +149,7 @@ public class FluidPhysicsTest {
             //?}
         }
         net.neoforged.neoforge.fluids.FluidType heavy = BCEnergyFluids.ALL.stream()
-            .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().fluidType().get();
+            .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().source().get().getFluidType();
         //? if >=1.21.10 {
         if (!heavy.getIsWaterLike() || !heavy.canSwim(null)) {
             helper.fail("refined oils must stay water-like/swimmable: heavy oil isWaterLike="
@@ -174,7 +174,7 @@ public class FluidPhysicsTest {
      */
     public static void energyFluidsMotionScaleIsWaterLike(GameTestHelper helper) {
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            net.neoforged.neoforge.fluids.FluidType type = entry.fluidType().get();
+            net.neoforged.neoforge.fluids.FluidType type = entry.source().get().getFluidType();
             double scale = type.motionScale(null);
             if (!(scale > 0.0 && scale <= 0.1)) {
                 helper.fail(entry.name() + " motionScale=" + scale

@@ -498,7 +498,7 @@ public class BlockUtil {
 
     /** True for a fluid thin enough that miners pass through it; see {@link #PASSABLE_FLUID_MAX_VISCOSITY}. */
     public static boolean isPassableFluid(Fluid fluid) {
-        return fluid.getFluidType().getViscosity() <= PASSABLE_FLUID_MAX_VISCOSITY;
+        return Platform.fluids().viscosity(fluid) <= PASSABLE_FLUID_MAX_VISCOSITY;
     }
 
     /**

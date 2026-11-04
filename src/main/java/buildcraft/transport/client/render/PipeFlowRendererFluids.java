@@ -161,7 +161,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         flow.writeAmountsForRender(partialTicks, amounts);
         flow.writeOffsetsForRender(partialTicks, offX, offY, offZ);
 
-        boolean gas = forRender.getFluid().getFluidType().isLighterThanAir();
+        boolean gas = buildcraft.platform.Platform.fluids().isLighterThanAir(forRender.getFluid());
         boolean horizontal = false;
         boolean vertical = flow.pipe.isConnected(gas ? Direction.DOWN : Direction.UP);
 

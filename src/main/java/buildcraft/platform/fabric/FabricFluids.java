@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
@@ -19,7 +20,9 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.FluidProperties;
 import buildcraft.platform.FluidServices;
+import buildcraft.platform.registry.BCFluidRegistrar;
 
 /^*
  * {@link FluidServices} on Fabric, and the one place a {@link BCFluidStack} becomes a Fabric {@link FluidVariant} plus
@@ -44,6 +47,41 @@ public final class FabricFluids implements FluidServices {
         // Fabric has no fluid-type bucket hook: the fluid's own bucket item, without the stack's components.
         Item bucket = stack.isEmpty() ? Items.AIR : stack.getFluid().getBucket();
         return bucket == Items.AIR ? ItemStack.EMPTY : new ItemStack(bucket);
+    }
+
+    @Override
+    public BCFluidRegistrar createRegistrar(String namespace) {
+        return new FabricFlowingFluids(namespace);
+    }
+
+    @Override
+    public int viscosity(Fluid fluid) {
+        // BuildCraft's own fluids answer what they declared; others through their attribute handler, whose unit is
+        // NeoForge's (FluidConstants.WATER_VISCOSITY is 1000). No level: the nether lava variant is not seen.
+        FluidProperties declared = FabricFlowingFluids.DECLARED.get(fluid);
+        return declared != null ? declared.viscosity() : FluidVariantAttributes.getViscosity(stillVariant(fluid), null);
+    }
+
+    @Override
+    public boolean isLighterThanAir(Fluid fluid) {
+        FluidProperties declared = FabricFlowingFluids.DECLARED.get(fluid);
+        return declared != null ? declared.lighterThanAir() : FluidVariantAttributes.isLighterThanAir(stillVariant(fluid));
+    }
+
+    @Override
+    public boolean isSameKind(Fluid a, Fluid b) {
+        // Fabric has no fluid type: a flowing fluid's own isSame (its source and flowing forms) stands in for it.
+        return a == b || a.isSame(b);
+    }
+
+    @Override
+    public Component description(Fluid fluid) {
+        return FluidVariantAttributes.getName(stillVariant(fluid));
+    }
+
+    /^* The variant of a bare fluid, a flowing form taken as its source (variants are of still fluids). ^/
+    private static FluidVariant stillVariant(Fluid fluid) {
+        return FluidVariant.of(fluid instanceof FlowingFluid flowing ? flowing.getSource() : fluid);
     }
 
     /^* The variant of a BuildCraft stack: its fluid and component patch ({@link FluidVariant#blank()} if empty). ^/

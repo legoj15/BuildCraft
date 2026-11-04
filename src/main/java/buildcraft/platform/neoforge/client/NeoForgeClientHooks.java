@@ -30,6 +30,7 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -106,6 +107,15 @@ public final class NeoForgeClientHooks implements ClientHooks {
     public void onItemTooltip(ItemTooltipListener listener) {
         NeoForge.EVENT_BUS.addListener(ItemTooltipEvent.class,
                 event -> listener.onTooltip(event.getItemStack(), event.getEntity(), event.getToolTip()));
+    }
+
+    @Override
+    public void onClientItemUseTick(ItemUseTickListener listener) {
+        NeoForge.EVENT_BUS.addListener(LivingEntityUseItemEvent.Tick.class, event -> {
+            if (event.getEntity().level().isClientSide()) {
+                listener.onUseTick(event.getEntity(), event.getItem(), event.getDuration());
+            }
+        });
     }
 
     @Override

@@ -9,12 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.GameHooks;
 import buildcraft.platform.event.PlatformProtection;
 
 /**
@@ -81,6 +83,48 @@ public final class ClaimProtectionMod implements AutoCloseable {
 
             @Override
             public void cancel() {}
+        };
+    }
+
+    /** A genuine (not probe, not cancelled) placement at {@code pos}, of whatever stands there now, against
+     *  {@code placedAgainst} by {@code entity}, delivered by nobody: for handing straight to a listener. */
+    public static GameHooks.BlockPlace genuinePlace(Level level, BlockPos pos, BlockState placedAgainst,
+            Entity entity) {
+        return new GameHooks.BlockPlace() {
+            @Override
+            public LevelAccessor level() {
+                return level;
+            }
+
+            @Override
+            public BlockPos pos() {
+                return pos;
+            }
+
+            @Override
+            public BlockState placedBlock() {
+                return level.getBlockState(pos);
+            }
+
+            @Override
+            public BlockState placedAgainst() {
+                return placedAgainst;
+            }
+
+            @Override
+            public Entity entity() {
+                return entity;
+            }
+
+            @Override
+            public boolean isProbe() {
+                return false;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
         };
     }
 

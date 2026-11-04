@@ -217,6 +217,20 @@ public class BCCore {
             )
         );
         //?}
+
+        registerFormerSubscribers();
+    }
+
+    /**
+     * The listeners of the classes that were {@code @EventBusSubscriber}s. FML registered those after this constructor
+     * returned (FML 12 {@code FMLModContainer.constructMod}: the constructor, then {@code AutomaticEventSubscriber}),
+     * so they are registered last here, keeping each event's listener order.
+     */
+    private static void registerFormerSubscribers() {
+        buildcraft.platform.event.GameHooks hooks = Platform.gameHooks();
+        buildcraft.lib.block.LocalBlockUpdateNotifier.registerHooks(hooks);
+        buildcraft.lib.marker.MarkerCacheEvents.registerHooks(hooks);
+        buildcraft.lib.misc.FakePlayerUtil.registerHooks(hooks);
     }
 
     /**

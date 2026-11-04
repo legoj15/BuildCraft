@@ -46,9 +46,7 @@ import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import buildcraft.platform.Platform;
 //?}
 
 /**
@@ -226,12 +224,12 @@ public final class LegacySavedData {
 
     /** Hooks the hand-over checks ({@link #checkWrites}) to the server's saves. Called once, from {@code BCLib}. */
     public static void registerListeners() {
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Save event) -> {
-            if (!CARRIED_OVER.isEmpty() && event.getLevel() instanceof ServerLevel level) {
+        Platform.lifecycle().onLevelSave(level -> {
+            if (!CARRIED_OVER.isEmpty()) {
                 checkWrites(dataFolderOf(level), true);
             }
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
+        Platform.lifecycle().onServerStopped(server -> {
             // Every storage was closed, and every write joined, before this fires.
             CARRIED_OVER.forEach((data, carried) -> check(data, carried, false));
             CARRIED_OVER.clear();

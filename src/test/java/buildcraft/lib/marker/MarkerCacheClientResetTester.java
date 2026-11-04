@@ -5,8 +5,6 @@
  */
 package buildcraft.lib.marker;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -17,9 +15,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.core.marker.VolumeCache;
@@ -27,6 +23,8 @@ import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.lib.test.FakeLevels;
 import buildcraft.lib.test.StubMarkerCache;
+import buildcraft.platform.RecordingHooks;
+import buildcraft.platform.event.GameHooks;
 
 /**
  * The CLIENT half of the marker caches. A {@link MarkerCache} keeps two tables keyed by dimension, one for the
@@ -124,18 +122,11 @@ public class MarkerCacheClientResetTester {
     }
 
     @Test
-    void theJoinResyncIsSubscribedToTheRealBus() {
-        Method handler = null;
-        for (Method method : MarkerCacheEvents.class.getDeclaredMethods()) {
-            Class<?>[] params = method.getParameterTypes();
-            if (params.length == 1 && params[0] == EntityJoinLevelEvent.class) {
-                handler = method;
-            }
-        }
-        Assertions.assertNotNull(handler, "MarkerCacheEvents must handle EntityJoinLevelEvent: that is when a "
-                + "player joining a level (login, dimension change, respawn) needs the markers sent");
-        Assertions.assertNotNull(handler.getAnnotation(SubscribeEvent.class), "it must carry @SubscribeEvent");
-        Assertions.assertTrue(Modifier.isStatic(handler.getModifiers()) && Modifier.isPublic(handler.getModifiers()),
-                "it must be public static for the automatic subscriber to register it");
+    void theJoinResyncIsRegistered() {
+        // The entity-join hook is when a player joining a level (login, dimension change, respawn) needs the
+        // markers sent.
+        RecordingHooks<GameHooks> recorder = RecordingHooks.of(GameHooks.class);
+        MarkerCacheEvents.registerHooks(recorder.hooks());
+        Assertions.assertNotNull(recorder.listener("onEntityJoinLevel", GameHooks.EntityJoin.class));
     }
 }

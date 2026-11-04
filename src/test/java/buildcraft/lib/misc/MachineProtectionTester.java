@@ -30,9 +30,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import net.neoforged.neoforge.common.util.BlockSnapshot;
 import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.level.BlockEvent;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
@@ -179,8 +177,8 @@ public class MachineProtectionTester {
             check(updates.isEmpty(), "the placement probe must not reach block-update subscribers, got " + updates);
 
             try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level)) {
-                LocalBlockUpdateNotifier.onBlockPlaced(new BlockEvent.EntityPlaceEvent(
-                        BlockSnapshot.create(level.dimension(), level, pos), Blocks.STONE.defaultBlockState(),
+                LocalBlockUpdateNotifier.onBlockPlaced(ClaimProtectionMod.genuinePlace(level, pos,
+                        Blocks.STONE.defaultBlockState(),
                         lease.player()));
             }
             check(updates.contains(pos), "a genuine placement event still reaches subscribers");

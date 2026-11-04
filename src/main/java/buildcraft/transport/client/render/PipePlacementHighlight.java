@@ -7,57 +7,17 @@ package buildcraft.transport.client.render;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-//? if <26.2 {
-/*import com.mojang.blaze3d.vertex.VertexConsumer;
-*///?}
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-//? if <26.2 {
-/*import net.minecraft.client.renderer.MultiBufferSource;
-*///?}
-//? if >=26.2 {
-import net.minecraft.client.renderer.SubmitNodeCollector;
-//?}
-//? if >=1.21.10 && <26.2 {
-/*import net.minecraft.client.renderer.ShapeRenderer;
-*///?} elif <1.21.10 {
-/*import net.minecraft.client.renderer.LevelRenderer;*/
-//?}
-import buildcraft.lib.client.render.BCLibRenderTypes;
-//? if >=26.1 {
-import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
-//?} elif >=1.21.10 {
-/*import net.minecraft.client.renderer.state.BlockOutlineRenderState;*/
-//?}
-//? if >=26.1 {
-import net.minecraft.client.renderer.state.level.LevelRenderState;
-//?} elif >=1.21.10 {
-/*import net.minecraft.client.renderer.state.LevelRenderState;*/
-//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-//? if >=1.21.10 {
-import net.minecraft.util.ARGB;
-//?}
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-//? if <1.21.10 {
-/*import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;*/
-//?}
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-
-//? if >=1.21.10 {
-import net.neoforged.neoforge.client.CustomBlockOutlineRenderer;
-import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderHighlightEvent;*/
-//?}
 
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IItemPluggable;
@@ -82,65 +42,29 @@ import buildcraft.transport.tile.TilePipeHolder;
  * adaptor traces its 10×10×4 box, and a gate keeps the 6×6 panel — instead of one fixed slab that
  * larger pluggables would visually swallow.
  *
- * <p>Registered on the game event bus by {@code BCTransportClient.initClient}.
+ * <p>Registered as a block-outline override ({@link buildcraft.platform.client.ClientHooks#onBlockOutline}) by
+ * {@code BCTransportClient.initClient}; the loader side draws the returned shape in place of the vanilla outline.
  */
 public final class PipePlacementHighlight {
     private PipePlacementHighlight() {}
 
-    //? if >=1.21.10 {
-    /** {@link ExtractBlockOutlineRenderStateEvent} listener (game event bus, client only). */
-    public static void onExtractBlockOutline(ExtractBlockOutlineRenderStateEvent event) {
-        if (!(event.getBlockState().getBlock() instanceof BlockPipeHolder)) {
-            return;
-        }
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) {
-            return;
-        }
-        BlockEntity be = event.getLevel().getBlockEntity(event.getBlockPos());
-        if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
-            return;
-        }
-        VoxelShape preview = previewShape(tile, event.getHitResult(), player);
-        if (preview != null) {
-            event.addCustomRenderer(new PreviewRenderer(preview));
-        }
-    }
-    //?} else {
-    /*// RenderHighlightEvent.Block listener (game event bus, client only). 1.21.1 has no
-    // outline-render-state extraction: draw the preview inline and cancel the vanilla outline.
-    public static void onRenderHighlightBlock(RenderHighlightEvent.Block event) {
-        BlockHitResult hit = event.getTarget();
-        Level level = Minecraft.getInstance().level;
-        if (level == null) {
-            return;
-        }
-        BlockPos blockPos = hit.getBlockPos();
-        BlockState state = level.getBlockState(blockPos);
+    /** The outline to draw for the pipe under the crosshair, or {@code null} to leave the default outline
+     *  (not a pipe, no local player, or the held item places nothing there). */
+    @Nullable
+    public static VoxelShape outline(Level level, BlockPos pos, BlockState state, BlockHitResult hit) {
         if (!(state.getBlock() instanceof BlockPipeHolder)) {
-            return;
+            return null;
         }
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) {
-            return;
+            return null;
         }
-        BlockEntity be = level.getBlockEntity(blockPos);
+        BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
-            return;
+            return null;
         }
-        VoxelShape preview = previewShape(tile, hit, player);
-        if (preview == null) {
-            return;
-        }
-        Vec3 cam = event.getCamera().getPosition();
-        PoseStack poseStack = event.getPoseStack();
-        VertexConsumer lines = event.getMultiBufferSource().getBuffer(BCLibRenderTypes.lines());
-        LevelRenderer.renderVoxelShape(poseStack, lines, preview,
-                blockPos.getX() - cam.x, blockPos.getY() - cam.y, blockPos.getZ() - cam.z,
-                0.0F, 0.0F, 0.0F, 0.4F, false);
-        event.setCanceled(true);
-    }*/
-    //?}
+        return previewShape(tile, hit, player);
+    }
 
     /** The outline to draw for what the held item would place, or {@code null} to leave the
      *  default outline in place (the held item places nothing on a pipe, or the resolved target
@@ -184,51 +108,4 @@ public final class PipePlacementHighlight {
         }
         return null;
     }
-
-    //? if >=1.21.10 {
-    /** Draws the preview outline in place of the vanilla outline. Captures only the immutable
-     *  shape — never the level — as {@link CustomBlockOutlineRenderer} requires. */
-    private record PreviewRenderer(VoxelShape shape) implements CustomBlockOutlineRenderer {
-        //? if >=26.2 {
-        @Override
-        public boolean render(BlockOutlineRenderState renderState, SubmitNodeCollector submitNodeCollector,
-                PoseStack poseStack, LevelRenderState levelRenderState) {
-            // 26.2: outline geometry goes through the retained-mode submit system. There is no
-            // per-pass callback anymore — submitShapeOutline takes an `afterTerrain` flag
-            // (= renderState.isTranslucent()) that defers the draw to the right pass, exactly as
-            // LevelRenderer.submitBlockOutline does for the vanilla outline.
-            Vec3 cam = levelRenderState.cameraRenderState.pos;
-            BlockPos pos = renderState.pos();
-            poseStack.pushPose();
-            poseStack.translate(pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
-            submitNodeCollector.submitShapeOutline(poseStack, shape, BCLibRenderTypes.blockOutline(),
-                    ARGB.black(102), 2.5F, renderState.isTranslucent());
-            poseStack.popPose();
-            return true;
-        }
-        //?} else {
-        /*@Override
-        public boolean render(BlockOutlineRenderState renderState, MultiBufferSource.BufferSource buffer,
-                PoseStack poseStack, boolean translucentPass, LevelRenderState levelRenderState) {
-            // Draw — and suppress the vanilla outline — only in the pass vanilla itself would
-            // have drawn the outline. Mirrors LevelRenderer.renderBlockOutline's pass gating.
-            if (translucentPass != renderState.isTranslucent()) {
-                return false;
-            }
-            Vec3 cam = levelRenderState.cameraRenderState.pos;
-            BlockPos pos = renderState.pos();
-            VertexConsumer lines = buffer.getBuffer(BCLibRenderTypes.lines());
-            ShapeRenderer.renderShape(poseStack, lines, shape,
-                    pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z,
-                    //? if >=1.21.11 {
-                    ARGB.black(102), 2.5F);
-                    //?} else {
-                    /^0x66000000);^/
-                    //?}
-            buffer.endLastBatch();
-            return true;
-        }
-        *///?}
-    }
-    //?}
 }

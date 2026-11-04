@@ -7,8 +7,6 @@
 package buildcraft.builders.client;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.RenderTooltipEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersMenuTypes;
@@ -40,20 +38,16 @@ public class BCBuildersClient {
             //?}
         });
         // Fade out architect "digitizing" cubes one tick at a time on the client.
-        NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.tick());
+        ClientPlatform.hooks().onClientTick(buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE::tick);
         // Draws a second tooltip-shaped panel below Blueprint/Template tooltips with a rotating
         // 3D preview. Mirrors the 1.12.2 BCBuildersEventDist#onPostText pattern; the 1.12.2
         // PostText event was removed in modern NeoForge, so we hook Pre and run the layout
         // math ourselves. See BlueprintTooltipOverlay for the full explanation.
-        NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class,
-                BlueprintTooltipOverlay::onPreTooltip);
+        ClientPlatform.hooks().onTooltipPre(BlueprintTooltipOverlay::onPreTooltip);
         // Same treatment for used single-block schematics: synthesize a 1×1×1 Blueprint and
         // render through the same PiP pipeline. Without this, two different "used" schematics
         // in the inventory look identical — a 1.12.2 UX gap we're closing here.
-        NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class,
-                SchematicSingleTooltipOverlay::onPreTooltip);
+        ClientPlatform.hooks().onTooltipPre(SchematicSingleTooltipOverlay::onPreTooltip);
     }
 
     private static void registerClientContent(ClientRegistrationSinks sinks) {

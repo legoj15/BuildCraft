@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
 
-import net.neoforged.neoforge.client.event.RenderTooltipEvent;
+import buildcraft.platform.client.BCTooltipPreContext;
 
 import buildcraft.api.schematics.ISchematicBlock;
 
@@ -67,10 +67,10 @@ public final class SchematicSingleTooltipOverlay {
 
     /**
      * Entry point — registered on {@code NeoForge.EVENT_BUS} alongside
-     * {@link BlueprintTooltipOverlay#onPreTooltip(RenderTooltipEvent.Pre)}.
+     * {@link BlueprintTooltipOverlay#onPreTooltip}.
      */
-    public static void onPreTooltip(RenderTooltipEvent.Pre event) {
-        ItemStack stack = event.getItemStack();
+    public static void onPreTooltip(BCTooltipPreContext ctx) {
+        ItemStack stack = ctx.stack();
         if (!(stack.getItem() instanceof ItemSchematicSingle schemItem) || !schemItem.isUsed()) {
             return;
         }
@@ -81,8 +81,8 @@ public final class SchematicSingleTooltipOverlay {
 
         // Run the same vanilla tooltip-layout math BlueprintTooltipOverlay does so we land
         // exactly below the main tooltip, regardless of where on screen it was positioned.
-        Font font = event.getFont();
-        List<ClientTooltipComponent> components = event.getComponents();
+        Font font = ctx.font();
+        List<ClientTooltipComponent> components = ctx.components();
         if (components.isEmpty()) {
             return;
         }
@@ -99,10 +99,10 @@ public final class SchematicSingleTooltipOverlay {
             /*contentHeight += c.getHeight();*/
             //?}
         }
-        ClientTooltipPositioner positioner = event.getTooltipPositioner();
+        ClientTooltipPositioner positioner = ctx.positioner();
         Vector2ic finalPos = positioner.positionTooltip(
-                event.getScreenWidth(), event.getScreenHeight(),
-                event.getX(), event.getY(), textWidth, contentHeight);
+                ctx.screenWidth(), ctx.screenHeight(),
+                ctx.x(), ctx.y(), textWidth, contentHeight);
         int finalX = finalPos.x();
         int finalY = finalPos.y();
         int pX = finalX;
@@ -111,13 +111,13 @@ public final class SchematicSingleTooltipOverlay {
         // Draw the frame first so the PiP draws over it.
         //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
         //?} elif >=1.21.10 {
         /*TooltipRenderUtil.renderTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
         //?} else {
         /*TooltipRenderUtil.renderTooltipBackground(
-                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
+                ctx.graphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
         //?}
 
         // Synthesize a 1×1×1 blueprint so BlueprintRenderer's existing pipeline just works.
@@ -127,7 +127,7 @@ public final class SchematicSingleTooltipOverlay {
         Blueprint synthetic = getOrBuildSynthetic(schematic);
 
         BlueprintRenderer.renderSnapshot(
-                new buildcraft.lib.gui.BCGraphics(event.getGraphics()), synthetic, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
+                new buildcraft.lib.gui.BCGraphics(ctx.graphics()), synthetic, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
     }
 
     private static Blueprint getOrBuildSynthetic(ISchematicBlock schematic) {

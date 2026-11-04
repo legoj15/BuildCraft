@@ -14,15 +14,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderHighlightEvent;*/
-//?}
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApiClient;
@@ -89,20 +82,10 @@ public class BCTransportClient {
         // The client's wire systems belong to the level they were sent for. A client level closing (disconnect, or the
         // old dimension on a dimension change; Minecraft posts Unload for it on every node) must not leave them for the
         // next level: the server sends none for a level with no wire in view, so nothing else would clear them. Client
-        // levels only: an integrated server's levels post the same event on this bus.
-        NeoForge.EVENT_BUS.addListener(LevelEvent.Unload.class, event -> {
-            if (event.getLevel().isClientSide()) {
-                ClientWireSystems.INSTANCE.clear();
-            }
-        });
+        // levels only: an integrated server's levels post the same event.
+        ClientPlatform.hooks().onClientLevelUnload(ClientWireSystems.INSTANCE::clear);
         // Face/corner-accurate placement-preview outline shown while holding a pluggable or wire.
-        //? if >=1.21.10 {
-        NeoForge.EVENT_BUS.addListener(ExtractBlockOutlineRenderStateEvent.class,
-                PipePlacementHighlight::onExtractBlockOutline);
-        //?} else {
-        /*NeoForge.EVENT_BUS.addListener(RenderHighlightEvent.Block.class,
-                PipePlacementHighlight::onRenderHighlightBlock);*/
-        //?}
+        ClientPlatform.hooks().onBlockOutline(PipePlacementHighlight::outline);
     }
 
     private static void registerClientContent(ClientRegistrationSinks sinks) {

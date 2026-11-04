@@ -6,28 +6,25 @@
 
 package buildcraft.core.list;
 
+import java.util.List;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 
 import buildcraft.api.items.IList;
 
 public enum ListTooltipHandler {
     INSTANCE;
 
-    @SubscribeEvent
-    public void itemTooltipEvent(ItemTooltipEvent event) {
-        final Player player = event.getEntity();
-        final ItemStack stack = event.getItemStack();
+    /** Shows "Matches" on a stack the open List GUI's list matches (a ClientHooks item-tooltip listener). */
+    public void itemTooltip(ItemStack stack, Player player, List<Component> tooltip) {
         if (!stack.isEmpty() && player != null && player.containerMenu instanceof ContainerList containerList) {
             ItemStack list = containerList.getListItemStack();
             if (!list.isEmpty() && list.getItem() instanceof IList listItem) {
                 if (listItem.matches(list, stack)) {
-                    event.getToolTip().add(
+                    tooltip.add(
                         Component.translatable("tip.list.matches").withStyle(ChatFormatting.GREEN)
                     );
                 }

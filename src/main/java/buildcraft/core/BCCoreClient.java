@@ -36,18 +36,12 @@ public class BCCoreClient {
         sinks.blockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE,
                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(BCCoreModels::getCreativeEngineQuads));
         // F3 debug overlay: tick handler for polling IDebuggable + sending server requests
-        NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
-        );
+        ClientPlatform.hooks().onClientTick(buildcraft.core.client.DebugOverlayHelper::onClientTick);
         // Marker laser length and the volume marker distance readout under the crosshair: work out per tick, draw per frame
-        NeoForge.EVENT_BUS.addListener(
-                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> {
-                    buildcraft.core.client.MarkerLengthIndicator.onClientTick();
-                    buildcraft.core.client.MarkerDistanceTracker.onClientTick();
-                }
-        );
+        ClientPlatform.hooks().onClientTick(() -> {
+            buildcraft.core.client.MarkerLengthIndicator.onClientTick();
+            buildcraft.core.client.MarkerDistanceTracker.onClientTick();
+        });
         // Register the fluid shard tint source for fragile fluid containers
         //? if >=1.21.10 {
         sinks.itemTintSource(net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
@@ -98,7 +92,7 @@ public class BCCoreClient {
             }
         });
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
-        NeoForge.EVENT_BUS.register(buildcraft.core.list.ListTooltipHandler.INSTANCE);
+        ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 
         // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
         NeoForge.EVENT_BUS.addListener(

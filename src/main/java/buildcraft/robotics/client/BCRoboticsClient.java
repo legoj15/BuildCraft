@@ -35,6 +35,7 @@ import buildcraft.robotics.client.render.RenderRobot;
 import buildcraft.robotics.client.render.RenderZonePlanner;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.entity.RobotExhaust;
+import buildcraft.platform.client.ClientHooks;
 import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
 
@@ -121,15 +122,24 @@ public class BCRoboticsClient {
         }
     }
 
-    /** Game-bus listeners (the mod bus is the default {@code @SubscribeEvent} surface above; these need
-     *  the other bus, so they live in their own class — the BCSiliconClient.GameBus pattern). */
+    /** Client game hooks (the session and tick hooks the Zone Planner cache and the table recipes need). */
     public static final class GameBus {
+        private GameBus() {}
+
+        static void register(ClientHooks hooks) {
+            hooks.onLoggingIn(GameBus::onClientLoggingIn);
+            hooks.onClientTick(GameBus::onClientTick);
+            hooks.onLoggingOut(GameBus::onClientLoggingOut);
+            hooks.onClientLevelUnload(GameBus::onLevelUnload);
+            hooks.onClientChunkLoad(GameBus::invalidateClientChunk);
+            hooks.onClientChunkUnload(GameBus::invalidateClientChunk);
+        }
+
         /** Table recipes are registered at ServerAboutToStartEvent on servers; a multiplayer client (where
          *  that event never fires) needs the programming recipe before its GUI can rebuild the option grid,
          *  so it registers here — same reason BCSiliconRecipes has its own LoggingIn hook. Once-per-JVM via
          *  the ensureInitialized guard. */
-        @SubscribeEvent
-        public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+        public static void onClientLoggingIn() {
             buildcraft.robotics.BCRoboticsRecipes.ensureInitialized();
         }
 
@@ -138,45 +148,27 @@ public class BCRoboticsClient {
         // inside a loaded chunk raise no client event, so the cache also refreshes by age (see LevelChunkCache).
 
         /** Drives the cache's refresh clock. */
-        @SubscribeEvent
-        public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        public static void onClientTick() {
             ZonePlannerMapDataClient.INSTANCE.tick();
         }
 
         /** Leaving a world: its terrain must not outlive it (and the cache must not pin its level). */
-        @SubscribeEvent
-        public static void onClientLoggingOut(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        public static void onClientLoggingOut() {
             ZonePlannerMapDataClient.INSTANCE.clear();
         }
 
-        /** A client level closing (disconnect, or the old dimension on a dimension change). Client levels
-         *  only: an integrated server's levels post the same event on this bus. */
-        @SubscribeEvent
-        public static void onLevelUnload(net.neoforged.neoforge.event.level.LevelEvent.Unload event) {
-            if (event.getLevel().isClientSide()) {
-                ZonePlannerMapDataClient.INSTANCE.clear();
-            }
+        /** A client level closing (disconnect, or the old dimension on a dimension change). */
+        public static void onLevelUnload() {
+            ZonePlannerMapDataClient.INSTANCE.clear();
         }
 
-        /** The server re-sent a chunk, so what was scanned from the old copy is stale. */
-        @SubscribeEvent
-        public static void onChunkLoad(net.neoforged.neoforge.event.level.ChunkEvent.Load event) {
-            invalidateClientChunk(event.getLevel(), event.getChunk().getPos());
-        }
-
-        /** The client dropped a chunk; the viewport must show a gap there, not the last terrain it had. */
-        @SubscribeEvent
-        public static void onChunkUnload(net.neoforged.neoforge.event.level.ChunkEvent.Unload event) {
-            invalidateClientChunk(event.getLevel(), event.getChunk().getPos());
-        }
-
-        /** {@code ChunkPos} reads as fields up to 1.21.11 and as record accessors from 26.1, so the position is
-         *  taken from its (stable) block-origin getters. */
-        private static void invalidateClientChunk(net.minecraft.world.level.LevelAccessor accessor,
+        /** A client chunk (re)loaded — the server re-sent it, so what was scanned from the old copy is stale — or
+         *  dropped, where the viewport must show a gap, not the last terrain it had. {@code ChunkPos} reads as
+         *  fields up to 1.21.11 and as record accessors from 26.1, so the position is taken from its (stable)
+         *  block-origin getters. */
+        private static void invalidateClientChunk(net.minecraft.world.level.Level level,
                                                   net.minecraft.world.level.ChunkPos pos) {
-            if (accessor.isClientSide() && accessor instanceof net.minecraft.world.level.Level level) {
-                ZonePlannerMapDataClient.INSTANCE.invalidateChunk(level, pos.getMinBlockX() >> 4, pos.getMinBlockZ() >> 4);
-            }
+            ZonePlannerMapDataClient.INSTANCE.invalidateChunk(level, pos.getMinBlockX() >> 4, pos.getMinBlockZ() >> 4);
         }
     }
 
@@ -196,6 +188,6 @@ public class BCRoboticsClient {
             return mc == null || mc.options == null
                     ? 0 : RobotExhaust.particleSettingId(mc.options.particles().get().name());
         });
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
+        GameBus.register(ClientPlatform.hooks());
     }
 }

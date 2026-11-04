@@ -9,7 +9,6 @@ package buildcraft.lib.client;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -105,42 +104,22 @@ public class BCLibClient {
         // correctly degrading to no recipe panels. On 1.21.1 vanilla still syncs the full
         // recipe list to every client itself, and RecipesUpdatedEvent fires once it has been
         // received (same join + /reload lifecycle).
-        //? if >=1.21.10 {
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.client.event.RecipesReceivedEvent.class,
-            event -> {
-                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .hasSeenSyncThisConnection();
-                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .setSynced(event.getRecipeMap().values());
-                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
-            }
-        );
-        //?} else {
-        /*NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.client.event.RecipesUpdatedEvent.class,
-            event -> {
-                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .hasSeenSyncThisConnection();
-                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                    .setSynced(event.getRecipeManager().getRecipes());
-                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
-            }
-        );*/
-        //?}
+        ClientPlatform.hooks().onRecipesReceived(recipes -> {
+            boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                .hasSeenSyncThisConnection();
+            buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.setSynced(recipes);
+            GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
+        });
 
         // Forget the previous server's recipes on disconnect (the next join re-fills the store;
         // recommended cleanup per RecipesReceivedEvent's own javadoc).
-        NeoForge.EVENT_BUS.addListener(
-            ClientPlayerNetworkEvent.LoggingOut.class,
-            event -> buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.clear()
-        );
+        ClientPlatform.hooks().onLoggingOut(buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache::clear);
 
         // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
         // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which
         // already renders the same info plus the server/client diff. Both were registered, so the F3
         // overlay showed the client info twice. DebugOverlayRenderer (RegisterGuiLayersEvent) is the keeper.)
-        NeoForge.EVENT_BUS.register(BCTooltips.class);
+        ClientPlatform.hooks().onItemTooltip(BCTooltips::onItemTooltip);
 
         // Advanced-debug overlay: draws the in-world highlight for whatever tile the player last
         // right-clicked with the Debugger item. Client-authoritative, no networking.

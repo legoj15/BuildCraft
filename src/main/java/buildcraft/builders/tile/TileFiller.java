@@ -718,10 +718,7 @@ public class TileFiller extends TileBC_Neptune
         if (stack.isEmpty()) return ItemStack.EMPTY;
         java.util.List<Direction> faces = new java.util.ArrayList<>(java.util.List.of(Direction.values()));
         java.util.Collections.shuffle(faces);
-        //? if >=1.21.10 {
-        net.neoforged.neoforge.transfer.item.ItemResource resource =
-                net.neoforged.neoforge.transfer.item.ItemResource.of(stack);
-        //?}
+        ItemStack resource = stack.copyWithCount(1);
         int remaining = stack.getCount();
         for (Direction face : faces) {
             if (remaining <= 0) break;
@@ -729,26 +726,13 @@ public class TileFiller extends TileBC_Neptune
             BlockEntity adjBe = serverLevel.getBlockEntity(adj);
             // IPipeHolder skip: BC pipes shouldn't act as drop sinks for the Filler's destruction
             // laser per the user's "non-pipe inventory block" requirement. Other mods' transport
-            // systems aren't recognized here — if a modded pipe registers Capabilities.Item.BLOCK
+            // systems aren't recognized here — if a modded pipe exposes an item storage
             // it would still siphon, but that's a known edge case we accept.
             if (adjBe instanceof buildcraft.api.transport.pipe.IPipeHolder) continue;
-            //? if >=1.21.10 {
-            var handler = serverLevel.getCapability(
-                    net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
-                    adj, face.getOpposite());
+            var handler = buildcraft.platform.transfer.TransferAccess.findItem(serverLevel, adj, face.getOpposite());
             if (handler == null) continue;
-            int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
-                    handler, resource, remaining, null);
+            int inserted = buildcraft.lib.transfer.ItemStorageUtil.insertStacking(handler, resource, remaining, null);
             remaining -= inserted;
-            //?} else {
-            /*var handler = serverLevel.getCapability(
-                    net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                    adj, face.getOpposite());
-            if (handler == null) continue;
-            ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(
-                    handler, stack.copyWithCount(remaining), false);
-            remaining = leftover.getCount();*/
-            //?}
         }
         return remaining <= 0 ? ItemStack.EMPTY : stack.copyWithCount(remaining);
     }

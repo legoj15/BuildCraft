@@ -25,31 +25,25 @@ import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.StackInsertionFunction.InsertionResult;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-
-import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
-//?}
+import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 @SuppressWarnings("this-escape")
 public class ItemHandlerSimple extends AbstractInvItemTransactor
     implements IItemHandlerAdv, INBTSerializable<CompoundTag> {
 
-    //? if >=1.21.10 {
     /**
      * One journal per slot, created lazily (a slot only needs one once a transaction touches it). The change callback
      * fires from {@link SlotJournal#onRootCommit}, i.e. once per slot per committed root transaction and only if the
      * slot really differs from its pre-transaction contents — never mid-transaction, where a later rollback would
      * leave the tile told about a change that never happened (and dirtied for nothing). Mirrors NeoForge's own
-     * {@code StacksResourceHandler}, and matches the 1.21.1 classic path, which never fires for a simulation.
+     * {@code StacksResourceHandler}; on 1.21.1 BuildCraft's own transaction manager runs the same journal.
      */
     @Nullable
     private SlotJournal[] journals;
 
-    private final class SlotJournal extends SnapshotJournal<ItemStack> {
+    private final class SlotJournal extends BCSnapshotJournal<ItemStack> {
         private final int index;
 
         SlotJournal(int index) {
@@ -76,7 +70,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
 
     /** Snapshot {@code index} into {@code tx} before changing it; without a transaction, report the change now. */
-    private void changeSlot(int index, ItemStack before, ItemStack after, @Nullable TransactionContext tx) {
+    private void changeSlot(int index, ItemStack before, ItemStack after, @Nullable BCTransactionContext tx) {
         if (tx == null) {
             setStackInternal(index, after);
             if (callback != null) {
@@ -94,7 +88,6 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         journal.updateSnapshots(tx);
         setStackInternal(index, after);
     }
-    //?}
 
 
     private StackInsertionChecker checker;
@@ -248,34 +241,28 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return stacks.get(slot).isEmpty();
     }
 
-    // Transfer-API (ResourceHandler<ItemResource>) adapter surface — 1.21.10+ only. On 1.21.1 the classic
-    // IItemHandler methods (insertItem/extractItem/getStackInSlot/getSlots/getSlotLimit/...) satisfy the cap.
-    //? if >=1.21.10 {
+    // BCItemStorage: the surface the platform layer adapts to each loader's item handler (NeoForge's
+    // ResourceHandler<ItemResource> on 1.21.10+, the classic IItemHandler on 1.21.1).
     @Override
-    public ItemResource getResource(int index) {
-        return badSlotIndex(index) ? ItemResource.EMPTY : ItemResource.of(stacks.get(index));
+    public ItemStack getStack(int index) {
+        return badSlotIndex(index) ? ItemStack.EMPTY : stacks.get(index).copy();
     }
 
     @Override
-    public long getAmountAsLong(int index) {
-        return badSlotIndex(index) ? 0 : stacks.get(index).getCount();
-    }
-
-    @Override
-    public long getCapacityAsLong(int index, ItemResource resource) {
+    public int getCapacity(int index, ItemStack resource) {
         return slotCapacity;
     }
 
     @Override
-    public boolean isValid(int index, ItemResource resource) {
-        return canSet(index, resource.toStack());
+    public boolean isValid(int index, ItemStack resource) {
+        return canSet(index, resource.isEmpty() ? ItemStack.EMPTY : resource.copyWithCount(1));
     }
 
     @Override
-    public int insert(int index, ItemResource resource, int amount, TransactionContext tx) {
+    public int insert(int index, ItemStack resource, int amount, BCTransactionContext tx) {
         if (badSlotIndex(index) || amount <= 0 || resource.isEmpty()) return 0;
-        ItemStack stack = resource.toStack(amount);
-        
+        ItemStack stack = resource.copyWithCount(amount);
+
         ItemStack current = stacks.get(index);
         if (!canSet(index, stack) || !canSet(index, current)) return 0;
 
@@ -300,10 +287,10 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
 
     @Override
-    public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
+    public int extract(int index, ItemStack resource, int amount, BCTransactionContext tx) {
         if (badSlotIndex(index) || amount <= 0 || resource.isEmpty()) return 0;
         ItemStack current = stacks.get(index);
-        if (current.isEmpty() || !ItemResource.of(current).equals(resource)) return 0;
+        if (current.isEmpty() || !ItemStack.isSameItemSameComponents(current, resource)) return 0;
 
         int toExtract = Math.min(amount, current.getCount());
         if (toExtract > 0) {
@@ -314,7 +301,6 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         }
         return toExtract;
     }
-    //?}
 
     /** Empties every non-empty slot through {@link #setStackInSlot}, so the change callback fires once per slot
      *  that held something. */
@@ -348,12 +334,11 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         stacks.set(slot, asValid(stack));
     }
 
-    //? if >=1.21.10 {
     @Override
     protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
-        try (Transaction tx = Transaction.openRoot()) {
-            int inserted = insert(slot, ItemResource.of(stack), stack.getCount(), tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int inserted = insert(slot, stack, stack.getCount(), tx);
             if (!simulate) tx.commit();
             return stack.copyWithCount(stack.getCount() - inserted);
         }
@@ -364,55 +349,13 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         if (badSlotIndex(slot) || max < min) return StackUtil.EMPTY;
         ItemStack current = stacks.get(slot);
         if (current.isEmpty() || current.getCount() < min || !filter.matches(asValid(current))) return StackUtil.EMPTY;
-        try (Transaction tx = Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int toExtract = Math.min(max, current.getCount());
-            int ex = extract(slot, ItemResource.of(current), toExtract, tx);
+            int ex = extract(slot, current, toExtract, tx);
             if (!simulate) tx.commit();
             return current.copyWithCount(ex);
         }
     }
-    //?} else {
-    /*@Override
-    protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        if (stack.isEmpty()) return StackUtil.EMPTY;
-        if (badSlotIndex(slot)) return stack;
-        ItemStack current = stacks.get(slot);
-        if (!canSet(slot, stack) || !canSet(slot, current)) return stack;
-        InsertionResult result = inserter.modifyForInsertion(slot, asValid(current.copy()), asValid(stack.copy()));
-        if (!canSet(slot, result.toSet)) {
-            throw new RuntimeException("Conflicting Insertion in ItemHandlerSimple! existing=" + current
-                + " inserting=" + stack + " toSet=" + result.toSet);
-        }
-        int inserted = stack.getCount() - result.toReturn.getCount();
-        if (inserted > 0 && !simulate) {
-            setStackInternal(slot, result.toSet);
-            if (callback != null) {
-                callback.onStackChange(this, slot, current, result.toSet);
-            }
-        }
-        return result.toReturn;
-    }
-
-    @Override
-    protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
-        if (badSlotIndex(slot) || max < min) return StackUtil.EMPTY;
-        ItemStack current = stacks.get(slot);
-        if (current.isEmpty() || current.getCount() < min || !filter.matches(asValid(current))) return StackUtil.EMPTY;
-        int toExtract = Math.min(max, current.getCount());
-        if (toExtract <= 0) return StackUtil.EMPTY;
-        ItemStack before = current.copy();
-        ItemStack after = current.copy();
-        after.shrink(toExtract);
-        if (after.getCount() <= 0) after = StackUtil.EMPTY;
-        if (!simulate) {
-            setStackInternal(slot, after);
-            if (callback != null) {
-                callback.onStackChange(this, slot, before, after);
-            }
-        }
-        return before.copyWithCount(toExtract);
-    }*/
-    //?}
 
     @Override
     public String toString() {

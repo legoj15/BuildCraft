@@ -29,11 +29,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
 
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.transport.IInjectable;
@@ -49,6 +44,11 @@ import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.DelayedList;
+import buildcraft.lib.transfer.ItemStorageUtil;
+import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.TransferAccess;
+
 
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventStatement;
@@ -163,20 +163,14 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
             return 0;
         }
 
-        // Get the item handler from the adjacent tile via NeoForge capability
+        // Get the item storage of the adjacent block through the platform layer
         IPipeHolder holder = pipe.getHolder();
         Level level = holder.getPipeWorld();
         BlockPos neighborPos = holder.getPipePos().relative(from);
         // Raw lookup (no isLoaded guard): reached only from a tick, the pipe's own or a powering neighbour's, so every
         // face neighbour is in a loaded chunk; TilePipeHolder.getNeighbourTile documents why. An off-tick caller would
         // load the chunk here.
-        //? if >=1.21.10 {
-        var handler = level.getCapability(
-            Capabilities.Item.BLOCK, neighborPos, from.getOpposite());
-        //?} else {
-        /*var handler = level.getCapability(
-            Capabilities.ItemHandler.BLOCK, neighborPos, from.getOpposite());*/
-        //?}
+        BCItemStorage handler = TransferAccess.findItem(level, neighborPos, from.getOpposite());
         if (handler == null) {
             return 0;
         }
@@ -184,21 +178,20 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         // Find a matching stack to extract (simulate first)
         ItemStack possible = ItemStack.EMPTY;
         int sourceSlot = -1;
-        //? if >=1.21.10 {
         for (int i = 0; i < handler.size(); i++) {
-            ItemResource res = handler.getResource(i);
-            if (res.isEmpty()) continue;
-            int available = handler.getAmountAsInt(i);
+            ItemStack inSlot = handler.getStack(i);
+            if (inSlot.isEmpty()) continue;
+            int available = inSlot.getCount();
             if (available <= 0) continue;
-            ItemStack slotStack = res.toStack(Math.min(available, count));
+            ItemStack slotStack = inSlot.copyWithCount(Math.min(available, count));
             if (filter.matches(slotStack)) {
                 // Simulate extraction to confirm the slot actually yields items. A slot can match
                 // the filter yet refuse extraction (e.g. an insert-only inventory like the Auto
                 // Workbench's materials grid) — keep scanning later slots when that happens.
-                try (Transaction tx = Transaction.openRoot()) {
-                    int extracted = handler.extract(i, res, Math.min(available, count), tx);
+                try (BCTransaction tx = BCTransaction.openRoot()) {
+                    int extracted = handler.extract(i, inSlot, Math.min(available, count), tx);
                     if (extracted > 0) {
-                        possible = res.toStack(extracted);
+                        possible = inSlot.copyWithCount(extracted);
                         sourceSlot = i;
                         // tx auto-aborts on close (no commit)
                     }
@@ -208,27 +201,6 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                 }
             }
         }
-        //?} else {
-        /*for (int i = 0; i < handler.getSlots(); i++) {
-            ItemStack inSlot = handler.getStackInSlot(i);
-            if (inSlot.isEmpty()) continue;
-            int available = inSlot.getCount();
-            if (available <= 0) continue;
-            ItemStack slotStack = inSlot.copyWithCount(Math.min(available, count));
-            if (filter.matches(slotStack)) {
-                // Simulate extraction to confirm the slot actually yields items (insert-only
-                // inventories match the filter but refuse extraction) — keep scanning on refusal.
-                ItemStack extracted = handler.extractItem(i, Math.min(available, count), true);
-                if (!extracted.isEmpty()) {
-                    possible = extracted;
-                    sourceSlot = i;
-                }
-                if (sourceSlot >= 0) {
-                    break;
-                }
-            }
-        }*/
-        //?}
 
         if (possible.isEmpty() || sourceSlot < 0) {
             return 0;
@@ -248,27 +220,15 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         count = Math.min(count, tryInsert.accepted);
 
         // Actually extract items
-        //? if >=1.21.10 {
-        ItemResource resource = ItemResource.of(possible);
         int actuallyExtracted;
-        if (simulate) {
-            try (Transaction tx = Transaction.openRoot()) {
-                actuallyExtracted = handler.extract(sourceSlot, resource, count, tx);
-                // tx auto-aborts
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            actuallyExtracted = handler.extract(sourceSlot, possible, count, tx);
+            if (!simulate && actuallyExtracted > 0) {
+                tx.commit();
             }
-        } else {
-            try (Transaction tx = Transaction.openRoot()) {
-                actuallyExtracted = handler.extract(sourceSlot, resource, count, tx);
-                if (actuallyExtracted > 0) {
-                    tx.commit();
-                }
-            }
+            // otherwise tx auto-aborts
         }
-        ItemStack stack = actuallyExtracted <= 0 ? ItemStack.EMPTY : resource.toStack(actuallyExtracted);
-        //?} else {
-        /*ItemStack stack = handler.extractItem(sourceSlot, count, simulate);
-        int actuallyExtracted = stack.getCount();*/
-        //?}
+        ItemStack stack = actuallyExtracted <= 0 ? ItemStack.EMPTY : possible.copyWithCount(actuallyExtracted);
 
         if (actuallyExtracted <= 0) {
             return 0;
@@ -508,17 +468,12 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                     Level level = holder.getPipeWorld();
                     BlockPos neighborPos = holder.getPipePos().relative(item.side);
                     // Tick-only raw lookup, safe for the reason TilePipeHolder.getNeighbourTile documents.
-                    //? if >=1.21.10 {
-                    var tileHandler = level.getCapability(
-                        Capabilities.Item.BLOCK, neighborPos, oppositeSide);
-                    if (tileHandler != null) {
-                        ItemResource resource = ItemResource.of(excess);
-                        // insertStacking fills partially-filled slots before empty ones — parity with the
-                        // <1.21.10 ItemHandlerHelper.insertItemStacked branch below and every other BC ejector
-                        // (InventoryUtil.addToRandomInventory, TileChute). Passing null opens+auto-commits a
-                        // transaction. Bare insert() used plain index order and fragmented target stacks.
-                        int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
-                                tileHandler, resource, excess.getCount(), null);
+                    BCItemStorage tileHandler = TransferAccess.findItem(level, neighborPos, oppositeSide);
+                    if (tileHandler != null && !excess.isEmpty()) {
+                        // insertStacking fills partially-filled slots before empty ones — parity with every other
+                        // BC ejector (InventoryUtil.addToRandomInventory, TileChute). Passing null opens and
+                        // auto-commits a transaction. Bare insert() used plain index order and fragmented stacks.
+                        int inserted = ItemStorageUtil.insertStacking(tileHandler, excess, excess.getCount(), null);
                         if (inserted > 0) {
                             excess.shrink(inserted);
                             if (excess.isEmpty()) {
@@ -526,20 +481,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                             }
                         }
                     }
-                    //?} else {
-                    /*var tileHandler = level.getCapability(
-                        Capabilities.ItemHandler.BLOCK, neighborPos, oppositeSide);
-                    if (tileHandler != null) {
-                        ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(tileHandler, excess.copy(), false);
-                        int inserted = excess.getCount() - leftover.getCount();
-                        if (inserted > 0) {
-                            excess.shrink(inserted);
-                            if (excess.isEmpty()) {
-                                excess = ItemStack.EMPTY;
-                            }
-                        }
-                    }*/
-                    //?}
+
                     // 1.12.2 parity: fire Ejected.IntoTile so handlers can observe/modify the ejection.
                     PipeEventItem.Ejected.IntoTile ejected =
                         new PipeEventItem.Ejected.IntoTile(holder, this, injectedBefore, excess, item.side, tile);

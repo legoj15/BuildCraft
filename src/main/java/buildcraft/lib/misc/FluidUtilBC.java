@@ -351,7 +351,7 @@ public class FluidUtilBC {
         }
         //? if >=1.21.10 {
         ResourceHandler<FluidResource> container =
-                ItemAccess.forHandlerIndexStrict(slots, slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+                ItemAccess.forHandlerIndexStrict(neoSlots(slots), slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
         return container != null && moveAll(container, tank);
         //?} else {
         /*FluidActionResult result = FluidUtil.tryEmptyContainer(stack, tank, Integer.MAX_VALUE, null, true);
@@ -375,7 +375,7 @@ public class FluidUtilBC {
         }
         //? if >=1.21.10 {
         ResourceHandler<FluidResource> container =
-                ItemAccess.forHandlerIndexStrict(slots, slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+                ItemAccess.forHandlerIndexStrict(neoSlots(slots), slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
         return container != null && moveAll(tank, container);
         //?} else {
         /*FluidActionResult result = FluidUtil.tryFillContainer(stack, tank, Integer.MAX_VALUE, null, true);
@@ -389,7 +389,14 @@ public class FluidUtilBC {
     //? if >=1.21.10 {
     // The container handlers above come from a STRICT slot access: the filled/emptied item replaces the container in
     // that same slot, never overflowing into the tile's other slots. Everything moves in one root transaction.
+    @SuppressWarnings("unchecked")
+    private static ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> neoSlots(ItemHandlerSimple slots) {
+        return (ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>)
+                buildcraft.platform.Platform.transfer().toLoaderItemHandler(slots);
+    }
+
     private static boolean moveAll(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
+
         try (Transaction tx = Transaction.openRoot()) {
             if (ResourceHandlerUtil.move(from, to, r -> true, Integer.MAX_VALUE, tx) > 0) {
                 tx.commit();

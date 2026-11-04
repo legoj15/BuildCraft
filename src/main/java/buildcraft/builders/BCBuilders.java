@@ -24,7 +24,9 @@ import buildcraft.builders.snapshot.TemplateRegistry;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
+import buildcraft.lib.transfer.ItemStorageUtil;
 import buildcraft.platform.Platform;
+import buildcraft.platform.transfer.CapabilityRegistrar;
 
 /**
  * BuildCraft Builders initializer. No longer a separate @Mod — called from BCCore.
@@ -58,6 +60,7 @@ public class BCBuilders {
         buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
+        Platform.transfer().registerCapabilities(BCBuilders::registerTransfer);
 
         // Per-server-tick driver for BCBuildersEventDist.onServerTick, which throttles
         // the destroying_the_world per-owner pairing scan to SCAN_INTERVAL_TICKS and
@@ -72,12 +75,10 @@ public class BCBuilders {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var itemCap = Capabilities.Item.BLOCK;
         var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var itemCap = Capabilities.ItemHandler.BLOCK;
-        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         // Quarry — advertises as an MJ connector too so kinesis pipes route power to it (a receiver IS a
@@ -87,20 +88,11 @@ public class BCBuilders {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.QUARRY.get(),
             quarry -> quarry.getMjReceiver(), energyCap,
             quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::wantsPower));
-        //? if >=1.21.10 {
-        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
-        //?} else {
-        /*event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> net.neoforged.neoforge.items.wrapper.EmptyItemHandler.INSTANCE);*/
-        //?}
 
         // Filler
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.FILLER.get(),
             filler -> filler.getMjReceiver(), energyCap,
             filler -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
-        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.FILLER.get(),
-            (filler, direction) -> filler.getItemHandler(direction));
 
         // Builder — wires it into the same pipe/engine capability surfaces as the Filler so MJ
         // engines push power into the battery, pipes push resources into the 27-slot grid, and
@@ -108,21 +100,32 @@ public class BCBuilders {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.BUILDER.get(),
             builder -> builder.getMjReceiver(), energyCap,
             builder -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
-        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> builder.getItemHandler(direction));
         event.registerBlockEntity(fluidCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getTankManager());
+    }
+
+    /** The item storages, through the platform layer's capability registrar. */
+    private static void registerTransfer(CapabilityRegistrar registrar) {
+        // Quarry: a slotless storage, so item pipes still connect to it.
+        registrar.blockItems(BCBuildersBlockEntities.QUARRY.get(), (quarry, direction) -> ItemStorageUtil.EMPTY);
+
+        registrar.blockItems(BCBuildersBlockEntities.FILLER.get(), (filler, direction) -> filler.getItemHandler(direction));
+
+        // Builder — pipes push resources into the 27-slot grid.
+        registrar.blockItems(BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> builder.getItemHandler(direction));
 
         // Electronic Library — exposes its snapshot up/download slots to item pipes.
-        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.LIBRARY.get(),
+        registrar.blockItems(BCBuildersBlockEntities.LIBRARY.get(),
             (library, direction) -> library.getItemHandler(direction));
 
         // Architect Table — exposes the INSERT input slot (blank Blueprint/Template) and the
         // EXTRACT output slot (finished snapshot) so item pipes can connect and exchange snapshots,
         // matching 1.12.2. Without this the slots are invisible to PipeFlowItems.canConnect.
-        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.ARCHITECT.get(),
+        registrar.blockItems(BCBuildersBlockEntities.ARCHITECT.get(),
             (architect, direction) -> architect.getItemHandler(direction));
     }
+
 
 
 

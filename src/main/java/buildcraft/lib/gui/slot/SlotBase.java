@@ -15,10 +15,7 @@ import net.minecraft.world.Container;
 
 import buildcraft.lib.tile.item.IItemHandlerAdv;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
+import buildcraft.platform.transfer.BCTransaction;
 
 public class SlotBase extends Slot {
     public final int handlerIndex;
@@ -43,31 +40,31 @@ public class SlotBase extends Slot {
     @Override
     @Nonnull
     public ItemStack getItem() {
+        // A copy on 1.21.10+ (what the Transfer API's resource view always gave); 1.21.1 keeps handing out the live
+        // stack, as its classic IItemHandler did. ItemHandlerSimple is the only IItemHandlerAdv.
         //? if >=1.21.10 {
-        return itemHandler.getResource(handlerIndex).toStack(itemHandler.getAmountAsInt(handlerIndex));
+        return itemHandler.getStack(handlerIndex);
         //?} else {
-        /*return itemHandler.getStackInSlot(handlerIndex);*/
+        /*return ((ItemHandlerSimple) itemHandler).getStackInSlot(handlerIndex);*/
         //?}
     }
 
     @Override
     public void set(@Nonnull ItemStack stack) {
-        //? if >=1.21.10 {
         if (itemHandler instanceof ItemHandlerSimple) {
             ((ItemHandlerSimple) itemHandler).setStackInSlot(handlerIndex, stack);
         } else {
-            try (Transaction tx = Transaction.openRoot()) {
-                itemHandler.extract(handlerIndex, itemHandler.getResource(handlerIndex), itemHandler.getAmountAsInt(handlerIndex), tx);
+            try (BCTransaction tx = BCTransaction.openRoot()) {
+                ItemStack current = itemHandler.getStack(handlerIndex);
+                if (!current.isEmpty()) {
+                    itemHandler.extract(handlerIndex, current, current.getCount(), tx);
+                }
                 if (!stack.isEmpty()) {
-                    itemHandler.insert(handlerIndex, ItemResource.of(stack), stack.getCount(), tx);
+                    itemHandler.insert(handlerIndex, stack, stack.getCount(), tx);
                 }
                 tx.commit();
             }
         }
-        //?} else {
-        /*// On 1.21.1 every IItemHandlerAdv is an IItemHandlerModifiable, so setStackInSlot is available directly.
-        itemHandler.setStackInSlot(handlerIndex, stack);*/
-        //?}
         this.setChanged();
     }
 
@@ -79,18 +76,18 @@ public class SlotBase extends Slot {
     @Override
     public int getMaxStackSize() {
         //? if >=1.21.10 {
-        return (int) itemHandler.getCapacityAsLong(handlerIndex, ItemResource.EMPTY);
+        return itemHandler.getCapacity(handlerIndex, ItemStack.EMPTY);
         //?} else {
-        /*return itemHandler.getSlotLimit(handlerIndex);*/
+        /*return ((ItemHandlerSimple) itemHandler).getSlotLimit(handlerIndex);*/
         //?}
     }
 
     @Override
     public int getMaxStackSize(@Nonnull ItemStack stack) {
         //? if >=1.21.10 {
-        int slotLimit = (int) itemHandler.getCapacityAsLong(handlerIndex, ItemResource.of(stack));
+        int slotLimit = itemHandler.getCapacity(handlerIndex, stack);
         //?} else {
-        /*int slotLimit = itemHandler.getSlotLimit(handlerIndex);*/
+        /*int slotLimit = ((ItemHandlerSimple) itemHandler).getSlotLimit(handlerIndex);*/
         //?}
         return Math.min(slotLimit, stack.getMaxStackSize());
     }
@@ -100,29 +97,25 @@ public class SlotBase extends Slot {
     public ItemStack remove(int amount) {
         ItemStack current = getItem();
         if (current.isEmpty()) return ItemStack.EMPTY;
-        //? if >=1.21.10 {
         int extracted = 0;
-        try (Transaction tx = Transaction.openRoot()) {
-            extracted = itemHandler.extract(handlerIndex, ItemResource.of(current), amount, tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            extracted = itemHandler.extract(handlerIndex, current, amount, tx);
             tx.commit();
         }
         return current.copyWithCount(extracted);
-        //?} else {
-        /*return itemHandler.extractItem(handlerIndex, amount, false);*/
-        //?}
     }
 
     // Dummy Container implementation
     private static class DummyContainer implements Container {
         private final IItemHandlerAdv handler;
         public DummyContainer(IItemHandlerAdv handler) { this.handler = handler; }
-        //? if >=1.21.10 {
         @Override public int getContainerSize() { return handler.size(); }
-        @Override public ItemStack getItem(int index) { return handler.getResource(index).toStack(handler.getAmountAsInt(index)); }
+        //? if >=1.21.10 {
+        @Override public ItemStack getItem(int index) { return handler.getStack(index); }
         //?} else {
-        /*@Override public int getContainerSize() { return handler.getSlots(); }
-        @Override public ItemStack getItem(int index) { return handler.getStackInSlot(index); }*/
+        /*@Override public ItemStack getItem(int index) { return ((ItemHandlerSimple) handler).getStackInSlot(index); }*/
         //?}
+
         @Override public boolean isEmpty() { return false; }
         @Override public ItemStack removeItem(int index, int count) { return ItemStack.EMPTY; }
         @Override public ItemStack removeItemNoUpdate(int index) { return ItemStack.EMPTY; }

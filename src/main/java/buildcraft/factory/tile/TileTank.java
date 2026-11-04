@@ -288,7 +288,7 @@ public class TileTank extends AbstractBCSyncedBlockEntity
      * <p>
      * BC's fluid economy expects tanks to be broken (which drops fluid as separate item
      * shards) before being moved, so a picked tank should always come back empty. On 1.21.10+
-     * the {@code "stacks"} key is {@code StacksResourceHandler.VALUE_IO_KEY}, what
+     * the {@code "stacks"} key is {@link BCFluidTank#STACKS_KEY}, what
      * {@code tank.serialize} writes; on 1.21.1 {@link buildcraft.lib.fluid.BCFluidTank} writes
      * per-slot {@code "fluid<i>"}/{@code "amount<i>"} keys instead, so those are discarded there.
      */
@@ -298,7 +298,7 @@ public class TileTank extends AbstractBCSyncedBlockEntity
     @Override
     public void removeComponentsFromTag(ValueOutput output) {
         super.removeComponentsFromTag(output);
-        output.discard("stacks");
+        output.discard(BCFluidTank.STACKS_KEY);
     }
     //?} else {
     /*@Override

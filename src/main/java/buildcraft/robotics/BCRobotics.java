@@ -130,17 +130,9 @@ public class BCRobotics {
 
         // Ph8: the Requester's item handler — lets pipes and hoppers deliver into (and drain) the
         // request slots' paired delivery slots, each face gated by the template-matching checker.
-        buildcraft.lib.misc.CapabilityListeners.add((net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
-            //? if >=1.21.10 {
-            event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
-                BCRoboticsBlockEntities.REQUESTER.get(),
-                (tile, direction) -> tile.getItemHandler(direction));
-            //?} else {
-            /*event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                BCRoboticsBlockEntities.REQUESTER.get(),
-                (tile, direction) -> tile.getItemHandler(direction));*/
-            //?}
-        });
+        Platform.transfer().registerCapabilities(registrar -> registrar.blockItems(
+            BCRoboticsBlockEntities.REQUESTER.get(), (tile, direction) -> tile.getItemHandler(direction)));
+
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {

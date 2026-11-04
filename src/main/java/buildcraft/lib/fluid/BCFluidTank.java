@@ -13,6 +13,14 @@ import net.minecraft.world.level.material.Fluid;
 import buildcraft.api.fluids.BCFluidStack;
 
 //? if >=1.21.10 {
+import java.util.ArrayList;
+import java.util.List;
+
+import com.mojang.serialization.Codec;
+import net.minecraft.core.NonNullList;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
@@ -38,8 +46,51 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
  */
 //? if >=1.21.10 {
 public class BCFluidTank extends FluidStacksResourceHandler {
+    /**
+     * The save key of the per-slot list. BuildCraft owns it: it is the value NeoForge's
+     * {@code StacksResourceHandler.VALUE_IO_KEY} had when BC inherited it, pinned by the golden fixtures, and
+     * {@code TileTank.removeComponentsFromTag} strips it.
+     */
+    public static final String STACKS_KEY = "stacks";
+
+    /** One {@link BCFluidStack#OPTIONAL_CODEC} entry per slot, so an empty slot is {@code {}}. */
+    private static final Codec<List<BCFluidStack>> STACKS_CODEC = BCFluidStack.OPTIONAL_CODEC.listOf();
+
     public BCFluidTank(int size, int capacity) {
         super(size, capacity);
+    }
+
+    /**
+     * Writes exactly what the inherited {@code StacksResourceHandler.serialize} wrote (the {@code "stacks"} list of
+     * optional fluid stacks), but through BuildCraft's own codec, so the format no longer rides on the parent.
+     */
+    @Override
+    public void serialize(ValueOutput output) {
+        List<BCFluidStack> list = new ArrayList<>(size());
+        for (int i = 0; i < size(); i++) {
+            list.add(getFluidStack(i));
+        }
+        output.store(STACKS_KEY, STACKS_CODEC, list);
+    }
+
+    /**
+     * Mirrors the inherited {@code deserialize}: an absent key leaves the contents alone, a present list replaces
+     * them wholesale (its length becomes the slot count) without firing the change hook.
+     */
+    @Override
+    public void deserialize(ValueInput input) {
+        input.read(STACKS_KEY, STACKS_CODEC).ifPresent(list -> {
+            NonNullList<FluidStack> neo =
+                    NonNullList.withSize(list.size(), FluidStack.EMPTY);
+            for (int i = 0; i < list.size(); i++) {
+                neo.set(i, NeoFluidStacks.toNeo(list.get(i)));
+            }
+            //? if >=1.21.11 {
+            setStacks(neo);
+            //?} else {
+            /*stacks = neo; // 21.10's parent has no setStacks and assigns the field itself, journals untouched
+            *///?}
+        });
     }
 
     // Bridge the Transfer-API hooks to the version-neutral ones tiles override.
@@ -49,7 +100,7 @@ public class BCFluidTank extends FluidStacksResourceHandler {
     }
 
     @Override
-    protected void onContentsChanged(int index, net.neoforged.neoforge.fluids.FluidStack previousContents) {
+    protected void onContentsChanged(int index, FluidStack previousContents) {
         onChanged();
     }
 
@@ -222,6 +273,8 @@ public class BCFluidTank extends FluidStacksResourceHandler {
     }
 
     // --- NBT (id + amount per slot; no registry provider needed) ---
+
+    public static final String STACKS_KEY = "stacks"; // not written here: 1.21.1 keeps fluid<i>/amount<i>
 
     public void serialize(CompoundTag tag) {
         for (int i = 0; i < tanks.length; i++) {

@@ -19,6 +19,8 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.platform.neoforge.NeoForgeItemStorages;
+
 
 /**
  * A minecart as a mod can make one: not a vanilla {@code Container}, its items reachable only through the entity item
@@ -47,10 +49,10 @@ public final class CapabilityOnlyCart extends Minecart {
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         //? if >=1.21.10 {
         event.registerEntity(Capabilities.Item.ENTITY, minecartType(),
-                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? cart.store : null);
+                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);
         //?} else {
         /*event.registerEntity(Capabilities.ItemHandler.ENTITY, minecartType(),
-                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? cart.store : null);*/
+                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);*/
         //?}
     }
 }

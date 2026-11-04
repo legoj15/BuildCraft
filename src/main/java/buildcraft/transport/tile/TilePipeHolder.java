@@ -871,6 +871,10 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (!level.isLoaded(neighborPos)) {
             return null;
         }
+        if (capability instanceof buildcraft.platform.transfer.BCCapability<?> bcCap) {
+            // BuildCraft's loader-neutral storage tokens: the platform layer's lookup, as a BuildCraft view
+            return (T) buildcraft.platform.transfer.TransferAccess.find(bcCap, level, neighborPos, side.getOpposite());
+        }
         if (capability instanceof net.neoforged.neoforge.capabilities.BlockCapability<?, ?> blockCap) {
             // Route block capabilities to the NeoForge capability system
             try {

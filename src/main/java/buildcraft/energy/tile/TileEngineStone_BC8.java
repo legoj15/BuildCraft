@@ -32,10 +32,6 @@ import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableIn
 import net.minecraft.world.phys.Vec3;
 import buildcraft.platform.Platform;
 //?}
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.item.ItemStackResourceHandler;
-//?}
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -43,6 +39,7 @@ import buildcraft.api.mj.MjAPI;
 
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.energy.container.ContainerEngineStone;
+import buildcraft.lib.transfer.SingleStackStorage;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
@@ -75,10 +72,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
      * ResourceHandler wrapper for the fuel slot.
      * In 1.12.2, ItemHandlerSimple registered with EnumAccess.BOTH exposed
      * this as a capability from all sides, allowing item pipes to insert fuel.
-     * NeoForge 1.21.11 uses ItemStackResourceHandler (transaction-safe single-slot handler).
+     * A transaction-safe single-slot storage (the loader-neutral twin of NeoForge's ItemStackResourceHandler).
      */
-    //? if >=1.21.10 {
-    public final ItemStackResourceHandler fuelItemHandler = new ItemStackResourceHandler() {
+    public final SingleStackStorage fuelItemHandler = new SingleStackStorage() {
         @Override
         protected ItemStack getStack() {
             return fuelStack;
@@ -90,9 +86,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         }
 
         @Override
-        protected boolean isValid(ItemResource resource) {
+        protected boolean isValid(ItemStack resource) {
             // Only accept burnable items
-            return isValidFuel(resource.toStack(1));
+            return isValidFuel(resource.copyWithCount(1));
         }
 
         @Override
@@ -100,76 +96,6 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
             setChanged();
         }
     };
-    //?} else {
-    /*// 1.21.1 has no Transfer API: expose the fuel slot as a classic single-slot IItemHandler.
-    // Mirrors the modern ItemStackResourceHandler — insert only accepts burnable fuel and caps at
-    // min(item max stack, 99); extract pulls whatever is in the slot; both mark the BE changed.
-    public final net.neoforged.neoforge.items.IItemHandlerModifiable fuelItemHandler =
-            new net.neoforged.neoforge.items.IItemHandlerModifiable() {
-        @Override
-        public int getSlots() {
-            return 1;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return slot == 0 ? fuelStack : ItemStack.EMPTY;
-        }
-
-        @Override
-        public void setStackInSlot(int slot, ItemStack stack) {
-            if (slot == 0) {
-                fuelStack = stack;
-                setChanged();
-            }
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return net.minecraft.world.item.Item.ABSOLUTE_MAX_STACK_SIZE;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return slot == 0 && isValidFuel(stack);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot != 0 || stack.isEmpty() || !isValidFuel(stack)) return stack;
-            int cap = Math.min(stack.getMaxStackSize(), net.minecraft.world.item.Item.ABSOLUTE_MAX_STACK_SIZE);
-            if (fuelStack.isEmpty()) {
-                int moved = Math.min(stack.getCount(), cap);
-                if (!simulate) {
-                    fuelStack = stack.copyWithCount(moved);
-                    setChanged();
-                }
-                return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
-            }
-            if (!ItemStack.isSameItemSameComponents(fuelStack, stack)) return stack;
-            int space = cap - fuelStack.getCount();
-            if (space <= 0) return stack;
-            int moved = Math.min(space, stack.getCount());
-            if (!simulate) {
-                fuelStack.grow(moved);
-                setChanged();
-            }
-            return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot != 0 || amount <= 0 || fuelStack.isEmpty()) return ItemStack.EMPTY;
-            int extracted = Math.min(amount, fuelStack.getCount());
-            ItemStack result = fuelStack.copyWithCount(extracted);
-            if (!simulate) {
-                fuelStack.shrink(extracted);
-                setChanged();
-            }
-            return result;
-        }
-    };*/
-    //?}
 
     public TileEngineStone_BC8(BlockPos pos, BlockState state) {
         super(BCEnergyBlockEntities.ENGINE_STONE.get(), pos, state);

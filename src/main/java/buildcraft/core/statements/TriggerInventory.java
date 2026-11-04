@@ -15,10 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
 import buildcraft.api.statements.IStatement;
@@ -26,6 +22,7 @@ import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.platform.transfer.TransferAccess;
 
 import buildcraft.core.BCCoreSprites;
 import buildcraft.core.BCCoreStatements;
@@ -52,11 +49,7 @@ public class TriggerInventory extends AbstractContainerStateTrigger {
     @Override
     public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
         IStatementContainer container, IStatementParameter[] parameters) {
-        //? if >=1.21.10 {
-        var handler = level.getCapability(Capabilities.Item.BLOCK, pos, side != null ? side.getOpposite() : null);
-        //?} else {
-        /*var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side != null ? side.getOpposite() : null);*/
-        //?}
+        var handler = TransferAccess.findItem(level, pos, side != null ? side.getOpposite() : null);
         if (handler == null) {
             return false;
         }
@@ -73,19 +66,10 @@ public class TriggerInventory extends AbstractContainerStateTrigger {
         boolean isList = !searchedStack.isEmpty() && searchedStack.getItem() instanceof IList;
         IList listFilter = isList ? (IList) searchedStack.getItem() : null;
 
-        //? if >=1.21.10 {
         int slotCount = handler.size();
-        //?} else {
-        /*int slotCount = handler.getSlots();*/
-        //?}
         for (int i = 0; i < slotCount; i++) {
             hasSlots = true;
-            //? if >=1.21.10 {
-            ItemResource res = handler.getResource(i);
-            ItemStack stack = res.isEmpty() ? ItemStack.EMPTY : res.toStack(handler.getAmountAsInt(i));
-            //?} else {
-            /*ItemStack stack = handler.getStackInSlot(i);*/
-            //?}
+            ItemStack stack = handler.getStack(i);
 
             boolean stackMatchesSearch;
             if (searchedStack.isEmpty()) {
@@ -108,11 +92,7 @@ public class TriggerInventory extends AbstractContainerStateTrigger {
                 hasSpace = stackMatchesSearch && stack.getCount() < stack.getMaxStackSize();
             } else if (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize()) {
                 int amount = Math.min(searchedStack.getCount(), stack.getMaxStackSize() - stack.getCount());
-                //? if >=1.21.10 {
-                int slotCap = handler.getCapacityAsInt(i, ItemResource.of(searchedStack));
-                //?} else {
-                /*int slotCap = handler.getSlotLimit(i);*/
-                //?}
+                int slotCap = handler.getCapacity(i, searchedStack);
                 if (amount > 0 && slotCap >= stack.getCount() + amount) {
                     hasSpace = true;
                 }

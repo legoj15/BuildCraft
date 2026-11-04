@@ -26,13 +26,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
-
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -52,6 +45,9 @@ import buildcraft.lib.tile.IComparatorOutputTile;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.lib.transfer.ItemStorageUtil;
+import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.TransferAccess;
 
 /**
  * Chute tile entity. Picks up items from the ground on its intake face and
@@ -199,37 +195,17 @@ public class TileChute extends TileBC_Neptune implements IBCMenuProvider, ICompa
             List<Direction> sides = new ArrayList<>(List.of(Direction.values()));
             Collections.shuffle(sides);
             sides.remove(currentSide);
-            //? if >=1.21.10 {
-            ItemResource resource = ItemResource.of(inSlot);
+            ItemStack resource = inSlot.copyWithCount(1);
             for (Direction side : sides) {
-                ResourceHandler<ItemResource> handler = level.getCapability(
-                        Capabilities.Item.BLOCK,
-                        worldPosition.relative(side),
-                        side.getOpposite());
+                BCItemStorage handler = TransferAccess.findItem(level, worldPosition.relative(side), side.getOpposite());
                 if (handler == null) continue;
-                int inserted = ResourceHandlerUtil.insertStacking(handler, resource, 1, null);
+                int inserted = ItemStorageUtil.insertStacking(handler, resource, 1, null);
                 if (inserted > 0) {
                     inv.extractItem(ourSlot, inserted, false);
                     grantAdvancement();
                     return;
                 }
             }
-            //?} else {
-            /*for (Direction side : sides) {
-                net.neoforged.neoforge.items.IItemHandler handler = level.getCapability(
-                        Capabilities.ItemHandler.BLOCK,
-                        worldPosition.relative(side),
-                        side.getOpposite());
-                if (handler == null) continue;
-                ItemStack remainder = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(handler, inSlot.copyWithCount(1), false);
-                int inserted = 1 - remainder.getCount();
-                if (inserted > 0) {
-                    inv.extractItem(ourSlot, inserted, false);
-                    grantAdvancement();
-                    return;
-                }
-            }*/
-            //?}
         }
     }
 

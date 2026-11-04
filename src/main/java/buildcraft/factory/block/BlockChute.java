@@ -30,7 +30,6 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.transport.IInjectable;
@@ -42,6 +41,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.block.BlockBCTile_Waterloggable;
+import buildcraft.platform.transfer.TransferAccess;
 
 /**
  * The Chute block — an enhanced hopper that picks up items and inserts them
@@ -115,11 +115,7 @@ public class BlockChute extends BlockBCTile_Waterloggable<TileChute> {
         Direction toNeighbourFace = direction.getOpposite();
 
         if (level instanceof Level realLevel) {
-            //? if >=1.21.10 {
-            if (realLevel.getCapability(Capabilities.Item.BLOCK, neighborPos, toNeighbourFace) != null) {
-            //?} else {
-            /*if (realLevel.getCapability(Capabilities.ItemHandler.BLOCK, neighborPos, toNeighbourFace) != null) {*/
-            //?}
+            if (TransferAccess.findItem(realLevel, neighborPos, toNeighbourFace) != null) {
                 return true;
             }
         }

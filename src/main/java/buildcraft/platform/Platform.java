@@ -16,6 +16,7 @@ import buildcraft.platform.network.BCNetwork;
 import buildcraft.platform.registry.AttachmentServices;
 import buildcraft.platform.registry.DataServices;
 import buildcraft.platform.registry.RegistryServices;
+import buildcraft.platform.transfer.TransferServices;
 
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
@@ -113,6 +114,23 @@ public final class Platform {
     /** Saved entity data attachments. */
     public static AttachmentServices attachments() {
         return AttachmentsHolder.INSTANCE;
+    }
+
+    /** Transfer: transactions and snapshot journals (BCTransaction, BCSnapshotJournal). */
+    public static TransferServices transfer() {
+        return TransferHolder.INSTANCE;
+    }
+
+    private static final class TransferHolder {
+        static final TransferServices INSTANCE = create();
+
+        private static TransferServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeTransfer();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricTransfer();
+            *///?}
+        }
     }
 
     private static final class LoaderHolder {

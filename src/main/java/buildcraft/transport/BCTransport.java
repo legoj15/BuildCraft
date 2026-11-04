@@ -82,6 +82,8 @@ public class BCTransport {
         buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
+        Platform.transfer().registerCapabilities(registrar -> registrar.blockItems(
+            BCTransportBlockEntities.FILTERED_BUFFER.get(), (tile, side) -> tile.getItemHandler(side)));
 
         // Register network payloads
         registerPayloads();
@@ -205,12 +207,10 @@ public class BCTransport {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var itemCap = Capabilities.Item.BLOCK;
         var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var itemCap = Capabilities.ItemHandler.BLOCK;
-        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         event.registerBlockEntity(
@@ -290,13 +290,8 @@ public class BCTransport {
                 return null;
             }
         );
-
-        event.registerBlockEntity(
-            itemCap, 
-            BCTransportBlockEntities.FILTERED_BUFFER.get(),
-            (tile, side) -> tile.getItemHandler(side)
-        );
     }
+
 
     private static void initStripesRegistry() {
         PipeApi.stripeRegistry = StripesRegistry.INSTANCE;

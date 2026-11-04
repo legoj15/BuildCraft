@@ -30,7 +30,11 @@ public final class NeoForgeLoaderServices implements LoaderServices {
 
     @Override
     public boolean isPhysicalClient() {
+        //? if >=1.21.10 {
         return FMLEnvironment.getDist() == Dist.CLIENT;
+        //?} else {
+        /*return FMLEnvironment.dist == Dist.CLIENT;*/
+        //?}
     }
 
     @Override

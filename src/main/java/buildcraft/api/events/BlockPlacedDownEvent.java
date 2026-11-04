@@ -8,11 +8,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.BlockPos;
 
-
-import net.neoforged.bus.api.Event;
-
 /*@Cancelable*/
-public class BlockPlacedDownEvent extends Event {
+/** Nothing posts this yet. */
+public class BlockPlacedDownEvent {
+    public static final BCEventListeners<BlockPlacedDownEvent> LISTENERS = new BCEventListeners<>();
+
     public final Player player;
     public final BlockState state;
     public final BlockPos pos;
@@ -23,4 +23,3 @@ public class BlockPlacedDownEvent extends Event {
         this.pos = pos;
     }
 }
-

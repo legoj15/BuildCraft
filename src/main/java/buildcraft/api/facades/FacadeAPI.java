@@ -5,8 +5,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 
-import net.neoforged.fml.InterModComms;
-
 public final class FacadeAPI {
     public static final String IMC_MOD_TARGET = "buildcraftunofficial";
     public static final String IMC_FACADE_DISABLE = "facade_disable_block";

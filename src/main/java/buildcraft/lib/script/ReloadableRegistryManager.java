@@ -11,8 +11,6 @@ import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import net.neoforged.neoforge.common.NeoForge;
-
 import buildcraft.api.registry.BuildCraftRegistryManager;
 import buildcraft.api.registry.EventBuildCraftReload;
 import buildcraft.api.registry.IReloadableRegistry;
@@ -83,16 +81,16 @@ public enum ReloadableRegistryManager implements IReloadableRegistryManager {
         }
         try {
             isReloading = true;
-            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.BeforeClear(this, set));
+            EventBuildCraftReload.BeforeClear.LISTENERS.post(new EventBuildCraftReload.BeforeClear(this, set));
             set.forEach(registry -> registry.getReloadableEntryMap().clear());
 
-            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PreLoad(this, set));
+            EventBuildCraftReload.PreLoad.LISTENERS.post(new EventBuildCraftReload.PreLoad(this, set));
 
             GsonBuilder builder = new GsonBuilder();
             // register our own types here, so that others can replace them
             JsonUtil.registerTypeAdaptors(builder);
 
-            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PopulateGson(this, set, builder));
+            EventBuildCraftReload.PopulateGson.LISTENERS.post(new EventBuildCraftReload.PopulateGson(this, set, builder));
             Gson gson = builder.create();
 
             for (IReloadableRegistry<?> registry : set) {
@@ -101,12 +99,12 @@ public enum ReloadableRegistryManager implements IReloadableRegistryManager {
                 }
             }
 
-            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PostLoad(this, set));
+            EventBuildCraftReload.PostLoad.LISTENERS.post(new EventBuildCraftReload.PostLoad(this, set));
         } finally {
             reloadCount++;
             isReloading = false;
         }
-        NeoForge.EVENT_BUS.post(new EventBuildCraftReload.FinishLoad(this, set));
+        EventBuildCraftReload.FinishLoad.LISTENERS.post(new EventBuildCraftReload.FinishLoad(this, set));
     }
 
     @Override

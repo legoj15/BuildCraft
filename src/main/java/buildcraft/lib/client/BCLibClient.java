@@ -10,7 +10,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
 
@@ -83,10 +82,7 @@ public class BCLibClient {
         // + reloadingRegistries-contains-GuideBookRegistry. Note: the vanilla `/reload`
         // command does NOT trigger this — it's a datapack reload (server-side), and our
         // guide content is resource-pack content (client-side). F3+T is the right gesture.
-        NeoForge.EVENT_BUS.addListener(
-            EventBuildCraftReload.FinishLoad.class,
-            GuideManager.INSTANCE::onRegistryReload
-        );
+        EventBuildCraftReload.FinishLoad.LISTENERS.addListener(GuideManager.INSTANCE::onRegistryReload);
 
         // Feed the guide's recipe store from the server's recipe sync, then (re)build guide
         // content. This event fires on every world join (and again on datapack /reload), so it

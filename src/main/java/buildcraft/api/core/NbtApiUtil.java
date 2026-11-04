@@ -5,9 +5,11 @@
  */
 package buildcraft.api.core;
 
+import java.util.Objects;
+import java.util.function.Supplier;
+
 import com.mojang.serialization.DynamicOps;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -25,6 +27,8 @@ import net.minecraft.resources.RegistryOps;
  */
 public final class NbtApiUtil {
 
+    private static volatile Supplier<DynamicOps<Tag>> registryOps = () -> NbtOps.INSTANCE;
+
     private NbtApiUtil() {}
 
     /** Resolve a registry-aware {@link DynamicOps} for NBT codecs that need to look up dynamic-registry entries
@@ -34,33 +38,18 @@ public final class NbtApiUtil {
      * fail silently — {@code DataResult} returns an error and {@code resultOrPartial()} yields an empty
      * {@code Optional}, so any {@code .ifPresent(payload -> tag.put(...))} call ends up writing nothing.
      *
-     * <p>Source priority: integrated/dedicated server's registry access (works in either) → client level's registry
-     * access → plain {@link NbtOps#INSTANCE} as a last-resort fallback (lossy, but prevents NPE if invoked before any
-     * world is loaded). */
+     * <p>The ops come from the source BuildCraft installs at startup ({@link #setRegistryOpsSource}): the running
+     * server's registry access (integrated or dedicated), else the client level's, else plain
+     * {@link NbtOps#INSTANCE} as a last-resort fallback (lossy, but prevents NPE if invoked before any world is
+     * loaded). Before that install it is the plain fallback. */
     public static DynamicOps<Tag> registryAwareOps() {
-        net.minecraft.server.MinecraftServer server =
-                net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            return RegistryOps.create(NbtOps.INSTANCE, (HolderLookup.Provider) server.registryAccess());
-        }
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-            HolderLookup.Provider clientProvider = clientLevelRegistryAccess();
-            if (clientProvider != null) {
-                return RegistryOps.create(NbtOps.INSTANCE, clientProvider);
-            }
-        }
-        return NbtOps.INSTANCE;
+        return registryOps.get();
     }
 
-    /** Wrapped in its own method so the client-only class reference doesn't get loaded on dedicated servers (which
-     * don't have {@code Minecraft} on the classpath at all). */
-    private static HolderLookup.Provider clientLevelRegistryAccess() {
-        try {
-            net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
-            return level == null ? null : level.registryAccess();
-        } catch (Throwable ignored) {
-            return null;
-        }
+    /** Installs where {@link #registryAwareOps()} gets its ops. BuildCraft's lib installs its loader-aware lookup
+     * ({@code NBTUtilBC.registryAwareOps}) at startup, so the API never asks the loader itself. */
+    public static void setRegistryOpsSource(Supplier<DynamicOps<Tag>> source) {
+        registryOps = Objects.requireNonNull(source, "source");
     }
 
     // ── Version-neutral CompoundTag accessors (mirror NBTUtilBC) ──

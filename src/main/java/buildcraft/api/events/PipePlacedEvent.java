@@ -8,9 +8,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.core.BlockPos;
 
-import net.neoforged.bus.api.Event;
+/** Nothing posts this yet. */
+public class PipePlacedEvent {
+    public static final BCEventListeners<PipePlacedEvent> LISTENERS = new BCEventListeners<>();
 
-public class PipePlacedEvent extends Event {
     public Player player;
     public Item pipeType;
     public BlockPos pos;
@@ -22,4 +23,3 @@ public class PipePlacedEvent extends Event {
     }
 
 }
-

@@ -6,19 +6,26 @@ package buildcraft.api.events;
 
 import net.minecraft.world.entity.player.Player;
 
+/** Fired when a robot program is about to be deployed; cancel to veto the placement. Nothing posts it yet. */
+public class RobotPlacementEvent implements ICancellableBCEvent {
+    public static final BCEventListeners<RobotPlacementEvent> LISTENERS = new BCEventListeners<>();
 
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
-
-/** Fired when a robot program is about to be deployed; cancel to veto the placement. */
-public class RobotPlacementEvent extends Event implements ICancellableEvent {
     public Player player;
     public String robotProgram;
+    private boolean canceled;
 
     public RobotPlacementEvent(Player player, String robotProgram) {
         this.player = player;
         this.robotProgram = robotProgram;
     }
 
-}
+    @Override
+    public boolean isCanceled() {
+        return canceled;
+    }
 
+    @Override
+    public void setCanceled(boolean canceled) {
+        this.canceled = canceled;
+    }
+}

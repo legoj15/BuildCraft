@@ -30,8 +30,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 
-import net.neoforged.neoforge.common.NeoForge;
-
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -241,7 +239,7 @@ public class ItemRobot extends Item {
         }
 
         RobotEvent.Place event = new RobotEvent.Place(robot, player);
-        NeoForge.EVENT_BUS.post(event);
+        RobotEvent.Place.LISTENERS.post(event);
         if (event.isCanceled()) {
             // The robot was never added to the level and never handed an id, so there is nothing to unwind —
             // and deliberately no discard() call, which would route a never-registered robot through the

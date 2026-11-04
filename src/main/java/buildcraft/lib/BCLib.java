@@ -7,11 +7,13 @@ package buildcraft.lib;
 
 import net.neoforged.bus.api.IEventBus;
 
+import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.lib.fluid.FuelRegistry;
 import buildcraft.lib.fluid.CoolantRegistry;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.recipe.RefineryRecipeRegistry;
 import buildcraft.platform.Platform;
 
@@ -42,6 +44,8 @@ public class BCLib {
         // BCFluidStack (api, loader-neutral) names itself through the loader's fluid services
         BCFluidStack.setHoverNameProvider(
             stack -> Platform.fluids().hoverName(stack.getFluidHolder(), stack.getAmount(), stack.getComponentsPatch()));
+        // NbtApiUtil (api, loader-neutral) resolves registries through lib's loader-aware lookup
+        NbtApiUtil.setRegistryOpsSource(NBTUtilBC::registryAwareOps);
 
         BCLibItems.ITEMS.subscribe();
 

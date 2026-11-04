@@ -23,7 +23,7 @@ if (loader != "neoforge" && loader != "fabric") {
 // replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
 val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
 // True only on the 1.21.1 node (1.21.10/1.21.11/26.1 have the newer APIs). Gates cliffs that
-// landed AT 1.21.10 — e.g. FMLEnvironment.dist became the getDist() accessor.
+// landed AT 1.21.10 — e.g. the model-data package move.
 val isPre1_21_10 = stonecutter.eval(stonecutter.current.version, "<1.21.10")
 // True on every node below 26.3: gates the loot/advancement data down-port (DataDownportPre263).
 val isPre26_3 = stonecutter.eval(stonecutter.current.version, "<26.3")
@@ -100,16 +100,6 @@ stonecutter {
             replace(
                 "\\bhelper\\.assertFalse\\(", "buildcraft.lib.test.GameTestUtil.assertFalse(helper, ",
                 "\\bbuildcraft\\.lib\\.test\\.GameTestUtil\\.assertFalse\\(helper, ", "helper.assertFalse("
-            )
-        }
-        // 1.21.1 ONLY: FMLEnvironment.getDist() (the accessor, added at 1.21.10) -> the older public
-        // static `dist` field. Specific + reversible; no collision since the canonical source only ever
-        // writes getDist(). On every other node the reverse half runs and matches nothing in canonical src.
-        regex {
-            direction.set(isPre1_21_10)
-            replace(
-                "FMLEnvironment\\.getDist\\(\\)", "FMLEnvironment.dist",
-                "FMLEnvironment\\.dist\\b", "FMLEnvironment.getDist()"
             )
         }
         // 1.21.1 ONLY: the model-data API (ModelData/ModelProperty/ModelDataManager) lives under

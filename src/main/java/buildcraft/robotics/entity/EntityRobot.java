@@ -63,7 +63,6 @@ import net.minecraft.world.entity.LinearInterpolationHandler;
 import net.minecraft.world.entity.PositionPath;
 //?}
 
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
 import net.neoforged.neoforge.fluids.FluidType;
 
@@ -736,14 +735,14 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         }
 
         RobotEvent.Interact interact = new RobotEvent.Interact(this, player, stack);
-        NeoForge.EVENT_BUS.post(interact);
+        RobotEvent.Interact.LISTENERS.post(interact);
         if (interact.isCanceled()) {
             return InteractionResult.PASS;
         }
 
         if (player.isShiftKeyDown() && EntityUtil.isWrench(stack)) {
             RobotEvent.Dismantle dismantle = new RobotEvent.Dismantle(this, player);
-            NeoForge.EVENT_BUS.post(dismantle);
+            RobotEvent.Dismantle.LISTENERS.post(dismantle);
             if (dismantle.isCanceled()) {
                 return InteractionResult.PASS;
             }

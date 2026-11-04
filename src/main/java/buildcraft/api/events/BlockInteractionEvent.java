@@ -7,11 +7,11 @@ package buildcraft.api.events;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 
-
-import net.neoforged.bus.api.Event;
-
 /*@Cancelable*/
-public class BlockInteractionEvent extends Event {
+/** Nothing posts this yet. */
+public class BlockInteractionEvent {
+    public static final BCEventListeners<BlockInteractionEvent> LISTENERS = new BCEventListeners<>();
+
     public final Player player;
     public final BlockState state;
 
@@ -20,4 +20,3 @@ public class BlockInteractionEvent extends Event {
         this.state = state;
     }
 }
-

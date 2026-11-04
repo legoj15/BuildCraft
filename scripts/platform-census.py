@@ -89,10 +89,19 @@ ALLOWLIST = {
         ],
         "paths": [],
     },
-    "api": {
-        "reason": "buildcraft/api/** keeps its NeoForge types until slice S16 (the API slice)",
+    "api-transfer": {
+        "reason": "the API's transfer and capability types (fluid/item handler views, the MJ capability token, the "
+                  "MJ-to-FE convertor, the docking station's fluid view, the pluggable capability provider) move "
+                  "with slice S14 (transfer and capabilities); the rest of buildcraft/api/** is loader-free since S16",
         "types": [],
-        "paths": ["buildcraft/api/"],
+        "paths": [
+            "buildcraft/api/core/IFluidHandlerAdv.java",
+            "buildcraft/api/inventory/IItemHandlerFiltered.java",
+            "buildcraft/api/mj/MjAPI.java",
+            "buildcraft/api/mj/MjToRfAutoConvertor.java",
+            "buildcraft/api/robots/DockingStation.java",
+            "buildcraft/api/transport/pluggable/PipePluggable.java",
+        ],
     },
 }
 

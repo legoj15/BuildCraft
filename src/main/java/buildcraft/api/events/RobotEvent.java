@@ -7,21 +7,31 @@ package buildcraft.api.events;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
-
 import buildcraft.api.robots.EntityRobotBase;
 
-public abstract class RobotEvent extends Event {
+/** Every robot event is cancellable; each subclass posts to its own {@link BCEventListeners} {@code LISTENERS}. */
+public abstract class RobotEvent implements ICancellableBCEvent {
     public final EntityRobotBase robot;
+    private boolean canceled;
 
     public RobotEvent(EntityRobotBase robot) {
         this.robot = robot;
     }
 
+    @Override
+    public boolean isCanceled() {
+        return canceled;
+    }
+
+    @Override
+    public void setCanceled(boolean canceled) {
+        this.canceled = canceled;
+    }
+
     /** Cancel to veto a robot being placed into the world from its item. */
-    public static class Place extends RobotEvent implements ICancellableEvent {
+    public static class Place extends RobotEvent {
+        public static final BCEventListeners<Place> LISTENERS = new BCEventListeners<>();
+
         public final Player player;
 
         public Place(EntityRobotBase robot, Player player) {
@@ -31,7 +41,9 @@ public abstract class RobotEvent extends Event {
     }
 
     /** Cancel to suppress the default right-click interaction handling on a robot. */
-    public static class Interact extends RobotEvent implements ICancellableEvent {
+    public static class Interact extends RobotEvent {
+        public static final BCEventListeners<Interact> LISTENERS = new BCEventListeners<>();
+
         public final Player player;
         public final ItemStack item;
 
@@ -43,7 +55,9 @@ public abstract class RobotEvent extends Event {
     }
 
     /** Cancel to prevent a robot from being dismantled back into its item. */
-    public static class Dismantle extends RobotEvent implements ICancellableEvent {
+    public static class Dismantle extends RobotEvent {
+        public static final BCEventListeners<Dismantle> LISTENERS = new BCEventListeners<>();
+
         public final Player player;
 
         public Dismantle(EntityRobotBase robot, Player player) {
@@ -52,4 +66,3 @@ public abstract class RobotEvent extends Event {
         }
     }
 }
-

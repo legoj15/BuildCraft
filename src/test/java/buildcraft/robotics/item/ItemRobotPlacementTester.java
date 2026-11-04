@@ -30,7 +30,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.boards.RedstoneBoardRegistry;
@@ -377,11 +376,11 @@ public class ItemRobotPlacementTester {
             ItemStack stack = programmedRobot(0L);
             Player player;
             vetoPlacement = true;
-            NeoForge.EVENT_BUS.addListener(RobotEvent.Place.class, veto);
+            RobotEvent.Place.LISTENERS.addListener(veto);
             try {
                 player = clickStationWith(helper, pipeRel, Direction.UP, stack);
             } finally {
-                NeoForge.EVENT_BUS.unregister(veto);
+                RobotEvent.Place.LISTENERS.removeListener(veto);
                 vetoPlacement = false;
             }
 

@@ -16,8 +16,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.fml.ModContainer;
-
 public final class BuildCraftAPI {
     public static IFakePlayerProvider fakePlayerProvider;
 
@@ -28,10 +26,6 @@ public final class BuildCraftAPI {
     private BuildCraftAPI() {}
 
     public static String getVersion() {
-        ModContainer container = null;
-        if (container != null) {
-            return "";
-        }
         return "UNKNOWN VERSION";
     }
 

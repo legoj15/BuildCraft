@@ -81,7 +81,7 @@ Never build a generic BC event bus. It is the Architectury trap the issue reject
 - **Shape.** `LoaderServices`: `isPhysicalClient()`, `isModLoaded(id)`, `modIds()`, `modVersion(id)` (an `Optional`), `modSourcePaths(id)` (`List<Path>`), `configDir()`, `gameDir()`, and `currentServer()` (nullable).
 - **Typing.** BC-owned. Fabric maps to `FabricLoader` and `getOrigin().getPaths()`, and captures `currentServer` at `SERVER_STARTING` and clears it at `SERVER_STOPPED`.
 - **Format risk.** None.
-- **Directive interplay.** The 1.21.1 `getDist()` to `.dist` regex (`build.gradle.kts`, the `isPre1_21_10` `getDist` pair) then applies only to the implementation file, plus `api/core/NbtApiUtil.java` until the API slice. The regex is deleted in the API slice, replaced by a `>=1.21.10` arm inside the implementation.
+- **Directive interplay.** Done in S16: the 1.21.1 `getDist()` to `.dist` regex is gone from `build.gradle.kts`; `NeoForgeLoaderServices.isPhysicalClient` carries the `>=1.21.10` arm, and `api/core/NbtApiUtil.java` asks the source lib installs (`setRegistryOpsSource`) instead of FML.
 
 ### Config
 - **Shape.** `ConfigRegistrar.register(BCConfigType, spec, fileName)`, where `BCConfigType` is a BC enum (COMMON, CLIENT, LOCAL), plus `ConfigHooks.onReload`.
@@ -100,6 +100,7 @@ Never build a generic BC event bus. It is the Architectury trap the issue reject
 - **Entrypoint (late slice).** `@Mod` moves to `platform/neoforge/BCNeoForgeEntrypoint`, which captures the mod bus. The 51 `init(IEventBus)` signatures become `init()`.
 - **Format risk.** None. Order risk: record the observed order before changing any priority. Note that the comment at `transport/BCTransport.java:82` contradicts the LOW/LOWEST pair it sits next to.
 - **Directive interplay.** The render-stage and other event-class cliffs move into the implementation with their directives.
+- **BC's own events (S16).** `api/events/*` and `EventBuildCraftReload` are not posted on any loader bus. Each event class holds a `LISTENERS` constant, a `buildcraft.api.events.BCEventListeners` (one typed list per event, run in registration order; a cancelled `ICancellableBCEvent` skips the later listeners). It is a list, not a bus: no dispatch by type, no priorities.
 
 ### Networking
 - **Shape.** `BCNetwork`:
@@ -267,7 +268,7 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
 **What it reports**, per API group, per subsystem, and for the top files:
 1. Live `net.neoforged` imports and fully qualified references outside `buildcraft/platform/neoforge/**`. This is the headline number.
 2. All-node lines: the `net.neoforged` lines in commented arms. These are informational; 1.21.1-only arms are listed separately.
-3. Allowlisted references, each with a reason, kept in the script: `ModConfigSpec`/`ModConfig` pending the config decision, and `buildcraft/api/**` until S16. The allowlist should end empty.
+3. Allowlisted references, each with a reason, kept in the script: `ModConfigSpec`/`ModConfig` pending the config decision, and the API's transfer and capability files until S14 (the rest of `buildcraft/api/**` left the allowlist in S16). The allowlist should end empty.
 4. Patched overrides: NeoForge extension-method names harvested from `.neoforge-ref/<26.3 dir>/.../common/extensions/I*Extension.java`, matched against BC overrides, with tagged and untagged counts.
 5. Impl leaks: any common file naming `buildcraft.platform.neoforge` or `.fabric` (other than the binders), any loader impl package naming the other loader's package, and any `buildcraft.platform` contract file naming a loader or BC gameplay type. Any leak means a nonzero exit.
 6. Directive lines remaining in common code. This is the secondary payoff metric.

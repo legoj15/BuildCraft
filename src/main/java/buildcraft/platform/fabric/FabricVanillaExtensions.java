@@ -69,7 +69,12 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
 
     @Override
     public float explosionResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion) {
-        return state.getBlock().getExplosionResistance();
+        float own = state.getBlock().getExplosionResistance();
+        // The same adjustment ExplosionDamageCalculatorMixin makes for a real blast.
+        if (state.getBlock() instanceof buildcraft.platform.hook.ExplosionArmouredBlock armoured) {
+            return armoured.explosionResistance(level, pos, explosion, own);
+        }
+        return own;
     }
 
     @Override

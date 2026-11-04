@@ -8,6 +8,8 @@ package buildcraft.platform.fabric;
 //? if fabric {
 /*import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
@@ -39,11 +41,13 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 
 import buildcraft.platform.VanillaExtensions;
+import buildcraft.platform.hook.PositionalSoundBlock;
 import buildcraft.platform.fabric.mixin.FlowingFluidAccessor;
 
 /^*
- * {@link VanillaExtensions} on Fabric, which patches none of these: each answers what vanilla does. The block-state
- * queries ignore the position (vanilla has no per-position sound or resistance); the dig speed fires no break-speed
+ * {@link VanillaExtensions} on Fabric, which patches none of these: each answers what vanilla does, plus BuildCraft's
+ * own hook interfaces. The sound asks a {@link PositionalSoundBlock}, the resistance an {@code ExplosionArmouredBlock}
+ * (other mods' blocks answer without the position); the dig speed fires no break-speed
  * event; the experience is what the block's own {@code spawnAfterBreak} would pop, caught before it spawns
  * ({@code BlockExperienceMixin}); the persistent tag is a BuildCraft data attachment; the saved-data level is the one
  * the storage was made for ({@code SavedDataStorageMixin}).
@@ -59,6 +63,22 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
 
     @Override
     public SoundType soundType(BlockState state, LevelReader level, BlockPos pos, Entity entity) {
+        return positionalSoundType(state, level, pos, entity);
+    }
+
+    /^*
+     * NeoForge's 4-arg {@code getSoundType}: a {@link PositionalSoundBlock}'s answer for the position, else the
+     * state's own sound. The sound-type mixins ({@code EntityMixin}, {@code LivingEntityMixin}, {@code BlockItemMixin},
+     * {@code LevelEventHandlerMixin}) ask it where NeoForge passes the position.
+     ^/
+    public static SoundType positionalSoundType(BlockState state, LevelReader level, BlockPos pos,
+            @Nullable Entity entity) {
+        if (state.getBlock() instanceof PositionalSoundBlock block) {
+            SoundType sound = block.soundType(level, pos, entity);
+            if (sound != null) {
+                return sound;
+            }
+        }
         return state.getSoundType();
     }
 

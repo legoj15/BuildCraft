@@ -21,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -29,12 +30,15 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityFluidInteraction;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.platform.fabric.FabricFluidPhysics;
 import buildcraft.platform.fabric.FabricGameHooks;
+import buildcraft.platform.fabric.FabricVanillaExtensions;
 import buildcraft.platform.hook.BlockParticleEffects;
+import buildcraft.platform.hook.PositionalSoundBlock;
 
 /^*
  * NeoForge's {@code addRunningEffects} on Fabric: a {@link BlockParticleEffects} block draws its own sprint particles.
@@ -42,7 +46,7 @@ import buildcraft.platform.hook.BlockParticleEffects;
  * drops, what {@code spawnAtLocation} drops is collected instead of put in the level. And NeoForge's fluid-type
  * checks in {@code baseTick} and {@code updateFluidInteraction} for BuildCraft's fluids ({@link FabricFluidPhysics}):
  * in water and eyes in water mean a water-like fluid, each fluid's own current pushes, and a fluid that is not
- * water-like damps the fall distance.
+ * water-like damps the fall distance. A {@link PositionalSoundBlock} steps with its own sound.
  *^/
 @Mixin(Entity.class)
 abstract class EntityMixin implements FabricGameHooks.DropCapture {
@@ -116,6 +120,17 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture {
                     target = "Lnet/minecraft/server/level/ServerLevel;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(ServerLevel level, Entity drop, Operation<Boolean> original) {
         return FabricGameHooks.captureDrop((Entity) (Object) this, (ItemEntity) drop) || original.call(level, drop);
+    }
+
+    /^* NeoForge's position-aware step sound ({@code IBlockExtension#playStepSound}). *^/
+    @WrapOperation(method = "playStepSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
+    private SoundType buildcraft$stepSound(BlockState state, Operation<SoundType> original,
+                                           @Local(argsOnly = true) BlockPos pos) {
+        Entity self = (Entity) (Object) this;
+        return state.getBlock() instanceof PositionalSoundBlock
+                ? FabricVanillaExtensions.positionalSoundType(state, self.level(), pos, self)
+                : original.call(state);
     }
 
     @Override

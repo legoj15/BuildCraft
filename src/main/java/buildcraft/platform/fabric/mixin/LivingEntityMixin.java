@@ -25,6 +25,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -34,7 +36,9 @@ import buildcraft.platform.FluidProperties;
 import buildcraft.platform.fabric.FabricFlowingFluids;
 import buildcraft.platform.fabric.FabricFluidPhysics;
 import buildcraft.platform.fabric.FabricGameHooks;
+import buildcraft.platform.fabric.FabricVanillaExtensions;
 import buildcraft.platform.hook.BlockParticleEffects;
+import buildcraft.platform.hook.PositionalSoundBlock;
 
 /^*
  * NeoForge's {@code addLandingEffects} on Fabric: a {@link BlockParticleEffects} block sends its own landing particles
@@ -83,6 +87,18 @@ abstract class LivingEntityMixin {
             return 0;
         }
         return original.call(level, particle, x, y, z, count, dx, dy, dz, speed);
+    }
+
+    /^* NeoForge's position-aware fall sound ({@code IBlockExtension#playFallSound}), for the block vanilla just read. *^/
+    @WrapOperation(method = "playBlockFallSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
+    private SoundType buildcraft$fallSound(BlockState state, Operation<SoundType> original) {
+        if (!(state.getBlock() instanceof PositionalSoundBlock)) {
+            return original.call(state);
+        }
+        LivingEntity self = (LivingEntity) (Object) this;
+        BlockPos pos = new BlockPos(Mth.floor(self.getX()), Mth.floor(self.getY() - 0.2F), Mth.floor(self.getZ()));
+        return FabricVanillaExtensions.positionalSoundType(state, self.level(), pos, self);
     }
 
     @Inject(method = "dropAllDeathLoot", at = @At("HEAD"))

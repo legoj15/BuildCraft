@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "BlockExperienceMixin",
+    "BlockItemMixin",
     "DiodeBlockMixin",
     "EntityAccessor",
     "EntityEquipmentMixin",
@@ -30,6 +31,7 @@
     "ServerPlayerMixin"
   ],
   "client": [
+    "client.LevelEventHandlerMixin",
     "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"
   ],

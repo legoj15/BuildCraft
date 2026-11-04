@@ -58,13 +58,14 @@ import buildcraft.platform.hook.BlockParticleEffects;
 import buildcraft.platform.hook.ExplosionArmouredBlock;
 import buildcraft.platform.hook.PickStackBlock;
 import buildcraft.platform.hook.PlayerBreakGuard;
+import buildcraft.platform.hook.PositionalSoundBlock;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
 public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock,
-        PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock {
+        PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock, PositionalSoundBlock {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
@@ -166,20 +167,21 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Sounds
 
-    // Every pipe shares this one block, so the sound comes from the placed pipe's material. Fabric gap: vanilla asks
-    // for a block's sound without its position, so there every pipe makes the holder block's own sound.
+    // Every pipe shares this one block, so the sound comes from the placed pipe's material. Fabric asks
+    // PositionalSoundBlock at the sites NeoForge passes the position (its sound-type mixins).
     //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#getSoundType")
     @Override
     public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
-        SoundType sound = pipeSoundType(level, pos);
+        SoundType sound = soundType(level, pos, entity);
         return sound != null ? sound : super.getSoundType(state, level, pos, entity);
     }
     //?}
 
     /** The placed pipe's own sound, or null when there is no pipe or its definition names none. */
+    @Override
     @Nullable
-    private static SoundType pipeSoundType(LevelReader level, BlockPos pos) {
+    public SoundType soundType(LevelReader level, BlockPos pos, @Nullable Entity entity) {
         if (level.getBlockEntity(pos) instanceof TilePipeHolder tile && tile.getPipe() != null) {
             return tile.getPipe().getDefinition().soundType;
         }

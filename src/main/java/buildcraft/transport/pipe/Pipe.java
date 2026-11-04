@@ -226,7 +226,7 @@ public final class Pipe implements IPipe, IDebuggable {
             // stale colour until something else invalidates the chunk. scheduleRenderUpdate
             // is the correct trigger for paint changes — server-side it sets the
             // sendBlockUpdated flag for the next tick, client-side it does the
-            // requestModelDataUpdate + sendBlockUpdated immediately. Matches the comment
+            // render-data update + sendBlockUpdated immediately. Matches the comment
             // in PipeFlowFluids.setFluid that calls out paint as having its own render-update.
             holder.scheduleRenderUpdate();
         }

@@ -167,7 +167,7 @@ public class GateItemModel implements ItemModel {
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the gate
     // variant per-stack, applyTransform() picks the per-(variant, context) pre-baked quad set —
-    // the same cache the modern update() uses — and wraps it in a QuadItemBakedModel.
+    // the same cache the modern update() uses — and wraps it in a fixed-quad item model (ClientModels.fixedQuadItemModel).
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
         new net.minecraft.client.renderer.block.model.ItemOverrides() {
             @Override
@@ -194,7 +194,7 @@ public class GateItemModel implements ItemModel {
         if (quads.isEmpty()) {
             return this;
         }
-        return new buildcraft.lib.client.model.QuadItemBakedModel(
+        return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
                 quads, quads.get(0).getSprite(), true, net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 

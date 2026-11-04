@@ -65,6 +65,7 @@ import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.platform.LoaderHook;
 import buildcraft.platform.Platform;
+import buildcraft.platform.render.PipeRenderData;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
@@ -76,7 +77,7 @@ import buildcraft.transport.pipe.PipeEventBus;
 
 @SuppressWarnings("this-escape")
 public class TilePipeHolder extends AbstractBCBlockEntity
-        implements IPipeHolder, IDebuggable, ContainedFluidDetonation.Container {
+        implements IPipeHolder, IDebuggable, ContainedFluidDetonation.Container, PipeRenderData {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_dream");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
@@ -85,10 +86,6 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fanatic");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_CATEGORIZING_WITH_COLORS
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
-
-    /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
-    public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
-        new net.neoforged.neoforge.model.data.ModelProperty<>();
 
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
@@ -233,7 +230,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         });
         // After data sync (e.g. colour change), refresh the model on the client
         if (level != null && level.isClientSide()) {
-            requestModelDataUpdate();
+            Platform.renderData().requestRenderDataUpdate(this);
             scheduleRenderUpdate = true;
         }
     }
@@ -283,7 +280,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             pipe.onLoad();
         }
         // Refresh model data and schedule render update
-        requestModelDataUpdate();
+        Platform.renderData().requestRenderDataUpdate(this);
         scheduleRenderUpdate = true;
     }
 
@@ -354,7 +351,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     private void afterClientNbtUpdate() {
         // Client just received fresh connection/pluggable/wire state from the server.
         invalidateCollisionShapeCache();
-        requestModelDataUpdate();
+        Platform.renderData().requestRenderDataUpdate(this);
         if (level != null && level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
@@ -912,7 +909,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public void scheduleRenderUpdate() {
         invalidateCollisionShapeCache();
         if (level != null && level.isClientSide()) {
-            requestModelDataUpdate();
+            Platform.renderData().requestRenderDataUpdate(this);
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         } else {
             scheduleRenderUpdate = true;
@@ -1018,11 +1015,19 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         }
     }
 
+    // --- PipeRenderData ---
+
+    /**
+     * What the pipe holder's block model reads: this tile itself, which the transport client's pipe model quads
+     * (PipeBlockModelQuads) read the pipe model and pluggable keys from while the chunk section meshes.
+     */
+    public PipeRenderData getPipeRenderData() {
+        return this;
+    }
+
     @LoaderHook("neoforge:IBlockEntityExtension#getModelData")
     @Override
     public net.neoforged.neoforge.model.data.ModelData getModelData() {
-        return net.neoforged.neoforge.model.data.ModelData.builder()
-            .with(PIPE_MODEL_DATA, this)
-            .build();
+        return (net.neoforged.neoforge.model.data.ModelData) Platform.renderData().blockEntityRenderData(getPipeRenderData());
     }
 }

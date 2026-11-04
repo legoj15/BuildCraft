@@ -343,7 +343,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     // Rendering — MODEL so quads participate in breaking overlay; pipe geometry
-    // is provided by PipeBlockStateModel which is swapped in via ModelEvent.ModifyBakingResult.
+    // is provided by the pipe block model ClientRegistrationSinks.pipeBlockModel swaps in.
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;

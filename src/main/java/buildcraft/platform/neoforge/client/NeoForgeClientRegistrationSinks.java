@@ -40,6 +40,7 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 import buildcraft.platform.client.ClientRegistrationSinks;
+import buildcraft.platform.client.PipeModelQuads;
 import buildcraft.platform.event.HookOrder;
 import buildcraft.platform.neoforge.NeoForgeGameHooks;
 import buildcraft.platform.neoforge.NeoForgeModBus;
@@ -205,6 +206,34 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
     public void onModelsBaked(HookOrder order, Runnable listener) {
         NeoForgeModBus.get().addListener(NeoForgeGameHooks.priority(order), false, ModelEvent.BakingCompleted.class,
                 event -> listener.run());
+    }
+
+    @Override
+    public void pipeBlockModel(Supplier<? extends Block> block, PipeModelQuads quads) {
+        // Added straight to the bus at the call, like editBakedModels, so it keeps its place among the bake editors.
+        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class, event -> {
+            //? if >=1.21.10 {
+            var blockModels = event.getBakingResult().blockStateModels();
+            for (net.minecraft.world.level.block.state.BlockState state : block.get().getStateDefinition().getPossibleStates()) {
+                var vanillaModel = blockModels.get(state);
+                if (vanillaModel != null) {
+                    blockModels.put(state, new NeoForgePipeBlockStateModel(vanillaModel, quads));
+                }
+            }
+            //?} else {
+            /*// All baked models (block and item) share one map keyed by ModelResourceLocation on this line.
+            Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel>
+                    models = event.getModels();
+            for (net.minecraft.world.level.block.state.BlockState state : block.get().getStateDefinition().getPossibleStates()) {
+                net.minecraft.client.resources.model.ModelResourceLocation mrl =
+                        net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+                net.minecraft.client.resources.model.BakedModel vanillaModel = models.get(mrl);
+                if (vanillaModel != null) {
+                    models.put(mrl, new NeoForgePipeBlockStateModel(vanillaModel, quads));
+                }
+            }*/
+            //?}
+        });
     }
 
     //? if >=26.2 {

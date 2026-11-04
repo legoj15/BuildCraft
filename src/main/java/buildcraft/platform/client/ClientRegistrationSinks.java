@@ -130,6 +130,15 @@ public interface ClientRegistrationSinks {
      */
     void onModelsBaked(buildcraft.platform.event.HookOrder order, Runnable listener);
 
+    /**
+     * Wraps the baked model of every state of {@code block}, each time the models bake, in a block model that draws
+     * {@code quads} from the {@link buildcraft.platform.render.PipeRenderData} its block entity hands over, and the
+     * wrapped model where there is none (NeoForge: a {@code DynamicBlockStateModel} swapped in from
+     * {@code ModelEvent.ModifyBakingResult}, an {@code IDynamicBakedModel} on 1.21.1; Fabric: a block model emitting
+     * through {@code FabricBlockStateModel#emitQuads}, swapped in by an after-bake modifier).
+     */
+    void pipeBlockModel(Supplier<? extends Block> block, PipeModelQuads quads);
+
     //? if >=26.2 {
     /** A picture-in-picture GUI renderer for one render-state class. */
     <S extends net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState> void pipRenderer(

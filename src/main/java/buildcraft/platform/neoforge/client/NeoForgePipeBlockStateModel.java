@@ -4,8 +4,9 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.transport.client.model;
+package buildcraft.platform.neoforge.client;
 
+//? if neoforge {
 import java.util.List;
 
 //? if >=26.1 {
@@ -33,10 +34,12 @@ import net.neoforged.neoforge.client.model.DynamicBlockStateModel;
 //?}
 import net.neoforged.neoforge.model.data.ModelData;
 
-import buildcraft.transport.tile.TilePipeHolder;
+import buildcraft.platform.client.PipeModelQuads;
+import buildcraft.platform.neoforge.NeoForgeRenderData;
+import buildcraft.platform.render.PipeRenderData;
 
 /**
- * A BlockStateModel for the pipe_holder block.
+ * The block model {@code ClientRegistrationSinks#pipeBlockModel} swaps in for every state of the pipe holder.
  *
  * <p>Implements NeoForge's DynamicBlockStateModel to receive level/pos context
  * in collectParts(), enabling position-dependent pipe geometry to be rendered
@@ -47,16 +50,18 @@ import buildcraft.transport.tile.TilePipeHolder;
  * {@code ChunkSectionLayer.TRANSLUCENT}. The chunk compiler routes each quad
  * to its correct buffer based on this per-quad layer field.
  *
- * <p>The tile entity's PipeModelKey is accessed via ModelData, which is
- * populated by TilePipeHolder.getModelData() and refreshed whenever
- * pipe connections or paint change.
+ * <p>The block entity's {@link PipeRenderData} is reached via ModelData, which is
+ * populated by the block entity's getModelData() and refreshed whenever
+ * pipe connections or paint change; the {@link PipeModelQuads} turn it into quads.
  */
 //? if >=1.21.10 {
-public class PipeBlockStateModel implements DynamicBlockStateModel {
+final class NeoForgePipeBlockStateModel implements DynamicBlockStateModel {
     private final BlockStateModel vanillaDelegate;
+    private final PipeModelQuads quads;
 
-    public PipeBlockStateModel(BlockStateModel vanillaDelegate) {
+    NeoForgePipeBlockStateModel(BlockStateModel vanillaDelegate, PipeModelQuads quads) {
         this.vanillaDelegate = vanillaDelegate;
+        this.quads = quads;
     }
 
     @Override
@@ -67,10 +72,9 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
     /*public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state,
                              RandomSource random, List<BlockModelPart> parts) {*/
     //?}
-        // Get the tile reference from model data
-        ModelData modelData = level.getModelData(pos);
-        TilePipeHolder tile = modelData.get(TilePipeHolder.PIPE_MODEL_DATA);
-        if (tile == null || tile.getPipe() == null) {
+        // Get the pipe render data from model data
+        PipeRenderData data = NeoForgeRenderData.pipe(level.getModelData(pos));
+        if (data == null || !quads.hasGeometry(data)) {
             // No pipe data — fall back to vanilla delegate (particle texture only)
             vanillaDelegate.collectParts(level, pos, state, random, parts);
             return;
@@ -84,7 +88,7 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         //?}
 
         // Cutout pass — pipe body geometry with pipe-specific textures
-        List<BakedQuad> cutoutQuads = PipeModelCacheAll.getCutoutModel(tile);
+        List<BakedQuad> cutoutQuads = quads.cutoutQuads(data);
         if (!cutoutQuads.isEmpty()) {
             addQuadsAsPart(parts, cutoutQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT);
         }
@@ -92,7 +96,7 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         // Translucent pass — colour overlay for painted pipes. On 26.1 the quad's MaterialInfo
         // layer routes it to the alpha-blended buffer; 1.21.11 BakedQuads carry no layer (see the
         // MutableQuad.toBakedTranslucent TODO), so this currently shares the cutout buffer there.
-        List<BakedQuad> translucentQuads = PipeModelCacheAll.getTranslucentModel(tile);
+        List<BakedQuad> translucentQuads = quads.translucentQuads(data);
         if (!translucentQuads.isEmpty()) {
             addQuadsAsPart(parts, translucentQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT);
         }
@@ -122,14 +126,12 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
 
     @Override
     public Object createGeometryKey(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random) {
-        ModelData modelData = level.getModelData(pos);
-        TilePipeHolder tile = modelData.get(TilePipeHolder.PIPE_MODEL_DATA);
-        if (tile == null || tile.getPipe() == null) {
+        PipeRenderData data = NeoForgeRenderData.pipe(level.getModelData(pos));
+        if (data == null || !quads.hasGeometry(data)) {
             return EMPTY_KEY;
         }
-        // Use PipeAllCutoutKey as the geometry key — it encodes both the pipe model
-        // and all pluggable model keys, so the chunk rebuilds when either changes.
-        return new PipeModelCacheAll.PipeAllCutoutKey(tile);
+        // The key encodes both the pipe model and all pluggable model keys, so the chunk rebuilds when either changes.
+        return quads.geometryKey(data);
     }
 
     // The context-free particle/material-flag getters are deprecated in favour of NeoForge's level-aware ones, but
@@ -159,14 +161,16 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
 }
 //?} else {
 /*// 1.21.1 has no DynamicBlockStateModel / collectParts — the dynamic block model is a classic
-// IDynamicBakedModel whose getQuads() returns the same shared PipeModelCacheAll quad lists the
+// IDynamicBakedModel whose getQuads() returns the same shared quad lists the
 // modern collectParts() wraps into BlockModelParts. Behaviour matches the 1.21.10/11 nodes
 // (translucent overlay shares the cutout buffer; no per-quad chunk layer on these lines).
-public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+final class NeoForgePipeBlockStateModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
     private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
+    private final PipeModelQuads quads;
 
-    public PipeBlockStateModel(net.minecraft.client.resources.model.BakedModel vanillaDelegate) {
+    NeoForgePipeBlockStateModel(net.minecraft.client.resources.model.BakedModel vanillaDelegate, PipeModelQuads quads) {
         this.vanillaDelegate = vanillaDelegate;
+        this.quads = quads;
     }
 
     @Override
@@ -177,8 +181,8 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
         if (side != null) {
             return java.util.List.of();
         }
-        TilePipeHolder tile = extraData.get(TilePipeHolder.PIPE_MODEL_DATA);
-        if (tile == null || tile.getPipe() == null) {
+        PipeRenderData data = NeoForgeRenderData.pipe(extraData);
+        if (data == null || !quads.hasGeometry(data)) {
             return vanillaDelegate.getQuads(state, side, random, extraData, renderType);
         }
         java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> out = new java.util.ArrayList<>();
@@ -186,10 +190,10 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
         // rides the translucent pass so its 30%-tint mask alpha-blends instead of rendering opaque.
         // (renderType is null for non-chunk callers — emit everything in that case.)
         if (renderType == null || renderType == net.minecraft.client.renderer.rendertype.RenderTypes.cutout()) {
-            out.addAll(PipeModelCacheAll.getCutoutModel(tile));
+            out.addAll(quads.cutoutQuads(data));
         }
         if (renderType == null || renderType == net.minecraft.client.renderer.rendertype.RenderTypes.translucent()) {
-            out.addAll(PipeModelCacheAll.getTranslucentModel(tile));
+            out.addAll(quads.translucentQuads(data));
         }
         return out;
     }
@@ -228,4 +232,5 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
         return net.minecraft.client.renderer.block.model.ItemOverrides.EMPTY;
     }
 }*/
+//?}
 //?}

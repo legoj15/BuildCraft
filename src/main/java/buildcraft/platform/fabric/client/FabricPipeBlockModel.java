@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2026 the BuildCraftUnofficial contributors
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+package buildcraft.platform.fabric.client;
+
+//? if fabric {
+/*import java.util.List;
+import java.util.function.Predicate;
+
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+
+import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+
+import buildcraft.platform.client.PipeModelQuads;
+import buildcraft.platform.render.PipeRenderData;
+
+/^*
+ * The block model {@code ClientRegistrationSinks#pipeBlockModel} swaps in on Fabric: emits the {@link PipeModelQuads}
+ * of the block entity's {@link PipeRenderData} (read through {@code FabricBlockGetter#getBlockEntityRenderData}, which
+ * returns what its {@code RenderDataBlockEntity#getRenderData} handed over) into the chunk mesh, unculled, the body on
+ * the cutout layer and a painted pipe's overlay on the translucent one; the wrapped model where there is none.
+ *
+ * <p>Gap: vanilla's {@code BakedQuad} carries no per-vertex colour on Fabric (see
+ * {@code ClientModels#withVertexColours}), so vertex-coloured BC quads draw untinted here.
+ *^/
+final class FabricPipeBlockModel extends WrapperBlockStateModel {
+    /^* Sentinel key returned when there is no pipe render data. *^/
+    private static final Object EMPTY_KEY = new Object();
+
+    private final PipeModelQuads quads;
+
+    FabricPipeBlockModel(BlockStateModel wrapped, PipeModelQuads quads) {
+        super(wrapped);
+        this.quads = quads;
+    }
+
+    private PipeRenderData renderData(BlockAndTintGetter level, BlockPos pos) {
+        return level.getBlockEntityRenderData(pos) instanceof PipeRenderData data && quads.hasGeometry(data)
+                ? data : null;
+    }
+
+    @Override
+    public void emitQuads(QuadEmitter emitter, BlockAndTintGetter level, BlockPos pos, BlockState state,
+            RandomSource random, Predicate<Direction> cullTest) {
+        PipeRenderData data = renderData(level, pos);
+        if (data == null) {
+            super.emitQuads(emitter, level, pos, state, random, cullTest);
+            return;
+        }
+        emit(emitter, quads.cutoutQuads(data), ChunkSectionLayer.CUTOUT);
+        emit(emitter, quads.translucentQuads(data), ChunkSectionLayer.TRANSLUCENT);
+    }
+
+    private static void emit(QuadEmitter emitter, List<BakedQuad> list, ChunkSectionLayer layer) {
+        for (BakedQuad quad : list) {
+            // No cull face: pipe geometry is sub-block sized, like NeoForge's addUnculledFace.
+            emitter.fromBakedQuad(quad);
+            emitter.chunkLayer(layer);
+            emitter.emit();
+        }
+    }
+
+    @Override
+    public Object createGeometryKey(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random) {
+        PipeRenderData data = renderData(level, pos);
+        return data == null ? EMPTY_KEY : quads.geometryKey(data);
+    }
+}
+*///?}

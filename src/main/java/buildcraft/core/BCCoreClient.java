@@ -63,7 +63,7 @@ public class BCCoreClient {
                                             buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()));
                     net.minecraft.client.resources.model.BakedModel vanilla = models.get(mrl);
                     if (vanilla != null) {
-                        models.put(mrl, new buildcraft.core.client.model.FragileFluidShardModel(vanilla));
+                        models.put(mrl, buildcraft.platform.client.ClientPlatform.models().layeredFluidContainerModel(vanilla));
                     }
                 }
         );*/

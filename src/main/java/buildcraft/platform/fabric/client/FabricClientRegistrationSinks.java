@@ -61,6 +61,7 @@ import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.fabricmc.fabric.api.resource.v1.reloader.ResourceReloaderKeys;
 
 import buildcraft.platform.client.ClientRegistrationSinks;
+import buildcraft.platform.client.PipeModelQuads;
 import buildcraft.platform.event.HookOrder;
 
 /^*
@@ -146,6 +147,14 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     public void editBakedModels(Consumer<ModelBakery.BakingResult> editor) {
         // Gap: Fabric API 26.3 offers per-model after-bake modifiers only (ModelModifier.AfterBakeBlock/AfterBakeItem),
         // never the whole baked set, so a whole-set editor cannot run; the editor's model swaps are absent on Fabric.
+    }
+
+    @Override
+    public void pipeBlockModel(Supplier<? extends Block> block, PipeModelQuads quads) {
+        // A per-model after-bake modifier, registered afresh on every model load, wraps each state of the block.
+        ModelLoadingPlugin.register(context -> context.modifyBlockModelAfterBake().register(
+                (model, modelContext) -> modelContext.state().is(block.get())
+                        ? new FabricPipeBlockModel(model, quads) : model));
     }
 
     @Override

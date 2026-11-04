@@ -222,7 +222,7 @@ public class LensItemModel implements ItemModel {
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the lens
     // colour + filter flag per-stack, applyTransform() picks the per-(lens, context) pre-baked quad
-    // set — the same cache the modern update() uses — and wraps it in a QuadItemBakedModel on the
+    // set — the same cache the modern update() uses — and wraps it in a fixed-quad item model (ClientModels.fixedQuadItemModel) on the
     // translucent item sheet (opaque frame stays opaque at alpha 255; coloured glass blends).
     // The modern setAnimated() bookkeeping is unnecessary here: 1.21.1's classic ItemRenderer GUI
     // path re-renders each frame, so the clear-lens water overlay animates without an explicit flag.
@@ -254,7 +254,7 @@ public class LensItemModel implements ItemModel {
         if (quads.isEmpty()) {
             return this;
         }
-        return new buildcraft.lib.client.model.QuadItemBakedModel(
+        return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
                 quads, quads.get(0).getSprite(), true,
                 buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
     }

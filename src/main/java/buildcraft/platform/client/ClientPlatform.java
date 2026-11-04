@@ -27,6 +27,23 @@ public final class ClientPlatform {
         return HooksHolder.INSTANCE;
     }
 
+    /** The loader's quad and model additions BC's model code builds with. */
+    public static ClientModels models() {
+        return ModelsHolder.INSTANCE;
+    }
+
+    private static final class ModelsHolder {
+        static final ClientModels INSTANCE = create();
+
+        private static ClientModels create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.client.NeoForgeClientModels();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.client.FabricClientModels();
+            *///?}
+        }
+    }
+
     private static final class HooksHolder {
         static final ClientHooks INSTANCE = create();
 

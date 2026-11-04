@@ -126,7 +126,8 @@ public class MutableQuad {
     // BakedQuad conversion
     //
     // MC 26.1+: BakedQuad is a record with MaterialInfo (built once in materialInfo(boolean)).
-    // Constructor: (Vector3fc×4, long×4, Direction, MaterialInfo, BakedNormals, BakedColors)
+    // Constructor: (Vector3fc×4, long×4, Direction, MaterialInfo); the per-vertex colours are the loader's
+    // addition (ClientModels.withVertexColours: NeoForge's BakedColors).
     //
     // ############################
 
@@ -137,10 +138,10 @@ public class MutableQuad {
     }
 
     //? if >=1.21.11 {
-    /** Builds a NeoForge BakedColors from this quad's per-vertex colours.
+    /** Gives {@code quad} this quad's per-vertex colours, through the loader's model API.
      * (1.21.11+ only — 1.21.10 bakes per-vertex colour straight into the BLOCK vertex int[].) */
-    private net.neoforged.neoforge.client.model.quad.BakedColors buildBakedColors() {
-        return net.neoforged.neoforge.client.model.quad.BakedColors.of(
+    private BakedQuad withVertexColours(BakedQuad quad) {
+        return buildcraft.platform.client.ClientPlatform.models().withVertexColours(quad,
             packArgb(vertex_0), packArgb(vertex_1),
             packArgb(vertex_2), packArgb(vertex_3));
     }
@@ -185,32 +186,28 @@ public class MutableQuad {
     public BakedQuad toBakedBlock() {
         //? if >=26.1 {
         BakedQuad.MaterialInfo matInfo = materialInfo(false);
-        return new BakedQuad(
+        return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
             UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            face, matInfo,
-            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
-            buildBakedColors()
-        );
+            face, matInfo
+        ));
         //?} elif >=1.21.11 {
         /*// 1.21.11 carries tintIndex/sprite/shade/lightEmission as separate record components and
         // has no per-quad chunk layer (the block's RenderType decides cutout vs translucent), so the
         // CUTOUT/TRANSLUCENT split below collapses here. hasAmbientOcclusion=true matches vanilla.
-        return new BakedQuad(
+        return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
             UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            tintIndex, face, sprite, shade, lightEmission,
-            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
-            buildBakedColors(), true
-        );*/
+            tintIndex, face, sprite, shade, lightEmission
+        ));*/
         //?} elif >=1.21.10 {
         /*// 1.21.10 BakedQuad is the old int[] vertex form (no Vector3fc / BakedColors / per-quad layer);
         // MutableVertex.toBakedBlock packs the BLOCK format (8 ints/vertex, colour+light+normal inline).
@@ -233,37 +230,33 @@ public class MutableQuad {
     }
 
     /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer,
-     *  preserving per-vertex colours via NeoForge's BakedColors extension.
+     *  preserving per-vertex colours via the loader's quad colours (NeoForge's BakedColors).
      *  The chunk compiler uses MaterialInfo.layer() to route each quad to the correct buffer,
      *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
     public BakedQuad toBakedTranslucent() {
         //? if >=26.1 {
         BakedQuad.MaterialInfo matInfo = materialInfo(true);
-        return new BakedQuad(
+        return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
             UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            face, matInfo,
-            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
-            buildBakedColors()
-        );
+            face, matInfo
+        ));
         //?} elif >=1.21.11 {
         /*// 1.21.11 BakedQuad has no per-quad layer; translucent routing is a TODO for 1.21.11 visual
         // parity (needs a TRANSLUCENT block RenderType). Produces the same quad as toBakedBlock().
-        return new BakedQuad(
+        return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
             UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            tintIndex, face, sprite, shade, lightEmission,
-            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
-            buildBakedColors(), true
-        );*/
+            tintIndex, face, sprite, shade, lightEmission
+        ));*/
         //?} elif >=1.21.10 {
         /*// 1.21.10: same int[] BakedQuad as toBakedBlock (no per-quad translucent layer here either).
         int[] data = new int[32];

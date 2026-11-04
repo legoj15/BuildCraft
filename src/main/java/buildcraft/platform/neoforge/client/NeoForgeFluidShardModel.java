@@ -3,10 +3,10 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-//? if <1.21.10 {
-/*package buildcraft.core.client.model;
+package buildcraft.platform.neoforge.client;
 
-import java.util.ArrayList;
+//? if neoforge && <1.21.10 {
+/*import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -46,7 +46,7 @@ import net.neoforged.neoforge.model.data.ModelData;
 //   2. Render with the CULL + SORTED translucent item type 1.21.1 provides (ITEM_LAYERED_TRANSLUCENT),
 //      not the NO_CULL + UNSORTED one the fluid_container picks, so the frame and the fluid inside it
 //      blend correctly. Water stays see-through; the shard reads like 1.12.2 / 26.1.2.
-public class FragileFluidShardModel implements IDynamicBakedModel {
+final class NeoForgeFluidShardModel implements IDynamicBakedModel {
 
     private static final List<RenderType> LAYERED_TRANSLUCENT =
             List.of(NeoForgeRenderTypes.ITEM_LAYERED_TRANSLUCENT.get());
@@ -54,7 +54,7 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
     private final BakedModel vanilla;
     private final ItemOverrides overrides;
 
-    public FragileFluidShardModel(BakedModel vanilla) {
+    NeoForgeFluidShardModel(BakedModel vanilla) {
         this.vanilla = vanilla;
         this.overrides = new ShardOverrides();
     }

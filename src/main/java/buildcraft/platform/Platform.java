@@ -16,6 +16,7 @@ import buildcraft.platform.network.BCNetwork;
 import buildcraft.platform.registry.AttachmentServices;
 import buildcraft.platform.registry.DataServices;
 import buildcraft.platform.registry.RegistryServices;
+import buildcraft.platform.render.RenderDataServices;
 import buildcraft.platform.transfer.TransferServices;
 
 /**
@@ -99,6 +100,11 @@ public final class Platform {
     /** Loot context parameters the loader adds. */
     public static LootServices loot() {
         return LootHolder.INSTANCE;
+    }
+
+    /** Render data a block entity hands its block model. */
+    public static RenderDataServices renderData() {
+        return RenderDataHolder.INSTANCE;
     }
 
     /** Registries: registrars and the holders they hand back. */
@@ -309,6 +315,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLootServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?}
+        }
+    }
+
+    private static final class RenderDataHolder {
+        static final RenderDataServices INSTANCE = create();
+
+        private static RenderDataServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeRenderData();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricRenderData();
             *///?}
         }
     }

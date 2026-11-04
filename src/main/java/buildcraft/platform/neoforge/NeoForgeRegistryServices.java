@@ -47,7 +47,9 @@ public final class NeoForgeRegistryServices implements RegistryServices {
         @Override
         public <I extends T> BCHolder<T, I> register(String name, Function<Identifier, ? extends I> factory) {
             DeferredHolder<T, I> holder = register.register(name, factory);
-            BCHolder<T, I> wrapped = new BCHolder<>(holder.getId(), holder.getKey(), holder);
+            // The key is rebuilt from the id: DeferredHolder#getKey is deprecated for removal on 26.3.
+            ResourceKey<T> key = ResourceKey.create(register.getRegistryKey(), holder.getId());
+            BCHolder<T, I> wrapped = new BCHolder<>(holder.getId(), key, holder);
             entries.add(wrapped);
             return wrapped;
         }

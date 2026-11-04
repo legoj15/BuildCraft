@@ -16,8 +16,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.energy.BCEnergyConfig.ContainedDetonation;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileTank;
@@ -55,7 +54,7 @@ public class ContainedFluidDetonationTester {
 
     public static void testTankOfGasDetonates(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        FluidStack gas = new FluidStack(entry("fuel_gaseous").source().get(), 2_000);
+        BCFluidStack gas = new BCFluidStack(entry("fuel_gaseous").source().get(), 2_000);
         boolean canBurnBefore = BCEnergyConfig.canBurnEnabled();
         boolean gasExplodesBefore = BCEnergyConfig.gasExplodesEnabled();
         ContainedDetonation modeBefore = BCEnergyConfig.containedFluidDetonation.get();

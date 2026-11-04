@@ -8,9 +8,8 @@ package buildcraft.lib.inventory.filter;
 
 import net.minecraft.resources.Identifier;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.fluids.BCFluidStack;
 
 public class InvertedFluidFilter implements IFluidFilter {
 
@@ -21,7 +20,7 @@ public class InvertedFluidFilter implements IFluidFilter {
     }
 
     @Override
-    public boolean matches(FluidStack fluid) {
+    public boolean matches(BCFluidStack fluid) {
         return !delegate.matches(fluid);
     }
 }

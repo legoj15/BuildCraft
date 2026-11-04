@@ -10,8 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeEventFluid;
 import buildcraft.api.transport.pipe.PipeEventHandler;
@@ -29,7 +28,7 @@ public class PipeBehaviourDiamondFluid extends PipeBehaviourDiamond {
 
     @PipeEventHandler
     public void sideCheck(PipeEventFluid.SideCheck sideCheck) {
-        FluidStack toCompare = sideCheck.fluid;
+        BCFluidStack toCompare = sideCheck.fluid;
         for (Direction face : Direction.values()) {
             if (sideCheck.isAllowed(face) && pipe.isConnected(face)) {
                 int offset = FILTERS_PER_SIDE * face.ordinal();
@@ -39,13 +38,13 @@ public class PipeBehaviourDiamondFluid extends PipeBehaviourDiamond {
                     ItemStack compareTo = filters.getStackInSlot(offset + i);
                     if (compareTo.isEmpty()) continue;
 
-                    FluidStack target = FluidUtilBC.getFluidContained(compareTo);
+                    BCFluidStack target = FluidUtilBC.getFluidContained(compareTo);
 
                     if (target.isEmpty()) {
                         continue;
                     }
                     foundItem = true;
-                    if (FluidStack.isSameFluidSameComponents(target, toCompare)) {
+                    if (BCFluidStack.isSameFluidSameComponents(target, toCompare)) {
                         sideAllowed = true;
                         break;
                     }

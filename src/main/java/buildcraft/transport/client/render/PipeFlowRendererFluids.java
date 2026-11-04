@@ -18,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
 import net.minecraft.client.renderer.rendertype.RenderType;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -26,8 +27,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluid;
-
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
@@ -105,7 +104,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
      *  1.21.10/1.21.11/26.1/26.2. */
     public void render(PipeFlowFluids flow, double x, double y, double z, float partialTicks,
                        SubmitNodeCollector collector, PoseStack poseStack) {
-        FluidStack forRender = flow.getFluidStackForRender();
+        BCFluidStack forRender = flow.getFluidStackForRender();
         if (forRender == null || forRender.isEmpty()) {
             return;
         }
@@ -120,7 +119,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
     @Override
     public void render(PipeFlowFluids flow, double x, double y, double z,
                         float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
-        FluidStack forRender = flow.getFluidStackForRender();
+        BCFluidStack forRender = flow.getFluidStackForRender();
         if (forRender == null || forRender.isEmpty()) {
             return;
         }
@@ -142,7 +141,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
      *  Node-agnostic: {@code pose} / {@code fluidBB} come from the {@code submitCustomGeometry}
      *  lambda on >=1.21.10 and from the immediate-mode buffer source on 1.21.1.
      *  {@code ensureRenderCache(flow, forRender)} must have run first. */
-    private static void drawAll(PipeFlowFluids flow, FluidStack forRender, float partialTicks,
+    private static void drawAll(PipeFlowFluids flow, BCFluidStack forRender, float partialTicks,
                                 PoseStack.Pose pose, VertexConsumer fluidBB) {
         Identifier stillTexture = flow.renderCacheSpriteId;
         if (stillTexture == null) return;
@@ -291,7 +290,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
      *  singleton works because vanilla and modded fluids are registered as singletons.
      *  The atlas sprite itself is looked up per frame from the cached id, which
      *  naturally survives atlas reloads. */
-    private static void ensureRenderCache(PipeFlowFluids flow, FluidStack fluidStack) {
+    private static void ensureRenderCache(PipeFlowFluids flow, BCFluidStack fluidStack) {
         Fluid current = fluidStack.getFluid();
         if (current == flow.renderCacheFluid) return;
         flow.renderCacheFluid = current;

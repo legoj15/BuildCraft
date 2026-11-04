@@ -4,10 +4,10 @@
  * of the license located in http://www.mod-buildcraft.com/MMPL-1.0.txt */
 package buildcraft.api.core;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 public interface IFluidFilter {
 
-    boolean matches(FluidStack fluid);
+    boolean matches(BCFluidStack fluid);
 }
 

@@ -34,14 +34,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -216,8 +217,8 @@ public class TileBuilder extends TileBC_Neptune
         }
 
         @Override
-        public FluidStack getFluidInTank(int slot) {
-            return slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : FluidStack.EMPTY;
+        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int slot) {
+            return NeoFluidStacks.toNeo(slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : BCFluidStack.EMPTY);
         }
 
         @Override
@@ -226,12 +227,12 @@ public class TileBuilder extends TileBC_Neptune
         }
 
         @Override
-        public boolean isFluidValid(int slot, FluidStack stack) {
-            return slot >= 0 && slot < tanks.length && tanks[slot].isFluidValid(0, stack);
+        public boolean isFluidValid(int slot, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
+            return slot >= 0 && slot < tanks.length && tanks[slot].isFluidValid(0, stackNeo);
         }
 
         @Override
-        public int fill(FluidStack resource, FluidAction action) {
+        public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
             for (int i = 0; i < tanks.length; i++) {
                 int n = tanks[i].fill(0, resource, action.simulate());
                 if (n > 0) {
@@ -242,24 +243,24 @@ public class TileBuilder extends TileBC_Neptune
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
+        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
             for (int i = 0; i < tanks.length; i++) {
-                FluidStack inTank = tanks[i].getFluidStack(0);
-                if (!inTank.isEmpty() && FluidStack.isSameFluidSameComponents(inTank, resource)) {
-                    return tanks[i].drain(0, resource.getAmount(), action.simulate());
+                BCFluidStack inTank = tanks[i].getFluidStack(0);
+                if (!inTank.isEmpty() && BCFluidStack.isSameFluidSameComponents(inTank, resource)) {
+                    return NeoFluidStacks.toNeo(tanks[i].drain(0, resource.getAmount(), action.simulate()));
                 }
             }
-            return FluidStack.EMPTY;
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
 
         @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
+        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
             for (int i = 0; i < tanks.length; i++) {
                 if (!tanks[i].getFluidStack(0).isEmpty()) {
-                    return tanks[i].drain(0, maxDrain, action.simulate());
+                    return NeoFluidStacks.toNeo(tanks[i].drain(0, maxDrain, action.simulate()));
                 }
             }
-            return FluidStack.EMPTY;
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
     };*/
     //?}
@@ -629,7 +630,7 @@ public class TileBuilder extends TileBC_Neptune
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
         // Tanks: store fluid id + amount per tank (same shape as TileEngineIron_BC8).
         for (int i = 0; i < tanks.length; i++) {
-            FluidStack fluid = tanks[i].getFluidStack(0);
+            BCFluidStack fluid = tanks[i].getFluidStack(0);
             if (!fluid.isEmpty()) {
                 Identifier id = BuiltInRegistries.FLUID.getKey(fluid.getFluid());
                 if (id != null) {
@@ -734,7 +735,7 @@ public class TileBuilder extends TileBC_Neptune
                     if (fluid != null && fluid != Fluids.EMPTY) {
                         int amount = input.getIntOr("tank_" + i + "_amount", 0);
                         if (amount > 0) {
-                            tanks[i].fill(0, new FluidStack(fluid, amount), false);
+                            tanks[i].fill(0, new BCFluidStack(fluid, amount), false);
                         }
                     }
                 }
@@ -1019,7 +1020,7 @@ public class TileBuilder extends TileBC_Neptune
      */
     @Override
     public void onBlockBroken(BlockPos brokenPos, java.util.List<ItemStack> drops, int xp,
-            net.neoforged.neoforge.fluids.FluidStack capturedFluid) {
+            buildcraft.api.fluids.BCFluidStack capturedFluid) {
         if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
         for (ItemStack stack : drops) {
             if (stack.isEmpty()) continue;
@@ -1037,7 +1038,7 @@ public class TileBuilder extends TileBC_Neptune
         // Fill each tank in order (matching the combined tankManager's fan-out) until the
         // captured fluid is exhausted; tank-full overflow is silently dropped (see javadoc).
         if (!capturedFluid.isEmpty() && getFluidMode() == buildcraft.builders.snapshot.EnumFluidHandlingMode.CLEAR) {
-            FluidStack remaining = capturedFluid.copy();
+            BCFluidStack remaining = capturedFluid.copy();
             for (int i = 0; i < tanks.length && !remaining.isEmpty(); i++) {
                 int filled = tanks[i].fill(0, remaining, false);
                 if (filled > 0) {

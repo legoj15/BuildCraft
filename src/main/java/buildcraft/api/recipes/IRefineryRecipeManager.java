@@ -6,24 +6,24 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 public interface IRefineryRecipeManager {
-    IHeatableRecipe createHeatingRecipe(FluidStack in, FluidStack out, int heatFrom, int heatTo);
+    IHeatableRecipe createHeatingRecipe(BCFluidStack in, BCFluidStack out, int heatFrom, int heatTo);
 
-    default IHeatableRecipe addHeatableRecipe(FluidStack in, FluidStack out, int heatFrom, int heatTo) {
+    default IHeatableRecipe addHeatableRecipe(BCFluidStack in, BCFluidStack out, int heatFrom, int heatTo) {
         return getHeatableRegistry().addRecipe(createHeatingRecipe(in, out, heatFrom, heatTo));
     }
 
-    ICoolableRecipe createCoolableRecipe(FluidStack in, FluidStack out, int heatFrom, int heatTo);
+    ICoolableRecipe createCoolableRecipe(BCFluidStack in, BCFluidStack out, int heatFrom, int heatTo);
 
-    default ICoolableRecipe addCoolableRecipe(FluidStack in, FluidStack out, int heatFrom, int heatTo) {
+    default ICoolableRecipe addCoolableRecipe(BCFluidStack in, BCFluidStack out, int heatFrom, int heatTo) {
         return getCoolableRegistry().addRecipe(createCoolableRecipe(in, out, heatFrom, heatTo));
     }
 
-    IDistillationRecipe createDistillationRecipe(FluidStack in, FluidStack outGas, FluidStack outLiquid, long powerRequired);
+    IDistillationRecipe createDistillationRecipe(BCFluidStack in, BCFluidStack outGas, BCFluidStack outLiquid, long powerRequired);
 
-    default IDistillationRecipe addDistillationRecipe(FluidStack in, FluidStack outGas, FluidStack outLiquid, long powerRequired) {
+    default IDistillationRecipe addDistillationRecipe(BCFluidStack in, BCFluidStack outGas, BCFluidStack outLiquid, long powerRequired) {
         return getDistillationRegistry().addRecipe(createDistillationRecipe(in, outGas, outLiquid, powerRequired));
     }
 
@@ -42,7 +42,7 @@ public interface IRefineryRecipeManager {
         Collection<R> getAllRecipes();
 
         @Nullable
-        R getRecipeForInput(@Nullable FluidStack fluid);
+        R getRecipeForInput(@Nullable BCFluidStack fluid);
 
         Collection<R> removeRecipes(Predicate<R> toRemove);
 
@@ -55,12 +55,12 @@ public interface IRefineryRecipeManager {
     }
 
     interface IRefineryRecipe {
-        FluidStack in();
+        BCFluidStack in();
     }
 
     interface IHeatExchangerRecipe extends IRefineryRecipe {
         @Nullable
-        FluidStack out();
+        BCFluidStack out();
 
         int heatFrom();
 
@@ -74,9 +74,9 @@ public interface IRefineryRecipeManager {
     interface IDistillationRecipe extends IRefineryRecipe {
         long powerRequired();
 
-        FluidStack outGas();
+        BCFluidStack outGas();
 
-        FluidStack outLiquid();
+        BCFluidStack outLiquid();
     }
 }
 

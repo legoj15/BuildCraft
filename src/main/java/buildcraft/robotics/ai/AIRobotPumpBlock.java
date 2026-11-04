@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -21,8 +20,10 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 //?}
 
 import buildcraft.api.core.NbtApiUtil;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.robotics.RobotProtection;
 
@@ -84,10 +85,10 @@ public class AIRobotPumpBlock extends AIRobot {
 
         if (blockToPump != null && robot.level() instanceof ServerLevel serverLevel
                 && BlockUtil.drainStaysInLoadedChunks(serverLevel, blockToPump, null)) {
-            FluidStack preview = BlockUtil.drainBlock(serverLevel, blockToPump, false);
+            BCFluidStack preview = BlockUtil.drainBlock(serverLevel, blockToPump, false);
             if (preview != null) {
                 //? if >=1.21.10 {
-                FluidResource resource = FluidResource.of(preview);
+                FluidResource resource = FluidResource.of(NeoFluidStacks.toNeo(preview));
                 int room = robot.getFluidHandler().getCapacityAsInt(0, resource)
                         - robot.getFluidHandler().getAmountAsInt(0);
                 if (room >= BUCKET && isPermitted(serverLevel)) {
@@ -110,10 +111,10 @@ public class AIRobotPumpBlock extends AIRobot {
                     }
                 }
                 //?} else {
-                /*int room = robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.SIMULATE);
+                /*int room = robot.getFluidHandler().fill(NeoFluidStacks.toNeo(preview), IFluidHandler.FluidAction.SIMULATE);
                 if (room >= BUCKET && isPermitted(serverLevel)) {
                     if (BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
-                        robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.EXECUTE);
+                        robot.getFluidHandler().fill(NeoFluidStacks.toNeo(preview), IFluidHandler.FluidAction.EXECUTE);
                         pumped = BUCKET;
                     } else {
                         refused = true;

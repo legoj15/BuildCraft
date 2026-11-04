@@ -32,8 +32,7 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreBlocks;
@@ -376,13 +375,13 @@ public class BlockWaterloggingTester {
             BlockEntity before = level.getBlockEntity(abs);
             helper.assertTrue(before != null, block + " must have a block entity");
 
-            FluidStack simulated = BlockUtil.drainBlock(level, abs, false);
+            BCFluidStack simulated = BlockUtil.drainBlock(level, abs, false);
             helper.assertTrue(simulated != null && simulated.getFluid() == Fluids.WATER && simulated.getAmount() == 1000,
                 "a waterlogged " + block + " must offer one bucket of water, got " + simulated);
             helper.assertTrue(helper.getBlockState(rel).getValue(BlockStateProperties.WATERLOGGED),
                 "a simulated drain must not touch the " + block);
 
-            FluidStack drained = BlockUtil.drainBlock(level, abs, true);
+            BCFluidStack drained = BlockUtil.drainBlock(level, abs, true);
             helper.assertTrue(drained != null && drained.getFluid() == Fluids.WATER && drained.getAmount() == 1000,
                 "draining a waterlogged " + block + " must yield one bucket of water, got " + drained);
             helper.assertBlockPresent(block, rel);
@@ -400,7 +399,7 @@ public class BlockWaterloggingTester {
             "kelp must not be drainable");
         helper.assertBlockPresent(Blocks.KELP, kelpRel);
 
-        FluidStack water = BlockUtil.drainBlock(level, helper.absolutePos(waterRel), true);
+        BCFluidStack water = BlockUtil.drainBlock(level, helper.absolutePos(waterRel), true);
         helper.assertTrue(water != null && water.getFluid() == Fluids.WATER && water.getAmount() == 1000,
             "a plain water source must drain one bucket, got " + water);
         helper.assertTrue(helper.getBlockState(waterRel).isAir(), "a drained water source must leave air");

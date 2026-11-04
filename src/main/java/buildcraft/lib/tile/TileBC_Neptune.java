@@ -127,7 +127,7 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
         if (tanks != null) {
             for (buildcraft.lib.fluid.BCFluidTank tank : tanks) {
                 if (tank != null && !tank.isTankEmpty(0)) {
-                    tank.setFluidStack(0, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+                    tank.setFluidStack(0, buildcraft.api.fluids.BCFluidStack.EMPTY);
                 }
             }
         }

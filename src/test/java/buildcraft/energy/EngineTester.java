@@ -356,7 +356,7 @@ public class EngineTester {
             //? if >=1.21.10 {
             engine.tankCoolant.set(0, FluidResource.EMPTY, 0);
             //?} else {
-            /*engine.tankCoolant.setFluidStack(0, net.neoforged.neoforge.fluids.FluidStack.EMPTY);*/
+            /*engine.tankCoolant.setFluidStack(0, buildcraft.api.fluids.BCFluidStack.EMPTY);*/
             //?}
             // Creative: ice converts to water and the block is NOT consumed (the regressed path).
             clickCoolantTankWithIce(helper, engine, true);
@@ -504,7 +504,7 @@ public class EngineTester {
                 () -> {
                     TileEngineIron_BC8 engine = ironEngineAt(helper, enginePos);
                     // Plenty of water coolant (fill() is node-uniform — same call loadTank uses).
-                    engine.tankCoolant.fill(0, new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+                    engine.tankCoolant.fill(0, new buildcraft.api.fluids.BCFluidStack(Fluids.WATER, 10_000), false);
 
                     // Force overheat. Iron heat is its own accumulator (not power-derived); fastForwardEnergy
                     // sets the heat field directly (the power it also sets is inert for iron's heat path).
@@ -562,7 +562,7 @@ public class EngineTester {
             for (int i = 0; i < 3000; i++) {
                 if (engine.tankCoolant.getAmountMb(0) < TileEngineIron_BC8.MAX_COOLANT_PER_TICK) {
                     engine.tankCoolant.fill(0,
-                        new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+                        new buildcraft.api.fluids.BCFluidStack(Fluids.WATER, 10_000), false);
                 }
                 engine.updateHeatLevel();
             }
@@ -599,7 +599,7 @@ public class EngineTester {
                 throw new IllegalStateException("Failed to place Combustion Engine!");
             }
             engine.tankCoolant.fill(0,
-                new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+                new buildcraft.api.fluids.BCFluidStack(Fluids.WATER, 10_000), false);
             // RED (204 °C) is above IDEAL_HEAT (100), so the powered engine cools and pulls coolant.
             fastForwardEnergy(engine, 0.80f);
 

@@ -8,6 +8,7 @@ package buildcraft.lib.gui.elem;
 
 import java.util.List;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.gui.BCGraphics;
 //? if >=1.21.10 {
@@ -15,8 +16,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.BuildCraftGui;
@@ -74,7 +73,7 @@ public class GuiElementFluidTank implements IInteractionElement {
     public void drawBackground(float partialTicks) {
         if (tank == null) return;
 
-        FluidStack fluid = tank.getFluidStack(0);
+        BCFluidStack fluid = tank.getFluidStack(0);
         long capacity = tank.getCapacityMb(0);
         long amount = tank.getAmountMb(0);
         if (!fluid.isEmpty() && capacity > 0 && amount > 0) {
@@ -90,7 +89,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         }
     }
 
-    private void drawFluid(BCGraphics graphics, FluidStack fluid, int amount, int capacity) {
+    private void drawFluid(BCGraphics graphics, BCFluidStack fluid, int amount, int capacity) {
         int x = (int) area.getX();
         int y = (int) area.getY();
         int w = (int) area.getWidth();
@@ -106,7 +105,7 @@ public class GuiElementFluidTank implements IInteractionElement {
     /** Fills the {@code w} x {@code h} rectangle at {@code (x, fillY)} with {@code fluid}'s still sprite, tiled 16x16
      *  from the top-left and tinted by the fluid's colour. Also draws the REI categories' tanks (REI's own fluid
      *  renderer draws nothing from 21.9 on). */
-    public static void drawTiledFluid(BCGraphics graphics, FluidStack fluid, int x, int fillY, int w, int fillHeight) {
+    public static void drawTiledFluid(BCGraphics graphics, BCFluidStack fluid, int x, int fillY, int w, int fillHeight) {
         TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
         if (sprite == null || w <= 0 || fillHeight <= 0) return;
 
@@ -173,7 +172,7 @@ public class GuiElementFluidTank implements IInteractionElement {
      * shows the whole readout in buckets — including a sub-bucket amount ("0.2 / 4 buckets"), never a mixed
      * "174 mB / 4 buckets". Shared by the per-screen tank-tooltip renderers and {@link #addToolTips}.
      */
-    public static List<net.minecraft.network.chat.Component> buildTankTooltip(FluidStack fluid, int amount, int capacity) {
+    public static List<net.minecraft.network.chat.Component> buildTankTooltip(BCFluidStack fluid, int amount, int capacity) {
         List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
         if (amount > 0 && fluid != null && !fluid.isEmpty()) {
             lines.add(fluid.getHoverName());
@@ -194,7 +193,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         if (tank == null) return;
         if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
 
-        FluidStack fluid = tank.getFluidStack(0);
+        BCFluidStack fluid = tank.getFluidStack(0);
         int capacity = tank.getCapacityMb(0);
         int amount = tank.getAmountMb(0);
         // Mirrors buildTankTooltip: a full tank shows its name + "x / cap" in grey; an empty tank shows

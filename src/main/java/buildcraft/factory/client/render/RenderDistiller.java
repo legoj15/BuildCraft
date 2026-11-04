@@ -42,8 +42,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.client.renderer.rendertype.RenderType;
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
 import buildcraft.lib.client.render.fluid.FluidSprites;
@@ -200,7 +200,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         FluidSmoother.FluidStackInterp interp = smoother.getFluidForRender(partialTicks);
         if (interp == null || interp.amount() <= 0) return;
 
-        FluidStack fluid = interp.fluid();
+        BCFluidStack fluid = interp.fluid();
         int capacity = smoother.getCapacity();
         if (capacity <= 0) return;
 

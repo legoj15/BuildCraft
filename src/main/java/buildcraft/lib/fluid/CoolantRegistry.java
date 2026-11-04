@@ -11,8 +11,7 @@ import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.ICoolant;
 import buildcraft.api.fuels.ICoolantManager;
 import buildcraft.api.fuels.ISolidCoolant;
@@ -36,12 +35,12 @@ public enum CoolantRegistry implements ICoolantManager {
     }
 
     @Override
-    public ICoolant addCoolant(FluidStack fluid, float degreesCoolingPerMb) {
+    public ICoolant addCoolant(BCFluidStack fluid, float degreesCoolingPerMb) {
         return addCoolant(new Coolant(fluid, degreesCoolingPerMb));
     }
 
     @Override
-    public ISolidCoolant addSolidCoolant(ItemStack solid, FluidStack fluid, float multiplier) {
+    public ISolidCoolant addSolidCoolant(ItemStack solid, BCFluidStack fluid, float multiplier) {
         return addSolidCoolant(new SolidCoolant(solid, fluid, multiplier));
     }
 
@@ -56,7 +55,7 @@ public enum CoolantRegistry implements ICoolantManager {
     }
 
     @Override
-    public ICoolant getCoolant(FluidStack fluid) {
+    public ICoolant getCoolant(BCFluidStack fluid) {
         if (fluid == null || fluid.isEmpty()) {
             return null;
         }
@@ -69,7 +68,7 @@ public enum CoolantRegistry implements ICoolantManager {
     }
 
     @Override
-    public float getDegreesPerMb(FluidStack fluid, float heat) {
+    public float getDegreesPerMb(BCFluidStack fluid, float heat) {
         if (fluid == null || fluid.isEmpty()) {
             return 0;
         }
@@ -93,21 +92,21 @@ public enum CoolantRegistry implements ICoolantManager {
     }
 
     public static class Coolant implements ICoolant {
-        private final FluidStack fluid;
+        private final BCFluidStack fluid;
         private final float degreesCoolingPerMb;
 
-        public Coolant(FluidStack fluid, float degreesCoolingPerMb) {
+        public Coolant(BCFluidStack fluid, float degreesCoolingPerMb) {
             this.fluid = fluid;
             this.degreesCoolingPerMb = degreesCoolingPerMb;
         }
 
         @Override
-        public boolean matchesFluid(FluidStack stack) {
-            return FluidStack.isSameFluid(fluid, stack);
+        public boolean matchesFluid(BCFluidStack stack) {
+            return BCFluidStack.isSameFluid(fluid, stack);
         }
 
         @Override
-        public float getDegreesCoolingPerMB(FluidStack stack, float heat) {
+        public float getDegreesCoolingPerMB(BCFluidStack stack, float heat) {
             if (matchesFluid(stack)) {
                 return degreesCoolingPerMb;
             }
@@ -115,29 +114,29 @@ public enum CoolantRegistry implements ICoolantManager {
         }
 
         @Override
-        public FluidStack getRepresentativeFluid() {
+        public BCFluidStack getRepresentativeFluid() {
             return fluid;
         }
     }
 
     public static class SolidCoolant implements ISolidCoolant {
         private final ItemStack solid;
-        private final FluidStack fluid;
+        private final BCFluidStack fluid;
         private final float multiplier;
 
-        public SolidCoolant(ItemStack solid, FluidStack fluid, float multiplier) {
+        public SolidCoolant(ItemStack solid, BCFluidStack fluid, float multiplier) {
             this.solid = solid;
             this.fluid = fluid;
             this.multiplier = multiplier;
         }
 
         @Override
-        public FluidStack getFluidFromSolidCoolant(ItemStack stack) {
+        public BCFluidStack getFluidFromSolidCoolant(ItemStack stack) {
             if (stack == null || !ItemStack.isSameItem(stack, solid)) {
                 return null;
             }
             int liquidAmount = (int) (stack.getCount() * fluid.getAmount() * multiplier / solid.getCount());
-            return new FluidStack(fluid.getFluid(), liquidAmount);
+            return new BCFluidStack(fluid.getFluid(), liquidAmount);
         }
 
         @Override

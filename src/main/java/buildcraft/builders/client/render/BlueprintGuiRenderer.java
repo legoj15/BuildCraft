@@ -42,8 +42,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.builders.client.render.pip.PreviewBlockModelRenderer;
 import buildcraft.builders.client.render.pip.PipePreviewModel;
@@ -260,7 +259,7 @@ public final class BlueprintGuiRenderer {
                                         Blueprint blueprint, BlockPos size,
                                         int xCell, int yCell, int zCell, FluidState fluidState) {
         Fluid fluid = fluidState.getType();
-        FluidStack stack = new FluidStack(fluid, 1);
+        BCFluidStack stack = new BCFluidStack(fluid, 1);
 
         TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
         if (sprite == null) {

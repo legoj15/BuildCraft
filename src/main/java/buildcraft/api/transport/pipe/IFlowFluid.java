@@ -2,21 +2,19 @@ package buildcraft.api.transport.pipe;
 
 import javax.annotation.Nullable;
 
-
 import net.minecraft.world.InteractionResult;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 public interface IFlowFluid {
     /** @deprecated use the version below with a simulate paramater. */
     @Nullable
     @Deprecated
-    default FluidStack tryExtractFluid(int millibuckets, Direction from, FluidStack filter) {
+    default BCFluidStack tryExtractFluid(int millibuckets, Direction from, BCFluidStack filter) {
         return tryExtractFluid(millibuckets, from, filter, false);
     }
 
@@ -25,7 +23,7 @@ public interface IFlowFluid {
      * @param filter The fluidstack that the extracted fluid must match, or null for any fluid.
      * @return The fluidstack extracted and inserted into the pipe. */
     @Nullable
-    FluidStack tryExtractFluid(int millibuckets, Direction from, FluidStack filter, boolean simulate);
+    BCFluidStack tryExtractFluid(int millibuckets, Direction from, BCFluidStack filter, boolean simulate);
 
     /** @deprecated use the version below with a simulate paramater. */
     @Deprecated
@@ -33,7 +31,7 @@ public interface IFlowFluid {
         return tryExtractFluidAdv(millibuckets, from, filter, false);
     }
 
-    /** Advanced version of {@link #tryExtractFluid(int, Direction, FluidStack, boolean)}. Note that this only works for
+    /** Advanced version of {@link #tryExtractFluid(int, Direction, BCFluidStack, boolean)}. Note that this only works for
      * fluid handlers that ALSO extend {@link IFluidHandlerAdv}
      * 
      * @param millibuckets
@@ -49,7 +47,7 @@ public interface IFlowFluid {
      * 
      * @param from The side that the fluid should *not* go in, or null if the fluid may flow in any direction.
      * @return The amount of fluid that was accepted, or 0 if no fluid was accepted. */
-    int insertFluidsForce(FluidStack fluid, @Nullable Direction from, boolean simulate);
+    int insertFluidsForce(BCFluidStack fluid, @Nullable Direction from, boolean simulate);
 
     /** Tries to extract fluids directly from the pipe. NOTE: This is intended for {@link PipeBehaviour} and
      * {@link PipePluggable} implementors ONLY! This will result in very buggy behaviour if external tiles try to use
@@ -61,6 +59,6 @@ public interface IFlowFluid {
      * @param simulate
      * @return */
     @Nullable
-    FluidStack extractFluidsForce(int min, int max, @Nullable Direction section, boolean simulate);
+    BCFluidStack extractFluidsForce(int min, int max, @Nullable Direction section, boolean simulate);
 }
 

@@ -29,8 +29,7 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreItems;
@@ -159,7 +158,7 @@ public class CommandReplaceTester {
                     clearDrops(helper, source);
                     clearDrops(helper, destination);
                     helper.setBlock(source, BCFactoryBlocks.TANK.get());
-                    tile(helper, source, TileTank.class).tank.setFluidStack(0, new FluidStack(Fluids.WATER, 1000));
+                    tile(helper, source, TileTank.class).tank.setFluidStack(0, new BCFluidStack(Fluids.WATER, 1000));
                     BlockPos a = helper.absolutePos(source);
                     BlockPos b = helper.absolutePos(destination);
                     command(helper, "clone " + a.getX() + " " + a.getY() + " " + a.getZ() + " "
@@ -308,7 +307,7 @@ public class CommandReplaceTester {
     private static List<Rig> buildRigs(GameTestHelper helper) {
         List<Rig> rigs = new ArrayList<>();
         Item shard = BCCoreItems.FRAGILE_FLUID_CONTAINER.get();
-        FluidStack water = new FluidStack(Fluids.WATER, 1000);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 1000);
 
         helper.setBlock(TANK, BCFactoryBlocks.TANK.get());
         tile(helper, TANK, TileTank.class).tank.setFluidStack(0, water);

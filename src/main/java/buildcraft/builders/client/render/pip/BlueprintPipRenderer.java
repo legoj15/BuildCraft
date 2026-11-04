@@ -70,8 +70,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
@@ -652,9 +651,9 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
             FluidState fluidState, int lightmap) {
     *///?}
         Fluid fluid = fluidState.getType();
-        // FluidUtilBC expects a FluidStack; the amount doesn't matter here — only the fluid
+        // FluidUtilBC expects a BCFluidStack; the amount doesn't matter here — only the fluid
         // identity is used to look up texture + colour.
-        FluidStack stack = new FluidStack(fluid, 1);
+        BCFluidStack stack = new BCFluidStack(fluid, 1);
 
         TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
         if (sprite == null) return;

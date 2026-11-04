@@ -19,8 +19,7 @@ import me.shedaniel.rei.api.client.gui.widgets.Tooltip;
 import me.shedaniel.rei.api.client.gui.widgets.TooltipContext;
 import me.shedaniel.rei.api.common.entry.EntryStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 
@@ -32,11 +31,11 @@ import buildcraft.lib.gui.elem.GuiElementFluidTank;
  * @param <T> the entry's value type (architectury's fluid stack; never read here)
  */
 final class ReiFluidTankRenderer<T> implements EntryRenderer<T> {
-    private final FluidStack fluid;
+    private final BCFluidStack fluid;
     private final EntryStack<T> plain;
 
     /** @param plain the same entry without this renderer, whose default renderer supplies the tooltip */
-    ReiFluidTankRenderer(FluidStack fluid, EntryStack<T> plain) {
+    ReiFluidTankRenderer(BCFluidStack fluid, EntryStack<T> plain) {
         this.fluid = fluid;
         this.plain = plain;
     }

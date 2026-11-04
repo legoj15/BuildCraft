@@ -13,8 +13,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
@@ -26,11 +24,13 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 // methods stand in.*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.block.BlockHeatExchange;
 import buildcraft.factory.block.BlockHeatExchange.EnumExchangePart;
 import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.OutputTank;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
@@ -60,7 +60,7 @@ public class HeatExchangerTester {
     public static void testOutputTankRejectsExternalInsert(GameTestHelper helper) {
         OutputTank tank = new OutputTank();
         //? if >=1.21.10 {
-        FluidResource lava = FluidResource.of(new FluidStack(Fluids.LAVA, 1000));
+        FluidResource lava = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.LAVA, 1000)));
         try (Transaction tx = Transaction.openRoot()) {
             int inserted = tank.insert(0, lava, 1000, tx);
             assertTrue(inserted == 0,
@@ -70,7 +70,7 @@ public class HeatExchangerTester {
         assertTrue(tank.getAmountAsLong(0) == 0,
                 "OutputTank should still be empty after rejected external insert");
         //?} else {
-        /*FluidStack lava = new FluidStack(Fluids.LAVA, 1000);
+        /*BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 1000);
         int inserted = tank.fill(0, lava, false);
         assertTrue(inserted == 0,
                 "External insert on OutputTank must return 0, got " + inserted);
@@ -88,7 +88,7 @@ public class HeatExchangerTester {
     public static void testOutputTankAcceptsInternalInsert(GameTestHelper helper) {
         OutputTank tank = new OutputTank();
         //? if >=1.21.10 {
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 500)));
         try (Transaction tx = Transaction.openRoot()) {
             int inserted = tank.insertInternal(0, water, 500, tx);
             assertTrue(inserted == 500,
@@ -98,7 +98,7 @@ public class HeatExchangerTester {
         assertTrue(tank.getAmountAsLong(0) == 500,
                 "OutputTank should hold 500mb after internal insert, got " + tank.getAmountAsLong(0));
         //?} else {
-        /*int inserted = tank.fillInternal(new FluidStack(Fluids.WATER, 500), false);
+        /*int inserted = tank.fillInternal(new BCFluidStack(Fluids.WATER, 500), false);
         assertTrue(inserted == 500,
                 "Internal insert on OutputTank should accept full amount, got " + inserted);
         assertTrue(tank.getAmountMb(0) == 500,
@@ -115,7 +115,7 @@ public class HeatExchangerTester {
     public static void testOutputTankInternalFlagResetsAfterCall(GameTestHelper helper) {
         OutputTank tank = new OutputTank();
         //? if >=1.21.10 {
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 100));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 100)));
         try (Transaction tx = Transaction.openRoot()) {
             tank.insertInternal(0, water, 100, tx);
             tx.commit();
@@ -130,7 +130,7 @@ public class HeatExchangerTester {
         assertTrue(tank.getAmountAsLong(0) == 100,
                 "OutputTank amount should be unchanged after rejected external insert");
         //?} else {
-        /*FluidStack water = new FluidStack(Fluids.WATER, 100);
+        /*BCFluidStack water = new BCFluidStack(Fluids.WATER, 100);
         int filled = tank.fillInternal(water, false);
         assertTrue(filled == 100,
                 "Internal insert on OutputTank should accept full amount, got " + filled);
@@ -156,7 +156,7 @@ public class HeatExchangerTester {
         //? if >=1.21.10 {
         OutputTank out = new OutputTank();
         FluidStacksResourceHandler in = new FluidStacksResourceHandler(1, 2000);
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
         // Pre-fill input
         in.set(0, water, 2000);
         // One craft step transfers 5mb
@@ -177,12 +177,12 @@ public class HeatExchangerTester {
         // Mirror that here: fill 5 into the output and drain 5 from the input.
         OutputTank out = new OutputTank();
         BCFluidTank in = new BCFluidTank(1, 2000);
-        in.setFluidStack(0, new FluidStack(Fluids.WATER, 2000));
-        FluidStack five = new FluidStack(Fluids.WATER, 5);
+        in.setFluidStack(0, new BCFluidStack(Fluids.WATER, 2000));
+        BCFluidStack five = new BCFluidStack(Fluids.WATER, 5);
         int simFilled = out.fillInternal(five, true);
         assertTrue(simFilled == 5, "simulate fill should promise 5mb, got " + simFilled);
         assertTrue(out.getAmountMb(0) == 0, "simulate fill must not mutate the output");
-        FluidStack simDrained = in.drain(0, 5, true);
+        BCFluidStack simDrained = in.drain(0, 5, true);
         assertTrue(simDrained.getAmount() == 5, "simulate drain should promise 5mb, got " + simDrained.getAmount());
         assertTrue(in.getAmountMb(0) == 2000, "simulate drain must not mutate the input");
         // Execute both halves — the balanced craft.
@@ -249,7 +249,7 @@ public class HeatExchangerTester {
         //? if >=1.21.10 {
         OutputTank tank = new OutputTank();
         // Seed with a non-empty value, mirroring a stale client-side cache.
-        FluidResource hotOil = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        FluidResource hotOil = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
         try (Transaction tx = Transaction.openRoot()) {
             tank.insertInternal(0, hotOil, 1000, tx);
             tx.commit();
@@ -266,10 +266,10 @@ public class HeatExchangerTester {
         /*// 1.21.1: setFluidStack(0, EMPTY) is the load-of-empty path (the NBT round-trip omits the
         // absent key; production's readData hands the empty stack through).
         OutputTank tank = new OutputTank();
-        tank.fillInternal(new FluidStack(Fluids.WATER, 1000), false);
+        tank.fillInternal(new BCFluidStack(Fluids.WATER, 1000), false);
         assertTrue(tank.getAmountMb(0) == 1000,
                 "Setup: tank should hold 1000mB before the simulated load");
-        tank.setFluidStack(0, FluidStack.EMPTY);
+        tank.setFluidStack(0, BCFluidStack.EMPTY);
         assertTrue(tank.getAmountMb(0) == 0,
                 "Tank must be empty after load-of-empty, got " + tank.getAmountMb(0));
         assertTrue(tank.getFluidStack(0).isEmpty(),
@@ -288,7 +288,7 @@ public class HeatExchangerTester {
         //? if >=1.21.10 {
         OutputTank out = new OutputTank();
         FluidStacksResourceHandler in = new FluidStacksResourceHandler(1, 2000);
-        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
         // Output is 1mb shy of full — only 1mb of the requested 5 will fit.
         try (Transaction setup = Transaction.openRoot()) {
             out.insertInternal(0, water, 1999, setup);
@@ -313,10 +313,10 @@ public class HeatExchangerTester {
         OutputTank out = new OutputTank();
         BCFluidTank in = new BCFluidTank(1, 2000);
         // Output is 1mb shy of full — only 1mb of the requested 5 will fit.
-        out.fillInternal(new FluidStack(Fluids.WATER, 1999), false);
-        in.setFluidStack(0, new FluidStack(Fluids.WATER, 100));
+        out.fillInternal(new BCFluidStack(Fluids.WATER, 1999), false);
+        in.setFluidStack(0, new BCFluidStack(Fluids.WATER, 100));
         // Probe first: the partial fill must not be executed.
-        FluidStack five = new FluidStack(Fluids.WATER, 5);
+        BCFluidStack five = new BCFluidStack(Fluids.WATER, 5);
         int simFilled = out.fillInternal(five, true);
         assertTrue(simFilled == 1, "simulate fill should promise only 1mb, got " + simFilled);
         boolean ok = simFilled == 5;

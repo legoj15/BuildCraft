@@ -16,11 +16,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
@@ -182,7 +181,7 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
     }
 
     @Override
-    protected FluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
+    protected BCFluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
         // 1.12.2 parity: the emerald (wood-diamond) FLUID pipe applies its whitelist/blacklist to
         // fluid extraction. Without this override it inherited PipeBehaviourWood.extractFluid and
         // pulled any fluid, making its filter slots inert.
@@ -193,11 +192,11 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
                     return flow.tryExtractFluid(millibuckets, dir, null, simulate);
                 }
                 Object result = flow.tryExtractFluidAdv(millibuckets, dir, makeFluidFilter(false), simulate);
-                return result instanceof FluidStack fs ? fs : null;
+                return result instanceof BCFluidStack fs ? fs : null;
             }
             case BLACK_LIST: {
                 Object result = flow.tryExtractFluidAdv(millibuckets, dir, makeFluidFilter(true), simulate);
-                return result instanceof FluidStack fs ? fs : null;
+                return result instanceof BCFluidStack fs ? fs : null;
             }
             case ROUND_ROBIN:
             default:
@@ -216,8 +215,8 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
             }
             boolean anyMatch = false;
             for (int i = 0; i < filters.getSlots(); i++) {
-                FluidStack f = getFilterFluid(i);
-                if (!f.isEmpty() && FluidStack.isSameFluidSameComponents(f, fluid)) {
+                BCFluidStack f = getFilterFluid(i);
+                if (!f.isEmpty() && BCFluidStack.isSameFluidSameComponents(f, fluid)) {
                     anyMatch = true;
                     break;
                 }
@@ -227,7 +226,7 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
     }
 
     /** The fluid represented by the filter item in the given slot (e.g. a bucket's contents), or empty. */
-    private FluidStack getFilterFluid(int slot) {
+    private BCFluidStack getFilterFluid(int slot) {
         return FluidUtilBC.getFluidContained(filters.getStackInSlot(slot));
     }
 

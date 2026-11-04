@@ -30,6 +30,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.builders.snapshot.NbtPath;
 import buildcraft.builders.snapshot.RequiredExtractor;
 import buildcraft.builders.snapshot.SchematicBlockFluid;
@@ -60,6 +61,16 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
 
     private static FluidStack water(int mb) {
         return new FluidStack(Fluids.WATER, mb);
+    }
+
+    // BC's own stack, for the tanks and snapshot rules that take one since S13 (same codec shape: see
+    // buildcraft.api.fluids.BCFluidStackCodecParityTest).
+    private static BCFluidStack bcLava(int mb) {
+        return new BCFluidStack(Fluids.LAVA, mb);
+    }
+
+    private static BCFluidStack bcWater(int mb) {
+        return new BCFluidStack(Fluids.WATER, mb);
     }
 
     /** Save, compare to the fixture, then load the fixture into a fresh object and require the same bytes again. */
@@ -155,8 +166,8 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
 
     private static BCFluidTank filledTank() {
         BCFluidTank tank = new BCFluidTank(2, 16_000);
-        tank.setFluidStack(0, lava(4321));
-        tank.setFluidStack(1, water(16_000));
+        tank.setFluidStack(0, bcLava(4321));
+        tank.setFluidStack(1, bcWater(16_000));
         return tank;
     }
 
@@ -174,14 +185,14 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
     @Test
     public void tileTankSave() {
         TileTank tile = newTank();
-        tile.tank.setFluidStack(0, lava(9000));
+        tile.tank.setFluidStack(0, bcLava(9000));
         pinTile("tile_tank", tile, GoldenSaveFormatTester::newTank, GoldenSaveFormatTester::saveTo, GoldenSaveFormatTester::loadFrom);
     }
 
     @Test
     public void tileTankPickBlockStripsTheFluidKey() {
         TileTank tile = newTank();
-        tile.tank.setFluidStack(0, lava(9000));
+        tile.tank.setFluidStack(0, bcLava(9000));
         //? if >=1.21.10 {
         ValueIoTestUtil.Written written = ValueIoTestUtil.newOutput();
         saveTo(tile, written.out);
@@ -205,9 +216,9 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
     @Test
     public void distillerSave() {
         TileDistiller_BC8 tile = newDistiller();
-        tile.getTankIn().setFluidStack(0, lava(1500));
-        tile.getTankGasOut().setFluidStack(0, water(300));
-        tile.getTankLiquidOut().setFluidStack(0, lava(40));
+        tile.getTankIn().setFluidStack(0, bcLava(1500));
+        tile.getTankGasOut().setFluidStack(0, bcWater(300));
+        tile.getTankLiquidOut().setFluidStack(0, bcLava(40));
         pinTile("tile_distiller", tile, GoldenSaveFormatTester::newDistiller,
                 GoldenSaveFormatTester::saveTo, GoldenSaveFormatTester::loadFrom);
     }
@@ -263,8 +274,8 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
 
     private static CompoundTag priced(RequiredExtractor extractor, CompoundTag tileNbt) {
         ListTag list = new ListTag();
-        for (FluidStack stack : extractor.extractFluidsFromBlock(Blocks.AIR.defaultBlockState(), tileNbt)) {
-            list.add(encode(stack));
+        for (BCFluidStack stack : extractor.extractFluidsFromBlock(Blocks.AIR.defaultBlockState(), tileNbt)) {
+            list.add(BCFluidStack.CODEC.encodeStart(NbtOps.INSTANCE, stack).getOrThrow());
         }
         CompoundTag result = new CompoundTag();
         result.put("fluids", list);
@@ -280,12 +291,12 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
                 ? "{\"type\":\"tank\",\"path\":[\"fluid0\"],\"amountPath\":[\"amount0\"]}"
                 : "{\"type\":\"tank\",\"path\":[\"" + stacksPath + "\"]}";
         TileTank tank = newTank();
-        tank.tank.setFluidStack(0, lava(9000));
+        tank.tank.setFluidStack(0, bcLava(9000));
         CompoundTag tankSave = ValueIoTestUtil.write(out -> saveTo(tank, out));
         GoldenFixtures.assertGolden("snapshot_priced_tank", priced(extractor(tankRule), tankSave));
 
         TileDistiller_BC8 distiller = newDistiller();
-        distiller.getTankIn().setFluidStack(0, lava(1500));
+        distiller.getTankIn().setFluidStack(0, bcLava(1500));
         CompoundTag distillerSave = ValueIoTestUtil.write(out -> saveTo(distiller, out));
         GoldenFixtures.assertGolden("snapshot_priced_distiller",
                 priced(extractor("{\"type\":\"tank\",\"path\":[\"fluidIn\"]}"), distillerSave));

@@ -14,7 +14,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
@@ -26,9 +25,11 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.VanillaSetupBaseTester;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.CapUtil;
 
 import buildcraft.transport.BCTransportPipes;
@@ -42,7 +43,7 @@ import buildcraft.transport.pipe.Pipe;
  * source could not deliver) minted fluid out of nothing.
  *
  * <p>The pipe is built on a stub holder with a TILE connection on {@link #FACE}; nothing here needs a world.
- * Extends {@link VanillaSetupBaseTester} because a 26.x {@code FluidStack} needs bound default components.
+ * Extends {@link VanillaSetupBaseTester} because a 26.x {@code BCFluidStack} needs bound default components.
  */
 public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
 
@@ -68,7 +69,7 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
 
     private static BCFluidTank waterTank(int amount) {
         BCFluidTank tank = new BCFluidTank(1, 4000);
-        Assertions.assertEquals(amount, tank.fill(0, new FluidStack(Fluids.WATER, amount), false));
+        Assertions.assertEquals(amount, tank.fill(0, new BCFluidStack(Fluids.WATER, amount), false));
         return tank;
     }
 
@@ -140,7 +141,7 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
     @Test
     public void simulatedFillLeavesNoTrace() {
         PipeFlowFluids flow = newConnectedFluidPipe();
-        int simulated = section(flow, FACE).fill(new FluidStack(Fluids.WATER, 100), IFluidHandler.FluidAction.SIMULATE);
+        int simulated = section(flow, FACE).fill(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 100)), IFluidHandler.FluidAction.SIMULATE);
         Assertions.assertTrue(simulated > 0, "precondition: the dry run must report an accepted amount");
         Assertions.assertEquals(0, pipeTotal(flow), "a simulated fill must not add fluid");
         Assertions.assertNull(flow.getFluidStackForRender(), "a simulated fill must not set the pipe's fluid type");
@@ -151,7 +152,7 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
         PipeFlowFluids flow = newConnectedFluidPipe();
         BCFluidTank tank = waterTank(1000);
         // BCFluidTank.drain's third argument is `simulate`: offer 100 mB without taking it yet
-        int filled = section(flow, FACE).fill(tank.drain(0, 100, true), IFluidHandler.FluidAction.EXECUTE);
+        int filled = section(flow, FACE).fill(NeoFluidStacks.toNeo(tank.drain(0, 100, true)), IFluidHandler.FluidAction.EXECUTE);
         Assertions.assertTrue(filled > 0, "precondition: the fill must transfer something");
         tank.drain(0, filled, false); // simulate=false: take from the tank exactly what landed in the pipe
         Assertions.assertEquals(1000, tank.getAmountMb(0) + pipeTotal(flow), "fluid is conserved");

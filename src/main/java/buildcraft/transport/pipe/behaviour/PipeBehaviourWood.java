@@ -12,8 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -79,7 +78,7 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
                 IFlowFluid fluidFlow = (IFlowFluid) flow;
                 int maxMillibuckets = (int) (power / BCTransportConfig.mjPerMillibucket.get());
                 if (maxMillibuckets > 0) {
-                    FluidStack extracted = extractFluid(fluidFlow, getCurrentDir(), maxMillibuckets, simulate);
+                    BCFluidStack extracted = extractFluid(fluidFlow, getCurrentDir(), maxMillibuckets, simulate);
                     if (extracted != null && !extracted.isEmpty()) {
                         return power - extracted.getAmount() * BCTransportConfig.mjPerMillibucket.get();
                     }
@@ -94,7 +93,7 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
     }
 
     @Nullable
-    protected FluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
+    protected BCFluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
         return flow.tryExtractFluid(millibuckets, dir, null, simulate);
     }
 

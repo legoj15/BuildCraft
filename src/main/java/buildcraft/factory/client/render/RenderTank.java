@@ -40,8 +40,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.client.renderer.rendertype.RenderType;
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
 import buildcraft.lib.client.render.fluid.FluidSprites;
@@ -112,7 +112,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> 
         buildcraft.lib.fluid.FluidSmoother.FluidStackInterp interp = tile.smoothedTank.getFluidForRender(partialTicks);
         if (interp == null) return;
 
-        FluidStack fluid = interp.fluid();
+        BCFluidStack fluid = interp.fluid();
         double amount = interp.amount();
         int capacity = tile.smoothedTank.getCapacity();
         if (amount <= 0 || capacity <= 0) return;
@@ -240,10 +240,10 @@ public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> 
         BlockEntity neighbor = tile.getLevel().getBlockEntity(neighborPos);
         if (neighbor instanceof TileTank otherTank) {
             if (!TileTank.canTanksConnect(tile, otherTank, direction)) return false;
-            FluidStack otherFluid = otherTank.tank.getFluidStack(0);
-            FluidStack thisFluid = tile.tank.getFluidStack(0);
+            BCFluidStack otherFluid = otherTank.tank.getFluidStack(0);
+            BCFluidStack thisFluid = tile.tank.getFluidStack(0);
             if (otherFluid.isEmpty() || thisFluid.isEmpty()) return false;
-            if (!FluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
+            if (!BCFluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
 
             // For gaseous fluids, invert the direction check:
             // a tank below with matching gas connects seamlessly (gas floats up)

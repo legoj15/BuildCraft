@@ -16,8 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.IFuel;
 import buildcraft.api.fuels.IFuelManager.IDirtyFuel;
 
@@ -52,7 +51,7 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, IFuel recipe, IFocusGroup focuses) {
-        FluidStack fuel = recipe.getFluid();
+        BCFluidStack fuel = recipe.getFluid();
         if (fuel != null && !fuel.isEmpty()) {
             builder.addInputSlot(IN_X, IN_Y)
                     .setFluidRenderer(BUCKET, false, TANK_W, TANK_H)
@@ -67,7 +66,7 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
             JeiFluidAliases.addAliases(builder, fuel, RecipeIngredientRole.INPUT);
         }
         if (recipe instanceof IDirtyFuel dirty) {
-            FluidStack residue = dirty.getResidue();
+            BCFluidStack residue = dirty.getResidue();
             if (residue != null && !residue.isEmpty()) {
                 builder.addOutputSlot(RESIDUE_X, RESIDUE_Y)
                         .setFluidRenderer(residue.getAmount(), false, TANK_W, TANK_H)

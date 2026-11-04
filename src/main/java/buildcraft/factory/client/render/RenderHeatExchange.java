@@ -47,8 +47,8 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 //?}
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.block.BlockHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
@@ -224,8 +224,8 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
                 // Flow volume is controlled by progress, not tank levels.
                 // Fluid type only, kept after the input tank empties so the flow recedes through
                 // STOPPING instead of vanishing with the tank — matches 1.12.2 behavior.
-                FluidStack coolantFluid = sectionEnd.smoothedTankInput.getRenderFluid();
-                FluidStack heatantFluid = section.smoothedTankInput.getRenderFluid();
+                BCFluidStack coolantFluid = sectionEnd.smoothedTankInput.getRenderFluid();
+                BCFluidStack heatantFluid = section.smoothedTankInput.getRenderFluid();
                 // Render upper flow (coolant)
                 if (!coolantFluid.isEmpty()) {
                     //? if >=1.21.10 {
@@ -269,7 +269,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         FluidSmoother.FluidStackInterp interp = smoother.getFluidForRender(partialTicks);
         if (interp == null || interp.amount() <= 0) return;
 
-        FluidStack fluid = interp.fluid();
+        BCFluidStack fluid = interp.fluid();
         int capacity = smoother.getCapacity();
         if (capacity <= 0) return;
 
@@ -326,12 +326,12 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
     //? if >=1.21.10 {
     private static void renderFlow(Vec3 diff, Direction face, PoseStack poseStack,
                                     SubmitNodeCollector collector,
-                                    double s, double e, FluidStack fluid,
+                                    double s, double e, BCFluidStack fluid,
                                     int point, float partialTicks, int light) {
     //?} else {
     /*private static void renderFlow(Vec3 diff, Direction face, PoseStack poseStack,
                                     MultiBufferSource.BufferSource bufferSource,
-                                    double s, double e, FluidStack fluid,
+                                    double s, double e, BCFluidStack fluid,
                                     int point, float partialTicks, int light) {*/
     //?}
         if (fluid.isEmpty()) return;

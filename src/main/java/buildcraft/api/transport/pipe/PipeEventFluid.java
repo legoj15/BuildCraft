@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 public abstract class PipeEventFluid extends PipeEvent {
 
@@ -30,9 +30,9 @@ public abstract class PipeEventFluid extends PipeEvent {
         public final Direction from;
         /** The incoming fluidstack. Currently changing this does nothing. */
         @Nonnull
-        public final FluidStack fluid;
+        public final BCFluidStack fluid;
 
-        public TryInsert(IPipeHolder holder, IFlowFluid flow, Direction from, @Nonnull FluidStack fluid) {
+        public TryInsert(IPipeHolder holder, IFlowFluid flow, Direction from, @Nonnull BCFluidStack fluid) {
             super(true, holder, flow);
             this.from = from;
             this.fluid = fluid;
@@ -43,7 +43,7 @@ public abstract class PipeEventFluid extends PipeEvent {
     public static class PreMoveToCentre extends PipeEventFluid {
         /** The fluid that is being moved. Future versions of BC *might* allow more than one fluid type per pipe, but
          * for the moment the API doesn't allow pipes to do this. */
-        public final FluidStack fluid;
+        public final BCFluidStack fluid;
 
         /** The maximum amount of fluid that the centre pipe could accept. */
         public final int totalAcceptable;
@@ -59,7 +59,7 @@ public abstract class PipeEventFluid extends PipeEvent {
          * centre. This should *never* be larger than */
         public final int[] actuallyOffered;
 
-        public PreMoveToCentre(IPipeHolder holder, IFlowFluid flow, FluidStack fluid, int totalAcceptable,
+        public PreMoveToCentre(IPipeHolder holder, IFlowFluid flow, BCFluidStack fluid, int totalAcceptable,
             int[] totalOffered, int[] actuallyOffered) {
             super(holder, flow);
             this.fluid = fluid;
@@ -88,7 +88,7 @@ public abstract class PipeEventFluid extends PipeEvent {
     public static class OnMoveToCentre extends PipeEventFluid {
         /** The fluid that is being moved. Future versions of BC *might* allow more than one fluid type per pipe, but
          * for the moment the API doesn't allow pipes to do this. */
-        public final FluidStack fluid;
+        public final BCFluidStack fluid;
 
         public final int[] fluidLeavingSide;
         public final int[] fluidEnteringCentre;
@@ -96,7 +96,7 @@ public abstract class PipeEventFluid extends PipeEvent {
         // Used for checking the state maximums
         private final int[] fluidLeaveCheck, fluidEnterCheck;
 
-        public OnMoveToCentre(IPipeHolder holder, IFlowFluid flow, FluidStack fluid, int[] fluidLeavingSide,
+        public OnMoveToCentre(IPipeHolder holder, IFlowFluid flow, BCFluidStack fluid, int[] fluidLeavingSide,
             int[] fluidEnteringCentre) {
             super(holder, flow);
             this.fluid = fluid;
@@ -127,14 +127,14 @@ public abstract class PipeEventFluid extends PipeEvent {
     }
 
     public static class SideCheck extends PipeEventFluid {
-        public final FluidStack fluid;
+        public final BCFluidStack fluid;
 
         /** The priorities of each side. Stored inversely to the values given, so a higher priority will have a lower
          * value than a lower priority. */
         private final int[] priority = new int[6];
         private final EnumSet<Direction> allowed = EnumSet.allOf(Direction.class);
 
-        public SideCheck(IPipeHolder holder, IFlowFluid flow, FluidStack fluid) {
+        public SideCheck(IPipeHolder holder, IFlowFluid flow, BCFluidStack fluid) {
             super(holder, flow);
             this.fluid = fluid;
         }

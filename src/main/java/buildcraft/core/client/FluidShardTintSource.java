@@ -17,14 +17,15 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
 import org.jspecify.annotations.Nullable;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCore;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.client.sprite.NativeImagePixels;
+import buildcraft.lib.fluid.NeoFluidStacks;
 
 /**
  * ItemTintSource for fragile fluid shards. Averages the fluid's still sprite and
@@ -49,7 +50,7 @@ public final class FluidShardTintSource implements ItemTintSource {
      *  guards on tintIndex so only the fluid layer — not the frame/cover — is tinted. */
     private int computeColor(ItemStack stack) {
         SimpleFluidContent content = stack.getOrDefault(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.EMPTY);
-        FluidStack fluid = content.copy();
+        BCFluidStack fluid = NeoFluidStacks.fromNeo(content.copy());
         if (fluid.isEmpty()) {
             return 0xFFFFFFFF;
         }

@@ -15,9 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemFragileFluidContainer;
 import buildcraft.lib.fluid.BCFluidTank;
@@ -33,7 +32,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  */
 public class FluidContainerHelperTest extends VanillaSetupBaseTester {
 
-    private static void assertFluid(FluidStack actual, net.minecraft.world.level.material.Fluid fluid, int amount,
+    private static void assertFluid(BCFluidStack actual, net.minecraft.world.level.material.Fluid fluid, int amount,
             String msg) {
         Assertions.assertFalse(actual.isEmpty(), msg + " — expected " + amount + " mB, got nothing");
         Assertions.assertTrue(actual.is(fluid), msg + " — wrong fluid: " + FluidUtilBC.getDebugString(actual));
@@ -42,11 +41,11 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
 
     private static ItemStack fragileShard(int waterMb) {
         ItemStack shard = new ItemStack(BCCoreItems.FRAGILE_FLUID_CONTAINER.get());
-        ItemFragileFluidContainer.setFluid(shard, new FluidStack(Fluids.WATER, waterMb));
+        ItemFragileFluidContainer.setFluid(shard, new BCFluidStack(Fluids.WATER, waterMb));
         return shard;
     }
 
-    private static BCFluidTank tank(int capacity, FluidStack contents) {
+    private static BCFluidTank tank(int capacity, BCFluidStack contents) {
         BCFluidTank tank = new BCFluidTank(1, capacity);
         if (!contents.isEmpty()) {
             Assertions.assertEquals(contents.getAmount(), tank.fill(0, contents, false), "test setup: pre-fill");
@@ -139,7 +138,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void waterBucketEmptiesIntoTank() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.WATER_BUCKET), 1);
-        BCFluidTank tank = tank(4000, FluidStack.EMPTY);
+        BCFluidTank tank = tank(4000, BCFluidStack.EMPTY);
 
         Assertions.assertTrue(FluidUtilBC.drainContainerSlot(slots, 0, tank), "a water bucket drains into room");
         assertFluid(tank.getFluidStack(0), Fluids.WATER, 1000, "the tank after the bucket emptied");
@@ -150,7 +149,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void bucketWillNotPartiallyEmpty() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.WATER_BUCKET), 1);
-        BCFluidTank tank = tank(500, FluidStack.EMPTY);
+        BCFluidTank tank = tank(500, BCFluidStack.EMPTY);
 
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(slots, 0, tank),
                 "a bucket is all-or-nothing: 500 mB of room cannot take it");
@@ -162,7 +161,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void bucketWillNotEmptyIntoADifferentFluid() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.WATER_BUCKET), 1);
-        BCFluidTank tank = tank(4000, new FluidStack(Fluids.LAVA, 1000));
+        BCFluidTank tank = tank(4000, new BCFluidStack(Fluids.LAVA, 1000));
 
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(slots, 0, tank), "water cannot join lava");
         assertFluid(tank.getFluidStack(0), Fluids.LAVA, 1000, "the lava tank is untouched");
@@ -175,7 +174,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
         ItemHandlerSimple bucketSlot = slot(new ItemStack(Items.BUCKET), 1);
         ItemHandlerSimple stoneSlot = slot(new ItemStack(Items.STONE), 1);
         ItemHandlerSimple emptySlot = slot(ItemStack.EMPTY, 1);
-        BCFluidTank tank = tank(4000, FluidStack.EMPTY);
+        BCFluidTank tank = tank(4000, BCFluidStack.EMPTY);
 
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(bucketSlot, 0, tank), "empty bucket");
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(stoneSlot, 0, tank), "stone");
@@ -188,7 +187,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void buildcraftShardShattersWhenEmptied() {
         ItemHandlerSimple slots = slot(fragileShard(300), 1);
-        BCFluidTank tank = tank(4000, FluidStack.EMPTY);
+        BCFluidTank tank = tank(4000, BCFluidStack.EMPTY);
 
         Assertions.assertTrue(FluidUtilBC.drainContainerSlot(slots, 0, tank), "the shard drains into the tank");
         assertFluid(tank.getFluidStack(0), Fluids.WATER, 300, "the tank after the shard emptied");
@@ -199,7 +198,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void stackedContainersAreNeverDrainedOrDeleted() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.WATER_BUCKET, 2), 64);
-        BCFluidTank tank = tank(8000, FluidStack.EMPTY);
+        BCFluidTank tank = tank(8000, BCFluidStack.EMPTY);
 
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(slots, 0, tank),
                 "a >1 stack has nowhere to put the emptied container, so nothing may happen");
@@ -214,7 +213,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void emptyBucketFillsFromTank() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.BUCKET), 1);
-        BCFluidTank tank = tank(4000, new FluidStack(Fluids.WATER, 1500));
+        BCFluidTank tank = tank(4000, new BCFluidStack(Fluids.WATER, 1500));
 
         Assertions.assertTrue(FluidUtilBC.fillContainerSlot(slots, 0, tank), "an empty bucket fills from 1500 mB");
         assertFluid(tank.getFluidStack(0), Fluids.WATER, 500, "the tank after one bucket was taken");
@@ -225,7 +224,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void bucketWillNotPartiallyFill() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.BUCKET), 1);
-        BCFluidTank tank = tank(4000, new FluidStack(Fluids.WATER, 500));
+        BCFluidTank tank = tank(4000, new BCFluidStack(Fluids.WATER, 500));
 
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(slots, 0, tank), "500 mB cannot fill a bucket");
         assertFluid(tank.getFluidStack(0), Fluids.WATER, 500, "the tank is untouched");
@@ -238,7 +237,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
         ItemHandlerSimple fullSlot = slot(new ItemStack(Items.WATER_BUCKET), 1);
         ItemHandlerSimple stoneSlot = slot(new ItemStack(Items.STONE), 1);
         ItemHandlerSimple emptySlot = slot(ItemStack.EMPTY, 1);
-        BCFluidTank tank = tank(4000, new FluidStack(Fluids.WATER, 2000));
+        BCFluidTank tank = tank(4000, new BCFluidStack(Fluids.WATER, 2000));
 
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(fullSlot, 0, tank), "a full bucket takes no more");
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(stoneSlot, 0, tank), "stone");
@@ -251,7 +250,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void emptyTankFillsNothing() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.BUCKET), 1);
-        BCFluidTank tank = tank(4000, FluidStack.EMPTY);
+        BCFluidTank tank = tank(4000, BCFluidStack.EMPTY);
 
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(slots, 0, tank), "an empty tank fills nothing");
         Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.BUCKET), slots.stacks.get(0)),
@@ -261,7 +260,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     @Test
     public void stackedContainersAreNeverFilledOrDeleted() {
         ItemHandlerSimple slots = slot(new ItemStack(Items.BUCKET, 2), 64);
-        BCFluidTank tank = tank(4000, new FluidStack(Fluids.WATER, 2000));
+        BCFluidTank tank = tank(4000, new BCFluidStack(Fluids.WATER, 2000));
 
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(slots, 0, tank),
                 "a >1 stack has nowhere to put the filled container, so nothing may happen");
@@ -285,7 +284,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     public void stalledDrainDoesNotReportASlotChange() {
         List<ItemStack> changes = new ArrayList<>();
         ItemHandlerSimple slots = watchedSlot(new ItemStack(Items.WATER_BUCKET), changes);
-        BCFluidTank full = tank(1000, new FluidStack(Fluids.WATER, 1000));
+        BCFluidTank full = tank(1000, new BCFluidStack(Fluids.WATER, 1000));
 
         Assertions.assertFalse(FluidUtilBC.drainContainerSlot(slots, 0, full), "a full tank takes no bucket");
         Assertions.assertEquals(List.of(), changes, "a refused drain changed nothing, so the tile must not be dirtied");
@@ -295,7 +294,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     public void stalledFillDoesNotReportASlotChange() {
         List<ItemStack> changes = new ArrayList<>();
         ItemHandlerSimple slots = watchedSlot(new ItemStack(Items.WATER_BUCKET), changes);
-        BCFluidTank source = tank(4000, new FluidStack(Fluids.WATER, 2000));
+        BCFluidTank source = tank(4000, new BCFluidStack(Fluids.WATER, 2000));
 
         Assertions.assertFalse(FluidUtilBC.fillContainerSlot(slots, 0, source), "a full bucket takes no more");
         Assertions.assertEquals(List.of(), changes, "a refused fill changed nothing, so the tile must not be dirtied");
@@ -305,7 +304,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
     public void successfulSwapReportsExactlyOneSlotChange() {
         List<ItemStack> drained = new ArrayList<>();
         ItemHandlerSimple drainSlot = watchedSlot(new ItemStack(Items.WATER_BUCKET), drained);
-        Assertions.assertTrue(FluidUtilBC.drainContainerSlot(drainSlot, 0, tank(4000, FluidStack.EMPTY)), "drain");
+        Assertions.assertTrue(FluidUtilBC.drainContainerSlot(drainSlot, 0, tank(4000, BCFluidStack.EMPTY)), "drain");
         Assertions.assertEquals(1, drained.size(), "one swap, one callback — got " + drained);
         Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.BUCKET), drained.get(0)),
                 "the callback must report the final empty bucket, got " + drained.get(0));
@@ -313,7 +312,7 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
         List<ItemStack> filled = new ArrayList<>();
         ItemHandlerSimple fillSlot = watchedSlot(new ItemStack(Items.BUCKET), filled);
         Assertions.assertTrue(FluidUtilBC.fillContainerSlot(fillSlot, 0,
-                tank(4000, new FluidStack(Fluids.WATER, 1000))), "fill");
+                tank(4000, new BCFluidStack(Fluids.WATER, 1000))), "fill");
         Assertions.assertEquals(1, filled.size(), "one swap, one callback — got " + filled);
         Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.WATER_BUCKET), filled.get(0)),
                 "the callback must report the final water bucket, got " + filled.get(0));

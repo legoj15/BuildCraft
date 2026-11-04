@@ -18,8 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.energy.compat.viewer.CombustionCoolant;
 import buildcraft.energy.BCEnergyItems;
 import buildcraft.lib.compat.jei.JeiFluidAliases;
@@ -53,7 +52,7 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
     public void setRecipe(IRecipeLayoutBuilder builder, CombustionCoolant recipe, IFocusGroup focuses) {
         if (recipe.isSolid()) {
             builder.addInputSlot(IN_X, SOLID_Y).addItemStacks(List.of(recipe.item()));
-            FluidStack water = recipe.fluid();
+            BCFluidStack water = recipe.fluid();
             if (water != null && !water.isEmpty()) {
                 builder.addOutputSlot(OUT_X, OUT_Y)
                         .setFluidRenderer(water.getAmount(), false, TANK_W, TANK_H)
@@ -65,7 +64,7 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
                 JeiFluidAliases.addAliases(builder, water, RecipeIngredientRole.OUTPUT);
             }
         } else {
-            FluidStack fluid = recipe.fluid();
+            BCFluidStack fluid = recipe.fluid();
             if (fluid != null && !fluid.isEmpty()) {
                 builder.addInputSlot(IN_X, IN_Y)
                         .setFluidRenderer(BUCKET, false, TANK_W, TANK_H)

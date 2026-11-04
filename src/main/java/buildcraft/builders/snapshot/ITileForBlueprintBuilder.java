@@ -6,9 +6,8 @@
 
 package buildcraft.builders.snapshot;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.inventory.IItemTransactor;
-
-import net.neoforged.neoforge.fluids.FluidStack;
 
 public interface ITileForBlueprintBuilder extends ITileForSnapshotBuilder {
     Blueprint.BuildingInfo getBlueprintBuildingInfo();

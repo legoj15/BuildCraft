@@ -21,8 +21,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.energy.BCEnergyConfig.ContainedDetonation;
 import buildcraft.lib.misc.BlockUtil;
 
@@ -53,7 +53,7 @@ public final class ContainedFluidDetonation {
     /** A block entity whose stored fluid can detonate. */
     public interface Container {
         /** Everything the container holds, as one stack of its whole amount (empty when it holds nothing). */
-        FluidStack containedFluid();
+        BCFluidStack containedFluid();
 
         /** Empties the container: its contents went up in the blast. */
         void ventContainedFluid();
@@ -120,13 +120,13 @@ public final class ContainedFluidDetonation {
 
     /** Whether {@code stack} is a BuildCraft fluid in the {@link FluidVolatility.Band#EXPLOSIVE} band, source or
      *  flowing form (read from the block the fluid places, which carries the band). */
-    static boolean isExplosive(FluidStack stack) {
+    static boolean isExplosive(BCFluidStack stack) {
         return !stack.isEmpty() && FluidVolatility.isExplosive(stack.getFluid().defaultFluidState().createLegacyBlock());
     }
 
     /** The power {@code container} would blow up with now, or 0 when it holds no gas or the config is off. */
     private static float powerOf(Container container) {
-        FluidStack contents = container.containedFluid();
+        BCFluidStack contents = container.containedFluid();
         if (!isExplosive(contents)) {
             return 0;
         }

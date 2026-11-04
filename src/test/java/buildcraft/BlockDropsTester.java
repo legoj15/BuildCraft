@@ -17,12 +17,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileArchitectTable;
@@ -42,6 +42,7 @@ import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.test.DropArenaUtil;
 import buildcraft.lib.test.DropArenaUtil.Drops;
 import buildcraft.transport.BCTransportBlocks;
@@ -198,17 +199,17 @@ public class BlockDropsTester {
         //?} else {
         /*TileTank tank = helper.getBlockEntity(pos);*/
         //?}
-        fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+        fillTank(tank, new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
     }
 
-    private static void fillTank(TileTank tank, FluidStack stack) {
+    private static void fillTank(TileTank tank, BCFluidStack stack) {
         fillBcTank(tank.tank, stack);
     }
 
-    private static void fillBcTank(BCFluidTank tank, FluidStack stack) {
+    private static void fillBcTank(BCFluidTank tank, BCFluidStack stack) {
         //? if >=1.21.10 {
         try (Transaction tx = Transaction.open(null)) {
-            tank.insert(0, FluidResource.of(stack), stack.getAmount(), tx);
+            tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
             tx.commit();
         }
         //?} else {
@@ -256,7 +257,7 @@ public class BlockDropsTester {
             /*TilePump pump = helper.getBlockEntity(pos);*/
             //?}
             // Pump spills its tank via the central getDropTanks() override.
-            fillBcTank(pump.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            fillBcTank(pump.getTank(), new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
             DropArenaUtil.removeBlock(helper, pos);
         }, Drops.near(pos, 2.0)
@@ -275,7 +276,7 @@ public class BlockDropsTester {
             /*TileFloodGate gate = helper.getBlockEntity(pos);*/
             //?}
             // The Flood Gate empties its own tank in dropContentsOnRemoval (no itemManager, no opt-in flag).
-            fillBcTank(gate.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            fillBcTank(gate.getTank(), new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
             DropArenaUtil.removeBlock(helper, pos);
         }, Drops.near(pos, 2.0)
@@ -299,7 +300,7 @@ public class BlockDropsTester {
             // used to drop, so breaking the machine silently destroyed them.
             distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET));
             distiller.containerSlots.setStackInSlot(2, new ItemStack(Items.GLASS_BOTTLE));
-            distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            distiller.getTankIn().setFluidStack(0, new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
             DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
         }, Drops.near(pos, 2.0)
@@ -317,7 +318,7 @@ public class BlockDropsTester {
             /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
             //?}
             distiller.containerSlots.setStackInSlot(1, new ItemStack(Items.BUCKET));
-            distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            distiller.getTankIn().setFluidStack(0, new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
             DropArenaUtil.removeBlock(helper, pos);
         }, Drops.near(pos, 2.0)
@@ -455,8 +456,8 @@ public class BlockDropsTester {
     private static final BlockPos DYNAMO_POS = new BlockPos(4, 2, 4);
     private static final BlockPos[] CONTENT_ENGINES = { FE_ENGINE_POS, COMBUSTION_ENGINE_POS, DYNAMO_POS };
 
-    private static FluidStack water() {
-        return new FluidStack(Fluids.WATER, 1000);
+    private static BCFluidStack water() {
+        return new BCFluidStack(Fluids.WATER, 1000);
     }
 
     /** An FE engine and an MJ Dynamo with gear upgrades, and a combustion engine with water in two tanks. */

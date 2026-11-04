@@ -26,9 +26,8 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
@@ -98,10 +97,10 @@ public class SchematicBlockFluid implements ISchematicBlock {
 
     @Nonnull
     @Override
-    public List<FluidStack> computeRequiredFluids() {
+    public List<BCFluidStack> computeRequiredFluids() {
         if (!isFlowing && !blockState.getFluidState().isEmpty()) {
             return Collections.singletonList(
-                new FluidStack(blockState.getFluidState().getType(), 1000)
+                new BCFluidStack(blockState.getFluidState().getType(), 1000)
             );
         }
         return Collections.emptyList();

@@ -10,13 +10,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.RobotManager;
@@ -25,6 +25,7 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.core.BCCoreStatements;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
@@ -128,10 +129,10 @@ public class FluidCarrierTester {
         //?}
     }
 
-    private static void fillTank(TileTank tank, FluidStack stack) {
+    private static void fillTank(TileTank tank, BCFluidStack stack) {
         //? if >=1.21.10 {
         try (Transaction tx = Transaction.open(null)) {
-            tank.tank.insert(0, FluidResource.of(stack), stack.getAmount(), tx);
+            tank.tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
             tx.commit();
         }
         //?} else {
@@ -141,14 +142,14 @@ public class FluidCarrierTester {
     }
 
     /** Seeds the robot's own 4000 mB tank directly (the E2E fills it through the load path instead). */
-    private static void fillRobotTank(EntityRobot robot, FluidStack stack) {
+    private static void fillRobotTank(EntityRobot robot, BCFluidStack stack) {
         //? if >=1.21.10 {
         try (Transaction tx = Transaction.open(null)) {
-            robot.getFluidHandler().insert(0, FluidResource.of(stack), stack.getAmount(), tx);
+            robot.getFluidHandler().insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
             tx.commit();
         }
         //?} else {
-        /*robot.getFluidHandler().fill(stack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
+        /*robot.getFluidHandler().fill(NeoFluidStacks.toNeo(stack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
         //?}
     }
 
@@ -231,7 +232,7 @@ public class FluidCarrierTester {
         //?} else {
         /*TileTank tank = helper.getBlockEntity(tankRel);*/
         //?}
-        fillTank(tank, new FluidStack(Fluids.WATER, 1000));
+        fillTank(tank, new BCFluidStack(Fluids.WATER, 1000));
 
         // Lazy-spawn on the first tick the supply station has registered: the carrier must not search
         // before there is anything to find, or its first search comes up empty and it goes to sleep. The
@@ -307,7 +308,7 @@ public class FluidCarrierTester {
                     spawned[0] = robot;
                     station.takeAsMain(robot);
                     robot.dock(station);
-                    fillRobotTank(robot, new FluidStack(Fluids.WATER, 1000));
+                    fillRobotTank(robot, new BCFluidStack(Fluids.WATER, 1000));
                     helper.assertTrue(carriedBy(robot) == 1000, "precondition: the robot carries a bucket");
 
                     helper.assertTrue(station.getFluidOutput() != null,

@@ -10,8 +10,7 @@ import java.util.Collection;
 
 import net.minecraft.gametest.framework.GameTestHelper;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.fuels.ICoolant;
 import buildcraft.api.fuels.IFuel;
@@ -43,7 +42,7 @@ public class FuelRegistryTester {
         int dirtyWithResidue = 0;
         long maxPower = 0;
         for (IFuel fuel : fuels) {
-            FluidStack fluid = fuel.getFluid();
+            BCFluidStack fluid = fuel.getFluid();
             if (fluid == null || fluid.isEmpty()) {
                 throw new IllegalStateException("Combustion fuel has an empty input fluid");
             }
@@ -55,7 +54,7 @@ public class FuelRegistryTester {
             }
             maxPower = Math.max(maxPower, fuel.getPowerPerCycle());
             if (fuel instanceof IDirtyFuel dirty) {
-                FluidStack residue = dirty.getResidue();
+                BCFluidStack residue = dirty.getResidue();
                 if (residue != null && !residue.isEmpty()) {
                     dirtyWithResidue++;
                 }
@@ -130,7 +129,7 @@ public class FuelRegistryTester {
     private static IFuel fuelFor(String baseName, int heat) {
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             if (entry.baseName().equals(baseName) && entry.heat() == heat) {
-                return BuildcraftFuelRegistry.fuel.getFuel(new FluidStack(entry.source().get(), 1));
+                return BuildcraftFuelRegistry.fuel.getFuel(new BCFluidStack(entry.source().get(), 1));
             }
         }
         throw new IllegalStateException("No such fluid: " + baseName + " at heat " + heat);

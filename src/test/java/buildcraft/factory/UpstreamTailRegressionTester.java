@@ -17,12 +17,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.factory.tile.TileTank;
@@ -118,7 +118,7 @@ public class UpstreamTailRegressionTester {
         helper.assertTrue(state.hasAnalogOutputSignal(), "A tank must be readable by a comparator");
         helper.assertTrue(comparatorLevel(helper, state, abs) == 0, "An empty tank must read 0");
 
-        tank.tank.fill(0, new FluidStack(Fluids.WATER, 8_000), false);
+        tank.tank.fill(0, new BCFluidStack(Fluids.WATER, 8_000), false);
         int half = comparatorLevel(helper, state, abs);
         helper.assertTrue(half == 8, "A half-full tank must read 8, got " + half);
 
@@ -133,7 +133,7 @@ public class UpstreamTailRegressionTester {
                 int output = comparatorOutput(helper, comparatorPos);
                 if (phase[0] == 0 && output == 8) {
                     phase[0] = 1;
-                    tank.tank.fill(0, new FluidStack(Fluids.WATER, 8_000), false);
+                    tank.tank.fill(0, new BCFluidStack(Fluids.WATER, 8_000), false);
                     int full = comparatorLevel(helper, state, abs);
                     helper.assertTrue(full == 15, "A full tank must read 15, got " + full);
                     return false;

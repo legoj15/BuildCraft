@@ -4,23 +4,23 @@
  * should be located as "LICENSE.API" in the BuildCraft source code distribution. */
 package buildcraft.api.fuels;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 public interface ICoolant {
-    boolean matchesFluid(FluidStack fluid);
+    boolean matchesFluid(BCFluidStack fluid);
 
     /** @param fluid
      * @param heat
      * @return 0 if the input fluid provides no cooling, or a value greater than 0 if it does. */
-    float getDegreesCoolingPerMB(FluidStack fluid, float heat);
+    float getDegreesCoolingPerMB(BCFluidStack fluid, float heat);
 
-    /** @return A canonical FluidStack identifying this coolant's input fluid, or
-     *  {@link FluidStack#EMPTY} if this coolant doesn't have a single representative fluid
+    /** @return A canonical BCFluidStack identifying this coolant's input fluid, or
+     *  {@link BCFluidStack#EMPTY} if this coolant doesn't have a single representative fluid
      *  (e.g. if it matches a tag-style group). Used by external systems (the guide book's
      *  {@code Linked From} / {@code Linked To} group population) to enumerate registered
      *  coolants without having to query every fluid in the registry. */
-    default FluidStack getRepresentativeFluid() {
-        return FluidStack.EMPTY;
+    default BCFluidStack getRepresentativeFluid() {
+        return BCFluidStack.EMPTY;
     }
 }
 

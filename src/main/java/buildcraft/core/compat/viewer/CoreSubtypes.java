@@ -10,8 +10,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.core.item.ItemFragileFluidContainer;
 
 /** The recipe-viewer identity (JEI subtype key, REI item comparator) of the core items with a hand-written key, kept
@@ -19,12 +18,12 @@ import buildcraft.core.item.ItemFragileFluidContainer;
 public final class CoreSubtypes {
     private CoreSubtypes() {}
 
-    /** Fragile fluid shard: the stored fluid's registry id alone, never the amount — keying on the full FluidStack
+    /** Fragile fluid shard: the stored fluid's registry id alone, never the amount — keying on the full BCFluidStack
      *  would make every fill level its own entry, and a recipe's 500 mB shard alias (see FluidContainerAliases)
      *  would only match exactly-full shards. Null (no subtype) for an empty shard. */
     @Nullable
     public static Object fragileFluidKey(ItemStack stack) {
-        FluidStack fluid = ItemFragileFluidContainer.getFluid(stack);
+        BCFluidStack fluid = ItemFragileFluidContainer.getFluid(stack);
         return fluid.isEmpty() ? null : BuiltInRegistries.FLUID.getKey(fluid.getFluid());
     }
 }

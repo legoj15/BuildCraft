@@ -19,8 +19,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.gui.BCContainer;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
@@ -92,7 +91,7 @@ public abstract class BucketRecipeTransfer<C extends AbstractContainerMenu & BCC
     /** The bucket item destined for a given container slot index. */
     public record BucketSlot(int slot, Item bucket) {
         /** Resolve the bucket item for a fluid ({@link Items#AIR} when the fluid is empty/bucketless). */
-        public static BucketSlot of(int slot, @Nullable FluidStack fluid) {
+        public static BucketSlot of(int slot, @Nullable BCFluidStack fluid) {
             Item bucket = (fluid == null || fluid.isEmpty()) ? Items.AIR : fluid.getFluid().getBucket();
             return new BucketSlot(slot, bucket);
         }

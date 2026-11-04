@@ -28,7 +28,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -38,6 +37,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
@@ -56,6 +56,7 @@ import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFlow;
 
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
@@ -83,7 +84,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     private final Map<EnumPipePart, Section> sections = new EnumMap<>(EnumPipePart.class);
     @Nonnull
-    private FluidStack currentFluid = FluidStack.EMPTY;
+    private BCFluidStack currentFluid = BCFluidStack.EMPTY;
     private int currentDelay;
     private SafeTimeTracker tracker;
 
@@ -132,15 +133,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 net.minecraft.world.level.material.Fluid fluid =
                     buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
-                    setFluid(new FluidStack(fluid, 1000));
+                    setFluid(new BCFluidStack(fluid, 1000));
                 } else {
-                    setFluid(FluidStack.EMPTY);
+                    setFluid(BCFluidStack.EMPTY);
                 }
             } else {
-                setFluid(FluidStack.EMPTY);
+                setFluid(BCFluidStack.EMPTY);
             }
         } else {
-            setFluid(FluidStack.EMPTY);
+            setFluid(BCFluidStack.EMPTY);
         }
 
         for (EnumPipePart part : EnumPipePart.VALUES) {
@@ -187,15 +188,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                     // Set fluid directly without calling setFluid() to avoid resetting section state
-                    currentFluid = new FluidStack(fluid, 1000);
+                    currentFluid = new BCFluidStack(fluid, 1000);
                 } else {
-                    currentFluid = FluidStack.EMPTY;
+                    currentFluid = BCFluidStack.EMPTY;
                 }
             } else {
-                currentFluid = FluidStack.EMPTY;
+                currentFluid = BCFluidStack.EMPTY;
             }
         } else {
-            currentFluid = FluidStack.EMPTY;
+            currentFluid = BCFluidStack.EMPTY;
         }
         // Update section amounts
         for (EnumPipePart part : EnumPipePart.VALUES) {
@@ -229,22 +230,22 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Override
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
         super.addDrops(toDrop, fortune);
-        FluidStack stored = getStoredFluid();
+        BCFluidStack stored = getStoredFluid();
         if (!stored.isEmpty()) {
             FluidItemDrops.addFluidDrops(toDrop, stored);
         }
     }
 
     /** Everything in the pipe, every section together, as one stack (empty when the pipe holds nothing). */
-    public FluidStack getStoredFluid() {
+    public BCFluidStack getStoredFluid() {
         if (currentFluid.isEmpty()) {
-            return FluidStack.EMPTY;
+            return BCFluidStack.EMPTY;
         }
         int totalAmount = 0;
         for (EnumPipePart part : EnumPipePart.VALUES) {
             totalAmount += sections.get(part).amount;
         }
-        return totalAmount > 0 ? currentFluid.copyWithAmount(totalAmount) : FluidStack.EMPTY;
+        return totalAmount > 0 ? currentFluid.copyWithAmount(totalAmount) : BCFluidStack.EMPTY;
     }
 
     @Override
@@ -256,7 +257,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
         // Rebuilds each section's `incoming` delay line and resets its timers, as the tick does when the last
         // drop leaves the pipe. The next server tick sees amount != lastSentAmount and syncs the empty pipe.
-        setFluid(FluidStack.EMPTY);
+        setFluid(BCFluidStack.EMPTY);
     }
 
     public boolean doesContainFluid() {
@@ -278,7 +279,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     @Override
     @SuppressWarnings("unchecked")
-    public FluidStack tryExtractFluid(int millibuckets, Direction from, FluidStack filter, boolean simulate) {
+    public BCFluidStack tryExtractFluid(int millibuckets, Direction from, BCFluidStack filter, boolean simulate) {
         if (from == null || millibuckets <= 0) {
             return null;
         }
@@ -298,15 +299,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         int extracted;
-        FluidStack toAdd;
+        BCFluidStack toAdd;
         //? if >=1.21.10 {
         // Determine what fluid resource to extract
         FluidResource resource;
         if (filter != null && !filter.isEmpty()) {
-            resource = FluidResource.of(filter);
+            resource = FluidResource.of(NeoFluidStacks.toNeo(filter));
         } else if (!currentFluid.isEmpty()) {
             // The pipe holds one fluid: pull only more of it, never whatever the handler lists first.
-            resource = FluidResource.of(currentFluid);
+            resource = FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
         } else {
             // Extract whatever the handler has
             resource = handler.getResource(0);
@@ -314,7 +315,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 return null;
             }
         }
-        if (!currentFluid.isEmpty() && !resource.matches(currentFluid)) {
+        if (!currentFluid.isEmpty() && !resource.matches(NeoFluidStacks.toNeo(currentFluid))) {
             return null;
         }
 
@@ -334,10 +335,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
 
-        toAdd = resource.toStack(extracted);
+        toAdd = NeoFluidStacks.fromNeo(resource.toStack(extracted));
         //?} else {
         /*// Determine what fluid to extract
-        FluidStack drainFilter;
+        BCFluidStack drainFilter;
         if (filter != null && !filter.isEmpty()) {
             drainFilter = filter;
         } else if (!currentFluid.isEmpty()) {
@@ -345,17 +346,17 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             drainFilter = currentFluid;
         } else {
             // Extract whatever the handler has
-            drainFilter = handler.getFluidInTank(0);
+            drainFilter = NeoFluidStacks.fromNeo(handler.getFluidInTank(0));
             if (drainFilter == null || drainFilter.isEmpty()) {
                 return null;
             }
         }
-        if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, drainFilter)) {
+        if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, drainFilter)) {
             return null;
         }
 
-        FluidStack drained = handler.drain(drainFilter.copyWithAmount(millibuckets),
-            simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+        BCFluidStack drained = NeoFluidStacks.fromNeo(handler.drain(NeoFluidStacks.toNeo(drainFilter.copyWithAmount(millibuckets)),
+            simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE));
         extracted = drained.getAmount();
 
         if (extracted <= 0) {
@@ -395,11 +396,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
      *
      * @param simulate When true nothing is mutated and the return value is what WOULD be accepted.
      * @return The mB accepted. */
-    public int insertFluidForce(FluidStack fluid, Direction face, boolean simulate) {
+    public int insertFluidForce(BCFluidStack fluid, Direction face, boolean simulate) {
         if (fluid == null || fluid.isEmpty() || face == null) {
             return 0;
         }
-        if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
+        if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
             return 0;
         }
         Section section = sections.get(EnumPipePart.fromFacing(face));
@@ -437,7 +438,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
      *  (which commits every time) allocates no snapshot. The push's own transaction and side checks are
      *  outside this class's control. */
     private final class FlowSnapshot {
-        private FluidStack fluid = FluidStack.EMPTY;
+        private BCFluidStack fluid = BCFluidStack.EMPTY;
         private int delay;
         private final int[][] incoming = new int[EnumPipePart.VALUES.length][];
         private final int[] amount = new int[EnumPipePart.VALUES.length];
@@ -507,7 +508,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
                 @Override
                 protected void releaseSnapshot(FlowSnapshot snapshot) {
-                    snapshot.fluid = FluidStack.EMPTY; // do not pin a stack while parked
+                    snapshot.fluid = BCFluidStack.EMPTY; // do not pin a stack while parked
                     spareSnapshot = snapshot;
                 }
             };
@@ -538,7 +539,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         @Override
         public FluidResource getResource(int index) {
             return index == 0 && !currentFluid.isEmpty() && stored() > 0
-                    ? FluidResource.of(currentFluid)
+                    ? FluidResource.of(NeoFluidStacks.toNeo(currentFluid))
                     : FluidResource.EMPTY;
         }
 
@@ -558,7 +559,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 return false;
             }
             return currentFluid.isEmpty()
-                    || FluidStack.isSameFluidSameComponents(currentFluid, resource.toStack(1));
+                    || BCFluidStack.isSameFluidSameComponents(currentFluid, NeoFluidStacks.fromNeo(resource.toStack(1)));
         }
 
         @Override
@@ -567,12 +568,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             if (index != 0 || amount <= 0) {
                 return 0;
             }
-            int accepted = insertFluidForce(resource.toStack(amount), face, true);
+            int accepted = insertFluidForce(NeoFluidStacks.fromNeo(resource.toStack(amount)), face, true);
             if (accepted <= 0) {
                 return 0;
             }
             journal.updateSnapshots(transaction);
-            return insertFluidForce(resource.toStack(accepted), face, false);
+            return insertFluidForce(NeoFluidStacks.fromNeo(resource.toStack(accepted)), face, false);
         }
 
         @Override
@@ -607,10 +608,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public FluidStack getFluidInTank(int tank) {
-            return tank == 0 && !currentFluid.isEmpty() && stored() > 0
+        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
+            return NeoFluidStacks.toNeo(tank == 0 && !currentFluid.isEmpty() && stored() > 0
                     ? currentFluid.copyWithAmount(stored())
-                    : FluidStack.EMPTY;
+                    : BCFluidStack.EMPTY);
         }
 
         @Override
@@ -619,27 +620,27 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public boolean isFluidValid(int tank, FluidStack stack) {
+        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
             if (tank != 0 || stack.isEmpty()) {
                 return false;
             }
-            return currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, stack);
+            return currentFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(currentFluid, stack);
         }
 
         @Override
-        public int fill(FluidStack resource, FluidAction action) {
+        public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
             // The classic API carries its own simulate flag, so no snapshot journal is needed here.
             return insertFluidForce(resource, face, action.simulate());
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
-            return FluidStack.EMPTY;
+        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
 
         @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            return FluidStack.EMPTY;
+        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
     }*/
     //?}
@@ -663,11 +664,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         for (int i = 0; i < handler.size(); i++) {
             FluidResource res = handler.getResource(i);
             // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
-            if (res == null || res.isEmpty() || (!currentFluid.isEmpty() && !res.matches(currentFluid))) {
+            if (res == null || res.isEmpty() || (!currentFluid.isEmpty() && !res.matches(NeoFluidStacks.toNeo(currentFluid)))) {
                 continue;
             }
-            if (filter.matches(res.toStack(1))) {
-                return tryExtractFluid(millibuckets, from, res.toStack(millibuckets), simulate);
+            if (filter.matches(NeoFluidStacks.fromNeo(res.toStack(1)))) {
+                return tryExtractFluid(millibuckets, from, NeoFluidStacks.fromNeo(res.toStack(millibuckets)), simulate);
             }
         }
         return null;
@@ -677,10 +678,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
         for (int i = 0; i < handler.getTanks(); i++) {
-            FluidStack inTank = handler.getFluidInTank(i);
+            BCFluidStack inTank = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
             // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
             if (inTank == null || inTank.isEmpty()
-                    || (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, inTank))) {
+                    || (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, inTank))) {
                 continue;
             }
             if (filter.matches(inTank)) {
@@ -692,12 +693,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     @Override
-    public int insertFluidsForce(FluidStack fluid, @Nullable Direction from, boolean simulate) {
+    public int insertFluidsForce(BCFluidStack fluid, @Nullable Direction from, boolean simulate) {
         Section s = sections.get(EnumPipePart.CENTER);
         if (fluid == null || fluid.isEmpty()) {
             return 0;
         }
-        if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
+        if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
             return 0;
         }
         // Measure first, as insertFluidForce does: setFluid() must only run when something lands, or a
@@ -718,7 +719,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     @Override
     @Nullable
-    public FluidStack extractFluidsForce(int min, int max, @Nullable Direction section, boolean simulate) {
+    public BCFluidStack extractFluidsForce(int min, int max, @Nullable Direction section, boolean simulate) {
         if (min > max) {
             throw new IllegalArgumentException("Minimum (" + min + ") > maximum (" + max + ")");
         }
@@ -730,7 +731,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
         int amount = MathUtil.clamp(s.amount, min, max);
-        FluidStack fluid = currentFluid.copyWithAmount(amount);
+        BCFluidStack fluid = currentFluid.copyWithAmount(amount);
         if (!simulate) {
             s.amount -= amount;
             s.drainInternal(amount, false);
@@ -740,7 +741,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     isEmpty &= s2.amount == 0;
                 }
                 if (isEmpty) {
-                    setFluid(FluidStack.EMPTY);
+                    setFluid(BCFluidStack.EMPTY);
                 }
             }
         }
@@ -798,7 +799,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     // Rendering
 
     /** Returns the current fluid type for rendering, or null if empty. */
-    public FluidStack getFluidStackForRender() {
+    public BCFluidStack getFluidStackForRender() {
         return currentFluid.isEmpty() ? null : currentFluid;
     }
 
@@ -840,7 +841,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     // Internal logic
 
-    private void setFluid(@Nonnull FluidStack fluid) {
+    private void setFluid(@Nonnull BCFluidStack fluid) {
         currentFluid = fluid;
         if (!fluid.isEmpty()) {
             currentDelay = (int) PipeApi.getFluidTransferInfo(pipe.getDefinition()).transferDelayMultiplier;
@@ -895,7 +896,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 }
             }
             if (totalFluid == 0) {
-                setFluid(FluidStack.EMPTY);
+                setFluid(BCFluidStack.EMPTY);
             } else {
                 if (canOutput) {
                     moveFromPipe();
@@ -955,7 +956,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     if (handler == null) continue;
 
                     if (maxDrain > 0) {
-                        FluidResource resource = FluidResource.of(currentFluid);
+                        FluidResource resource = FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
                         int filled;
                         try (Transaction tx = Transaction.openRoot()) {
                             filled = handler.insert(resource, maxDrain, tx);
@@ -987,7 +988,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     if (handler == null) continue;
 
                     if (maxDrain > 0) {
-                        int filled = handler.fill(currentFluid.copyWithAmount(maxDrain), IFluidHandler.FluidAction.EXECUTE);
+                        int filled = handler.fill(NeoFluidStacks.toNeo(currentFluid.copyWithAmount(maxDrain)), IFluidHandler.FluidAction.EXECUTE);
                         if (filled > 0) {
                             section.drainInternal(filled, true);
                             section.ticksInDirection = COOLDOWN_OUTPUT;
@@ -999,7 +1000,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                             // would fire its TryInsert event twice a tick). A pipe face is TILE only behind the
                             // neighbour's blocking plug, where BCTransport's pipe_holder provider gives no fluid handler.
                             int settled = section.getSettled();
-                            filled = handler.fill(currentFluid.copyWithAmount(settled), IFluidHandler.FluidAction.EXECUTE);
+                            filled = handler.fill(NeoFluidStacks.toNeo(currentFluid.copyWithAmount(settled)), IFluidHandler.FluidAction.EXECUTE);
                             if (filled > 0) {
                                 section.amount -= Math.min(filled, settled);
                                 section.ticksInDirection = COOLDOWN_OUTPUT;
@@ -1197,7 +1198,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 net.minecraft.world.level.material.Fluid fluid =
                     buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
-                    currentFluid = new FluidStack(fluid, 1000);
+                    currentFluid = new BCFluidStack(fluid, 1000);
                 }
             }
             for (EnumPipePart part : EnumPipePart.VALUES) {
@@ -1428,7 +1429,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
         /** How much of {@code fluidStack} a neighbour may push into this face section right now, mutating
          *  nothing — the shared front half of the capability insert/fill on every node. */
-        private int measureNeighbourInsert(FluidStack fluidStack) {
+        private int measureNeighbourInsert(BCFluidStack fluidStack) {
             if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
                 return 0;
             }
@@ -1440,7 +1441,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             if (tryInsert.isCanceled()) {
                 return 0;
             }
-            if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
+            if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
                 return 0;
             }
             // An empty pipe's delay line is all zeros, exactly what setFluid() would rebuild it to, so the
@@ -1449,7 +1450,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         /** Lands {@code accepted} mB (from {@link #measureNeighbourInsert}) in this section. */
-        private int commitNeighbourInsert(FluidStack fluidStack, int accepted) {
+        private int commitNeighbourInsert(BCFluidStack fluidStack, int accepted) {
             if (currentFluid.isEmpty()) {
                 setFluid(fluidStack.copyWithAmount(accepted));
             }
@@ -1471,7 +1472,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         @Override
         public FluidResource getResource(int index) {
             if (index == 0 && !currentFluid.isEmpty() && amount > 0) {
-                return FluidResource.of(currentFluid);
+                return FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
             }
             return FluidResource.EMPTY;
         }
@@ -1490,14 +1491,14 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         public boolean isValid(int index, FluidResource resource) {
             if (index != 0) return false;
             return currentFluid.isEmpty()
-                || FluidStack.isSameFluidSameComponents(currentFluid, resource.toStack(1));
+                || BCFluidStack.isSameFluidSameComponents(currentFluid, NeoFluidStacks.fromNeo(resource.toStack(1)));
         }
 
         @Override
         public int insert(int index, FluidResource resource, int insertAmount,
                           net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
             if (index != 0 || insertAmount <= 0) return 0;
-            FluidStack fluidStack = resource.toStack(insertAmount);
+            BCFluidStack fluidStack = NeoFluidStacks.fromNeo(resource.toStack(insertAmount));
             int accepted = measureNeighbourInsert(fluidStack);
             if (accepted <= 0) {
                 return 0;
@@ -1520,11 +1521,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public FluidStack getFluidInTank(int tank) {
+        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
             if (tank == 0 && !currentFluid.isEmpty() && amount > 0) {
-                return currentFluid.copyWithAmount(amount);
+                return NeoFluidStacks.toNeo(currentFluid.copyWithAmount(amount));
             }
-            return FluidStack.EMPTY;
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
 
         @Override
@@ -1533,14 +1534,14 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public boolean isFluidValid(int tank, FluidStack stack) {
+        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
             if (tank != 0) return false;
             return currentFluid.isEmpty()
-                || FluidStack.isSameFluidSameComponents(currentFluid, stack);
+                || BCFluidStack.isSameFluidSameComponents(currentFluid, stack);
         }
 
         @Override
-        public int fill(FluidStack fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+        public int fill(net.neoforged.neoforge.fluids.FluidStack fluidStackNeo, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) { BCFluidStack fluidStack = NeoFluidStacks.fromNeo(fluidStackNeo);
             int accepted = measureNeighbourInsert(fluidStack);
             if (accepted <= 0 || action.simulate()) {
                 // A dry run leaves no trace: no fluid type, no input cooldown.
@@ -1550,15 +1551,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
             // Pipe sections don't support external drain
-            return FluidStack.EMPTY;
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
 
         @Override
-        public FluidStack drain(int maxDrain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
             // Pipe sections don't support external drain
-            return FluidStack.EMPTY;
+            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
         }
         *///?}
     }

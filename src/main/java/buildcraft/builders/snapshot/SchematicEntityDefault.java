@@ -44,9 +44,8 @@ import net.minecraft.world.level.storage.TagValueOutput;
 //?}
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicEntityContext;
 
@@ -166,7 +165,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
 
     @Nonnull
     @Override
-    public List<FluidStack> computeRequiredFluids() {
+    public List<BCFluidStack> computeRequiredFluids() {
         Identifier entityId = Identifier.parse(NBTUtilBC.getString(entityNbt, "id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         return rules.stream()

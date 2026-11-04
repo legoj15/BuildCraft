@@ -43,7 +43,8 @@ public class FluidSpritesGuardTester {
     /** The lookup reads the fluid's own client data, stack-aware, through the API this node has. */
     @Test
     public void lookupAsksTheFluidForItsStackAwareTextureAndTint() {
-        String code = MainSourceSet.codeOnly(file(LOOKUP).text());
+        // The NeoForge client APIs take NeoForge's FluidStack: since S13 the BCFluidStack is converted at the call.
+        String code = MainSourceSet.codeOnly(file(LOOKUP).text()).replace("NeoFluidStacks.toNeo(stack", "stack");
         boolean clientExtensions = code.contains("getStillTexture(stack") && code.contains("getTintColor(stack");
         boolean fluidModels = code.contains("getFluidStateModelSet(") && code.contains("stillMaterial()")
             && code.contains("colorAsStack(stack");

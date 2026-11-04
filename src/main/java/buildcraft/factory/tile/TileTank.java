@@ -32,8 +32,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.energy.ContainedFluidDetonation;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
@@ -86,13 +85,13 @@ public class TileTank extends AbstractBCSyncedBlockEntity
      *  would spill; see {@code AbstractBCBlockEntity#clearContent}. */
     @Override
     public void clearContent() {
-        tank.setFluidStack(0, FluidStack.EMPTY);
+        tank.setFluidStack(0, BCFluidStack.EMPTY);
     }
 
     // --- Detonation (gas in this tank exploding; the column's other tanks each answer for their own) ---
 
     @Override
-    public FluidStack containedFluid() {
+    public BCFluidStack containedFluid() {
         return tank.getFluidStack(0);
     }
 
@@ -178,13 +177,13 @@ public class TileTank extends AbstractBCSyncedBlockEntity
      * move everything as high as possible. */
     public void balanceTankFluids() {
         List<TileTank> tanks = getTankColumn();
-        FluidStack fluid = FluidStack.EMPTY;
+        BCFluidStack fluid = BCFluidStack.EMPTY;
         for (TileTank tile : tanks) {
-            FluidStack held = tile.tank.getFluidStack(0);
+            BCFluidStack held = tile.tank.getFluidStack(0);
             if (held.isEmpty()) continue;
             if (fluid.isEmpty()) {
                 fluid = held;
-            } else if (!FluidStack.isSameFluidSameComponents(fluid, held)) {
+            } else if (!BCFluidStack.isSameFluidSameComponents(fluid, held)) {
                 return; // Different fluids — can't balance
             }
         }

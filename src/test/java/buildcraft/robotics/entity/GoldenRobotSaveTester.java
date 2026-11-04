@@ -17,8 +17,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.builders.snapshot.NbtPath;
 import buildcraft.builders.snapshot.RequiredExtractor;
 import buildcraft.lib.test.GoldenFixtures;
@@ -35,7 +34,7 @@ public class GoldenRobotSaveTester {
         return new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
     }
 
-    private static void setTank(EntityRobot robot, FluidStack stack) {
+    private static void setTank(EntityRobot robot, BCFluidStack stack) {
         try {
             Field f = EntityRobot.class.getDeclaredField("tank");
             f.setAccessible(true);
@@ -47,7 +46,7 @@ public class GoldenRobotSaveTester {
 
     public static void robotSaveFormat(GameTestHelper helper) {
         EntityRobot robot = newRobot(helper);
-        setTank(robot, new FluidStack(Fluids.LAVA, 2750));
+        setTank(robot, new BCFluidStack(Fluids.LAVA, 2750));
         CompoundTag saved = ValueIoTestUtil.write(robot::writeData);
         GoldenFixtures.assertGolden("entity_robot", saved);
 
@@ -59,8 +58,8 @@ public class GoldenRobotSaveTester {
         RequiredExtractor rule = gson.fromJson(JsonParser.parseString("{\"type\":\"tank\",\"path\":[\"tank\"]}"),
                 RequiredExtractor.class);
         ListTag priced = new ListTag();
-        for (FluidStack stack : rule.extractFluidsFromEntity(saved)) {
-            priced.add(FluidStack.CODEC.encodeStart(NbtOps.INSTANCE, stack).getOrThrow());
+        for (BCFluidStack stack : rule.extractFluidsFromEntity(saved)) {
+            priced.add(BCFluidStack.CODEC.encodeStart(NbtOps.INSTANCE, stack).getOrThrow());
         }
         CompoundTag pricedTag = new CompoundTag();
         pricedTag.put("fluids", priced);

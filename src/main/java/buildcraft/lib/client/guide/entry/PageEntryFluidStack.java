@@ -21,8 +21,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -31,6 +30,7 @@ import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.contents.PageLinkFluidStack;
 import buildcraft.lib.client.guide.ref.GuideGroupManager;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiFluid;
 import buildcraft.lib.gui.ISimpleDrawable;
 
@@ -63,11 +63,11 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
         prof.push("iterate_all_fluids");
         for (Fluid fluid : BuiltInRegistries.FLUID) {
             if (fluid == Fluids.EMPTY) continue;
-            FluidStack stack = new FluidStack(fluid, 1);
+            BCFluidStack stack = new BCFluidStack(fluid, 1);
             if (stack.isEmpty()) continue;
             // Dedup against guide-defined fluid entries (refinery fuels, coolants).
             if (!GuideManager.INSTANCE.objectsAdded.add(fluid)) continue;
-            String displayName = fluid.getFluidType().getDescription(stack).getString();
+            String displayName = fluid.getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
             if (displayName == null || displayName.trim().isEmpty()) continue;
             consumer.addChild(OTHER_FLUIDS_TAGS, PageLinkFluidStack.create(false, stack, prof));
         }
@@ -86,14 +86,14 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
         if (fluid == null) {
             return new OptionallyDisabled<>("Unknown fluid '" + str + "'");
         }
-        FluidStackValueFilter filter = new FluidStackValueFilter(new FluidStack(fluid, 1));
+        FluidStackValueFilter filter = new FluidStackValueFilter(new BCFluidStack(fluid, 1));
         return new OptionallyDisabled<>(new PageEntry<>(this, name, json, filter));
     }
 
     @Override
     public String getTitle(FluidStackValueFilter value) {
-        FluidStack stack = value.stack;
-        return stack.getFluid().getFluidType().getDescription(stack).getString();
+        BCFluidStack stack = value.stack;
+        return stack.getFluid().getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
     }
 
     @Override
@@ -106,7 +106,7 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
         Fluid target = null;
         if (obj instanceof FluidStackValueFilter f) {
             target = f.stack.getFluid();
-        } else if (obj instanceof FluidStack fs) {
+        } else if (obj instanceof BCFluidStack fs) {
             target = fs.getFluid();
         } else if (obj instanceof Fluid f) {
             target = f;

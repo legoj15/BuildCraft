@@ -16,9 +16,8 @@ import net.minecraft.world.phys.Vec3;
 
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
 import buildcraft.api.blocks.CustomPaintHelper;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.transport.pipe.IPipe;
 
 import buildcraft.transport.BCTransportBlocks;
@@ -274,7 +273,7 @@ public class PaintedPipeConnectionTester {
         // Feed fluid into A's centre each tick and run the flow.
         PipeFlowFluids aFlow = (PipeFlowFluids) aPipe.getFlow();
         for (int i = 0; i < 60; i++) {
-            aFlow.insertFluidsForce(new FluidStack(Fluids.WATER, 200), null, false);
+            aFlow.insertFluidsForce(new BCFluidStack(Fluids.WATER, 200), null, false);
             aPipe.onTick();
             bPipe.onTick();
         }

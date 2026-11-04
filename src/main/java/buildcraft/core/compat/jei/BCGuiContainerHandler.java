@@ -11,9 +11,9 @@ import java.util.Optional;
 
 import net.minecraft.client.renderer.Rect2i;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.IGuiElement;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
@@ -68,11 +68,11 @@ public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
             BCFluidTank tank = tankElem.getTank();
             if (tank == null || tank.size() == 0) continue;
 
-            FluidStack stack = tank.getFluidStack(0);
+            BCFluidStack stack = tank.getFluidStack(0);
             long amount = tank.getAmountMb(0);
             if (stack.isEmpty() || amount <= 0) continue;
 
-            return builder.createBuilder(NeoForgeTypes.FLUID_STACK, stack)
+            return builder.createBuilder(NeoForgeTypes.FLUID_STACK, NeoFluidStacks.toNeo(stack))
                     .buildWithArea((int) x, (int) y, (int) Math.ceil(w), (int) Math.ceil(h));
         }
         return Optional.empty();

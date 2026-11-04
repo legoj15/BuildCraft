@@ -6,7 +6,6 @@ import javax.annotation.Nullable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.NonNullList;
@@ -16,8 +15,10 @@ import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 import java.util.function.Consumer;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.LocaleUtil;
 
 public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
@@ -30,7 +31,7 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
 
     @Override
     public Component getName(ItemStack stack) {
-        FluidStack fluid = getFluid(stack);
+        BCFluidStack fluid = getFluid(stack);
         if (fluid.isEmpty()) {
             // No fluid stored — e.g. the bare item shown in the guide book or the
             // creative/JEI search. Use a generic name rather than substituting a
@@ -58,7 +59,7 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
         Consumer<Component> tooltip = tooltipList::add;
         super.appendHoverText(stack, context, tooltipList, flagIn);*/
     //?}
-        FluidStack fluid = getFluid(stack);
+        BCFluidStack fluid = getFluid(stack);
         if (!fluid.isEmpty() && fluid.getAmount() > 0) {
             // Same "<amount> / <capacity> <unit>" formatter every other tank readout uses, so this
             // honours useFullUnitNames, abbreviateLargeNumbers, and the separator settings instead of
@@ -68,13 +69,13 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
     }
 
     @Override
-    public void addFluidDrops(NonNullList<ItemStack> toDrop, @Nullable FluidStack fluid) {
+    public void addFluidDrops(NonNullList<ItemStack> toDrop, @Nullable BCFluidStack fluid) {
         if (fluid == null || fluid.isEmpty()) {
             return;
         }
         int amount = fluid.getAmount();
         if (amount >= MAX_FLUID_HELD) {
-            FluidStack fluid2 = fluid.copy();
+            BCFluidStack fluid2 = fluid.copy();
             fluid2.setAmount(MAX_FLUID_HELD);
             while (amount >= MAX_FLUID_HELD) {
                 ItemStack stack = new ItemStack(this);
@@ -85,26 +86,26 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
         }
         if (amount > 0) {
             ItemStack stack = new ItemStack(this);
-            FluidStack fluid2 = fluid.copy();
+            BCFluidStack fluid2 = fluid.copy();
             fluid2.setAmount(amount);
             setFluid(stack, fluid2);
             toDrop.add(stack);
         }
     }
 
-    public static void setFluid(ItemStack container, FluidStack fluid) {
+    public static void setFluid(ItemStack container, BCFluidStack fluid) {
         if (fluid.isEmpty()) {
             container.remove(BCCore.FLUID_CONTENT.get());
             return;
         }
-        container.set(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.copyOf(fluid));
+        container.set(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.copyOf(NeoFluidStacks.toNeo(fluid)));
     }
 
-    public static FluidStack getFluid(ItemStack container) {
+    public static BCFluidStack getFluid(ItemStack container) {
         if (container.isEmpty()) {
-            return FluidStack.EMPTY;
+            return BCFluidStack.EMPTY;
         }
         SimpleFluidContent content = container.getOrDefault(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.EMPTY);
-        return content.copy();
+        return NeoFluidStacks.fromNeo(content.copy());
     }
 }

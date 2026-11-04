@@ -6,7 +6,7 @@
 
 package buildcraft.lib.fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
  * Provides smooth client-side interpolation of fluid tank levels for rendering.
@@ -32,7 +32,7 @@ public class FluidSmoother {
      * The last fluid the tank held. Kept after the tank empties, as the 1.12.2 client kept its fluid link, so the
      * level drains to zero and the heat exchanger's flow recedes instead of popping out with the tank.
      */
-    private FluidStack lastFluid = FluidStack.EMPTY;
+    private BCFluidStack lastFluid = BCFluidStack.EMPTY;
 
     public FluidSmoother(BCFluidTank tank) {
         this.tank = tank;
@@ -94,10 +94,10 @@ public class FluidSmoother {
      * Returns the tank's fluid stack, or the last fluid it held once empty (type only — use {@link #getAmount} for
      * the smoothed quantity). Empty only if the tank never held anything.
      */
-    public FluidStack getRenderFluid() {
-        FluidStack current = tank.getFluidStack(0);
+    public BCFluidStack getRenderFluid() {
+        BCFluidStack current = tank.getFluidStack(0);
         // Copy on change: the tank may shrink its own stack in place, which would empty a shared reference.
-        if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, lastFluid)) {
+        if (!current.isEmpty() && !BCFluidStack.isSameFluidSameComponents(current, lastFluid)) {
             lastFluid = current.copyWithAmount(1);
         }
         return lastFluid;
@@ -125,14 +125,14 @@ public class FluidSmoother {
     /**
      * Result record for convenience rendering methods.
      */
-    public record FluidStackInterp(FluidStack fluid, double amount) {}
+    public record FluidStackInterp(BCFluidStack fluid, double amount) {}
 
     /**
      * Returns a combined fluid type + smoothed amount for rendering, or {@code null} if the tank never held
      * anything. An emptied tank keeps its last fluid while the amount drains to zero; callers skip a zero amount.
      */
     public FluidStackInterp getFluidForRender(double partialTicks) {
-        FluidStack res = getRenderFluid();
+        BCFluidStack res = getRenderFluid();
         if (res.isEmpty()) {
             return null;
         }

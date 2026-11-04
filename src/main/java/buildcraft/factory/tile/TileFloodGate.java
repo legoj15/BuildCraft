@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -34,8 +33,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.factory.BCFactoryBlockEntities;
@@ -132,7 +130,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
      *  spill; see {@code AbstractBCBlockEntity#clearContent}. */
     @Override
     public void clearContent() {
-        tank.setFluidStack(0, FluidStack.EMPTY);
+        tank.setFluidStack(0, BCFluidStack.EMPTY);
     }
 
     // Owner tracking (field, getOwner, onPlacedBy) lives on AbstractBCBlockEntity; the placing player
@@ -159,7 +157,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     private void buildQueue() {
         queue.clear();
         paths.clear();
-        FluidStack fluid = tank.getFluidStack(0);
+        BCFluidStack fluid = tank.getFluidStack(0);
         if (fluid.isEmpty()) {
             return;
         }
@@ -278,7 +276,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
         tick++;
         if (tick % 16 == 0) {
             if (!tank.isTankEmpty(0) && !queue.isEmpty()) {
-                FluidStack res = tank.getFluidStack(0);
+                BCFluidStack res = tank.getFluidStack(0);
                 if (tank.getAmountMb(0) >= 1000) {
                     BlockPos currentPos = queue.removeLast();
                     List<BlockPos> path = reconstructPath(currentPos);

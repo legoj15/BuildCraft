@@ -37,12 +37,12 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicEntityContext;
 
+import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -64,7 +64,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     public final List<ItemStack> remainingRequiredItems = new ArrayList<>();
     private List<ItemStack>[] remainingRequiredItemBlocks;
     private List<ItemStack> remainingRequiredItemBlocksConcat = Collections.emptyList();
-    private final Map<Pair<List<ItemStack>, List<FluidStack>>, Optional<List<ItemStack>>> extractRequiredCache =
+    private final Map<Pair<List<ItemStack>, List<BCFluidStack>>, Optional<List<ItemStack>>> extractRequiredCache =
         new HashMap<>();
 
     public BlueprintBuilder(ITileForBlueprintBuilder tile) {
@@ -164,7 +164,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         remainingRequiredItems.clear();
     }
 
-    private Stream<ItemStack> getDisplayRequired(List<ItemStack> requiredItems, List<FluidStack> requiredFluids) {
+    private Stream<ItemStack> getDisplayRequired(List<ItemStack> requiredItems, List<BCFluidStack> requiredFluids) {
         return Stream.concat(
             requiredItems == null ? Stream.empty() : requiredItems.stream(),
             requiredFluids == null ? Stream.empty() : requiredFluids.stream()
@@ -177,7 +177,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     private Optional<List<ItemStack>> tryExtractRequired(List<ItemStack> requiredItems,
-                                                         List<FluidStack> requiredFluids,
+                                                         List<BCFluidStack> requiredFluids,
                                                          boolean simulate) {
         Supplier<Optional<List<ItemStack>>> function = () ->
             (
@@ -194,11 +194,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                         .allMatch(stack -> {
                             //? if >=1.21.10 {
                             try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                                int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(stack), stack.getAmount(), tx);
+                                int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
                                 return extracted == stack.getAmount();
                             }
                             //?} else {
-                            /*int extracted = tile.getTankManager().drain(stack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE).getAmount();
+                            /*int extracted = tile.getTankManager().drain(NeoFluidStacks.toNeo(stack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE).getAmount();
                             return extracted == stack.getAmount();*/
                             //?}
                         })
@@ -220,19 +220,19 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                                 .map(fluidStack -> {
                                     //? if >=1.21.10 {
                                     try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                                        int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(fluidStack), fluidStack.getAmount(), tx);
+                                        int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(fluidStack)), fluidStack.getAmount(), tx);
                                         if (!simulate) tx.commit();
-                                        return new FluidStack(fluidStack.getFluid(), extracted);
+                                        return new BCFluidStack(fluidStack.getFluid(), extracted);
                                     }
                                     //?} else {
-                                    /*int extracted = tile.getTankManager().drain(fluidStack, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
-                                    return new FluidStack(fluidStack.getFluid(), extracted);*/
+                                    /*int extracted = tile.getTankManager().drain(NeoFluidStacks.toNeo(fluidStack), simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
+                                    return new BCFluidStack(fluidStack.getFluid(), extracted);*/
                                     //?}
                                 })
                                 .map(fluidStack -> {
                                     ItemStack stack = buildcraft.lib.misc.FluidUtilBC.getFilledBucket(fluidStack);
                                     // Store fluid id + amount directly in the BuilderFluidStack
-                                    // tag so cancelPlaceTask can reconstitute the FluidStack for
+                                    // tag so cancelPlaceTask can reconstitute the BCFluidStack for
                                     // the tank refund. Earlier this used a TODO-stubbed empty
                                     // CompoundTag, which made cancel crash the server with
                                     // "Expected resource to be non-empty" as soon as a fluid
@@ -488,17 +488,17 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 net.minecraft.world.item.component.CustomData customData =
                     stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
                 CompoundTag fluidTag = NBTUtilBC.getCompound(customData.copyTag(), FLUID_STACK_KEY);
-                if (fluidTag.isEmpty()) return FluidStack.EMPTY;
+                if (fluidTag.isEmpty()) return BCFluidStack.EMPTY;
                 String fluidIdStr = NBTUtilBC.getString(fluidTag, "fluid", "");
                 int amount = NBTUtilBC.getInt(fluidTag, "amount", 0);
-                if (fluidIdStr.isEmpty() || amount <= 0) return FluidStack.EMPTY;
+                if (fluidIdStr.isEmpty() || amount <= 0) return BCFluidStack.EMPTY;
                 net.minecraft.resources.Identifier id =
                     net.minecraft.resources.Identifier.tryParse(fluidIdStr);
-                if (id == null) return FluidStack.EMPTY;
+                if (id == null) return BCFluidStack.EMPTY;
                 net.minecraft.world.level.material.Fluid fluid =
                     buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, id);
-                if (fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY) return FluidStack.EMPTY;
-                return new FluidStack(fluid, amount);
+                if (fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY) return BCFluidStack.EMPTY;
+                return new BCFluidStack(fluid, amount);
             })
             // What a full tank cannot take back is lost: fluid has no item to drop, and the tank gave it up
             // moments before. Defensive filter — if for any reason the round-trip above came back empty (old
@@ -509,11 +509,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             .forEach(fluidStack -> {
                 //? if >=1.21.10 {
                 try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                    tile.getTankManager().insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(fluidStack), fluidStack.getAmount(), tx);
+                    tile.getTankManager().insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(fluidStack)), fluidStack.getAmount(), tx);
                     tx.commit();
                 }
                 //?} else {
-                /*tile.getTankManager().fill(fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
+                /*tile.getTankManager().fill(NeoFluidStacks.toNeo(fluidStack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
                 //?}
             });
     }

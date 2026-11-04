@@ -300,10 +300,10 @@ public class ContainerContentsScanTester {
         }
     }
 
-    private static int waterMb(List<net.neoforged.neoforge.fluids.FluidStack> fluids) {
+    private static int waterMb(List<buildcraft.api.fluids.BCFluidStack> fluids) {
         return fluids.stream()
                 .filter(stack -> stack.getFluid() == net.minecraft.world.level.material.Fluids.WATER)
-                .mapToInt(net.neoforged.neoforge.fluids.FluidStack::getAmount)
+                .mapToInt(buildcraft.api.fluids.BCFluidStack::getAmount)
                 .sum();
     }
 
@@ -323,8 +323,8 @@ public class ContainerContentsScanTester {
     public static void testBuildCraftMachineContentsArePriced(GameTestHelper helper) {
         try {
             ServerLevel level = helper.getLevel();
-            net.neoforged.neoforge.fluids.FluidStack water4000 =
-                    new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 4000);
+            buildcraft.api.fluids.BCFluidStack water4000 =
+                    new buildcraft.api.fluids.BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 4000);
 
             BlockPos tankPos = helper.absolutePos(new BlockPos(1, 2, 1));
             level.setBlock(tankPos, buildcraft.factory.BCFactoryBlocks.TANK.get().defaultBlockState(), 3);

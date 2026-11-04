@@ -10,7 +10,7 @@ import java.util.Objects;
 
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.api.fluids.BCFluidStack;
 
 /** Mirror of {@link ItemStackValueFilter} for fluids — used as the value type of
  *  {@link PageEntryFluidStack} so guide groups can hold fluid endpoints (fuels, coolants,
@@ -21,14 +21,14 @@ import net.neoforged.neoforge.fluids.FluidStack;
  *  any amount of the same fluid are equal. Most guide-book uses don't care about amount
  *  (we want "diesel" to match "diesel" regardless of bucket size). */
 public class FluidStackValueFilter {
-    public final FluidStack stack;
+    public final BCFluidStack stack;
 
-    public FluidStackValueFilter(FluidStack stack) {
+    public FluidStackValueFilter(BCFluidStack stack) {
         this.stack = stack;
     }
 
     public FluidStackValueFilter(Fluid fluid) {
-        this(new FluidStack(fluid, 1));
+        this(new BCFluidStack(fluid, 1));
     }
 
     public Fluid getFluid() {

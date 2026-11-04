@@ -7,8 +7,9 @@ description: Bumping NeoForge on any Stonecutter node in BuildCraft — use when
 
 NeoForge for Minecraft is constantly updating. `neo_version` is the pin, and it is **per-node**
 (`versions/<node>/gradle.properties`) — each node tracks its own line independently. The
-version-check hook reads every node's pin directly (it does not depend on any root
-gradle.properties mirror).
+version-check hook reads every NeoForge node's pin directly (it does not depend on any root
+gradle.properties mirror). It and `scripts/neoforge-sources-sync.sh` skip a node whose `loader` is not
+`neoforge` (the compile-only `26.3-fabric` node has no `neo_version`).
 
 ## Awareness — the SessionStart hook
 

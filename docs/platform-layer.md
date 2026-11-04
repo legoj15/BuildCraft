@@ -33,9 +33,9 @@ Verified facts this section rests on:
 **Build wiring.**
 - Root `gradle.properties` gets `loader=neoforge`. A Fabric node's `versions/<node>/gradle.properties` sets `loader=fabric`. The loader is never parsed out of the node name.
 - `build.gradle.kts` reads `loader` and sets `stonecutter { constants.match(loader, "neoforge", "fabric") }`. Slice 1 must confirm with javap or a dry run that `match` sets exactly the matching key true and the others false; if not, use two `put` calls.
-- **Node names:** the six NeoForge nodes stay unsuffixed. Fabric nodes are `<mc>-fabric`, declared as `vers("26.3-fabric", "26.3")`. Renaming the existing nodes would churn every `:26.3:` task path, the skills, the hooks, the smoke runner and the release orchestrator, for nothing.
-- **Phase 2 build shape:** move the `neoForge {}` block (`build.gradle.kts:244-334`) into a buildSrc convention plugin `bc.neoforge`, add a Loom twin `bc.fabric`, and select with `apply(plugin = "bc.$loader")`. Never two plugin DSLs inline behind conditionals. Loom on 26.x does not remap, so shared source compiles as-is.
-- **Phase 2 option, decided by the spike rather than now:** `git mv` `platform/neoforge` into a `neoforge` source set (`src/neoforge/java`, same package names, so no code edits). That would make "common never names an implementation" compiler-enforced. The cost is MDG `mods { sourceSet(neoforge) }`, test classpaths, the `buildcraft.test.mainSourceDirs` system property (`build.gradle.kts:434-438`), and a binder that is injected from the entrypoint, because main could no longer name the implementation. Until then the census enforces the rule.
+- **Node names:** the six NeoForge nodes stay unsuffixed. Fabric nodes are `<mc>-fabric`, declared as `version("26.3-fabric", "26.3")` (0.9.8 deprecates the short `vers()` at error level, so it does not compile). Renaming the existing nodes would churn every `:26.3:` task path, the skills, the hooks, the smoke runner and the release orchestrator, for nothing.
+- **Phase 2 build shape (landed with the spike, #100):** everything NeoForge-specific (the `neoForge {}` block, its dependencies, mods.toml expansion, tests, game tests, the jar and `buildAndCollect`) lives in the buildSrc convention plugin `buildSrc/src/main/kotlin/bc.neoforge.gradle.kts`, its Loom twin is `bc.fabric.gradle.kts`, and `build.gradle.kts` keeps only the shared Stonecutter, toolchain and javac setup before `apply(plugin = "bc.$loader")`. ModDevGradle and Loom are `implementation` dependencies of `buildSrc/build.gradle.kts`, which is where their versions are pinned. Stonecutter flags reach the convention plugins as the `bcNode` extension (`buildcraft.gradle.BcNode`). Each convention plugin registers `nodeVerification`, the node's share of the root `fullTestSuite`. Never two plugin DSLs inline behind conditionals. Loom on 26.x does not remap, so shared source compiles as-is.
+- **Phase 2 option, decided by the spike rather than now:** `git mv` `platform/neoforge` into a `neoforge` source set (`src/neoforge/java`, same package names, so no code edits). That would make "common never names an implementation" compiler-enforced. The cost is MDG `mods { sourceSet(neoforge) }`, test classpaths, the `buildcraft.test.mainSourceDirs` system property (`tasks.test` in `bc.neoforge.gradle.kts`), and a binder that is injected from the entrypoint, because main could no longer name the implementation. Until then the census enforces the rule.
 
 **IDE.** The active node stays `26.3` (NeoForge). NeoForge implementation files are live; Fabric implementation files show as comments. To edit Fabric code, switch the active node to `26.3-fabric`.
 
@@ -81,7 +81,7 @@ Never build a generic BC event bus. It is the Architectury trap the issue reject
 - **Shape.** `LoaderServices`: `isPhysicalClient()`, `isModLoaded(id)`, `modIds()`, `modVersion(id)` (an `Optional`), `modSourcePaths(id)` (`List<Path>`), `configDir()`, `gameDir()`, and `currentServer()` (nullable).
 - **Typing.** BC-owned. Fabric maps to `FabricLoader` and `getOrigin().getPaths()`, and captures `currentServer` at `SERVER_STARTING` and clears it at `SERVER_STOPPED`.
 - **Format risk.** None.
-- **Directive interplay.** The 1.21.1 `getDist()` to `.dist` regex (`build.gradle.kts:106-115`) then applies only to the implementation file, plus `api/core/NbtApiUtil.java` until the API slice. The regex is deleted in the API slice, replaced by a `>=1.21.10` arm inside the implementation.
+- **Directive interplay.** The 1.21.1 `getDist()` to `.dist` regex (`build.gradle.kts`, the `isPre1_21_10` `getDist` pair) then applies only to the implementation file, plus `api/core/NbtApiUtil.java` until the API slice. The regex is deleted in the API slice, replaced by a `>=1.21.10` arm inside the implementation.
 
 ### Config
 - **Shape.** `ConfigRegistrar.register(BCConfigType, spec, fileName)`, where `BCConfigType` is a BC enum (COMMON, CLIENT, LOCAL), plus `ConfigHooks.onReload`.
@@ -278,7 +278,7 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
 - The spike (SP) has answered these questions:
   - Loom and MDG side by side via the `bc.neoforge`/`bc.fabric` convention plugins inside one Stonecutter tree.
   - Constants resolving on `26.3-fabric`.
-  - `vers("26.3-fabric", "26.3")` giving `stonecutter.current.version == 26.3` in the build scripts.
+  - `version("26.3-fabric", "26.3")` giving `stonecutter.current.version == 26.3` in the build scripts.
   - The guard working with a suffixed active node.
   - Whether to move `platform/neoforge` into a `neoforge` source set.
 - Phase 1 finish line met on the 26.3 view.
@@ -307,7 +307,7 @@ These are NeoForge-only today and need Fabric twins or loader-awareness:
 - **Reference sources:** `.neoforge-ref` and `scripts/neoforge-sources-sync.sh`. Fabric needs a Fabric API sources dir-set and `INDEX.txt` rows.
 - **Version tracking:** the `neoforge-bump` skill and the SessionStart version-check hook, for Fabric Loader and Fabric API pins.
 - **Smoke:** the smoke runner (`scripts/smoke/`, which hard-codes `config/neoforge-client.toml`) and McDevBridge, if it is a NeoForge mod.
-- **Release:** the boot and connect matrix, the release orchestrator, Modrinth and CurseForge loader tags, the jar name (`build.gradle.kts:457-463` carries no loader component), and the update manifest.
+- **Release:** the boot and connect matrix, the release orchestrator, Modrinth and CurseForge loader tags, the jar name (`tasks.jar` in `bc.neoforge.gradle.kts` carries no loader component), and the update manifest.
 - **Build hygiene:** `DuplicatesStrategy.EXCLUDE` in `processResources` would silently hide a resource present in both loader trees. Switch to FAIL when the loader resources split.
 - **Census upkeep:** keep the census script in step with directive syntax (`elif`, `*///?}`).
 

@@ -67,7 +67,7 @@ the safety net — this skill is the manual.
 `skyAccess=true` so no barrier ceiling blocks top-down scans). Its watchdog `max_ticks` is read
 from the SAME JSON manifests the modern nodes consume — so a missing manifest degrades 1.21.1
 too, and every manifest field you write is live on every node. You never write any of this
-yourself; adding to `registerAll` is all three nodes at once.
+yourself; adding to `registerAll` is every NeoForge node at once (a Fabric node runs no game tests yet).
 
 ## Never assert on a fixed tick after placing blocks/entities
 

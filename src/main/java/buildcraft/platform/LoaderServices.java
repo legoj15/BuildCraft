@@ -28,14 +28,18 @@ public interface LoaderServices {
     /** Whether a mod with this id is installed. */
     boolean isModLoaded(String modId);
 
-    /** The id of every installed mod, in the loader's own order. */
+    /** The id of every installed mod, in an order that is the same on every launch with the same mods. The order
+     *  itself is the implementation's: NeoForge gives its mod list's (dependencies first, ties in discovery order),
+     *  Fabric sorts by id (its own list is shuffled on every development launch). The order is observable:
+     *  {@code RulesLoader}'s rule precedence follows it, so on Fabric that precedence is id order. */
     List<String> modIds();
 
     /** The version string of the installed mod with this id, or empty if there is none. */
     Optional<String> modVersion(String modId);
 
     /** Where the installed mod with this id was loaded from (its jar, or its class directory in a development
-     *  environment): empty if there is no such mod, otherwise one entry per root the loader reports. */
+     *  environment): one entry per root the loader reports. Empty if there is no such mod, or if the loader reports
+     *  no file of the mod's own (a jar-in-jar mod on Fabric). */
     List<Path> modSourcePaths(String modId);
 
     /** The directory the loader keeps mod configuration in. */

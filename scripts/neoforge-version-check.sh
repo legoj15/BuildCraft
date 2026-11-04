@@ -58,6 +58,9 @@ shopt -u nullglob
 if [ "${#node_props[@]}" -gt 0 ]; then
     for f in "${node_props[@]}"; do
         id="$(basename "$(dirname "$f")")"
+        # NeoForge nodes only: a node whose loader (its own, else the root's) is not neoforge has no NeoForge pin.
+        ld="$(get_prop "$f" loader)"; [ -n "$ld" ] || ld="$(get_prop "$root_props" loader)"
+        [ -z "$ld" ] || [ "$ld" = neoforge ] || continue
         nv="$(get_prop "$f" neo_version)";       [ -n "$nv" ] || nv="$(get_prop "$root_props" neo_version)"
         mv="$(get_prop "$f" minecraft_version)"; [ -n "$mv" ] || mv="$(get_prop "$root_props" minecraft_version)"
         [ -n "$nv" ] || { note "node $id: no neo_version; skipping"; continue; }

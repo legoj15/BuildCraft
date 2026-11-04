@@ -6,24 +6,32 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.concurrent.atomic.AtomicBoolean;
+/*import fuzs.forgeconfigapiport.fabric.api.v5.ConfigRegistry;
+import net.neoforged.fml.config.IConfigSpec;
+import net.neoforged.fml.config.ModConfig;
 
 import buildcraft.platform.config.BCConfigType;
 import buildcraft.platform.config.ConfigRegistrar;
 
 /^*
- * {@link ConfigRegistrar} on Fabric: a documented no-op. Fabric has no {@code ModConfigSpec}, and the choice between
- * Forge Config API Port and an in-house builder (open question 1 in {@code docs/platform-layer.md}) is the user's call,
- * so nothing is registered, the config classes keep their spec defaults, and the first call logs that once.
+ * {@link ConfigRegistrar} on Fabric, through Forge Config API Port, which ships NeoForge's {@code ModConfigSpec} and
+ * {@code ModConfig} on Fabric (so BC's config classes stay as they are) and reads and writes the same toml files.
+ *
+ * <p><b>Gap:</b> FCAP has no {@code LOCAL} type, only NeoForge's pre-FML-12 set. {@code LOCAL} and {@code COMMON} both
+ * map to its {@code COMMON}, which is both sides, one global file and never synced: exactly {@code LOCAL}'s behaviour.
+ * The one loss is that a NeoForge 26.3 {@code COMMON} (FML 12 {@code SYNCED}) spec is not synced to clients on Fabric.
  *^/
 public final class FabricConfigRegistrar implements ConfigRegistrar {
-    private static final AtomicBoolean WARNED = new AtomicBoolean();
+    static final String MOD_ID = "buildcraftunofficial";
 
     @Override
     public void register(BCConfigType type, Object spec, String fileName) {
-        if (WARNED.compareAndSet(false, true)) {
-            org.slf4j.LoggerFactory.getLogger("buildcraft.platform")
-                .warn("Config registration is not implemented on Fabric yet; using built-in defaults");
+        ModConfig.Type fcapType = type == BCConfigType.CLIENT ? ModConfig.Type.CLIENT : ModConfig.Type.COMMON;
+        IConfigSpec configSpec = (IConfigSpec) spec;
+        if (fileName == null) {
+            ConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec);
+        } else {
+            ConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec, fileName);
         }
     }
 }

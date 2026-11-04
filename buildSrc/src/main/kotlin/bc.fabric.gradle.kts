@@ -17,6 +17,7 @@ plugins {
 val minecraftVersion = property("minecraft_version") as String
 val fabricLoaderVersion = property("fabric_loader_version") as String
 val fabricApiVersion = property("fabric_api_version") as String
+val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
 
 sourceSets {
     named("main") {
@@ -50,12 +51,22 @@ loom {
 // Loom registers this itself; declared so the source of fabric-loader / fabric-api is visible here.
 repositories {
     maven("https://maven.fabricmc.net/")
+    // Modrinth's maven, for Forge Config API Port alone.
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
 }
 
 dependencies {
     "minecraft"("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    // NeoForge's config API on Fabric (FabricConfigRegistrar). Its night-config libraries ride inside it as nested
+    // jars at runtime; the compile needs them directly because ModConfigSpec's signatures name them.
+    implementation("maven.modrinth:forge-config-api-port:$forgeConfigApiPortVersion")
+    compileOnly("com.electronwill.night-config:core:3.8.4")
+    compileOnly("com.electronwill.night-config:toml:3.8.4")
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

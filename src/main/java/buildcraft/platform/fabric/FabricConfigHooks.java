@@ -6,18 +6,32 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import buildcraft.platform.config.ConfigHooks;
+/*import fuzs.forgeconfigapiport.fabric.api.v5.ModConfigEvents;
+
+import buildcraft.platform.config.ConfigHooks;
 
 /^*
- * {@link ConfigHooks} on Fabric: a documented no-op, because nothing is loaded or reloaded without a config backend
- * (see {@link FabricConfigRegistrar}).
+ * {@link ConfigHooks} on Fabric: Forge Config API Port's per-mod loading and reloading events, filtered to the spec,
+ * as the NeoForge implementation filters {@code ModConfigEvent}.
  *^/
 public final class FabricConfigHooks implements ConfigHooks {
 
     @Override
-    public void onLoad(Object spec, Runnable action) {}
+    public void onLoad(Object spec, Runnable action) {
+        ModConfigEvents.loading(FabricConfigRegistrar.MOD_ID).register(config -> {
+            if (config.getSpec() == spec) {
+                action.run();
+            }
+        });
+    }
 
     @Override
-    public void onReload(Object spec, Runnable action) {}
+    public void onReload(Object spec, Runnable action) {
+        ModConfigEvents.reloading(FabricConfigRegistrar.MOD_ID).register(config -> {
+            if (config.getSpec() == spec) {
+                action.run();
+            }
+        });
+    }
 }
 *///?}

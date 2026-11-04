@@ -23,6 +23,8 @@ public final class BCFabricEntrypoint implements ModInitializer {
         FabricLoaderServices.registerLifecycleListeners();
         FabricLoaderHookRoutes.register();
         BCCore.init();
+        // NeoForge builds the entries in its register events, after the whole init; Fabric does it here.
+        FabricRegistryServices.registerPending();
         // NeoForge adds these from biome-modifier JSON, which the Fabric resources drop (FabricDataServices).
         FabricDataServices.addTaggedBiomeFeatures();
         ((FabricLifecycleHooks) Platform.lifecycle()).finishInit();

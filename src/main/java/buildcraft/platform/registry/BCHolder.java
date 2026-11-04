@@ -25,10 +25,18 @@ import net.minecraft.resources.ResourceKey;
 public class BCHolder<R, T extends R> implements Supplier<T> {
     private final Identifier id;
     private final ResourceKey<R> key;
-    private final Holder<R> delegate;
+    private final Supplier<? extends Holder<R>> delegate;
 
     /** @param delegate the loader's holder for the entry; it resolves to the value once the entry is registered */
     public BCHolder(Identifier id, ResourceKey<R> key, Holder<R> delegate) {
+        this(id, key, () -> delegate);
+    }
+
+    /**
+     * @param delegate the loader's holder for the entry, asked for on each use: a loader that registers an entry only
+     *     when it is first needed (Fabric, replaying BuildCraft's registrations after its init) registers it there
+     */
+    public BCHolder(Identifier id, ResourceKey<R> key, Supplier<? extends Holder<R>> delegate) {
         this.id = id;
         this.key = key;
         this.delegate = delegate;
@@ -51,14 +59,14 @@ public class BCHolder<R, T extends R> implements Supplier<T> {
 
     /** The vanilla holder of the entry, for an API that takes a {@link Holder}. */
     public Holder<R> holder() {
-        return delegate;
+        return delegate.get();
     }
 
     /** The registered value. Throws while the entry is not registered yet. */
     @Override
     @SuppressWarnings("unchecked")
     public T get() {
-        return (T) delegate.value();
+        return (T) delegate.get().value();
     }
 
     @Override

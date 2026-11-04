@@ -15,22 +15,104 @@ import java.util.function.Function;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
+
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.RegistryServices;
 
 /^*
- * {@link RegistryServices} on Fabric: registration is eager, {@code Registry.registerForHolder} at the register call
- * (the block and item helpers have already set the id on the properties, as on NeoForge). Gap: Fabric has no registry
+ * {@link RegistryServices} on Fabric. NeoForge builds every entry from its factory in its registry's register event,
+ * after all of BuildCraft's register calls; building it at the call instead runs a factory while the class whose
+ * static init made the call is half built (a block-entity type naming a block of a holder class still initialising).
+ * So each entry is queued at its register call and built and {@code Registry.registerForHolder}ed either when first
+ * asked for ({@link BCHolder#get}) or by {@link #registerPending}, which the Fabric entrypoint calls after BuildCraft's
+ * init, registry by registry in NeoForge's order and in call order within one (the block and item helpers have
+ * already set the id on the properties, as on NeoForge). Gap: Fabric has no registry
  * alias API, so {@link BCRegistrar#addAlias} records nothing and old ids do not resolve.
  *^/
 public final class FabricRegistryServices implements RegistryServices {
+    /^* Every queued entry, in register-call order. ^/
+    private static final List<Pending<?>> PENDING = new ArrayList<>();
+
+    /^*
+     * Registers every entry not yet registered: NeoForge's registry order (attributes, data components and particle
+     * types first, then vanilla's own order), call order within a registry.
+     *^/
+    public static void registerPending() {
+        List<ResourceKey<? extends Registry<?>>> order = new ArrayList<>();
+        order.add(Registries.ATTRIBUTE);
+        order.add(Registries.DATA_COMPONENT_TYPE);
+        order.add(Registries.PARTICLE_TYPE);
+        for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
+            if (!order.contains(registry.key())) {
+                order.add(registry.key());
+            }
+        }
+        List<Pending<?>> pending;
+        synchronized (PENDING) {
+            pending = new ArrayList<>(PENDING);
+            PENDING.clear();
+        }
+        for (ResourceKey<? extends Registry<?>> registry : order) {
+            for (Pending<?> entry : pending) {
+                if (entry.key.registryKey().equals(registry.identifier())) {
+                    entry.holder();
+                }
+            }
+        }
+        for (Pending<?> entry : pending) {
+            entry.holder(); // any registry the order above did not name
+        }
+    }
+
+    /^* One queued entry: built and registered on its first {@link #holder} call. ^/
+    private static final class Pending<T> {
+        final Registry<T> registry;
+        final ResourceKey<T> key;
+        final Identifier id;
+        Function<Identifier, ? extends T> factory;
+        Holder<T> holder;
+
+        Pending(Registry<T> registry, ResourceKey<T> key, Identifier id, Function<Identifier, ? extends T> factory) {
+            this.registry = registry;
+            this.key = key;
+            this.id = id;
+            this.factory = factory;
+        }
+
+        synchronized Holder<T> holder() {
+            if (holder == null) {
+                Function<Identifier, ? extends T> build = factory;
+                factory = null;
+                if (build == null) {
+                    throw new IllegalStateException("Registry entry " + key + " asked for while it is being built");
+                }
+                holder = Registry.registerForHolder(registry, key, build.apply(id));
+            }
+            return holder;
+        }
+    }
+
     @Override
     public <T> BCRegistrar<T> create(ResourceKey<? extends Registry<T>> registry, String namespace) {
         return new FabricRegistrar<>(registry, namespace);
+    }
+
+    @Override
+    public CreativeModeTab.Builder creativeTabBuilder() {
+        return FabricCreativeModeTab.builder();
+    }
+
+    @Override
+    public CreativeModeTab.Builder creativeTabBuilder(ResourceKey<CreativeModeTab> after) {
+        // Gap: no tab ordering on Fabric; the tab follows registration order (BuildCraft registers `after` first).
+        return FabricCreativeModeTab.builder();
     }
 
     private static final class FabricRegistrar<T> implements BCRegistrar<T> {
@@ -57,9 +139,11 @@ public final class FabricRegistryServices implements RegistryServices {
         public <I extends T> BCHolder<T, I> register(String name, Function<Identifier, ? extends I> factory) {
             Identifier id = Identifier.fromNamespaceAndPath(namespace, name);
             ResourceKey<T> key = ResourceKey.create(registryKey, id);
-            T value = factory.apply(id);
-            Holder<T> holder = Registry.registerForHolder(registry(), key, value);
-            BCHolder<T, I> wrapped = new BCHolder<>(id, key, holder);
+            Pending<T> pending = new Pending<>(registry(), key, id, factory);
+            synchronized (PENDING) {
+                PENDING.add(pending);
+            }
+            BCHolder<T, I> wrapped = new BCHolder<>(id, key, pending::holder);
             entries.add(wrapped);
             return wrapped;
         }
@@ -86,7 +170,7 @@ public final class FabricRegistryServices implements RegistryServices {
 
         @Override
         public void subscribe() {
-            // Entries were registered at their register calls.
+            // Entries are registered when first asked for, or by registerPending after BuildCraft's init.
         }
     }
 }

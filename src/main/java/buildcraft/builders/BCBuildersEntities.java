@@ -10,15 +10,15 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
 import buildcraft.builders.entity.EntityQuarryRig;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCBuildersEntities {
-    public static final DeferredRegister<EntityType<?>> ENTITIES =
-            DeferredRegister.create(Registries.ENTITY_TYPE, BCBuilders.MODID);
+    public static final BCRegistrar<EntityType<?>> ENTITIES =
+            BCRegistrar.create(Registries.ENTITY_TYPE, BCBuilders.MODID);
 
     public static final Supplier<EntityType<EntityQuarryRig>> QUARRY_RIG = ENTITIES.register(
             "quarry_rig",
@@ -33,6 +33,6 @@ public class BCBuildersEntities {
                     //?}
 
     public static void init(IEventBus modEventBus) {
-        ENTITIES.register(modEventBus);
+        ENTITIES.subscribe();
     }
 }

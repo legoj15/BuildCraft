@@ -5,73 +5,71 @@
 package buildcraft.builders;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
 import buildcraft.lib.item.ItemEnchantableMachine;
-import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.api.enums.EnumSnapshotType;
 import net.minecraft.world.item.BlockItem;
-import net.neoforged.neoforge.registries.DeferredBlock;
 
 import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCItemHolder;
 
 public class BCBuildersItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCBuilders.MODID);
+    public static final BCRegistrar.Items ITEMS = BCRegistrar.createItems(BCBuilders.MODID);
 
-    public static final DeferredItem<BlockItem> FRAME = ITEMS
+    public static final BCItemHolder<BlockItem> FRAME = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.FRAME);
 
-    public static final DeferredItem<BlockItem> FILLER = ITEMS
+    public static final BCItemHolder<BlockItem> FILLER = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.FILLER);
 
-    public static final DeferredItem<BlockItem> BUILDER = ITEMS
+    public static final BCItemHolder<BlockItem> BUILDER = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.BUILDER);
 
-    public static final DeferredItem<BlockItem> ARCHITECT = ITEMS
+    public static final BCItemHolder<BlockItem> ARCHITECT = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.ARCHITECT);
 
-    public static final DeferredItem<BlockItem> LIBRARY = ITEMS
+    public static final BCItemHolder<BlockItem> LIBRARY = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.LIBRARY);
 
-    public static final DeferredItem<BlockItem> REPLACER = ITEMS
+    public static final BCItemHolder<BlockItem> REPLACER = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.REPLACER);
 
-    public static final DeferredItem<ItemEnchantableMachine> QUARRY = RegistrationUtilBC.registerBlockItem(ITEMS,
+    public static final BCItemHolder<ItemEnchantableMachine> QUARRY = ITEMS.registerBlockItem(
             BCBuildersBlocks.QUARRY, ItemEnchantableMachine::new);
 
-    public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSnapshot> BLUEPRINT_CLEAN = ITEMS.registerItem(
             "blueprint_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSnapshot> BLUEPRINT_USED = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSnapshot> BLUEPRINT_USED = ITEMS.registerItem(
             "blueprint_used",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, true),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemSnapshot> TEMPLATE_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSnapshot> TEMPLATE_CLEAN = ITEMS.registerItem(
             "template_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.TEMPLATE, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSnapshot> TEMPLATE_USED = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSnapshot> TEMPLATE_USED = ITEMS.registerItem(
             "template_used",
             props -> new ItemSnapshot(props, EnumSnapshotType.TEMPLATE, true),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSchematicSingle> SCHEMATIC_SINGLE_CLEAN = ITEMS.registerItem(
             "schematic_single_clean",
             props -> new ItemSchematicSingle(props, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = RegistrationUtilBC.registerItem(ITEMS,
+    public static final BCItemHolder<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = ITEMS.registerItem(
             "schematic_single_used",
             props -> new ItemSchematicSingle(props, true),
             props -> props.stacksTo(1));
 
     public static void init(IEventBus modEventBus) {
-        ITEMS.register(modEventBus);
+        ITEMS.subscribe();
     }
 }

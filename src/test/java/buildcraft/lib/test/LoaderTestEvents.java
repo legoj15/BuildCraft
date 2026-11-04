@@ -38,17 +38,18 @@ public final class LoaderTestEvents {
     }
 
     /**
-     * A level of either side unloading. Fabric has no client level-unload event (FabricClientHooks.onClientLevelUnload
-     * hooks the level change and the disconnect instead, with no level to name), so a client level throws there.
+     * A level of either side unloading (NeoForge {@code LevelEvent.Unload}; on Fabric a client level goes through
+     * {@code FabricGameHooks.fireClientLevelUnload}, where its {@code MinecraftMixin} posts it).
      */
     public static void levelUnload(net.minecraft.world.level.Level level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Unload(level));
         //?} else {
-        /*if (!(level instanceof ServerLevel server)) {
-            throw new UnsupportedOperationException("Fabric has no client level-unload event to post for " + level);
-        }
-        levelUnload(server);*/
+        /*if (!level.isClientSide() && level instanceof ServerLevel server) {
+            levelUnload(server);
+        } else {
+            buildcraft.platform.fabric.FabricGameHooks.fireClientLevelUnload(level);
+        }*/
         //?}
     }
 
@@ -79,9 +80,8 @@ public final class LoaderTestEvents {
     }
 
     /**
-     * A dying entity's drops being collected into {@code drops} (NeoForge {@code LivingDropsEvent}). Fabric's
-     * route is {@code ServerLivingEntityEvents.AFTER_DEATH}, which puts the drops straight in the level, so there is
-     * no list to post there; a test that needs one is not in the Fabric set.
+     * A dying entity's drops being collected into {@code drops} (NeoForge {@code LivingDropsEvent}; Fabric
+     * {@code FabricGameHooks.fireLivingDrops}, where its {@code LivingEntityMixin} posts it).
      */
     public static void livingDrops(LivingEntity victim, DamageSource source, Collection<ItemEntity> drops,
             boolean recentlyHit) {
@@ -89,11 +89,15 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(victim, source, drops, recentlyHit));
         //?} else {
-        /*throw new UnsupportedOperationException("Fabric has no drops-list event to post");*/
+        /*buildcraft.platform.fabric.FabricGameHooks.fireLivingDrops(victim, source, recentlyHit,
+                drops instanceof java.util.List<ItemEntity> list ? list : new java.util.ArrayList<>(drops));*/
         //?}
     }
 
-    /** A mob's spawn being finalized (NeoForge {@code FinalizeSpawnEvent}); Fabric API has no such event. */
+    /**
+     * A mob's spawn being finalized, as a natural spawn (NeoForge {@code FinalizeSpawnEvent}; Fabric
+     * {@code FabricGameHooks.fireFinalizeSpawn}, where its {@code MobMixin} posts it).
+     */
     public static void finalizeSpawn(ServerLevel level, Mob mob) {
         //? if neoforge && >=1.21.10 {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent(
@@ -104,13 +108,14 @@ public final class LoaderTestEvents {
                 mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
                 net.minecraft.world.entity.MobSpawnType.NATURAL, null, null));*/
         //?} else {
-        /*throw new UnsupportedOperationException("Fabric API has no spawn-finalize event");*/
+        /*buildcraft.platform.fabric.FabricGameHooks.fireFinalizeSpawn(mob, false);*/
         //?}
     }
 
     /**
      * Calls {@code listener} with each vanilla game event (its type, position and cause) until the returned handle is
-     * closed (NeoForge {@code VanillaGameEvent}). Fabric API has no game-event hook.
+     * closed (NeoForge {@code VanillaGameEvent}; on Fabric the game-test mod's {@code ServerLevelGameEventMixin}, at
+     * the same point in {@code ServerLevel.gameEvent}).
      */
     public static Observer observeGameEvents(GameEventListener listener) {
         //? if neoforge {
@@ -119,18 +124,20 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.VanillaGameEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
         //?} else {
-        /*throw new UnsupportedOperationException("Fabric API has no game-event hook");*/
+        /*FabricGameEvents.OPEN.add(listener);
+        return () -> FabricGameEvents.OPEN.remove(listener);*/
         //?}
     }
 
-    /** A chunk sent to a player (NeoForge {@code ChunkWatchEvent.Sent}); Fabric API has no chunk-sent event. */
+    /** A chunk sent to a player (NeoForge {@code ChunkWatchEvent.Sent}; Fabric {@code FabricGameHooks.fireChunkSent},
+     *  where its {@code PlayerChunkSenderMixin} posts it). */
     public static void chunkSent(net.minecraft.server.level.ServerPlayer player, net.minecraft.world.level.chunk.LevelChunk chunk,
             ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new net.neoforged.neoforge.event.level.ChunkWatchEvent.Sent(player, chunk, level));
         //?} else {
-        /*throw new UnsupportedOperationException("Fabric API has no chunk-sent event");*/
+        /*buildcraft.platform.fabric.FabricGameHooks.fireChunkSent(level, player, chunk.getPos());*/
         //?}
     }
 
@@ -157,7 +164,20 @@ public final class LoaderTestEvents {
     }
 
     //? if fabric {
-    /*private static final class FabricAttackClaims {
+    /*/^* The game-event observers open on Fabric; the game-test mod's {@code ServerLevelGameEventMixin} tells them. *^/
+    public static final class FabricGameEvents {
+        static final java.util.List<GameEventListener> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        private FabricGameEvents() {}
+
+        public static void post(Holder<GameEvent> event, Vec3 position, @Nullable Entity cause) {
+            for (GameEventListener listener : OPEN) {
+                listener.onGameEvent(event, position, cause);
+            }
+        }
+    }
+
+    private static final class FabricAttackClaims {
         static final java.util.List<java.util.function.BiPredicate<net.minecraft.world.entity.player.Player, Entity>> OPEN =
                 new java.util.concurrent.CopyOnWriteArrayList<>();
 

@@ -3,7 +3,8 @@
   "package": "buildcraft.platform.fabric.gametest.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "GameTestInfoChunkWaitMixin"
+    "GameTestInfoChunkWaitMixin",
+    "ServerLevelGameEventMixin"
   ],
   "injectors": {
     "defaultRequire": 1

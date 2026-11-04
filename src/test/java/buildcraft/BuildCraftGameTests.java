@@ -170,10 +170,7 @@ public class BuildCraftGameTests {
         //?}
         reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
         reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
-        // Not on Fabric: Fabric API has no explosion event, so a blast does not set off the tank it broke (FabricGameHooks.onExplosionDetonate gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:tank_of_gas_detonates", () -> buildcraft.energy.ContainedFluidDetonationTester::testTankOfGasDetonates);
-        //?}
 
         // Inventory Transactors
         reg.accept("buildcraftunofficial:item_transactor_simple_moving", () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);
@@ -188,10 +185,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_lease_isolates_nested_fetches", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeaseIsolatesNestedFetches);
         reg.accept("buildcraftunofficial:fake_player_cache_drops_unloaded_level", () -> buildcraft.lib.misc.FakePlayerUtilTester::testUnloadDropsLevelPlayers);
         reg.accept("buildcraftunofficial:fake_player_owner_session_change_evicts", () -> buildcraft.lib.misc.FakePlayerUtilTester::testOwnerSessionChangeEvicts);
-        // Not on Fabric: observes vanilla game events through NeoForge's VanillaGameEvent; Fabric API has no game-event hook.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
-        //?}
         reg.accept("buildcraftunofficial:fake_player_api_separate_from_leases", () -> buildcraft.lib.misc.FakePlayerUtilTester::testApiPlayerIsSeparateFromLeases);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_released", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsReleased);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_swept_at_tick_start", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsSweptWhenATickStarts);
@@ -296,10 +290,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_volume_triangulation_2d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
         // Join resync: what a joining client is sent, and that a player joining a level triggers it.
-        // Not on Fabric: posts a level unload for a stand-in client level; Fabric has no client level-unload event, and its client reset (MarkerCacheEvents.registerClientHooks, pinned by MarkerCacheClientResetTester) is a client hook the dedicated game-test server never loads.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:marker_join_sync_replays_markers_and_connections", () -> buildcraft.core.marker.MarkerTester::testJoinSyncReplaysMarkersAndConnections);
-        //?}
         reg.accept("buildcraftunofficial:marker_join_event_resyncs_player", () -> buildcraft.lib.marker.MarkerJoinResyncTester::aPlayerJoiningALevelIsResynced);
         // Hermeticity of the marker tests themselves: leftovers from earlier batches must neither corrupt a connection nor survive MarkerArenaUtil.open.
         reg.accept("buildcraftunofficial:marker_leftovers_do_not_corrupt_connections", () -> buildcraft.core.marker.MarkerTester::testLeftoverMarkersDoNotCorruptConnections);
@@ -664,14 +655,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);
         reg.accept("buildcraftunofficial:wrench_wear_follows_wrench_actions", () -> buildcraft.core.item.WrenchToolTester::wearFollowsWrenchActions);
         reg.accept("buildcraftunofficial:wrench_hit_on_a_mob_wears_one_use", () -> buildcraft.core.item.WrenchToolTester::hitOnAMobWearsOneUse);
-        // Not on Fabric: Fabric API has no spawn-finalize event (FabricGameHooks.onFinalizeSpawn gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:zombies_sometimes_carry_a_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesCarryAWrench);
-        //?}
-        // Not on Fabric: posts a drops-list event; Fabric's drops route (AFTER_DEATH) puts the drops straight in the level.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:zombies_sometimes_drop_a_worn_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesDropAWornWrench);
-        //?}
 
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
@@ -1043,10 +1028,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_visible_only_to_players_whose_view_holds_system", () -> buildcraft.transport.WireSystemTester::testWireVisibleOnlyToPlayersWhoseViewHoldsTheSystem);
         reg.accept("buildcraftunofficial:wire_system_spanning_two_chunks_seen_from_either", () -> buildcraft.transport.WireSystemTester::testWireSystemSpanningTwoChunksIsSeenFromEither);
         reg.accept("buildcraftunofficial:wire_chunk_delivery_queues_only_wire_chunks", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires);
-        // Not on Fabric: Fabric API has no chunk-sent event (FabricGameHooks.onChunkSent gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
-        //?}
         reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
@@ -1475,10 +1457,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_harvest_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::harvestActsAsTheStationOwner);
         //?}
-        // Not on Fabric: observes vanilla game events through NeoForge's VanillaGameEvent; Fabric API has no game-event hook.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
-        //?}
         // Not on Fabric: its claim mods are NeoForge event listeners at chosen priorities.
         //? if neoforge {
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);

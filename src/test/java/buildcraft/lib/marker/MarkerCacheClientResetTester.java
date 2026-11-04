@@ -122,8 +122,8 @@ public class MarkerCacheClientResetTester {
         }
     }
 
-    /** The client level-unload hook (Fabric's only client reset: its level change and disconnect name no level)
-     *  drops every client table and leaves the server's alone. */
+    /** The client level-unload hook (the client's level change and disconnect, naming no level) drops every client
+     *  table and leaves the server's alone. */
     @Test
     void theClientLevelCloseHookDropsEveryClientSubCacheOnly() {
         StubMarkerCache cache = StubMarkerCache.register();

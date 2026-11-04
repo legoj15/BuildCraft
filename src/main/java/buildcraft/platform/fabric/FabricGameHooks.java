@@ -8,26 +8,38 @@ package buildcraft.platform.fabric;
 //? if fabric {
 /*import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
@@ -42,23 +54,39 @@ import buildcraft.platform.event.HookOrder;
 
 /^*
  * {@link GameHooks} on Fabric: Fabric API's events, registered at the call. A {@link HookOrder} other than
- * {@code DEFAULT} is a BuildCraft phase ordered before or after Fabric's default phase.
+ * {@code DEFAULT} is a BuildCraft phase ordered before or after Fabric's default phase. Where Fabric API has no event,
+ * a mixin in {@code platform.fabric.mixin} calls one of this class's {@code fire...} methods where NeoForge posts its
+ * event: the chunk sent to a player ({@code PlayerChunkSenderMixin}), the spawn finalize ({@code MobMixin}), the dying
+ * entity's drops ({@code LivingEntityMixin}, collected at the drop sites NeoForge captures), the neighbour notify
+ * ({@code ServerLevelMixin}, {@code DiodeBlockMixin}), the explosion's lists ({@code ServerExplosionMixin}), each
+ * player's own tick ({@code PlayerMixin}) and the client level's unload ({@code client.MinecraftMixin}).
  *
- * <p><b>Gaps</b> (Fabric API has no such event; the hook registers nothing and its listener never runs):
- * {@link #onChunkSent} (wire systems reach a newly watching player on their next change instead),
- * {@link #onFinalizeSpawn}, {@link #onNeighborNotify}, {@link #onExplosionDetonate} and {@link #syncRecipeTypes}
- * (Fabric syncs recipes per serializer, not per type). Narrower than NeoForge: {@link #onBlockPlace} sees only the
- * placements BuildCraft's machines make through {@code FabricProtection} (Fabric API has no placement event, so a
- * player's own placement is not seen), {@link #onLevelUnload} sees server levels only (a client level's
- * unload is a client hook), {@link #onPlayerTickEnd} runs once per server tick for every player rather than inside each
- * player's own tick, {@link #onLivingDrops} adds its drops to the level after vanilla's own (Fabric's after-death
- * callback has no drop list), and a {@code receiveCancelled} {@link #onEntityInteract} listener is never told about a
- * refused click, because a Fabric callback that refuses stops the event there.
+ * <p><b>Gap</b> (the hook registers nothing): {@link #syncRecipeTypes} (Fabric syncs recipes per serializer, not per
+ * type). Narrower than NeoForge: {@link #onBlockPlace} sees only the placements BuildCraft's machines make through
+ * {@code FabricProtection} (Fabric API has no placement event; a player's own placement still reaches the
+ * neighbour-notify listeners), {@link #onFinalizeSpawn} runs from inside {@code Mob}'s own finalize (a mob whose
+ * override never calls it is not seen, and a spawner that skips the finalize posts nothing), and a
+ * {@code receiveCancelled} {@link #onEntityInteract} listener is never told about a refused click, because a Fabric
+ * callback that refuses stops the event there.
  *^/
 public final class FabricGameHooks implements GameHooks {
 
     static final Identifier EARLY_PHASE = Identifier.fromNamespaceAndPath("buildcraftunofficial", "early");
     static final Identifier LATE_PHASE = Identifier.fromNamespaceAndPath("buildcraftunofficial", "late");
+
+    // The mixin-fed hooks. Copy-on-write: a spawn finalize can run off the server thread (world generation).
+    private static final List<ChunkSent> CHUNK_SENT = new CopyOnWriteArrayList<>();
+    private static final List<SpawnFinalized> FINALIZE_SPAWN = new CopyOnWriteArrayList<>();
+    private static final List<LivingDrops> LIVING_DROPS = new CopyOnWriteArrayList<>();
+    private static final List<NeighborNotify> NEIGHBOR_NOTIFY = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<ServerPlayer>> PLAYER_TICK_END = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<LevelAccessor>> CLIENT_LEVEL_UNLOAD = new CopyOnWriteArrayList<>();
+    private static final Event<ExplosionDetonate> EXPLOSION_DETONATE = EventFactory.createArrayBacked(
+            ExplosionDetonate.class, listeners -> (level, explosion, blocks, entities) -> {
+                for (ExplosionDetonate listener : listeners) {
+                    listener.onDetonate(level, explosion, blocks, entities);
+                }
+            });
 
     /^* Registers {@code listener} on {@code event} in the phase {@code order} names. *^/
     static <T> void register(Event<T> event, HookOrder order, T listener) {
@@ -92,17 +120,13 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onPlayerTickEnd(Consumer<ServerPlayer> listener) {
-        // No player tick event: every player once, after the server tick
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            for (ServerPlayer player : List.copyOf(server.getPlayerList().getPlayers())) {
-                listener.accept(player);
-            }
-        });
+        PLAYER_TICK_END.add(listener);
     }
 
     @Override
     public void onLevelUnload(Consumer<LevelAccessor> listener) {
         ServerLevelEvents.UNLOAD.register((server, level) -> listener.accept(level));
+        CLIENT_LEVEL_UNLOAD.add(listener);
     }
 
     @Override
@@ -117,7 +141,7 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onChunkSent(ChunkSent listener) {
-        // Gap: Fabric API has no chunk-sent event (see the class documentation)
+        CHUNK_SENT.add(listener);
     }
 
     @Override
@@ -148,21 +172,12 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onFinalizeSpawn(SpawnFinalized listener) {
-        // Gap: Fabric API has no spawn-finalize event (see the class documentation)
+        FINALIZE_SPAWN.add(listener);
     }
 
     @Override
     public void onLivingDrops(LivingDrops listener) {
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (!(entity.level() instanceof ServerLevel level)) {
-                return;
-            }
-            List<ItemEntity> drops = new ArrayList<>();
-            listener.onDrops(entity, source, entity.getLastHurtByPlayerMemoryTime() > 0, drops);
-            for (ItemEntity drop : drops) {
-                level.addFreshEntity(drop);
-            }
-        });
+        LIVING_DROPS.add(listener);
     }
 
     @Override
@@ -190,12 +205,12 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onNeighborNotify(NeighborNotify listener) {
-        // Gap: Fabric API has no neighbour-notify event (see the class documentation)
+        NEIGHBOR_NOTIFY.add(listener);
     }
 
     @Override
     public void onExplosionDetonate(HookOrder order, ExplosionDetonate listener) {
-        // Gap: Fabric API has no explosion event (see the class documentation)
+        register(EXPLOSION_DETONATE, order, listener);
     }
 
     @Override
@@ -213,6 +228,98 @@ public final class FabricGameHooks implements GameHooks {
     @Override
     public void syncRecipeTypes(List<RecipeType<?>> types) {
         // Gap: Fabric syncs recipes per serializer (RecipeSynchronization), not per type (see the class documentation)
+    }
+
+    // ── Where the mixins post (and the game tests, as NeoForge's tests post its events) ──────────────────────
+
+    /^* A chunk was sent to {@code player}'s client ({@code PlayerChunkSender.sendChunk}). *^/
+    public static void fireChunkSent(ServerLevel level, ServerPlayer player, ChunkPos pos) {
+        for (ChunkSent listener : CHUNK_SENT) {
+            listener.onChunkSent(level, player, pos);
+        }
+    }
+
+    /^* {@code mob}'s spawn is being finalized ({@code Mob.finalizeSpawn}). *^/
+    public static void fireFinalizeSpawn(Mob mob, boolean conversion) {
+        for (SpawnFinalized listener : FINALIZE_SPAWN) {
+            listener.onFinalizeSpawn(mob, conversion);
+        }
+    }
+
+    /^* {@code entity} died with {@code drops} collected and not yet in the level; a listener may add to them. *^/
+    public static void fireLivingDrops(LivingEntity entity, DamageSource source, boolean recentlyHit,
+            List<ItemEntity> drops) {
+        for (LivingDrops listener : LIVING_DROPS) {
+            listener.onDrops(entity, source, recentlyHit, drops);
+        }
+    }
+
+    /^* A block change at {@code pos} is about to notify its neighbours. *^/
+    public static void fireNeighborNotify(Level level, BlockPos pos, BlockState state) {
+        for (NeighborNotify listener : NEIGHBOR_NOTIFY) {
+            listener.onNeighborNotify(level, pos, state);
+        }
+    }
+
+    /^* An explosion has worked out what it hits; a listener may take blocks and entities out of the lists. *^/
+    public static void fireExplosionDetonate(Level level, Explosion explosion, List<BlockPos> blocks,
+            List<Entity> entities) {
+        EXPLOSION_DETONATE.invoker().onDetonate(level, explosion, blocks, entities);
+    }
+
+    /^* {@code player} has finished its own tick ({@code Player.tick}). *^/
+    public static void firePlayerTickEnd(ServerPlayer player) {
+        for (Consumer<ServerPlayer> listener : PLAYER_TICK_END) {
+            listener.accept(player);
+        }
+    }
+
+    /^* The client's level is closing (replaced, or the connection closed); server levels go through Fabric API. *^/
+    public static void fireClientLevelUnload(Level level) {
+        for (Consumer<LevelAccessor> listener : CLIENT_LEVEL_UNLOAD) {
+            listener.accept(level);
+        }
+    }
+
+    // ── NeoForge's captureDrops, for fireLivingDrops ─────────────────────────────────────────────────────────
+
+    /^* An entity collecting the drops of its death ({@code EntityMixin}). *^/
+    public interface DropCapture {
+        /^* The drops collected so far, or null when no death is collecting them. *^/
+        @Nullable
+        List<ItemEntity> buildcraft$capturedDrops();
+
+        void buildcraft$setCapturedDrops(@Nullable List<ItemEntity> drops);
+    }
+
+    /^* Starts collecting {@code entity}'s death drops (the start of {@code LivingEntity.dropAllDeathLoot}). *^/
+    public static void startDropCapture(LivingEntity entity) {
+        ((DropCapture) entity).buildcraft$setCapturedDrops(new ArrayList<>());
+    }
+
+    /^* @return true when {@code drop} was collected for {@code dropper}'s death instead of being put in the level *^/
+    public static boolean captureDrop(Entity dropper, ItemEntity drop) {
+        List<ItemEntity> drops = ((DropCapture) dropper).buildcraft$capturedDrops();
+        if (drops == null) {
+            return false;
+        }
+        drops.add(drop);
+        return true;
+    }
+
+    /^* Ends the collection (the end of {@code dropAllDeathLoot}): the listeners see the drops, then they go in the
+     *  level, as NeoForge's {@code LivingDropsEvent} does. *^/
+    public static void finishDropCapture(LivingEntity entity, DamageSource source) {
+        DropCapture capture = (DropCapture) entity;
+        List<ItemEntity> drops = capture.buildcraft$capturedDrops();
+        capture.buildcraft$setCapturedDrops(null);
+        if (drops == null) {
+            return;
+        }
+        fireLivingDrops(entity, source, entity.getLastHurtByPlayerMemoryTime() > 0, drops);
+        for (ItemEntity drop : drops) {
+            entity.level().addFreshEntity(drop);
+        }
     }
 }
 *///?}

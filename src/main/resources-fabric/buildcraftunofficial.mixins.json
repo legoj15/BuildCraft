@@ -5,19 +5,28 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "BlockExperienceMixin",
+    "DiodeBlockMixin",
+    "EntityEquipmentMixin",
     "EntityMixin",
     "ExplosionDamageCalculatorMixin",
     "FireBlockMixin",
     "FlowingFluidAccessor",
+    "InventoryMixin",
     "LavaFluidMixin",
     "LevelMixin",
     "LivingEntityMixin",
+    "MobMixin",
+    "PlayerChunkSenderMixin",
+    "PlayerMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",
+    "ServerExplosionMixin",
+    "ServerLevelMixin",
     "ServerPlayerGameModeMixin",
     "ServerPlayerMixin"
   ],
   "client": [
+    "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"
   ],
   "injectors": {

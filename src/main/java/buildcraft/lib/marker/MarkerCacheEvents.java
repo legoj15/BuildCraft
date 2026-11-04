@@ -27,9 +27,9 @@ import buildcraft.platform.event.GameHooks;
  *     {@code minecraft:overworld} is the same key in every world a client ever joins, so the NEXT world to use
  *     it was handed the old world's markers and connections instead of its own. NeoForge posts this event for
  *     a client level when it is replaced ({@code Minecraft.setLevel}: dimension change, new connection) and when
- *     the connection closes ({@code Minecraft.disconnect}), which covers every way a client leaves a world.
- *     Fabric posts no unload for a client level, so the client also drops all its sub-caches on the client
- *     level-unload hook ({@link #registerClientHooks}: a level change or a disconnect there).
+ *     the connection closes ({@code Minecraft.disconnect}), which covers every way a client leaves a world
+ *     (BuildCraft's Fabric hooks post it at the same three points). The client also drops all its sub-caches on
+ *     the client level-unload hook ({@link #registerClientHooks}: a level change or a disconnect).
  *     Nothing here touches a client-only class; on a dedicated server a client level never exists.</li>
  * <li><b>Join</b> refills what the unload dropped: the live {@code MessageMarker} updates only reach players
  *     already in the dimension, so a player entering a level (login, dimension change, respawn) is sent every
@@ -51,8 +51,8 @@ public final class MarkerCacheEvents {
     /**
      * Registers the client half of the unload: every client sub-cache is dropped when the client's level closes.
      * Called once from BCCoreClient, on a physical client only. On NeoForge {@link #onLevelUnload} has already dropped
-     * the closing level's own sub-cache (the client holds one level, so no other client table has anything in it); on
-     * Fabric the level-unload hook sees server levels only, so this is the client's reset there.
+     * the closing level's own sub-cache (the client holds one level, so no other client table has anything in it), and
+     * so has Fabric's; this is the reset for any client table the level's own unload missed.
      */
     public static void registerClientHooks(ClientHooks hooks) {
         hooks.onClientLevelUnload(MarkerCache::onClientWorldClosed);

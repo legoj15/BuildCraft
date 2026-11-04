@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.platform.LoaderHook;
 import buildcraft.platform.Platform;
+import buildcraft.platform.menu.MenuOpeningData;
 
 /**
  * A {@link MenuProvider} whose client-side container is rebuilt from opening data it writes itself
@@ -36,12 +37,13 @@ import buildcraft.platform.Platform;
  * disconnect a spectator hits on right-click). With it, a spectator opens the GUI read-only, matching how vanilla
  * treats chests and furnaces. {@link #openFor} bypasses the hook, so the data is never written twice.
  */
-public interface IBCMenuProvider extends MenuProvider {
+public interface IBCMenuProvider extends MenuProvider, MenuOpeningData {
 
     /**
      * Writes the opening data the client container reads. The default writes the position of this provider, which
      * must then be a {@link BlockEntity}; any other provider overrides it.
      */
+    @Override
     default void writeOpeningData(RegistryFriendlyByteBuf buffer) {
         if (!(this instanceof BlockEntity blockEntity)) {
             throw new IllegalStateException(getClass().getName() + " is not a block entity and must override writeOpeningData");
@@ -56,12 +58,15 @@ public interface IBCMenuProvider extends MenuProvider {
         }
     }
 
-    // The spectator path described above relies on this hook.
+    // The spectator path described above relies on this hook (on Fabric: the ServerPlayer#openMenu mixin, which
+    // finds MenuOpeningData on the provider instead).
+    //? if neoforge {
     @LoaderHook("neoforge:IMenuProviderExtension#writeClientSideData")
     @Override
     default void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
         writeOpeningData(buffer);
     }
+    //?}
 
     /** A provider that is not a block entity: {@code title}, {@code constructor}, and {@code writer}'s data. */
     static IBCMenuProvider of(Component title, MenuConstructor constructor, Consumer<RegistryFriendlyByteBuf> writer) {

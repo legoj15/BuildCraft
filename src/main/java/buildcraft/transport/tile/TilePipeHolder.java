@@ -307,7 +307,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         return tag;
     }
 
-    //? if >=1.21.10 {
+    // Fabric has no update-tag or data-packet hook: on the client, vanilla hands both to loadAdditional, so the
+    // Fabric arm applies the client update there.
+    //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
@@ -321,7 +323,15 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         super.onDataPacket(net, input);
         onClientUpdate(new BCValueInput(input));
     }
-    //?} else {
+    //?} elif fabric {
+    /*@Override
+    public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        if (level != null && level.isClientSide()) {
+            onClientUpdate(new BCValueInput(input));
+        }
+    }*/
+    //?} elif neoforge {
     /*@LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
     @Override
     public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
@@ -1003,9 +1013,16 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         return this;
     }
 
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockEntityExtension#getModelData")
     @Override
     public net.neoforged.neoforge.model.data.ModelData getModelData() {
         return (net.neoforged.neoforge.model.data.ModelData) Platform.renderData().blockEntityRenderData(getPipeRenderData());
     }
+    //?} elif fabric {
+    /*@Override
+    public Object getRenderData() {
+        return Platform.renderData().blockEntityRenderData(getPipeRenderData());
+    }*/
+    //?}
 }

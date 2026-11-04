@@ -17,6 +17,9 @@
     "main": ["buildcraft.platform.fabric.BCFabricEntrypoint"],
     "client": ["buildcraft.platform.fabric.client.BCFabricClientEntrypoint"]
   },
+  "mixins": [
+    "buildcraftunofficial.mixins.json"
+  ],
   "accessWidener": "buildcraftunofficial.classtweaker",
   "depends": {
     "fabricloader": ">=${fabric_loader_version}",

@@ -54,12 +54,17 @@ import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.platform.LoaderHook;
 import buildcraft.platform.Platform;
+import buildcraft.platform.hook.BlockParticleEffects;
+import buildcraft.platform.hook.ExplosionArmouredBlock;
+import buildcraft.platform.hook.PickStackBlock;
+import buildcraft.platform.hook.PlayerBreakGuard;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
-public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock {
+public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock,
+        PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
@@ -161,13 +166,16 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Sounds
 
-    /** Every pipe shares this one block, so the sound comes from the placed pipe's material. */
+    // Every pipe shares this one block, so the sound comes from the placed pipe's material. Fabric gap: vanilla asks
+    // for a block's sound without its position, so there every pipe makes the holder block's own sound.
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#getSoundType")
     @Override
     public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
         SoundType sound = pipeSoundType(level, pos);
         return sound != null ? sound : super.getSoundType(state, level, pos, entity);
     }
+    //?}
 
     /** The placed pipe's own sound, or null when there is no pipe or its definition names none. */
     @Nullable
@@ -184,11 +192,20 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
      *  centre first, so the pipe resists it as well as that pluggable does (a facade answers with its block's
      *  resistance). Ported from 1.12.2, with one deliberate change — a pluggable can only raise the pipe's own
      *  resistance, never lower it, so a glass facade no longer makes the pipe behind it weaker than bare. */
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#getExplosionResistance")
     @Override
     public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos,
                                         Explosion explosion) {
-        return armouredResistance(level, pos, explosion, super.getExplosionResistance(state, level, pos, explosion));
+        return explosionResistance(level, pos, explosion, super.getExplosionResistance(state, level, pos, explosion));
+    }
+    //?}
+
+    // Fabric applies this to the block's and the fluid's resistance together (its ExplosionDamageCalculator mixin),
+    // which gives the same answer since it only ever raises the resistance.
+    @Override
+    public float explosionResistance(BlockGetter level, BlockPos pos, Explosion explosion, float own) {
+        return armouredResistance(level, pos, explosion, own);
     }
 
     /** {@code own}, raised to the resistance of the pluggable on the side facing the blast, if any. */
@@ -678,23 +695,31 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // NeoForge hook: returning false prevents the block from being destroyed.
     // If the player targets a pluggable, remove only the pluggable and return false.
+    // Fabric asks keepsBlockOnPlayerBreak from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes): server side
+    // only and before playerWillDestroy, so there a part break plays no break particles, and the client briefly
+    // predicts the whole pipe gone until the server's block update restores it.
+    //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
     @Override
-    //? if >=1.21.10 {
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
                                        ItemStack toolStack, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
-    //?} else {
-    /*public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
-                                       boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {*/
+        return !keepsBlockOnPlayerBreak(state, level, pos, player)
+            && super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
+    }
+    //?} elif neoforge {
+    /*@LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+                                       boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        return !keepsBlockOnPlayerBreak(state, level, pos, player)
+            && super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+    }*/
     //?}
-        if (breakTargetedPart(state, level, pos, player)) {
-            return false; // Don't destroy the pipe, on client or server
-        }
-        //? if >=1.21.10 {
-        return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
-        //?} else {
-        /*return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);*/
-        //?}
+
+    /** A targeted part breaks alone: the pipe is not destroyed, on client or server. */
+    @Override
+    public boolean keepsBlockOnPlayerBreak(BlockState state, Level level, BlockPos pos, Player player) {
+        return breakTargetedPart(state, level, pos, player);
     }
 
     /** Removes (and drops) only the pluggable or wire the player is aiming at, if any: true when it did, so the
@@ -937,15 +962,15 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     // Pick block (middle click) — return the correct item for what's targeted
-    //? if >=1.21.10 {
+    // Fabric asks pickedStack(level, pos, player) from PlayerPickItemEvents.BLOCK (FabricLoaderHookRoutes).
+    //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockExtension#getCloneItemStack")
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {
-        // Use player.pick to get the hit result (works on both client and server via player entity)
-        ItemStack picked = pickedStack(level, pos, () -> player.pick(5.0, 0.0f, false));
+        ItemStack picked = pickedStack(level, pos, player);
         return picked != null ? picked : super.getCloneItemStack(level, pos, state, includeData, player);
     }
-    //?} else {
+    //?} elif neoforge {
     /*@LoaderHook("neoforge:IBlockExtension#getCloneItemStack")
     @Override
     public ItemStack getCloneItemStack(BlockState state, net.minecraft.world.phys.HitResult target, LevelReader level, BlockPos pos, Player player) {
@@ -954,6 +979,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return picked != null ? picked : super.getCloneItemStack(state, target, level, pos, player);
     }*/
     //?}
+
+    @Override
+    @Nullable
+    public ItemStack pickedStack(LevelReader level, BlockPos pos, Player player) {
+        // Use player.pick to get the hit result (works on both client and server via player entity)
+        return pickedStack(level, pos, () -> player.pick(5.0, 0.0f, false));
+    }
 
     /** The item for what the player aims at in this pipe (pluggable, wire, or the pipe itself, coloured if
      *  painted), or null to fall back to the block's default. {@code hitResult} is asked only for a pipe. */
@@ -1009,13 +1041,24 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Sprint particles — pipes use INVISIBLE render shape so vanilla won't create particles.
     // We delegate to PipeHolderClientExtensions which resolves the correct pipe-specific texture.
+    // NeoForge's particle hooks; Fabric reaches spawnRunningEffects and spawnLandingEffects through its Entity and
+    // LivingEntity mixins.
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#addRunningEffects")
     @Override
     public boolean addRunningEffects(BlockState state, Level level, BlockPos pos, Entity entity) {
-        return runningEffects(level, pos, entity);
+        return spawnRunningEffects(level, pos, entity);
     }
 
-    private static boolean runningEffects(Level level, BlockPos pos, Entity entity) {
+    @LoaderHook("neoforge:IBlockExtension#addLandingEffects")
+    @Override
+    public boolean addLandingEffects(BlockState state1, net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state2, net.minecraft.world.entity.LivingEntity entity, int numberOfParticles) {
+        return spawnLandingEffects(level, pos, entity, numberOfParticles);
+    }
+    //?}
+
+    @Override
+    public boolean spawnRunningEffects(Level level, BlockPos pos, Entity entity) {
         if (level.isClientSide()) {
             return buildcraft.transport.client.PipeHolderClientExtensions.spawnRunningParticle(
                 level, pos,
@@ -1029,14 +1072,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Landing particles — vanilla spawns wooden pipe particles because the block has no explicit texture.
     // We delegate to a custom packet to spawn the correct pipe-specific texture on clients.
-    @LoaderHook("neoforge:IBlockExtension#addLandingEffects")
     @Override
-    public boolean addLandingEffects(BlockState state1, net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state2, net.minecraft.world.entity.LivingEntity entity, int numberOfParticles) {
-        return landingEffects(level, pos, entity, numberOfParticles);
-    }
-
-    private static boolean landingEffects(net.minecraft.server.level.ServerLevel level, BlockPos pos, LivingEntity entity,
-                                          int numberOfParticles) {
+    public boolean spawnLandingEffects(net.minecraft.server.level.ServerLevel level, BlockPos pos, LivingEntity entity,
+                                       int numberOfParticles) {
         Platform.network().sendToTrackingChunk(
             level, new net.minecraft.world.level.ChunkPos(pos.getX() >> 4, pos.getZ() >> 4),
             new buildcraft.transport.net.MessagePipeLandingEffect(pos, entity.getX(), entity.getY(), entity.getZ(), numberOfParticles)

@@ -23,6 +23,7 @@ public final class BCFabricEntrypoint implements ModInitializer {
     @Override
     public void onInitialize() {
         FabricLoaderServices.registerLifecycleListeners();
+        FabricLoaderHookRoutes.register();
         BCCore.init();
         // NeoForge adds these from biome-modifier JSON, which the Fabric resources drop (FabricDataServices).
         FabricDataServices.addTaggedBiomeFeatures();

@@ -23,6 +23,7 @@ import net.minecraft.world.level.material.FlowingFluid;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.FluidVolatility;
 import buildcraft.platform.LoaderHook;
+import buildcraft.platform.hook.FireReactiveBlock;
 
 /**
  * The {@link LiquidBlock} backing every BuildCraft energy fluid. Identical to the vanilla
@@ -49,11 +50,11 @@ import buildcraft.platform.LoaderHook;
  * vanilla fire's flammability and spread-speed questions from it (zero for residue and whenever the
  * {@code canBurn} config is off), so oils and fuels burn with ordinary fire. Lava lights every burning fluid but
  * crude oil, at any heat (see the constructor). A gaseous variant additionally
- * detonates when fire catches it ({@link #onCaughtFire}) and, as the cell's own scheduled block tick, when a
+ * detonates when fire catches it ({@link #catchFire}) and, as the cell's own scheduled block tick, when a
  * neighbouring detonation chains to it ({@link #tick}); the fluid tick covers the rest (see
  * {@link FluidVolatility}).
  */
-public class BCFluidBlock extends LiquidBlock {
+public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
 
     /** 1-in-N chance per display-tick sample to vent a wisp. Keeps the surface lively but not a fog. */
     private static final int STEAM_SPAWN_CHANCE = 8;
@@ -84,44 +85,68 @@ public class BCFluidBlock extends LiquidBlock {
         return volatility != FluidVolatility.Band.INERT && BCEnergyConfig.canBurnEnabled();
     }
 
+    @Override
+    public int fireBurnOdds(BlockState state) {
+        return burns() ? volatility.flammability : 0;
+    }
+
+    @Override
+    public int fireIgniteOdds(BlockState state) {
+        return burns() ? volatility.fireSpreadSpeed : 0;
+    }
+
+    @Override
+    public boolean lavaIgnites(BlockState state) {
+        return lavaIgnites && burns();
+    }
+
+    @Override
+    public boolean catchFire(BlockState state, Level level, BlockPos pos) {
+        return FluidVolatility.catchFire(level, pos, state, volatility);
+    }
+
+    // NeoForge's patched fire hooks, each handing over to the FireReactiveBlock method above (Fabric's FireBlock and
+    // LavaFluid mixins call those directly).
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#getFlammability")
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        return burns() ? volatility.flammability : 0;
+        return fireBurnOdds(state);
     }
 
     @LoaderHook("neoforge:IBlockExtension#getFireSpreadSpeed")
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        return burns() ? volatility.fireSpreadSpeed : 0;
+        return fireIgniteOdds(state);
     }
 
     @LoaderHook("neoforge:IBlockExtension#ignitedByLava")
     @Override
     public boolean ignitedByLava(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        return lavaIgnites && burns();
+        return lavaIgnites(state);
     }
+    //?}
 
     // onCaughtFire: void on 1.21.1, boolean from 1.21.10 (true = the block was set on fire), and 26.3 adds the item
-    // that lit it. All three hand the work to FluidVolatility.
-    //? if >=26.3 {
+    // that lit it. All three hand the work to catchFire.
+    //? if neoforge && >=26.3 {
     @LoaderHook("neoforge:IBlockExtension#onCaughtFire")
     @Override
     public boolean onCaughtFire(BlockState state, Level level, BlockPos pos, Direction direction, LivingEntity igniter,
                                 ItemStack ignitionItem) {
-        return FluidVolatility.catchFire(level, pos, state, volatility);
+        return catchFire(state, level, pos);
     }
-    //?} elif >=1.21.10 {
+    //?} elif neoforge && >=1.21.10 {
     /*@LoaderHook("neoforge:IBlockExtension#onCaughtFire")
     @Override
     public boolean onCaughtFire(BlockState state, Level level, BlockPos pos, Direction direction, LivingEntity igniter) {
-        return FluidVolatility.catchFire(level, pos, state, volatility);
+        return catchFire(state, level, pos);
     }*/
-    //?} else {
+    //?} elif neoforge {
     /*@LoaderHook("neoforge:IBlockExtension#onCaughtFire")
     @Override
     public void onCaughtFire(BlockState state, Level level, BlockPos pos, Direction direction, LivingEntity igniter) {
-        FluidVolatility.catchFire(level, pos, state, volatility);
+        catchFire(state, level, pos);
     }*/
     //?}
 

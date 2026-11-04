@@ -27,11 +27,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-
 import buildcraft.lib.BCLib;
+import buildcraft.platform.event.GameHooks;
 
 /**
  * Developer-facing slash command for A/B testing UI / click sounds when tuning
@@ -51,7 +48,6 @@ import buildcraft.lib.BCLib;
  * pitch buttons are click-to-run, so iterating "which sound + which pitch" is one click
  * per candidate. Add new candidates by extending {@link #SOUNDS}.
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public class SoundTestCommand {
 
     /** Candidate sound IDs that appear as rows in the menu. */
@@ -78,10 +74,14 @@ public class SoundTestCommand {
     /** Pitch buttons shown per row. */
     private static final float[] PITCHES = { 0.5f, 0.7f, 1.0f, 1.3f, 1.5f, 1.8f, 2.0f };
 
-    @SubscribeEvent
-    public static void onRegisterCommands(RegisterCommandsEvent event) {
+    /** Registers the command-registration listener. Called once from BCCore. */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onRegisterCommands(SoundTestCommand::onRegisterCommands);
+    }
+
+    public static void onRegisterCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         if (!BCLib.DEV) return;
-        register(event.getDispatcher());
+        register(dispatcher);
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {

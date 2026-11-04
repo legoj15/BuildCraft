@@ -5,6 +5,7 @@
  */
 package buildcraft.core.item;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -17,6 +18,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,13 +27,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
-
 import buildcraft.core.BCCoreItems;
+import buildcraft.platform.event.GameHooks;
 
 /**
  * Zombies sometimes carry a Basic Wrench, and sometimes drop one outright. Both apply to the zombies vanilla hands an
@@ -50,7 +47,6 @@ import buildcraft.core.BCCoreItems;
  *     table formats differ in every line from 1.21.1 to 26.3 and each of them would need its own down-port.</li>
  * </ul>
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public final class ZombieWrenches {
 
     /** The zombies that may carry or drop a wrench: {@code data/buildcraftunofficial/tags/entity_type/wrench_carriers.json}. */
@@ -69,10 +65,17 @@ public final class ZombieWrenches {
     private ZombieWrenches() {
     }
 
-    @SubscribeEvent
-    public static void onFinalizeSpawn(FinalizeSpawnEvent event) {
-        Mob mob = event.getEntity();
-        if (isCarrier(mob) && !event.isCanceled() && !isConversion(event)) {
+    /** Registers the spawn-finalize, join and drops listeners. Called once from BCCore. */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onFinalizeSpawn(ZombieWrenches::onFinalizeSpawn);
+        hooks.onEntityJoinLevel(ZombieWrenches::onJoinLevel);
+        hooks.onLivingDrops(ZombieWrenches::onDrops);
+    }
+
+    /** A cancelled finalize never reaches this listener. A converted mob keeps the gear of the one it was made from,
+     *  and vanilla leaves its hands alone. */
+    public static void onFinalizeSpawn(Mob mob, boolean conversion) {
+        if (isCarrier(mob) && !conversion) {
             FINALIZED.add(mob);
         }
     }
@@ -82,18 +85,8 @@ public final class ZombieWrenches {
         return BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(mob.getType()).is(CARRIERS);
     }
 
-    /** A converted mob keeps the gear of the one it was made from, and vanilla leaves its hands alone. */
-    private static boolean isConversion(FinalizeSpawnEvent event) {
-        //? if >=1.21.10 {
-        return event.getSpawnType() == net.minecraft.world.entity.EntitySpawnReason.CONVERSION;
-        //?} else {
-        /*return event.getSpawnType() == net.minecraft.world.entity.MobSpawnType.CONVERSION;*/
-        //?}
-    }
-
-    @SubscribeEvent
-    public static void onJoinLevel(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() || event.loadedFromDisk() || !(event.getEntity() instanceof Mob mob)) {
+    public static void onJoinLevel(Entity entity, ServerLevel level, boolean loadedFromDisk) {
+        if (loadedFromDisk || !(entity instanceof Mob mob)) {
             return;
         }
         if (FINALIZED.remove(mob) && mob.getMainHandItem().isEmpty()) {
@@ -111,16 +104,15 @@ public final class ZombieWrenches {
         return true;
     }
 
-    @SubscribeEvent
-    public static void onDrops(LivingDropsEvent event) {
-        LivingEntity victim = event.getEntity();
+    public static void onDrops(LivingEntity victim, DamageSource source, boolean recentlyHit,
+            Collection<ItemEntity> drops) {
         // A zombie carrying a wrench already drops it as vanilla equipment; one kill yields at most one.
-        if (!event.isRecentlyHit() || !(victim.level() instanceof ServerLevel level) || !isCarrier(victim)
+        if (!recentlyHit || !(victim.level() instanceof ServerLevel level) || !isCarrier(victim)
             || victim.getMainHandItem().getItem() instanceof ItemWrench_Neptune) {
             return;
         }
         RandomSource random = victim.getRandom();
-        float chance = equipmentDropChance(level, victim, event.getSource());
+        float chance = equipmentDropChance(level, victim, source);
         if (random.nextFloat() >= chance) {
             return;
         }
@@ -128,7 +120,7 @@ public final class ZombieWrenches {
         wearLikeDroppedEquipment(wrench, random);
         ItemEntity drop = new ItemEntity(level, victim.getX(), victim.getY(), victim.getZ(), wrench);
         drop.setDefaultPickUpDelay();
-        event.getDrops().add(drop);
+        drops.add(drop);
     }
 
     /**

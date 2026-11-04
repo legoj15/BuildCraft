@@ -67,6 +67,9 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture {
     @Shadow
     public abstract boolean isPushedByFluid();
 
+    @Shadow
+    protected abstract BlockPos getOnPos(float offset);
+
     @Unique
     @Nullable
     private List<ItemEntity> buildcraft$capturedDrops;
@@ -107,8 +110,8 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture {
     @Inject(method = "spawnSprintParticle", at = @At("HEAD"), cancellable = true)
     private void buildcraft$runningEffects(CallbackInfo ci) {
         Entity self = (Entity) (Object) this;
-        // The block vanilla reads next, at the same position.
-        BlockPos pos = self.getOnPosLegacy();
+        // The block vanilla reads next, at the same position: the body of its deprecated getOnPosLegacy().
+        BlockPos pos = getOnPos(0.2F);
         BlockState state = self.level().getBlockState(pos);
         if (state.getBlock() instanceof BlockParticleEffects block && block.spawnRunningEffects(self.level(), pos, self)) {
             ci.cancel();

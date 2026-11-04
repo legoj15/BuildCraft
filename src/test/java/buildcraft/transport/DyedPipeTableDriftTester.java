@@ -103,7 +103,10 @@ public class DyedPipeTableDriftTester {
         //? if neoforge && >=1.21.10 {
         return ingredient.getValues().stream().map(net.minecraft.core.Holder::value).collect(Collectors.toSet());
         //?} elif fabric {
-        /*return ingredient.items().map(net.minecraft.core.Holder::value).collect(Collectors.toSet());*/
+        /*// Vanilla deprecates items() as display-only; outside NeoForge it is the only full listing there is.
+        @SuppressWarnings("deprecation")
+        java.util.stream.Stream<net.minecraft.core.Holder<Item>> items = ingredient.items();
+        return items.map(net.minecraft.core.Holder::value).collect(Collectors.toSet());*/
         //?} else {
         /*return java.util.Arrays.stream(ingredient.getItems())
                 .map(ItemStack::getItem).collect(Collectors.toSet());*/

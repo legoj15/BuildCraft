@@ -296,6 +296,27 @@ dependencies {
 // generated copy would pass this node's only gate vacuously.
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
+// The deprecated-API guard (AGENTS.md: no deprecated APIs; suppress only on the narrowest element, with a one-line
+// why). ForRemovalApiGuardTester is a unit test, so it runs on the NeoForge nodes only and never sees Fabric API; here
+// javac itself is the guard: the main and gametest compiles lint deprecation and removal and fail on any warning
+// (-Werror), so an unsuppressed [deprecation] and every [removal] stops the build. Both compiles emit no other warning
+// today; a new non-lint warning would fail them too and is fixed the same way. `-PbcLint=...` (the opt-in lint audit,
+// build.gradle.kts) turns -Werror off so the audit can list every category's hits without failing on them.
+val deprecationGuarded = listOf("compileJava", "compileGametestJava")
+deprecationGuarded.forEach { name ->
+    tasks.named<JavaCompile>(name) {
+        options.compilerArgs.add("-Xlint:deprecation,removal")
+        if (!project.hasProperty("bcLint")) {
+            options.compilerArgs.add("-Werror")
+        }
+    }
+}
+tasks.register("checkDeprecations") {
+    group = "verification"
+    description = "Compiles the main and gametest source sets with -Xlint:deprecation,removal -Werror (the Fabric node's deprecated-API guard)."
+    dependsOn(deprecationGuarded)
+}
+
 // No unit tests: FML-JUnit has no Fabric twin (docs/platform-layer.md, test plan).
 tasks.named("test") { enabled = false }
 
@@ -321,10 +342,11 @@ tasks.register<Copy>("buildAndCollect") {
     dependsOn("assemble")
 }
 
-// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the class tweaker, the
+// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the deprecation-guarded compiles, the class tweaker, the
 // transformed resources, the collected jar and the game tests. The NeoForge twin in bc.neoforge adds unit tests.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation, the Fabric data transform, the collected jar and the game tests."
-    dependsOn("compileJava", "validateAccessWidener", "processResources", "jar", "buildAndCollect", "runGameTest")
+    description = "This Fabric node's share of fullTestSuite: compileJava, the deprecated-API guard, the class-tweaker validation, the Fabric data transform, the collected jar and the game tests."
+    dependsOn("compileJava", "checkDeprecations", "validateAccessWidener", "processResources", "jar", "buildAndCollect",
+        "runGameTest")
 }

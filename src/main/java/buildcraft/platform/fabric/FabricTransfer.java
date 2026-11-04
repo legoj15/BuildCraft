@@ -78,6 +78,9 @@ public final class FabricTransfer implements TransferServices {
     }
 
     @Override
+    // getCurrentUnsafe is deprecated only as a hint to pass the context instead; a simulate-flag call has none to
+    // pass, which is the case it exists for (NeoForge's getCurrentOpenedTransaction, likewise).
+    @SuppressWarnings("deprecation")
     public BCTransaction openInCurrent() {
         TransactionContext current = Transaction.getCurrentUnsafe();
         return new Owned(current == null ? Transaction.openOuter() : current.openNested());

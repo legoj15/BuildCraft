@@ -359,7 +359,7 @@ These are NeoForge-only today and need Fabric twins or loader-awareness:
 - **Guard testers:**
   - `StonecutterDirectiveGuardTester`: loader terms, suffixed active node.
   - `MainSourceSet` and the `buildcraft.test.mainSourceDirs` property: every source set must be passed.
-  - `ForRemovalApiGuardTester`: the Fabric API needs its own `forRemoval` scan.
+  - `ForRemovalApiGuardTester`: runs on the NeoForge nodes only. **Built (Fabric):** the `26.3-fabric` node's main and gametest compiles lint `deprecation,removal` with `-Werror` (`checkDeprecations` in `bc.fabric`, part of `nodeVerification`), so any `[removal]` and any unsuppressed `[deprecation]`, Fabric API's or vanilla's, fails the build. `-PbcLint` turns `-Werror` off for an audit.
   - `CopyrightHeaderTester`: new files.
 - **Reference sources:** `.neoforge-ref` and `scripts/neoforge-sources-sync.sh`. Fabric needs a Fabric API sources dir-set and `INDEX.txt` rows.
 - **Version tracking:** the `neoforge-bump` skill and the SessionStart version-check hook, for Fabric Loader and Fabric API pins.

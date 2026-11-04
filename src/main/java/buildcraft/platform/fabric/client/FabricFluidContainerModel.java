@@ -40,7 +40,6 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.SpriteContents;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelDebugName;
 import net.minecraft.client.resources.model.cuboid.CuboidFace;
@@ -67,6 +66,7 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.platform.Platform;
 import buildcraft.platform.client.ClientPlatform;
 
@@ -174,7 +174,7 @@ public final class FabricFluidContainerModel implements ItemModel {
     private static RenderType[] fluidSheets(Material.Baked sprite, boolean forceOpaque) {
         boolean translucent = !forceOpaque
                 && (sprite.forceTranslucent() || sprite.sprite().transparency().hasTranslucent());
-        boolean blockAtlas = sprite.sprite().atlasLocation().equals(TextureAtlas.LOCATION_BLOCKS);
+        boolean blockAtlas = sprite.sprite().atlasLocation().equals(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         if (blockAtlas) {
             return translucent
                     ? new RenderType[] {Sheets.translucentBlockItemSheet(), Sheets.translucentBlockItemGlintSheet(),

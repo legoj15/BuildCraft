@@ -8,8 +8,10 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
 # Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.3 is the primary from its first release; nothing ships until the user says so).
 # Plus one Fabric node, 26.3-fabric (#98): all of BuildCraft on Fabric Loader + Fabric API + Forge Config API Port,
-# jar BuildCraftRedux-<v>+mc26.3-fabric.jar; :26.3-fabric:runServer / :26.3-fabric:runClient work, and
-# :26.3-fabric:runGameTest runs the shared game tests on Fabric. No JUnit tests on it (FML-JUnit has no Fabric twin).
+# jar BuildCraftRedux-<v>+mc26.3-fabric.jar; :26.3-fabric:runServer / :26.3-fabric:runClient work,
+# :26.3-fabric:runGameTest runs the shared game tests on Fabric, and :26.3-fabric:runClientGameTest is the in-world
+# client check (needs a GL context; not in nodeVerification). No JUnit tests on it (FML-JUnit has no Fabric twin);
+# its compiles are the deprecated-API guard (-Werror, :26.3-fabric:checkDeprecations).
 # Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and the Fabric node's nodeVerification.
@@ -25,10 +27,14 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ./gradlew :26.3:runClient
 ./gradlew :26.3:runServer
 ./gradlew :26.3:runClient -Precipe_viewer=rei   # dev runtime gets REI instead of JEI (default jei; never both)
+./gradlew :26.3-fabric:runClient
+./gradlew :26.3-fabric:runServer
 
 # Unit tests / headless game tests
 ./gradlew :26.3:test
 ./gradlew :26.3:runGameTestServer
+./gradlew :26.3-fabric:runGameTest
+./gradlew :26.3-fabric:runClientGameTest   # needs a display/GL context
 ```
 
 ## Multi-version builds (Stonecutter)

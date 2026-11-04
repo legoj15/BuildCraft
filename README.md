@@ -1,6 +1,6 @@
 ## BuildCraft Redux
 #### Formerly BuildCraft Unofficial
-#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge
+#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge, and 26.3 on Fabric (in development)
 
 ### Reporting an issue
 
@@ -31,6 +31,27 @@ Please check if the bug or feature request has been reported beforehand. Also, p
 
 **Please** mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
 
+### Fabric
+A Fabric build for **Minecraft 26.3** is built from the same source tree. It is in development and not released yet.
+It is the same mod, with the same mod id (`buildcraftunofficial`), and it needs:
+
+* [Fabric Loader](https://fabricmc.net/use/) 0.20.1 or newer,
+* [Fabric API](https://modrinth.com/mod/fabric-api) 0.165.2+26.3 or newer,
+* [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) 26.3.1 or newer (BuildCraft's config files),
+* optionally Team Reborn Energy, for RF/FE interop with other mods' machines (without it BuildCraft offers and
+  finds no RF/FE),
+* optionally JEI or REI, for recipe viewing.
+
+Common Protection API, through which claim and protection mods answer BuildCraft's "may this player build here"
+questions, is bundled inside the jar.
+
+Known differences from the NeoForge build:
+
+* Robot Goggles have no Curios/Accessories slot (neither mod has a Fabric 26.3 build); they count only when worn in
+  the head slot.
+* Fluids are counted in whole millibuckets. Fabric measures fluids in droplets (81 to the millibucket), so a transfer
+  of less than 1 mB moves nothing and any fraction of a millibucket is ignored.
+
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` for 26.1.2 and newer, and `Java 21` for 1.21.x (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
  * Optional: Install `Gradle` (found [here](http://www.gradle.org/downloads)).
@@ -40,7 +61,7 @@ Please check if the bug or feature request has been reported beforehand. Also, p
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the jar `BuildCraftRedux-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`.
+5. Once the build finishes, the jar `BuildCraftRedux-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`, beside the Fabric jar `BuildCraftRedux-<version>+mc26.3-fabric.jar`.
 
 ### Running in a Development Environment
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.3:`):
@@ -48,6 +69,10 @@ To test the mod locally, use the NeoForge run tasks. These are **per-node**, so 
 * Run the Server: `./gradlew :26.3:runServer` (or `.\gradlew.bat :26.3:runServer` on Windows)
 
 Valid versions are `:1.21.1:`, `:1.21.10:`, `:1.21.11:`, `:26.1.2:`, `:26.2:` and `:26.3:`.
+
+The Fabric build is the `:26.3-fabric:` node: `./gradlew :26.3-fabric:runClient`, `./gradlew :26.3-fabric:runServer`,
+and `./gradlew :26.3-fabric:runGameTest` (headless game tests) or `./gradlew :26.3-fabric:runClientGameTest` (an
+in-world client check that needs a display).
 
 On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.3` node by default) to reduce the amount of steps.
 

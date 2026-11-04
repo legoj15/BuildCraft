@@ -31,8 +31,14 @@ sourceSets {
             exclude("buildcraft/platform/fabric/BCFabricEntrypoint.java",
                     "buildcraft/platform/fabric/client/BCFabricClientEntrypoint.java")
         }
-        // BC's resources are NeoForge's (mods.toml, the data down-ports); a Fabric node ships none yet.
-        resources { exclude("**") }
+        // BC's assets and data are shared; the loader metadata is not. src/main/resources-fabric adds this node's
+        // own (fabric.mod.json, the class tweaker) and the NeoForge-only files are dropped. The NeoForge data JSON
+        // (neoforge:conditions, biome modifiers, fluid_container models) still ships untransformed: a known gap
+        // until the Fabric data transform lands.
+        resources {
+            srcDir(rootProject.file("src/main/resources-fabric"))
+            exclude("META-INF/neoforge.mods.toml", "META-INF/accesstransformer.cfg")
+        }
     }
     named("test") {
         // Unit tests stay NeoForge-only: FML-JUnit has no Fabric twin (docs/platform-layer.md, test plan).
@@ -46,6 +52,20 @@ sourceSets {
 // it to the Minecraft jar this node compiles against.
 loom {
     accessWidenerPath.set(rootProject.file("src/main/resources-fabric/buildcraftunofficial.classtweaker"))
+}
+
+val modVersion = property("mod_version") as String
+tasks.named<ProcessResources>("processResources") {
+    val replaceProperties = mapOf(
+        "mod_version" to modVersion,
+        "minecraft_version" to minecraftVersion,
+        "fabric_loader_version" to fabricLoaderVersion,
+        "fabric_api_version" to fabricApiVersion,
+    )
+    inputs.properties(replaceProperties)
+    filesMatching("fabric.mod.json") { expand(replaceProperties) }
+    // A file present in both resource trees is a mistake, not something to drop silently.
+    duplicatesStrategy = DuplicatesStrategy.FAIL
 }
 
 // Loom registers this itself; declared so the source of fabric-loader / fabric-api is visible here.

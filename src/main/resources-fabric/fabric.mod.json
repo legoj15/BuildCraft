@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "buildcraftunofficial",
+  "version": "${mod_version}",
+  "name": "BuildCraft Redux",
+  "description": "Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!\nA fan-made continuation reuniting BuildCraft 7 and 8.",
+  "authors": ["SpaceToad", "BuildCraft Team", "legoj15 (1.21.1+ port)"],
+  "contact": {
+    "homepage": "https://github.com/legoj15/BuildCraft",
+    "sources": "https://github.com/legoj15/BuildCraft",
+    "issues": "https://github.com/legoj15/BuildCraft/issues"
+  },
+  "license": "MPL-2.0",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["buildcraft.platform.fabric.BCFabricEntrypoint"],
+    "client": ["buildcraft.platform.fabric.client.BCFabricClientEntrypoint"]
+  },
+  "accessWidener": "buildcraftunofficial.classtweaker",
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "~${minecraft_version}",
+    "forgeconfigapiport": ">=26.3.1"
+  }
+}

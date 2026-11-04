@@ -5,14 +5,11 @@
 package buildcraft.builders;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.template.TemplateApi;
@@ -44,10 +41,8 @@ public class BCBuilders {
         BCBuildersMenuTypes.init(modEventBus);
         BCBuildersFeatures.init(modEventBus);
 
-        modEventBus.addListener((FMLCommonSetupEvent event) -> {
-            BCBuildersRecipes.init();
-        });
-        modEventBus.addListener((FMLCommonSetupEvent event) -> {
+        Platform.lifecycle().onCommonSetup(BCBuildersRecipes::init);
+        Platform.lifecycle().onCommonSetup(() -> {
             FillerManager.registry = FillerRegistry.INSTANCE;
             TemplateApi.templateRegistry = TemplateRegistry.INSTANCE;
             TemplateApi.templateRegistry.addHandler(TemplateHandlerDefault.INSTANCE);
@@ -68,8 +63,7 @@ public class BCBuilders {
         // Per-server-tick driver for BCBuildersEventDist.onServerTick, which throttles
         // the destroying_the_world per-owner pairing scan to SCAN_INTERVAL_TICKS and
         // short-circuits when no level has ≥2 tracked quarries.
-        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
-                event -> BCBuildersEventDist.INSTANCE.onServerTick());
+        Platform.gameHooks().onServerTickEnd(server -> BCBuildersEventDist.INSTANCE.onServerTick());
 
         if (Platform.loader().isPhysicalClient()) {
             buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);

@@ -6,11 +6,8 @@
 package buildcraft.energy;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,22 +46,18 @@ public class BCEnergy {
         });
 
         // Setup event for things that need registries to be frozen
-        modEventBus.addListener((FMLCommonSetupEvent event) -> {
-            commonSetup(event);
-        });
+        Platform.lifecycle().onCommonSetupOnMain(BCEnergy::commonSetup);
 
         ContainedFluidDetonation.init();
 
         // MC 26.1: Register recipes on ServerAboutToStartEvent
-        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> {
-            onServerAboutToStart(event);
-        });
+        Platform.lifecycle().onServerAboutToStart(server -> BCEnergyRecipes.ensureInitialized());
 
         //? if >=26.3 {
         // 26.3 clients cannot resolve fuel burn times, so the server sends the Stirling engine's list to the recipe
         // viewer whenever it syncs datapacks (login and /reload).
         buildcraft.energy.compat.viewer.StirlingFuelSync.registerPayload();
-        NeoForge.EVENT_BUS.addListener(buildcraft.energy.compat.viewer.StirlingFuelSync::onDatapackSync);
+        Platform.gameHooks().onDatapackSync(buildcraft.energy.compat.viewer.StirlingFuelSync::onDatapackSync);
         //?}
 
         LOGGER.info("BuildCraft Energy initialized");
@@ -154,22 +147,17 @@ public class BCEnergy {
         );
     }
 
-    private static void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
-            // liquidBlock stays the cool default; the resolver swaps in searing crude under a Nether biome so a Nether
-            // spring regenerates the same oil its deposit was generated with.
-            BlockSpring.oilLiquidResolver = (level, pos) ->
-                    OilGenerator.crudeOilFor(level.getBiome(pos)).block().get().defaultBlockState();
-            EnumSpring.OIL.tileConstructor = () -> {
-                return null;
-            };
+    /** Common setup, on the main thread. */
+    private static void commonSetup() {
+        EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
+        // liquidBlock stays the cool default; the resolver swaps in searing crude under a Nether biome so a Nether
+        // spring regenerates the same oil its deposit was generated with.
+        BlockSpring.oilLiquidResolver = (level, pos) ->
+                OilGenerator.crudeOilFor(level.getBiome(pos)).block().get().defaultBlockState();
+        EnumSpring.OIL.tileConstructor = () -> {
+            return null;
+        };
 
-            BCEnergyWorldGen.init();
-        });
-    }
-
-    private static void onServerAboutToStart(ServerAboutToStartEvent event) {
-        BCEnergyRecipes.ensureInitialized();
+        BCEnergyWorldGen.init();
     }
 }

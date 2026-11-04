@@ -7,12 +7,9 @@
 package buildcraft.silicon;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,9 +52,7 @@ public class BCSilicon {
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
-        modEventBus.addListener((FMLCommonSetupEvent event) -> {
-            commonSetup(event);
-        });
+        Platform.lifecycle().onCommonSetupOnMain(BCSilicon::commonSetup);
         modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (BuildCreativeModeTabContentsEvent event) -> {
             addCreativeTabItems(event);
         });
@@ -65,9 +60,7 @@ public class BCSilicon {
 
 
         // MC 26.1: Register recipes on ServerAboutToStartEvent
-        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> {
-            onServerAboutToStart(event);
-        });
+        Platform.lifecycle().onServerAboutToStart(server -> onServerAboutToStart());
 
         LOGGER.info("BuildCraft Silicon initialized");
     }
@@ -96,15 +89,14 @@ public class BCSilicon {
             (table, direction) -> table.getItemHandler(direction));
     }
 
-    private static void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            BCSiliconPlugs.registerAll();
-            FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
-            FacadeAPI.registry = FacadeStateManager.INSTANCE;
-        });
+    /** Common setup, on the main thread. */
+    private static void commonSetup() {
+        BCSiliconPlugs.registerAll();
+        FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
+        FacadeAPI.registry = FacadeStateManager.INSTANCE;
     }
 
-    private static void onServerAboutToStart(ServerAboutToStartEvent event) {
+    private static void onServerAboutToStart() {
         FacadeStateManager.ensureInitialized();
         BCSiliconRecipes.ensureInitialized();
     }

@@ -131,6 +131,7 @@ Never build a generic BC event bus. It is the Architectury trap the issue reject
 - **Attachments.** `BCAttachment<T>` (`get`/`set`, `copyOnDeath`). The payloads stay on vanilla `ValueInput`/`ValueOutput` (NBT on 1.21.1). Format risk is high: the NeoForge adapter must write today's bytes, so golden fixtures come first. Cross-loader world portability is explicitly out of scope.
   - **As built (S9h).** `BCAttachmentRegistrar.create(ns).register(name, factory, copyOnDeath)` returns `BCAttachment<T>` with `get(Entity)`/`set(Entity, T)`; payloads implement `BCAttachmentData`, which carries NeoForge's own method names (`serialize`/`deserialize`, `serializeNBT`/`deserializeNBT` on 1.21.1), and the NeoForge serializer is the one `AttachmentType.serializable` builds. `AttachmentGoldenTest` (written first) pins the bytes, the round trip and copy-on-death.
 - **Data JSON.** `neoforge:conditions`, `neoforge:components`, `neoforge:ingredient_type`, biome modifiers and `neoforge:fluid_container` item models stay canonical NeoForge. Phase 2 adds a buildSrc Fabric data transform, following the precedent of `DataDownport1211`.
+  - **As built (Phase 2).** `buildcraft.gradle.DataFabric` runs as a `doLast` of the Fabric node's `processResources`. Conditions become `fabric:load_conditions` (`mod_loaded` → `all_mods_loaded`, `always`/`never` → `true`/`false`, `not`/`and`/`or`, `tag_empty` → `not` of `tags_populated`, `registered` → `registry_contains`, `feature_flags_enabled` → `features_enabled`); BC's own types (`buildcraftunofficial:rf_enabled`) pass through, since `DataServices.registerCondition` registers them on Fabric too. Non-strict `neoforge:components` ingredients become `fabric:components` (`items` → `base`); a strict one fails the build, since Fabric has no exhaustive mode. `data/neoforge/**` and `neoforge/biome_modifier/**` are dropped against a known-file list: `add_oil` is `registerAllBiomesFeature`, the two `add_features` modifiers are `FabricDataServices.addTaggedBiomeFeatures`, and the build fails if a dropped modifier changes or names a feature that file does not add. `fluid_container` item models become a plain `item/generated` model of the base texture. A final check fails on any `"neoforge:` left in the output. Gaps on Fabric: no fluid overlay on buckets or the fragile fluid shard (no Fabric dynamic fluid model yet); no recipe priorities, so the shared 8-glass tank grid is not settled in IronTanks' favour.
 
 ### Transfer and capabilities (a sub-epic; give it its own issue)
 - **Shape.**
@@ -291,8 +292,8 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
 - Resource twins:
   - `fabric.mod.json` beside `META-INF/neoforge.mods.toml`, each expanded by `processResources` per loader.
   - An access widener translated from `META-INF/accesstransformer.cfg`, and the mixins json.
-  - The Fabric data transform for conditions and components.
-  - Fabric code for biome modifiers and the `fluid_container` item models.
+  - The Fabric data transform for conditions and components (built: `DataFabric`, see Data JSON).
+  - Fabric code for biome modifiers (built) and the `fluid_container` item models (a static stand-in; a real Fabric dynamic fluid model is still open).
 - A mixin or registry route for each `@LoaderHook` tag.
 - Config route decided (open question 1).
 - Energy: Team Reborn Energy as an optional dependency, behind the RF gate.

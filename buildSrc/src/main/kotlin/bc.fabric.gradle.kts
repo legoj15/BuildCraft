@@ -4,10 +4,13 @@
 // Phase 2 spike (#100): COMPILE ONLY, NOTHING SHIPS. The node compiles buildcraft/platform/** from main (the
 // loader-neutral contracts, the binder with its fabric arm live, and buildcraft.platform.fabric) plus the vanilla-only
 // BCFluidStack in buildcraft/api/fluids, and nothing else:
-// no resources, no tests, no jar, no buildAndCollect. Its share of the root fullTestSuite is compileJava alone.
+// no tests, no jar, no buildAndCollect (its resources are processed and transformed, but ship nowhere).
+// Its share of the root fullTestSuite is compileJava plus processResources (the data transform and its guard).
 //
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
 // go on the plain Java configurations rather than the mod* remapping ones.
+
+import buildcraft.gradle.DataFabric
 
 plugins {
     id("net.fabricmc.fabric-loom")
@@ -32,9 +35,8 @@ sourceSets {
                     "buildcraft/platform/fabric/client/BCFabricClientEntrypoint.java")
         }
         // BC's assets and data are shared; the loader metadata is not. src/main/resources-fabric adds this node's
-        // own (fabric.mod.json, the class tweaker) and the NeoForge-only files are dropped. The NeoForge data JSON
-        // (neoforge:conditions, biome modifiers, fluid_container models) still ships untransformed: a known gap
-        // until the Fabric data transform lands.
+        // own (fabric.mod.json, the class tweaker) and the NeoForge-only files are dropped. The NeoForge-shaped data
+        // JSON is rewritten for Fabric after the copy (DataFabric, below).
         resources {
             srcDir(rootProject.file("src/main/resources-fabric"))
             exclude("META-INF/neoforge.mods.toml", "META-INF/accesstransformer.cfg")
@@ -66,6 +68,15 @@ tasks.named<ProcessResources>("processResources") {
     filesMatching("fabric.mod.json") { expand(replaceProperties) }
     // A file present in both resource trees is a mistake, not something to drop silently.
     duplicatesStrategy = DuplicatesStrategy.FAIL
+    // The NeoForge -> Fabric data transform (conditions, components ingredients, biome modifiers, fluid_container
+    // item models), then the guard that nothing NeoForge-keyed is left. FabricDataServices is an input: the
+    // transform checks the biome features it adds against the biome-modifier JSON it drops.
+    val fabricDataCode = rootProject.file("src/main/java/buildcraft/platform/fabric/FabricDataServices.java")
+    inputs.file(fabricDataCode)
+    doLast {
+        DataFabric.apply(destinationDir, fabricDataCode)
+        DataFabric.verifyNoNeoForgeData(destinationDir)
+    }
 }
 
 // Loom registers this itself; declared so the source of fabric-loader / fabric-api is visible here.
@@ -98,10 +109,10 @@ tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 tasks.named("test") { enabled = false }
 tasks.named("jar") { enabled = false }
 
-// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile alone. The NeoForge twin in
-// bc.neoforge adds unit tests, game tests and the jar.
+// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the class tweaker and the
+// transformed resources. The NeoForge twin in bc.neoforge adds unit tests, game tests and the jar.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Fabric node's share of fullTestSuite: compileJava and the class-tweaker validation (nothing ships yet)."
-    dependsOn("compileJava", "validateAccessWidener")
+    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation and the Fabric data transform (nothing ships yet)."
+    dependsOn("compileJava", "validateAccessWidener", "processResources")
 }

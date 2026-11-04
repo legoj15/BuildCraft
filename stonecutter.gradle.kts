@@ -41,8 +41,8 @@ tasks.register<Exec>("runReleaseMatrix") {
 // game-test crash went unnoticed — a `:<node>:` qualifier (or a broken node) quietly dropped coverage.
 // Here every node's share is a hard dependency; drop a node only by removing it from the tree. A node's share is
 // its `nodeVerification` task, which its loader convention plugin registers: unit tests + headless game tests + jar
-// build on a NeoForge node (bc.neoforge), compileJava alone on the compile-only Fabric node (bc.fabric). The node
-// owns the list because only the node knows its loader.
+// build on a NeoForge node (bc.neoforge), compileJava plus the transformed resources on the compile-only Fabric
+// node (bc.fabric). The node owns the list because only the node knows its loader.
 //
 // No active-node switching is needed: each node compiles its OWN stonecutterGenerate output, so
 // `:1.21.1:test` and `:26.2:test` are correct in one invocation regardless of which node is "active"

@@ -226,8 +226,11 @@ public class FluidFireTester {
 
     /** Work budget of the gas test, counted from the cell ticking: build, first blast, chain, the settle that proves
      *  nothing further goes off, the config-off check, the direct fire catch, and the Nether's chunks loading for the
-     *  last stage (worldgen runs off-thread while the ticks keep coming, so that wait is most of this). */
-    private static final int GAS_WORK_TICKS = 700;
+     *  last stage (worldgen runs off-thread while the ticks keep coming, so that wait is most of this, and under heavy
+     *  machine load (issue #118) it ate a 700 tick budget before the gas was even set down). The Nether's chunks are
+     *  now requested in the first stage so that wait overlaps the rest, and the budget is generous because every stage
+     *  gates on observed state: it is only the ceiling for a machine that never gets there. */
+    private static final int GAS_WORK_TICKS = 2400;
 
     /** Ticks the guard gas is watched after the chain has finished, before it is declared untouched. The chain is
      *  over within a dozen ticks (delays of 2 to 5 per generation), so this is several times the longest it can run. */
@@ -303,6 +306,10 @@ public class FluidFireTester {
                     helper.setBlock(LINK, gas);
                     helper.setBlock(GUARD, gas);
                     helper.setBlock(FIRE_BESIDE_TRIGGER, Blocks.FIRE);
+                    if (nether != null) {
+                        // Worldgen runs off-thread: ask for the Nether now so it finishes while stages 1 to 4 run.
+                        forceLoadNether(nether, true);
+                    }
                     advance(stage, stageStart, polls);
                 }
                 case 1 -> {
@@ -340,7 +347,6 @@ public class FluidFireTester {
                         if (nether == null) {
                             return true;
                         }
-                        forceLoadNether(nether, true);
                         advance(stage, stageStart, polls);
                     }
                 }
@@ -371,8 +377,10 @@ public class FluidFireTester {
                         helper.setBlock(rel, Blocks.AIR);
                     }
                 }
-                if (nether != null && stage[0] >= 5) {
-                    nether.setBlock(NETHER_SPOT, Blocks.AIR.defaultBlockState(), 3);
+                if (nether != null && stage[0] > 0) {
+                    if (stage[0] >= 6) {
+                        nether.setBlock(NETHER_SPOT, Blocks.AIR.defaultBlockState(), 3);
+                    }
                     forceLoadNether(nether, false);
                 }
             });

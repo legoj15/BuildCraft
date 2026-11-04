@@ -26,7 +26,7 @@ public class OilAndFuelProductionTester {
 
     public static void testFreshAttachmentEmpty(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        OilAndFuelProduction data = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        OilAndFuelProduction data = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
         helper.assertFalse(data.isComplete(), "Fresh attachment must not report complete");
         for (String name : BCEnergyFluids.BASE_NAMES) {
             int amount = data.get(name);
@@ -39,7 +39,7 @@ public class OilAndFuelProductionTester {
 
     public static void testRecordProductionClampsAtTarget(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        OilAndFuelProduction data = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        OilAndFuelProduction data = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
 
         // Overshooting in one call: counter saturates at PER_FLUID_TARGET (16,000) rather
         // than running past it. A single distillation step can produce up to several
@@ -65,7 +65,7 @@ public class OilAndFuelProductionTester {
 
     public static void testRecordProductionIgnoresUnknownAndNonPositive(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        OilAndFuelProduction data = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        OilAndFuelProduction data = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
 
         // Unknown base name: vanilla water/lava and other-mod fluids hit this path via
         // BCEnergyFluids.getBaseName returning null. Tracker must reject silently — no
@@ -94,7 +94,7 @@ public class OilAndFuelProductionTester {
 
     public static void testCompletionEdgeFiresExactlyOnce(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        OilAndFuelProduction data = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        OilAndFuelProduction data = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
 
         // Crediting in two halves: first half is below target, must return null; second
         // half pushes across the threshold, must return the saturated base name.

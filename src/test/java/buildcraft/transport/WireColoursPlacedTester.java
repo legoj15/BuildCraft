@@ -31,14 +31,14 @@ public class WireColoursPlacedTester {
 
     public static void testFreshAttachmentEmpty(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        WireColoursPlaced data = player.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+        WireColoursPlaced data = BCTransportAttachments.WIRE_COLOURS_PLACED.get(player);
         helper.assertFalse(data.isComplete(), "Fresh attachment must not report complete");
         helper.succeed();
     }
 
     public static void testMarkPlacedReturnsTrueOnlyOnFirstSighting(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        WireColoursPlaced data = player.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+        WireColoursPlaced data = BCTransportAttachments.WIRE_COLOURS_PLACED.get(player);
 
         helper.assertTrue(data.markPlaced(DyeColor.RED),
             "First RED placement must return true");
@@ -53,7 +53,7 @@ public class WireColoursPlacedTester {
 
     public static void testCompleteOnlyAfterAllSixteenColours(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        WireColoursPlaced data = player.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+        WireColoursPlaced data = BCTransportAttachments.WIRE_COLOURS_PLACED.get(player);
 
         DyeColor[] colours = DyeColor.values();
         // 16 dye colours is a hard contract of Minecraft's DyeColor enum; if this ever changes

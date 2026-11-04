@@ -26,12 +26,15 @@ import buildcraft.VanillaSetupBaseTester;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.lib.test.GoldenFixtures;
+import buildcraft.platform.registry.BCAttachment;
+import buildcraft.platform.registry.BCAttachmentData;
 import buildcraft.transport.BCTransportAttachments;
 
 /**
  * Golden save format of BuildCraft's player attachments (wire colours placed, pluggables placed, oil and fuel
  * production): the {@code neoforge:attachments} compound an entity writes, through NeoForge's own attachment holder,
- * so the platform layer's attachment seam is proven to write today's bytes. Also pins that all three survive death.
+ * so the platform attachment seam ({@code NeoForgeAttachmentServices}) is proven to write today's bytes. Also pins
+ * that all three survive death.
  *
  * <p>What breaks it: a changed attachment id, a changed payload key or type, or a serializer that no longer writes
  * through the payload's own save method.
@@ -59,21 +62,28 @@ public class AttachmentGoldenTest extends VanillaSetupBaseTester {
         }
     }
 
+    private static <T extends BCAttachmentData> AttachmentType<T> type(BCAttachment<T> attachment) {
+        return NeoForgeAttachmentServices.typeOf(attachment);
+    }
+
     private static List<AttachmentType<?>> types() {
-        return List.of(BCTransportAttachments.WIRE_COLOURS_PLACED.get(), BCTransportAttachments.PLUGGABLES_PLACED.get(),
-                BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        return List.of(type(BCTransportAttachments.WIRE_COLOURS_PLACED),
+                type(BCTransportAttachments.PLUGGABLES_PLACED),
+                type(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION));
     }
 
     private static TestHolder filled() {
         TestHolder holder = new TestHolder();
-        BCTransportAttachments.WireColoursPlaced wires = holder.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+        BCTransportAttachments.WireColoursPlaced wires =
+                holder.getData(type(BCTransportAttachments.WIRE_COLOURS_PLACED));
         wires.markPlaced(DyeColor.RED);
         wires.markPlaced(DyeColor.BLUE);
-        BCTransportAttachments.PluggablesPlaced plugs = holder.getData(BCTransportAttachments.PLUGGABLES_PLACED.get());
+        BCTransportAttachments.PluggablesPlaced plugs =
+                holder.getData(type(BCTransportAttachments.PLUGGABLES_PLACED));
         plugs.markPlaced(BCTransportAttachments.PluggablesPlaced.Kind.GATE);
         plugs.markPlaced(BCTransportAttachments.PluggablesPlaced.Kind.TIMER);
         BCFactoryAttachments.OilAndFuelProduction oil =
-                holder.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+                holder.getData(type(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION));
         oil.recordProduction(BCEnergyFluids.BASE_NAMES.get(0), 1234);
         oil.recordProduction(BCEnergyFluids.BASE_NAMES.get(2), 20_000);
         return holder;
@@ -90,11 +100,11 @@ public class AttachmentGoldenTest extends VanillaSetupBaseTester {
         TestHolder loaded = new TestHolder();
         loaded.load(saved);
         Assertions.assertEquals(saved, loaded.save(), "a saved holder loads back to the same tag");
-        Assertions.assertTrue(loaded.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get())
+        Assertions.assertTrue(loaded.getData(type(BCTransportAttachments.WIRE_COLOURS_PLACED))
                 .markPlaced(DyeColor.GREEN), "an unsaved colour is still unplaced after the load");
-        Assertions.assertFalse(loaded.getData(BCTransportAttachments.WIRE_COLOURS_PLACED.get())
+        Assertions.assertFalse(loaded.getData(type(BCTransportAttachments.WIRE_COLOURS_PLACED))
                 .markPlaced(DyeColor.RED), "a saved colour is placed after the load");
-        Assertions.assertEquals(1234, loaded.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get())
+        Assertions.assertEquals(1234, loaded.getData(type(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION))
                 .get(BCEnergyFluids.BASE_NAMES.get(0)), "a production counter survives the load");
     }
 

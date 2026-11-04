@@ -470,7 +470,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                             player, ADVANCEMENT_LOGIC_TRANSPORTATION);
                     }
                     buildcraft.transport.BCTransportAttachments.WireColoursPlaced placed =
-                        player.getData(buildcraft.transport.BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+                        buildcraft.transport.BCTransportAttachments.WIRE_COLOURS_PLACED.get(player);
                     if (placed.markPlaced(wireColour)) {
                         // One criterion per dye colour — awarding the matching name lets the
                         // advancement screen display "x/16" progress automatically.

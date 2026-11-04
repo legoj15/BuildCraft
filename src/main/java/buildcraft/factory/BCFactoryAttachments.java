@@ -5,38 +5,31 @@
  */
 package buildcraft.factory;
 
-import java.util.function.Supplier;
-
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.common.util.ValueIOSerializable;
-//?}
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.platform.registry.BCAttachment;
+import buildcraft.platform.registry.BCAttachmentData;
+import buildcraft.platform.registry.BCAttachmentRegistrar;
 
 public class BCFactoryAttachments {
-    public static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
-        DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, BCFactory.MODID);
+    public static final BCAttachmentRegistrar ATTACHMENTS = BCAttachmentRegistrar.create(BCFactory.MODID);
 
     /** Per-player cumulative production of every BuildCraft oil and fuel, keyed by
      *  {@link BCEnergyFluids#BASE_NAMES} index. Each counter is clamped at one tank's
      *  worth (16,000 mB) — once all ten are full the {@code refine_and_redefine}
      *  advancement fires. Persisted across save/load and copied on respawn so death
      *  does not reset progress. */
-    public static final Supplier<AttachmentType<OilAndFuelProduction>> OIL_AND_FUEL_PRODUCTION =
-        ATTACHMENTS.register("oil_and_fuel_production",
-            () -> AttachmentType.serializable(OilAndFuelProduction::new).copyOnDeath().build());
+    public static final BCAttachment<OilAndFuelProduction> OIL_AND_FUEL_PRODUCTION =
+        ATTACHMENTS.register("oil_and_fuel_production", OilAndFuelProduction::new, true);
 
     public static void init(IEventBus modEventBus) {
-        ATTACHMENTS.register(modEventBus);
+        ATTACHMENTS.subscribe();
     }
 
     /**
@@ -46,11 +39,7 @@ public class BCFactoryAttachments {
      * at {@link #PER_FLUID_TARGET}. The advancement is granted when every counter
      * is saturated.
      */
-    //? if >=1.21.10 {
-    public static final class OilAndFuelProduction implements ValueIOSerializable {
-    //?} else {
-    /*public static final class OilAndFuelProduction implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
-    //?}
+    public static final class OilAndFuelProduction implements BCAttachmentData {
         public static final int PER_FLUID_TARGET = 16_000;
 
         /** Parallel array to {@link BCEnergyFluids#BASE_NAMES}; values in [0, PER_FLUID_TARGET]. */

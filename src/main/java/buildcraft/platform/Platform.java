@@ -13,6 +13,7 @@ import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
+import buildcraft.platform.registry.AttachmentServices;
 import buildcraft.platform.registry.DataServices;
 import buildcraft.platform.registry.RegistryServices;
 
@@ -102,6 +103,11 @@ public final class Platform {
     /** Data-driven hooks: load conditions and biome modifiers. */
     public static DataServices data() {
         return DataHolder.INSTANCE;
+    }
+
+    /** Saved entity data attachments. */
+    public static AttachmentServices attachments() {
+        return AttachmentsHolder.INSTANCE;
     }
 
     private static final class LoaderHolder {
@@ -292,6 +298,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeDataServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricDataServices();
+            *///?}
+        }
+    }
+
+    private static final class AttachmentsHolder {
+        static final AttachmentServices INSTANCE = create();
+
+        private static AttachmentServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeAttachmentServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricAttachmentServices();
             *///?}
         }
     }

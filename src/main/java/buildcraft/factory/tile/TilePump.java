@@ -278,7 +278,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         if (player == null) return;
         String baseName = BCEnergyFluids.getBaseName(drain.getFluid());
         if (baseName == null) return;
-        var tracker = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        var tracker = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
         String justSaturated = tracker.recordProduction(baseName, drain.getAmount());
         if (justSaturated != null) {
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_REFINE_AND_REDEFINE, justSaturated);

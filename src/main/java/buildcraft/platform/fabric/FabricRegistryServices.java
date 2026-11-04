@@ -35,12 +35,16 @@ import buildcraft.platform.registry.RegistryServices;
  * init, registry by registry in NeoForge's order and in call order within one (the block and item helpers have
  * already set the id on the properties, as on NeoForge). A registrar subscribed after that (another mod's initializer
  * running after BuildCraft's, such as the game-test mod) has its queued entries built at its {@link
- * BCRegistrar#subscribe}, since nothing else would build them. Gap: Fabric has no registry
- * alias API, so {@link BCRegistrar#addAlias} records nothing and old ids do not resolve.
+ * BCRegistrar#subscribe}, since nothing else would build them. Aliases ({@link BCRegistrar#addAlias}) go through
+ * Fabric API's {@code FabricRegistry.addAlias}, whose {@code MappedRegistry} lookups by id and by key resolve them as
+ * NeoForge's do; they are queued like the entries and added once the entries are built, since Fabric warns about an
+ * alias whose target is not registered yet.
  *^/
 public final class FabricRegistryServices implements RegistryServices {
     /^* Every queued entry, in register-call order. ^/
     private static final List<Pending<?>> PENDING = new ArrayList<>();
+    /^* Every queued alias, in addAlias-call order. ^/
+    private static final List<PendingAlias> PENDING_ALIASES = new ArrayList<>();
     /^* Set once {@link #registerPending} has run: from then on {@code subscribe()} builds its own entries. ^/
     private static volatile boolean initRegistered;
 
@@ -73,8 +77,24 @@ public final class FabricRegistryServices implements RegistryServices {
         for (Pending<?> entry : pending) {
             entry.holder(); // any registry the order above did not name
         }
+        addPendingAliases();
         initRegistered = true;
     }
+
+    /^* Adds every queued alias, now that the entries it may name are registered. ^/
+    private static void addPendingAliases() {
+        List<PendingAlias> aliases;
+        synchronized (PENDING_ALIASES) {
+            aliases = new ArrayList<>(PENDING_ALIASES);
+            PENDING_ALIASES.clear();
+        }
+        for (PendingAlias alias : aliases) {
+            alias.registry.addAlias(alias.from, alias.to);
+        }
+    }
+
+    /^* One queued alias. ^/
+    private record PendingAlias(Registry<?> registry, Identifier from, Identifier to) {}
 
     /^* One queued entry: built and registered on its first {@link #holder} call. ^/
     private static final class Pending<T> {
@@ -155,7 +175,9 @@ public final class FabricRegistryServices implements RegistryServices {
 
         @Override
         public void addAlias(Identifier from, Identifier to) {
-            // Gap: no Fabric alias API (see the class comment).
+            synchronized (PENDING_ALIASES) {
+                PENDING_ALIASES.add(new PendingAlias(registry(), from, to));
+            }
         }
 
         @Override
@@ -181,6 +203,7 @@ public final class FabricRegistryServices implements RegistryServices {
                 for (BCHolder<T, ? extends T> entry : entries) {
                     entry.holder();
                 }
+                addPendingAliases();
             }
         }
     }

@@ -1046,10 +1046,7 @@ public class BuildCraftGameTests {
 
         // Backwards-compat registry aliases (LegacyAliases) — every legacy block/item/BE/fluid ID
         // must resolve to a live current entry, so old worlds and inventories keep their content.
-        // Not on Fabric: Fabric has no registry alias API (FabricRegistryServices.addAlias gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_aliases_resolve", () -> buildcraft.lib.registry.LegacyAliasTester::testAliasesResolve);
-        //?}
 
         // Robotics — Zone Planner slot transfer: a ZONE map location <-> tile layer round trip
         // through serverTick (input read + output write), with the world<->tile-relative offset and

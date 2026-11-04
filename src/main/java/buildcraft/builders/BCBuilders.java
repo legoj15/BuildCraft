@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders;
 
-
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.template.TemplateApi;
 import buildcraft.builders.gui.GuiArchitectTable;

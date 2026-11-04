@@ -53,11 +53,8 @@ public class BCFactory {
         // Notify TilePump when COMMON config reloads so running pumps re-evaluate
         // pumpsConsumeWater on the next tick instead of waiting for natural queue
         // exhaustion (which never happens if the pump's tank stays full).
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading event) -> {
-            if (event.getConfig().getSpec() == buildcraft.core.BCUnifiedConfig.SPEC) {
-                buildcraft.factory.tile.TilePump.onConfigReloaded();
-            }
-        });
+        buildcraft.platform.Platform.configHooks().onReload(buildcraft.core.BCUnifiedConfig.SPEC,
+                buildcraft.factory.tile.TilePump::onConfigReloaded);
 
         LOGGER.info("BuildCraft Factory initialized");
     }

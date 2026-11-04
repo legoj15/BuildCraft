@@ -18,6 +18,16 @@ public final class Platform {
         return LoaderHolder.INSTANCE;
     }
 
+    /** Config registration: maps a {@link buildcraft.platform.config.BCConfigType} onto the loader's own config types. */
+    public static buildcraft.platform.config.ConfigRegistrar configRegistrar() {
+        return ConfigRegistrarHolder.INSTANCE;
+    }
+
+    /** Config load and reload listeners. */
+    public static buildcraft.platform.config.ConfigHooks configHooks() {
+        return ConfigHooksHolder.INSTANCE;
+    }
+
     private static final class LoaderHolder {
         static final LoaderServices INSTANCE = create();
 
@@ -26,6 +36,30 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            *///?}
+        }
+    }
+
+    private static final class ConfigRegistrarHolder {
+        static final buildcraft.platform.config.ConfigRegistrar INSTANCE = create();
+
+        private static buildcraft.platform.config.ConfigRegistrar create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeConfigRegistrar();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricConfigRegistrar();
+            *///?}
+        }
+    }
+
+    private static final class ConfigHooksHolder {
+        static final buildcraft.platform.config.ConfigHooks INSTANCE = create();
+
+        private static buildcraft.platform.config.ConfigHooks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeConfigHooks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricConfigHooks();
             *///?}
         }
     }

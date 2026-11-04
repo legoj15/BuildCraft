@@ -13,20 +13,17 @@ import net.neoforged.neoforge.common.NeoForge;
 public class BCCoreClient {
     public static void init(ModContainer modContainer, IEventBus modEventBus) {
         // Per-player display preferences — registered client-side only so each client owns its own copy.
-        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, BCUnifiedClientConfig.SPEC);
+        buildcraft.platform.Platform.configRegistrar().register(buildcraft.platform.config.BCConfigType.CLIENT,
+                BCUnifiedClientConfig.SPEC, null);
 
         // Live re-render diamond pipes when the colourblind toggle changes. Both variants are
         // already on the block atlas (the `pipes/` directory atlas source picks up `_cb.png`
         // companions at startup), so this just kicks the level renderer to rebuild visible
         // chunks — no resource-pack reload needed.
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading event) -> {
-            if (event.getConfig().getSpec() == BCUnifiedClientConfig.SPEC) {
-                buildcraft.transport.client.model.PipeBaseModelGenStandard.onColorBlindToggle();
-            }
-        });
+        buildcraft.platform.Platform.configHooks().onReload(BCUnifiedClientConfig.SPEC,
+                buildcraft.transport.client.model.PipeBaseModelGenStandard::onColorBlindToggle);
 
-        modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        buildcraft.platform.client.ClientPlatform.configScreens().registerConfigScreen();
 
         NeoForge.EVENT_BUS.addListener(
                 //? if >=26.1 {

@@ -13,6 +13,7 @@ import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
+import buildcraft.platform.transfer.TransferServices;
 
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
@@ -95,6 +96,23 @@ public final class Platform {
     /** Loot context parameters the loader adds. */
     public static LootServices loot() {
         return LootHolder.INSTANCE;
+    }
+
+    /** Transfer: transactions and snapshot journals (BCTransaction, BCSnapshotJournal). */
+    public static TransferServices transfer() {
+        return TransferHolder.INSTANCE;
+    }
+
+    private static final class TransferHolder {
+        static final TransferServices INSTANCE = create();
+
+        private static TransferServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeTransfer();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricTransfer();
+            *///?}
+        }
     }
 
     private static final class LoaderHolder {

@@ -45,6 +45,9 @@ import buildcraft.factory.tile.TileTank;
  * in the hotbar, the tank and Stirling engine GUIs and the guide book, each screenshotted into the run's
  * {@code screenshots/} folder for a person to look at.
  * <p>
+ * It also runs the game-test bodies that load client classes, which the dedicated game-test server cannot
+ * ({@link #runClientClassGameTests}).
+ * <p>
  * What it asserts on its own: each GUI opens as its BuildCraft screen; no world or held-item shot is dominated by the
  * missing-texture magenta; and the run's log carries no BuildCraft ERROR line and no BuildCraft missing-model,
  * missing-texture or load-failure line. It needs a GL context, so it is not part of {@code nodeVerification}.
@@ -131,6 +134,8 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             ctx.takeScreenshot("bc-guide-contents");
             ctx.setScreen(() -> null);
             ctx.waitTicks(5);
+
+            runClientClassGameTests(server, problems);
         }
 
         problems.addAll(logProblems());
@@ -140,6 +145,56 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         }
         LOGGER.info(PASS_MARKER);
     }
+
+    /^*
+     * The game-test bodies that load client classes (the guide's recipe lookups, the Zone Planner overlay geometry),
+     * which Fabric's dedicated game-test server refuses: they run here instead, on the singleplayer server's thread,
+     * each through a {@link DetachedGameTestHelper} (on NeoForge they are ordinary game tests).
+     *^/
+    private static void runClientClassGameTests(TestServerContext server, List<String> problems) {
+        List<String> found = new ArrayList<>();
+        server.runOnServer(s -> {
+            for (ClientClassGameTest test : CLIENT_CLASS_GAME_TESTS) {
+                DetachedGameTestHelper helper = new DetachedGameTestHelper(s.overworld(), CLIENT_CLASS_TEST_ORIGIN);
+                try {
+                    test.body().accept(helper);
+                    if (!helper.succeeded()) {
+                        found.add(test.name() + ": never succeeded");
+                    }
+                } catch (Throwable failure) {
+                    found.add(test.name() + ": " + failure);
+                }
+            }
+        });
+        for (String failure : found) {
+            problems.add("game test " + failure);
+        }
+        // Worded so the log check (BC_PROBLEM) does not read the count itself as a problem.
+        LOGGER.info("Ran {} client-class game tests, {} passed", CLIENT_CLASS_GAME_TESTS.size(),
+            CLIENT_CLASS_GAME_TESTS.size() - found.size());
+    }
+
+    /^* Where the client-class bodies' arena would be: well away from the rig, above the flat world's ground. *^/
+    private static final BlockPos CLIENT_CLASS_TEST_ORIGIN = new BlockPos(0, 100, 400);
+
+    private record ClientClassGameTest(String name, java.util.function.Consumer<net.minecraft.gametest.framework.GameTestHelper> body) {}
+
+    /^* Registered on NeoForge as the game tests of the same names (BuildCraftGameTests, "Not on Fabric" there). *^/
+    private static final List<ClientClassGameTest> CLIENT_CLASS_GAME_TESTS = List.of(
+        new ClientClassGameTest("guide_recipe_lookup_synced_cache",
+            buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache),
+        new ClientClassGameTest("guide_modifier_recipe_renders_correct_input_variant",
+            buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant),
+        new ClientClassGameTest("zone_planner_overlay_in_view",
+            buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView),
+        new ClientClassGameTest("zone_planner_overlay_survey_zoom",
+            buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample),
+        new ClientClassGameTest("zone_planner_cull_above_camera",
+            buildcraft.robotics.ZonePlannerOverlayTester::terrainAndOverlayLeaveOutColumnsReachingTheCamera),
+        new ClientClassGameTest("zone_planner_survey_edge_low_terrain",
+            buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn),
+        new ClientClassGameTest("zone_planner_survey_outline_on_cells",
+            buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells));
 
     private static void buildRig(TestServerContext server) {
         for (String cmd : new String[] {

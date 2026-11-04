@@ -93,11 +93,16 @@ public class GuideRecipeLookupTester {
             ClientGuideRecipeCache.clear();
         }
 
-        // Empty store + no integrated server (this IS a dedicated-style test server, so
+        // Empty store + no integrated server (a dedicated-style test server, so
         // Minecraft.getInstance() is null): the multiplayer no-sync degradation — lookups
-        // return empty rather than throwing.
-        if (!GuideCraftingRecipes.INSTANCE.getRecipes(quarryStack).isEmpty()) {
-            helper.fail("Lookups against an empty recipe store should return no factories");
+        // return empty rather than throwing. On a physical client (the Fabric node runs this
+        // body in its client game test, over a singleplayer world) the empty store falls back
+        // to the integrated server's RecipeManager instead, so the quarry is still found.
+        boolean singleplayerFallback = buildcraft.platform.Platform.loader().isPhysicalClient();
+        if (GuideCraftingRecipes.INSTANCE.getRecipes(quarryStack).isEmpty() == singleplayerFallback) {
+            helper.fail(singleplayerFallback
+                ? "An empty recipe store on a singleplayer client should fall back to the integrated server's recipes"
+                : "Lookups against an empty recipe store should return no factories");
             return;
         }
         helper.succeed();

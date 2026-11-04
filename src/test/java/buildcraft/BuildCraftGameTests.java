@@ -352,7 +352,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gui_test_dynamo_upgrade", () -> buildcraft.lib.test.gui.GuiTester::testDynamoUpgrade);
         reg.accept("buildcraftunofficial:gui_test_filler_ui", () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
         // Guide book recipe lookups off the server-synced cache (multiplayer recipe-panel fix)
-        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
+        // client game test (BCFabricClientGameTest) runs it instead.
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_recipe_lookup_synced_cache", () -> buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache);
         //?}
@@ -923,7 +924,8 @@ public class BuildCraftGameTests {
         // input with the correct variant (was rendering as default CLAY_BRICK "Basic Gate"
         // because `Ingredient.items()` drops data-component patches) and that CLAY_BRICK
         // Basic Gate has no assembly usages.
-        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
+        // client game test (BCFabricClientGameTest) runs it instead.
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
         //?}
@@ -1078,19 +1080,22 @@ public class BuildCraftGameTests {
         // Robotics — Zone Planner map overlay as the viewport emits it: one quad per painted column on mapped
         // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
         // in place of its layer, and nothing out of view or off the mapped terrain.
-        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
+        // client game test (BCFabricClientGameTest) runs it instead.
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
         reg.accept("buildcraftunofficial:zone_planner_cull_above_camera", () -> buildcraft.robotics.ZonePlannerOverlayTester::terrainAndOverlayLeaveOutColumnsReachingTheCamera);
         //?}
         // ...and terrain far below the planner, de-magnified into view from beyond the ground span, is still drawn.
-        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
+        // client game test (BCFabricClientGameTest) runs it instead.
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_edge_low_terrain", () -> buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn);
         //?}
         // ...and the survey-square outline is made of the terrain's own cells.
-        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
+        // client game test (BCFabricClientGameTest) runs it instead.
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_outline_on_cells", () -> buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells);
         //?}

@@ -123,8 +123,8 @@ public final class FabricTransfer implements TransferServices {
             @Override
             public void itemFluidsDrainOnlyConsumable(ItemLike item, Supplier<? extends DataComponentType<?>> content,
                     int capacity) {
-                // Gap: no Fabric item fluid storage is built over the content component (FabricFluidContent), so the
-                // fragile fluid shard is no fluid container on Fabric; it still holds and spills its fluid.
+                FluidStorage.ITEM.registerForItems(
+                    (stack, context) -> new FabricDrainOnlyFluidItem(context, content.get(), capacity), item);
             }
         });
     }

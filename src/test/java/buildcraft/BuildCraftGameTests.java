@@ -295,6 +295,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:neptune_subclasses_declare_model_render_shape", () -> buildcraft.lib.block.BlockRenderShapeTester::testNeptuneSubclassesDeclareModelRenderShape);
 
         // Core Blocks
+        reg.accept("buildcraftunofficial:fragile_shard_drain_only_container", () -> buildcraft.core.item.FragileShardContainerTester::testShardIsDrainOnlyConsumableContainer);
         reg.accept("buildcraftunofficial:core_spring_water", () -> buildcraft.core.block.SpringTester::testWaterSpring);
         reg.accept("buildcraftunofficial:core_spring_oil", () -> buildcraft.core.block.SpringTester::testOilSpring);
         reg.accept("buildcraftunofficial:core_spring_oil_attaches_tile", () -> buildcraft.core.block.SpringTester::testOilSpringAttachesTile);

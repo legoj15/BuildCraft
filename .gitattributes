@@ -1,6 +1,7 @@
 # text stuff
 *.java text
 *.sh text eol=lf
+*.classtweaker text eol=lf
 *.bat text eol=crlf
 *.md text
 

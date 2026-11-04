@@ -1,0 +1,16 @@
+classTweaker	v1	official
+# Fabric twin of META-INF/accesstransformer.cfg (26.3 names; unobfuscated, so the official namespace). Keep the two in step.
+accessible	field	net/minecraft/world/item/crafting/ShapedRecipe	result	Lnet/minecraft/world/item/ItemStackTemplate;
+accessible	field	net/minecraft/world/item/crafting/ShapelessRecipe	result	Lnet/minecraft/world/item/ItemStackTemplate;
+accessible	field	net/minecraft/world/item/crafting/ShapelessRecipe	ingredients	Ljava/util/List;
+accessible	field	net/minecraft/world/item/crafting/SingleItemRecipe	result	Lnet/minecraft/world/item/ItemStackTemplate;
+accessible	field	net/minecraft/world/item/crafting/SingleItemRecipe	input	Lnet/minecraft/world/item/crafting/Ingredient;
+accessible	method	net/minecraft/world/level/material/FlowingFluid	canPassThroughWall	(Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Z
+accessible	method	net/minecraft/world/level/material/FlowingFluid	canPassThrough	(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/world/level/material/Fluid;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/material/FluidState;)Z
+accessible	method	net/minecraft/world/level/material/FlowingFluid	spreadToSides	(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/block/state/BlockState;)V
+accessible	field	net/minecraft/world/item/ItemCooldowns	cooldowns	Ljava/util/Map;
+accessible	class	net/minecraft/client/multiplayer/ClientChunkCache$Storage
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache	storage	Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	chunkRadius	I
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterX	I
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterZ	I

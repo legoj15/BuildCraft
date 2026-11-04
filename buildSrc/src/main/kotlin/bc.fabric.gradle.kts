@@ -34,6 +34,13 @@ sourceSets {
     }
 }
 
+// The Fabric twin of META-INF/accesstransformer.cfg, in the 26.x class-tweaker format (classTweaker v1 official:
+// 26.x is unobfuscated). It lives outside src/main/resources so the NeoForge jar never carries it, and Loom applies
+// it to the Minecraft jar this node compiles against.
+loom {
+    accessWidenerPath.set(rootProject.file("src/main/resources-fabric/buildcraftunofficial.classtweaker"))
+}
+
 // Loom registers this itself; declared so the source of fabric-loader / fabric-api is visible here.
 repositories {
     maven("https://maven.fabricmc.net/")
@@ -58,6 +65,6 @@ tasks.named("jar") { enabled = false }
 // bc.neoforge adds unit tests, game tests and the jar.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Fabric node's share of fullTestSuite: compileJava only (compile-only spike, nothing ships)."
-    dependsOn("compileJava")
+    description = "This Fabric node's share of fullTestSuite: compileJava and the class-tweaker validation (nothing ships yet)."
+    dependsOn("compileJava", "validateAccessWidener")
 }

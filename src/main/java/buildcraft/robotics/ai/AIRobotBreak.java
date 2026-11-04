@@ -16,8 +16,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
@@ -105,7 +105,7 @@ public class AIRobotBreak extends AIRobot {
         }
     }
 
-    private void breakCycle(ServerLevel serverLevel, BlockState state, float hardness, FakePlayer player) {
+    private void breakCycle(ServerLevel serverLevel, BlockState state, float hardness, ServerPlayer player) {
         RobotProtection.holdInMainHand(player, robot.getHeldItem());
         // The same never-ticked-player trap as the hand bridge there, part two: vanilla's getDestroySpeed divides by 5 for a
         // miner that is not on the ground, and a fresh fake player's flag is false — a diamond pickaxe

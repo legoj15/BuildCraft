@@ -20,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.PrimedTnt;
@@ -29,10 +30,7 @@ import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 
 import buildcraft.api.robots.DockingStation;
@@ -44,6 +42,8 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MachineIdentity;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.OwnerData;
+
+import buildcraft.platform.Platform;
 
 /**
  * Who a robot is when protection mods are asked. A robot answers to two players: whoever deployed it (placed it on a
@@ -161,7 +161,7 @@ public final class RobotProtection {
      * The lease takes the tool back out of the hand when it closes; the stack is never copied, so wear the use puts
      * on it lands on the robot's own tool.
      */
-    public static void holdInMainHand(FakePlayer player, ItemStack tool) {
+    public static void holdInMainHand(ServerPlayer player, ItemStack tool) {
         player.setItemInHand(InteractionHand.MAIN_HAND, tool);
         //? if >=1.21.10 {
         // 1.21.10 split the player's equipment table off the Inventory: setItemInHand now writes the table, while
@@ -209,16 +209,16 @@ public final class RobotProtection {
 
     /**
      * Swings the robot's held item at {@code target}, if protection mods let both its players attack it. The event a
-     * player's own swing posts ({@link AttackEntityEvent}, which claim mods' animal and PvE protection listen to) is
-     * posted for the deployer's fake player and, when a different player, for the station owner's, each standing where
-     * the robot is and holding its weapon ({@link #holdInMainHand}: listeners read the hand); nothing is hit unless
-     * neither is cancelled. The hit is then {@link IRobotAccess#attackTargetEntityWithCurrentItem(Entity, Player)}
-     * naming the deployer's player as the attacker, still holding the weapon: the hit's damage reads the robot's own
-     * stack, but a kill's loot reads Looting off the killer's hand (the loot functions and the equipment drop chance
-     * alike), so a robot's kill gets its weapon's Looting, as a player's would (7.1.x's robots never applied it). The
-     * event is posted directly rather than through {@code CommonHooks.onPlayerAttackTarget} (the same event, under that
-     * name on every node), whose second half would run the held weapon's own left-click hook, which a robot's hit never
-     * did. While {@link BCCoreConfig#minePlayerProtected} is on nobody is asked, as for breaks.
+     * player's own swing posts ({@link buildcraft.platform.event.PlatformProtection#canAttack}, which claim mods'
+     * animal and PvE protection listen to) is posted for the deployer's fake player and, when a different player, for
+     * the station owner's, each standing where the robot is and holding its weapon ({@link #holdInMainHand}: listeners
+     * read the hand); nothing is hit unless neither is refused. The hit is then
+     * {@link IRobotAccess#attackTargetEntityWithCurrentItem(Entity, Player)} naming the deployer's player as the
+     * attacker, still holding the weapon: the hit's damage reads the robot's own stack, but a kill's loot reads
+     * Looting off the killer's hand (the loot functions and the equipment drop chance alike), so a robot's kill gets
+     * its weapon's Looting, as a player's would (7.1.x's robots never applied it). The ask never runs the held
+     * weapon's own left-click hook, which a robot's hit never did. While {@link BCCoreConfig#minePlayerProtected} is
+     * on nobody is asked, as for breaks.
      *
      * @return true when the swing went ahead (the hit itself may still do nothing, e.g. to an invulnerable target);
      *         false when a protection mod refused it, or the station's owner is unknown
@@ -230,18 +230,18 @@ public final class RobotProtection {
         boolean ask = !BCCoreConfig.minePlayerProtected.get();
         Vec3 at = robot.position();
         try (FakePlayerUtil.Lease lease = lease(robot, level)) {
-            FakePlayer attacker = lease.player();
+            ServerPlayer attacker = lease.player();
             FakePlayerUtil.pose(attacker, at, 0, 0);
             holdInMainHand(attacker, robot.getHeldItem());
-            if (ask && NeoForge.EVENT_BUS.post(new AttackEntityEvent(attacker, target)).isCanceled()) {
+            if (ask && !Platform.protection().canAttack(attacker, target)) {
                 return false;
             }
             if (ask && stationOwnerAsksSeparately(robot)) {
                 try (FakePlayerUtil.Lease ownerLease = FakePlayerUtil.lease(level, stationIdentityOf(robot), null)) {
-                    FakePlayer owner = ownerLease.player();
+                    ServerPlayer owner = ownerLease.player();
                     FakePlayerUtil.pose(owner, at, 0, 0);
                     holdInMainHand(owner, robot.getHeldItem());
-                    if (NeoForge.EVENT_BUS.post(new AttackEntityEvent(owner, target)).isCanceled()) {
+                    if (!Platform.protection().canAttack(owner, target)) {
                         return false;
                     }
                 }
@@ -336,12 +336,12 @@ public final class RobotProtection {
         // Vanilla hurts an entity only within twice the radius; the event's list is the whole box around that
         double reach = explosion.radius() * 2.0;
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, null)) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             event.getAffectedBlocks().removeIf(pos -> !BlockUtil.canMachineBreakAs(level, pos, player));
             FakePlayerUtil.pose(player, center, 0, 0);
             event.getAffectedEntities().removeIf(entity -> !entity.ignoreExplosion(explosion)
                     && entity.distanceToSqr(center) <= reach * reach
-                    && NeoForge.EVENT_BUS.post(new AttackEntityEvent(player, entity)).isCanceled());
+                    && !Platform.protection().canAttack(player, entity));
         }
     }
 }

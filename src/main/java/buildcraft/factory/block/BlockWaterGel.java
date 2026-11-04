@@ -37,10 +37,11 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 import net.neoforged.neoforge.common.util.DeferredSoundType;
-import net.neoforged.neoforge.event.EventHooks;
 
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.factory.BCFactoryItems;
+
+import buildcraft.platform.Platform;
 
 @SuppressWarnings("this-escape")
 public class BlockWaterGel extends Block {
@@ -235,7 +236,7 @@ public class BlockWaterGel extends Block {
         //?} else {
         /*float speed = player.getDigSpeed(state, pos);*/
         //?}
-        boolean canHarvest = EventHooks.doPlayerHarvestCheck(player, state, level, pos);
+        boolean canHarvest = Platform.protection().canHarvest(player, state, level, pos);
         if (canHarvest) {
             return speed / hardness / 30.0F;
         } else {

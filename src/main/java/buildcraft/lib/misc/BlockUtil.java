@@ -48,13 +48,14 @@ import net.minecraft.world.phys.Vec3;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import net.neoforged.neoforge.common.CommonHooks;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.core.BCCoreConfig;
+
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection.ClickVerdict;
 
 public class BlockUtil {
     /** Mining multiplier, set by BCCoreConfig on init. Default 1.0. */
@@ -280,7 +281,7 @@ public class BlockUtil {
      * <p>
      * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
      * pipes and robots), so the player is the cached one, leased for the duration of the event. The
-     * event is a probe — {@link BreakEventCompat#isProbe} tells BuildCraft's own break listeners to
+     * event is a probe — {@link buildcraft.platform.event.PlatformProtection#isProbe} tells BuildCraft's own break listeners to
      * ignore it.
      */
     public static boolean canMachineBreak(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
@@ -288,7 +289,7 @@ public class BlockUtil {
             return true;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
-            return BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), lease.player());
+            return Platform.protection().canBreak(level, pos, level.getBlockState(pos), lease.player());
         }
     }
 
@@ -307,7 +308,7 @@ public class BlockUtil {
         float xRot = machine.getXRot();
         FakePlayerUtil.pose(machine, Vec3.atCenterOf(pos), yRot, xRot);
         try {
-            return BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), machine);
+            return Platform.protection().canBreak(level, pos, level.getBlockState(pos), machine);
         } finally {
             FakePlayerUtil.pose(machine, feet, yRot, xRot);
         }
@@ -318,7 +319,7 @@ public class BlockUtil {
      * using an item (the Blueprint Builder) may place a block filling {@code cells} (the cell the block goes in first,
      * then any other cell it fills, such as a bed's head). Always true while {@link BCCoreConfig#minePlayerProtected}
      * is on; otherwise posts a placement event for the owner-bound fake player standing on the first cell, through
-     * {@link PlaceEventProbe}, and answers whether no protection mod cancelled it. The event is a probe that places
+     * {@link buildcraft.platform.event.PlatformProtection#canPlace}, and answers whether no protection mod cancelled it. The event is a probe that places
      * nothing. A machine that places by using an item needs no probe: the item's use posts the right-click and
      * placement events itself (see {@link #tryUseItemOnBlock}).
      */
@@ -327,7 +328,7 @@ public class BlockUtil {
             return true;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), cells.get(0))) {
-            return PlaceEventProbe.canPlace(level, cells, lease.player());
+            return Platform.protection().canPlace(level, cells, lease.player());
         }
     }
 
@@ -352,7 +353,7 @@ public class BlockUtil {
         float xRot = machine.getXRot();
         FakePlayerUtil.pose(machine, Vec3.atCenterOf(pos), yRot, xRot);
         try {
-            return PlaceEventProbe.canPlace(level, List.of(pos), machine);
+            return Platform.protection().canPlace(level, List.of(pos), machine);
         } finally {
             FakePlayerUtil.pose(machine, feet, yRot, xRot);
         }
@@ -401,11 +402,11 @@ public class BlockUtil {
     /** {@link #useItemOnBlock} with the outcome kept apart: a refusal is not an item that passed. */
     public static ItemUse tryUseItemOnBlock(
             Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
-        PlayerInteractEvent.RightClickBlock ask = CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit);
-        if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+        ClickVerdict ask = Platform.protection().rightClickBlock(player, hand, hit);
+        if (ask == ClickVerdict.REFUSED) {
             return refused(player);
         }
-        if (!ask.getUseItem().isTrue() && itemGateStops(player, stack)) {
+        if (ask != ClickVerdict.FORCE_ITEM && itemGateStops(player, stack)) {
             return refused(player);
         }
         InteractionResult result = stack.useOn(new UseOnContext(level, player, hand, stack, hit));
@@ -445,7 +446,7 @@ public class BlockUtil {
      *         stopped it, or the item passed
      */
     public static boolean useItemInAir(Level level, Player player, InteractionHand hand, ItemStack stack) {
-        if (itemGateStops(player, stack) || CommonHooks.onItemRightClick(player, hand) != null) {
+        if (itemGateStops(player, stack) || !Platform.protection().canUseItem(player, hand)) {
             refused(player);
             return false;
         }

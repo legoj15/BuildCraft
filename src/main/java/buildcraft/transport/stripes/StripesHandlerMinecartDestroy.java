@@ -23,9 +23,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.Container;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerBlock;
 
@@ -33,6 +30,8 @@ import buildcraft.lib.inventory.AbstractInvItemTransactor;
 import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.lib.inventory.ItemHandlerTransactor;
 import buildcraft.lib.misc.MachineRefusals;
+
+import buildcraft.platform.Platform;
 
 /** Breaks a minecart in front of the stripes pipe and sends it, and whatever it carried, back down the pipe. Run by
  *  {@code StripesRegistry#handleBlock} from the pipe's tick, ahead of its digging, as 7.1.x ran its BLOCK_BREAK
@@ -61,7 +60,7 @@ public enum StripesHandlerMinecartDestroy implements IStripesHandlerBlock {
             // Breaking a cart is what a player's attack does, so a claim mod is asked the way it is asked about a
             // player's swing (the attack-entity event; nothing is hit). A refusal is a refused click: it is counted
             // and ends the dispatch, and the cart is left alone.
-            if (NeoForge.EVENT_BUS.post(new AttackEntityEvent(player, cart)).isCanceled()) {
+            if (!Platform.protection().canAttack(player, cart)) {
                 MachineRefusals.record(player);
                 return false;
             }

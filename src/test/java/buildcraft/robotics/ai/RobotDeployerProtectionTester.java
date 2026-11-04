@@ -56,7 +56,6 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
-import buildcraft.lib.misc.BreakEventCompat;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
@@ -68,6 +67,9 @@ import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
+
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection;
 
 /**
  * A robot answers to two players: the one who deployed it and the owner of its home station. It acts as its deployer
@@ -897,18 +899,18 @@ public class RobotDeployerProtectionTester {
     private static final class PlayerClaim implements AutoCloseable {
         final List<UUID> breakAsks = new ArrayList<>();
         final List<UUID> placeAsks = new ArrayList<>();
-        private final Object breakToken;
+        private final PlatformProtection.Registration breakToken;
         private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
 
         PlayerClaim(BlockPos pos, @Nullable GameProfile refused) {
             UUID refusedId = refused == null ? null : GameProfileUtil.getId(refused);
-            breakToken = BreakEventCompat.onBreak(event -> {
-                if (event.getPos().equals(pos)) {
-                    Player asker = BreakEventCompat.playerOf(event);
+            breakToken = Platform.protection().onBreak(event -> {
+                if (event.pos().equals(pos)) {
+                    Player asker = event.player();
                     UUID id = asker == null ? null : asker.getUUID();
                     breakAsks.add(id);
                     if (id != null && id.equals(refusedId)) {
-                        BreakEventCompat.cancel(event);
+                        event.cancel();
                     }
                 }
             });
@@ -927,7 +929,7 @@ public class RobotDeployerProtectionTester {
 
         @Override
         public void close() {
-            BreakEventCompat.removeListener(breakToken);
+            breakToken.close();
             NeoForge.EVENT_BUS.unregister(placeListener);
         }
     }

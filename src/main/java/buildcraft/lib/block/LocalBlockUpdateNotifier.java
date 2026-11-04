@@ -16,6 +16,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection;
+
 /**
  * Listens for block updates in a given level and notifies all registered
  * {@link ILocalBlockUpdateSubscriber}s whose update range covers the event
@@ -24,7 +27,7 @@ import net.neoforged.neoforge.event.level.LevelEvent;
  * The 1.12.2 version hooked {@code IWorldEventListener.notifyBlockUpdate} for
  * a single catch-all signal. That API was removed in MC 1.21+, so this version
  * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent}, the block-break event
- * (via {@link buildcraft.lib.misc.BreakEventCompat}), and {@link BlockEvent.NeighborNotifyEvent}. Together
+ * (via {@link PlatformProtection#onBreak}), and {@link BlockEvent.NeighborNotifyEvent}. Together
  * those cover player placements/breaks and any {@code setBlock} call that
  * propagates neighbor updates. Consumers (e.g. {@link buildcraft.silicon.tile.TileLaser})
  * should still maintain a periodic rescan as a safety net for sources that
@@ -82,7 +85,7 @@ public class LocalBlockUpdateNotifier {
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
         // A machine's "may I place here?" probe (BlockUtil.canMachinePlace) places nothing; forwarding it would wake
         // nearby lasers once per Builder placement, as the break probe once did for every scanned block.
-        if (buildcraft.lib.misc.PlaceEventProbe.isProbe(event)) {
+        if (Platform.protection().isProbe(event)) {
             return;
         }
         if (event.getLevel() instanceof Level level && !level.isClientSide()) {
@@ -90,23 +93,23 @@ public class LocalBlockUpdateNotifier {
         }
     }
 
-    // NOT @SubscribeEvent: the break-event class differs across 26.1.x, so this is registered
-    // reflectively via BreakEventCompat (see registerBreakListener) against the common BlockEvent base.
-    public static void onBlockBroken(BlockEvent event) {
+    // NOT @SubscribeEvent: the break-event class differs across 26.1.x, so this is registered through
+    // PlatformProtection#onBreak (see registerBreakListener).
+    public static void onBlockBroken(PlatformProtection.BlockBreak event) {
         // A machine's "may I break this?" probe (BlockUtil.canMachineBreak) is a real break event that breaks
         // nothing; forwarding it made every per-block check in a quarry/builder scan wake nearby lasers.
-        if (buildcraft.lib.misc.BreakEventCompat.isProbe(event)) {
+        if (event.isProbe()) {
             return;
         }
-        LevelAccessor accessor = event.getLevel();
+        LevelAccessor accessor = event.level();
         if (accessor instanceof Level level && !level.isClientSide()) {
-            dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));
+            dispatch(level, event.pos(), event.state(), level.getBlockState(event.pos()));
         }
     }
 
     /** Registers {@link #onBlockBroken} for the running version's break event. Called once from BCCore. */
     public static void registerBreakListener() {
-        buildcraft.lib.misc.BreakEventCompat.onBreak(LocalBlockUpdateNotifier::onBlockBroken);
+        Platform.protection().onBreak(LocalBlockUpdateNotifier::onBlockBroken);
     }
 
     @SubscribeEvent

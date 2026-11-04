@@ -20,16 +20,15 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -37,9 +36,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.IFakePlayerProvider;
 
+import buildcraft.platform.FakePlayers;
+import buildcraft.platform.Platform;
+
 /**
- * BuildCraft's fake players: one cached {@link FakePlayer} per (level, profile id + name), handed out in a
- * fresh-equivalent state. {@link #PROVIDER} is what {@code BuildCraftAPI.fakePlayerProvider} points at.
+ * BuildCraft's fake players: one cached fake player (the loader's own class, from {@link Platform#fakePlayers()}) per
+ * (level, profile id + name), handed out in a fresh-equivalent state. {@link #PROVIDER} is what
+ * {@code BuildCraftAPI.fakePlayerProvider} points at.
  *
  * <h2>Why cache</h2>
  * Constructing a {@code ServerPlayer} is not cheap — on 1.21.1 the constructor runs a spawn-point search and
@@ -79,7 +82,7 @@ import buildcraft.api.core.IFakePlayerProvider;
  * <h2>Leases and reentrancy</h2>
  * BuildCraft's own callers use {@link #lease}: try-with-resources, and {@link Lease#close()} scrubs the items the
  * caller stashed (so no live stack reference outlives the operation). While a lease is open its player is
- * reserved: a nested lease for the same (level, profile) gets a detached, uncached {@code FakePlayer} instead of
+ * reserved: a nested lease for the same (level, profile) gets a detached, uncached fake player instead of
  * resetting the outer caller's player under it. Audit at time of writing: no BuildCraft path fetches a fake player
  * while another fetch is in use (the break-permission probe, template placement, stripes pipe drops and the robot
  * AIs all run from their own tick and never synchronously reach another fetch), so the reservation is a guard
@@ -112,17 +115,17 @@ public final class FakePlayerUtil {
     /** The implementation behind {@code BuildCraftAPI.fakePlayerProvider}; see {@link IFakePlayerProvider}. */
     public static final IFakePlayerProvider PROVIDER = new IFakePlayerProvider() {
         @Override
-        public FakePlayer getBuildCraftPlayer(ServerLevel world) {
+        public ServerPlayer getBuildCraftPlayer(ServerLevel world) {
             return fetch(world, null, null);
         }
 
         @Override
-        public FakePlayer getFakePlayer(ServerLevel world, GameProfile profile) {
+        public ServerPlayer getFakePlayer(ServerLevel world, GameProfile profile) {
             return fetch(world, profile, null);
         }
 
         @Override
-        public FakePlayer getFakePlayer(ServerLevel world, GameProfile profile, BlockPos pos) {
+        public ServerPlayer getFakePlayer(ServerLevel world, GameProfile profile, BlockPos pos) {
             return fetch(world, profile, pos);
         }
     };
@@ -132,7 +135,9 @@ public final class FakePlayerUtil {
 
     /** A cached player plus the state it was created in, which every fetch restores. */
     private static final class Entry {
-        final FakePlayer player;
+        final ServerPlayer player;
+        /** The quiet-reset half of {@link #player}. */
+        final FakePlayers.Reusable reusable;
         final Vec3 homePos;
         final float homeYRot, homeXRot, homeYHeadRot, homeYBodyRot;
         final int homeFireTicks;
@@ -140,59 +145,15 @@ public final class FakePlayerUtil {
         @Nullable
         Lease activeLease;
 
-        Entry(FakePlayer player) {
-            this.player = player;
+        Entry(FakePlayers.Reusable reusable) {
+            this.reusable = reusable;
+            this.player = reusable.player();
             this.homePos = player.position();
             this.homeYRot = player.getYRot();
             this.homeXRot = player.getXRot();
             this.homeYHeadRot = player.getYHeadRot();
             this.homeYBodyRot = player.yBodyRot;
             this.homeFireTicks = player.getRemainingFireTicks();
-        }
-    }
-
-    /**
-     * The cached players' class: a plain {@link FakePlayer} (still {@code instanceof FakePlayer} and
-     * {@code isFakePlayer()} for every mod) that can end an item use quietly. {@code stopUsingItem()} would fire the
-     * item's stop-using hook and an {@code ITEM_INTERACT_FINISH} vibration that sculk sensors hear; the throwaway
-     * players this cache replaced were just discarded mid-use and never did either.
-     */
-    private static final class CachedFakePlayer extends FakePlayer {
-        CachedFakePlayer(ServerLevel level, GameProfile profile) {
-            super(level, profile);
-            untargetable(this);
-        }
-
-        /** Puts the in-use state back to a fresh player's without running any hook or emitting any event. */
-        void dropUseItemQuietly() {
-            setLivingEntityFlag(1, false); // using an item
-            setLivingEntityFlag(2, false); // ...with the off hand
-            useItem = ItemStack.EMPTY;
-            useItemRemaining = 0;
-            //? if >=1.21.11 {
-            recentKineticEnemies = null;
-            //?}
-        }
-
-        /**
-         * Puts back what a fresh player has for the state a caller can change short of the world: hunger, the hurt
-         * and invulnerability timers, death, freezing and portal travel. Plain field writes — no event fires.
-         */
-        void resetLivingState() {
-            foodData = new FoodData();
-            dead = false;
-            deathTime = 0;
-            hurtTime = 0;
-            hurtDuration = 0;
-            //? if >=26.3 {
-            // the field went private in 26.3
-            setInvulnerableTime(0);
-            //?} else {
-            /*invulnerableTime = 0;
-            *///?}
-            setTicksFrozen(0);
-            setPortalCooldown(0);
-            portalProcess = null;
         }
     }
 
@@ -241,7 +202,7 @@ public final class FakePlayerUtil {
      */
     public static Lease lease(ServerLevel level, @Nullable GameProfile profile, BlockPos pos, Direction facing) {
         Lease lease = lease(level, profile, pos);
-        FakePlayer player = lease.player();
+        ServerPlayer player = lease.player();
         double out = 0.5 + AIM_OUTSET;
         Vec3 eye = Vec3.atCenterOf(pos).add(facing.getStepX() * out, facing.getStepY() * out, facing.getStepZ() * out);
         float yRot = facing.getAxis().isHorizontal() ? facing.toYRot() : 0;
@@ -326,7 +287,7 @@ public final class FakePlayerUtil {
     }
 
     /** The API path: the API's own cached player (never a leased one), reset. */
-    private static FakePlayer fetch(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
+    private static ServerPlayer fetch(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
         Entry entry = entryFor(level, profile, true);
         if (entry == null) {
             return detached(level, profile, pos);
@@ -352,7 +313,9 @@ public final class FakePlayerUtil {
         if (entry == null) {
             // Built outside the map: construction fires entity-construction events, and a listener that fetched
             // the same key from inside computeIfAbsent would throw ConcurrentModificationException.
-            entry = new Entry(new CachedFakePlayer(level, resolved));
+            FakePlayers.Reusable created = Platform.fakePlayers().createReusable(level, resolved);
+            untargetable(created.player());
+            entry = new Entry(created);
             Entry raced = CACHE.putIfAbsent(key, entry);
             if (raced != null) {
                 entry = raced;
@@ -361,8 +324,8 @@ public final class FakePlayerUtil {
         return entry;
     }
 
-    private static FakePlayer detached(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
-        FakePlayer player = untargetable(new FakePlayer(level, resolveProfile(profile)));
+    private static ServerPlayer detached(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
+        ServerPlayer player = untargetable(Platform.fakePlayers().create(level, resolveProfile(profile)));
         if (pos != null) {
             placeAt(player, new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
         }
@@ -375,7 +338,7 @@ public final class FakePlayerUtil {
      * player is not in the world, so a mob that took it would chase a spot where nobody stands. Damage to it is
      * already refused on every node.
      */
-    private static <P extends FakePlayer> P untargetable(P player) {
+    private static <P extends ServerPlayer> P untargetable(P player) {
         //? if <1.21.10 {
         /*player.setInvulnerable(true);
         *///?}
@@ -383,11 +346,9 @@ public final class FakePlayerUtil {
     }
 
     private static void reset(Entry entry, @Nullable BlockPos pos) {
-        FakePlayer player = entry.player;
+        ServerPlayer player = entry.player;
         scrubItems(player);
-        if (player instanceof CachedFakePlayer cached) {
-            cached.resetLivingState();
-        }
+        entry.reusable.resetLivingState();
         player.setShiftKeyDown(false);
         player.setSprinting(false);
         player.setSwimming(false);
@@ -427,10 +388,10 @@ public final class FakePlayerUtil {
      * the item in use, and cooldowns. The stacks themselves are never modified, and no item hook, game event or
      * third-party listener runs — so this can neither throw from foreign code nor be heard by a sculk sensor.
      */
-    private static void scrubItems(FakePlayer player) {
+    private static void scrubItems(ServerPlayer player) {
         // A detached player is discarded after use, exactly like the old per-call players, so its use state
         // (a reference only) is left to the garbage collector.
-        if (player instanceof CachedFakePlayer cached) {
+        if (player instanceof FakePlayers.Reusable cached) {
             cached.dropUseItemQuietly();
         }
         // Covers the hands and all armor/equipment on every node: 1.21.1 keeps them as Inventory compartments,
@@ -512,17 +473,17 @@ public final class FakePlayerUtil {
      * reservation; closing twice is harmless.
      */
     public static final class Lease implements AutoCloseable {
-        private final FakePlayer player;
+        private final ServerPlayer player;
         @Nullable
         private final Entry entry;
         private boolean closed;
 
-        private Lease(FakePlayer player, @Nullable Entry entry) {
+        private Lease(ServerPlayer player, @Nullable Entry entry) {
             this.player = player;
             this.entry = entry;
         }
 
-        public FakePlayer player() {
+        public ServerPlayer player() {
             return player;
         }
 

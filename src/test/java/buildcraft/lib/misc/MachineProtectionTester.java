@@ -62,6 +62,9 @@ import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.TravellingItem;
 import buildcraft.transport.tile.TilePipeHolder;
 
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection;
+
 /**
  * Machine protection: every BuildCraft machine that breaks blocks must first ask protection mods through
  * {@link BlockUtil#canMachineBreak} (a cancellable break event posted by the machine's fake player), and that probe
@@ -123,7 +126,8 @@ public class MachineProtectionTester {
             check(updates.isEmpty(), "the permission probe must not reach block-update subscribers, got " + updates);
 
             try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level)) {
-                LocalBlockUpdateNotifier.onBlockBroken(BreakEventCompat.create(level, pos, stone, lease.player()));
+                LocalBlockUpdateNotifier.onBlockBroken(
+                        ClaimProtectionMod.genuineBreak(level, pos, stone, lease.player()));
             }
             check(updates.contains(pos), "a genuine break event still reaches subscribers");
         } finally {
@@ -535,12 +539,12 @@ public class MachineProtectionTester {
 
         // A claim that keeps only the first owner out, as a claim mod with a trusted-players list does.
         List<UUID> askedBy = new ArrayList<>();
-        Object claim = BreakEventCompat.onBreak(event -> {
-            if (event.getPos().equals(log)) {
-                Player asker = BreakEventCompat.playerOf(event);
+        PlatformProtection.Registration claim = Platform.protection().onBreak(event -> {
+            if (event.pos().equals(log)) {
+                Player asker = event.player();
                 askedBy.add(asker.getUUID());
                 if (asker.getUUID().equals(GameProfileUtil.getId(refusedOwner))) {
-                    BreakEventCompat.cancel(event);
+                    event.cancel();
                 }
             }
         });
@@ -555,7 +559,7 @@ public class MachineProtectionTester {
             check(askedBy.equals(List.of(GameProfileUtil.getId(refusedOwner), GameProfileUtil.getId(allowedOwner))),
                     "each owner was asked once, as themselves: " + askedBy);
         } finally {
-            BreakEventCompat.removeListener(claim);
+            claim.close();
         }
         helper.succeed();
     }
@@ -623,7 +627,7 @@ public class MachineProtectionTester {
         // Every break event posted while this synchronous loop runs comes from this robot (tests do not interleave),
         // and its zone keeps the search on this cell's logs.
         List<BlockPos> probed = new ArrayList<>();
-        Object listener = BreakEventCompat.onBreak(event -> probed.add(event.getPos()));
+        PlatformProtection.Registration listener = Platform.protection().onBreak(event -> probed.add(event.pos()));
         try {
             // Settled once the board has handed the found log to the goto leg.
             for (int i = 0; i < 600 && !(lumberjack.getActiveAI() instanceof AIRobotGotoBlock); i++) {
@@ -631,7 +635,7 @@ public class MachineProtectionTester {
             }
             check(lumberjack.getActiveAI() instanceof AIRobotGotoBlock, "the search settled on a log");
         } finally {
-            BreakEventCompat.removeListener(listener);
+            listener.close();
             lumberjack.abortDelegateAI();
             registry.releaseResources(robot);
             registry.killRobot(robot);

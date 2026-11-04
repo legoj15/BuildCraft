@@ -14,7 +14,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.server.level.ServerPlayer;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
@@ -75,7 +75,7 @@ public class AIRobotPlant extends AIRobot {
                 boolean planted = false;
                 if (RobotProtection.stationOwnerCanPlace(robot, serverLevel, blockFound.above())) {
                     try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
-                        FakePlayer player = lease.player();
+                        ServerPlayer player = lease.player();
                         player.setPos(robot.position());
                         planted = CropManager.plantCrop(serverLevel, player, held, blockFound);
                     }

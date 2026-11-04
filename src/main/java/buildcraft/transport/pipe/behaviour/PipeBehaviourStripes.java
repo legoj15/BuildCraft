@@ -16,6 +16,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -26,7 +27,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.common.IShearable;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
@@ -337,7 +337,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         // and closing the lease drops the stack reference a failed handler leaves behind (the stack itself carries
         // on as the dropped item).
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel, owner, pos, direction)) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             ItemStack used = event.getStack();
             Item usedItem = used.getItem();
             player.setItemInHand(InteractionHand.MAIN_HAND, used);
@@ -381,7 +381,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
             return false;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(world, pipe.getHolder().getOwner(), pos, dir)) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             long refusedBefore = MachineRefusals.count(player);
             if (PipeApi.stripeRegistry.handleBlock(world, pos, dir, player, this)) {
                 battery.extractPower(BLOCK_HANDLER_COST);

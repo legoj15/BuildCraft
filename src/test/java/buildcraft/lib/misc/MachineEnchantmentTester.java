@@ -18,6 +18,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -38,7 +39,6 @@ import net.minecraft.world.level.storage.TagValueInput;
 //?}
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
@@ -78,7 +78,7 @@ public class MachineEnchantmentTester {
     private static int anvilLevel(GameTestHelper gth, Item machine, ResourceKey<Enchantment> key, int level) {
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(gth.getLevel(), null,
                 gth.absolutePos(new BlockPos(2, 2, 2)))) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             player.setGameMode(GameType.SURVIVAL);
             AnvilMenu anvil = new AnvilMenu(0, player.getInventory());
             anvil.getSlot(0).set(new ItemStack(machine));
@@ -166,7 +166,7 @@ public class MachineEnchantmentTester {
     private static void placeOnTopOf(GameTestHelper gth, ItemStack stack, BlockPos floor) {
         BlockPos floorAbs = gth.absolutePos(floor);
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(gth.getLevel(), null, floorAbs.above(64))) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             player.setGameMode(GameType.SURVIVAL);
             player.setItemInHand(InteractionHand.MAIN_HAND, stack);
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(floorAbs).add(0, 0.5, 0), Direction.UP, floorAbs,

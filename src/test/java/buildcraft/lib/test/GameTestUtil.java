@@ -8,13 +8,12 @@ package buildcraft.lib.test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
-
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.lib.misc.FakePlayerUtil;
 
@@ -84,7 +83,7 @@ public final class GameTestUtil {
         BlockState state = level.getBlockState(absPos);
         BlockEntity be = level.getBlockEntity(absPos);
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, absPos.above(64))) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             player.setGameMode(GameType.SURVIVAL);
             player.setItemInHand(InteractionHand.MAIN_HAND, heldItem);
             boolean canHarvest = state.canHarvestBlock(level, absPos, player);

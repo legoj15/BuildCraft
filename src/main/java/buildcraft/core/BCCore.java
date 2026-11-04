@@ -133,7 +133,7 @@ public class BCCore {
         modEventBus.addListener(this::onConfigChanged);
 
         // Block-break notifier: the break-event class differs across 26.1.x, so register it
-        // through BreakEventCompat (reflective) instead of @SubscribeEvent.
+        // through PlatformProtection#onBreak instead of @SubscribeEvent.
         buildcraft.lib.block.LocalBlockUpdateNotifier.registerBreakListener();
 
         // Vanilla Brush for cleaning pipes & painted blocks

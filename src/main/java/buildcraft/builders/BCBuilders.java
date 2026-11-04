@@ -28,6 +28,7 @@ import buildcraft.builders.snapshot.TemplateRegistry;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
+import buildcraft.platform.Platform;
 
 /**
  * BuildCraft Builders initializer. No longer a separate @Mod — called from BCCore.
@@ -70,7 +71,7 @@ public class BCBuilders {
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
                 event -> BCBuildersEventDist.INSTANCE.onServerTick());
 
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);
         }
     }

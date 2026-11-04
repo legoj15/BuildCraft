@@ -30,11 +30,6 @@ import com.google.gson.JsonSyntaxException;
 
 import org.apache.commons.io.IOUtils;
 
-
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforgespi.language.IModInfo;
-
 import buildcraft.api.core.BCLog;
 import buildcraft.api.registry.IReloadableRegistryManager;
 import buildcraft.api.registry.IScriptableRegistry;
@@ -45,6 +40,7 @@ import buildcraft.lib.script.SimpleScript.ScriptAction;
 import buildcraft.lib.script.SimpleScript.ScriptActionAdd;
 import buildcraft.lib.script.SimpleScript.ScriptActionRemove;
 import buildcraft.lib.script.SimpleScript.ScriptActionReplace;
+import buildcraft.platform.Platform;
 
 public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implements IScriptableRegistry<E> {
 
@@ -112,26 +108,26 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         List<FileSystem> openFileSystems = new ArrayList<>();
         Map<File, Path> loadedFiles = new HashMap<>();
         List<Path> jarRoots = new ArrayList<>();
-        for (IModInfo modInfo : ModList.get().getMods()) {
-            // In NeoForge, mod files are accessed through the ModFileInfo system
-            var modFile = ModList.get().getModFileById(modInfo.getModId());
-            if (modFile == null) continue;
-            File source = modFile.getFile().getFilePath().toFile();
-            if (!source.exists()) {
-                continue;
-            }
-            visitFile(openFileSystems, loadedFiles, jarRoots, source);
+        for (String modId : Platform.loader().modIds()) {
+            // Empty when the loader has no file for the mod
+            for (Path modPath : Platform.loader().modSourcePaths(modId)) {
+                File source = modPath.toFile();
+                if (!source.exists()) {
+                    continue;
+                }
+                visitFile(openFileSystems, loadedFiles, jarRoots, source);
 
-            // NeoForge dev environment fix: modFile.getFilePath() points to
-            // build/classes/java/main which has no assets/ — the resources are at
-            // build/resources/main. Try the sibling resources directory too.
-            if (source.isDirectory()) {
-                String sourcePath = source.getAbsolutePath();
-                if (sourcePath.endsWith("classes" + File.separator + "java" + File.separator + "main")) {
-                    File resourcesDir = new File(source.getParentFile().getParentFile().getParentFile(),
-                        "resources" + File.separator + "main");
-                    if (resourcesDir.isDirectory()) {
-                        visitFile(openFileSystems, loadedFiles, jarRoots, resourcesDir);
+                // Dev environment fix: a mod's source path points to
+                // build/classes/java/main which has no assets/ — the resources are at
+                // build/resources/main. Try the sibling resources directory too.
+                if (source.isDirectory()) {
+                    String sourcePath = source.getAbsolutePath();
+                    if (sourcePath.endsWith("classes" + File.separator + "java" + File.separator + "main")) {
+                        File resourcesDir = new File(source.getParentFile().getParentFile().getParentFile(),
+                            "resources" + File.separator + "main");
+                        if (resourcesDir.isDirectory()) {
+                            visitFile(openFileSystems, loadedFiles, jarRoots, resourcesDir);
+                        }
                     }
                 }
             }
@@ -139,7 +135,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
 
         // Resource pack loading deferred — NeoForge handles resource packs differently
 
-        File baseFile = new File(FMLPaths.CONFIGDIR.get().toFile(), "buildcraft/scripts");
+        File baseFile = new File(Platform.loader().configDir().toFile(), "buildcraft/scripts");
         if (!baseFile.isDirectory()) {
             baseFile.mkdirs();
         }

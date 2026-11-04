@@ -2,11 +2,10 @@
 // This is the Tree controller, NOT the per-node build. The actual mod build lives
 // in build.gradle.kts (the centralScript), which runs once per version node.
 //
-// moddev is declared here with `apply false` so its version is known to every node
-// subproject; each node applies it (version-less) in build.gradle.kts.
+// The loader build plugins (ModDevGradle, Loom) are NOT declared here: their versions are buildSrc dependencies
+// (buildSrc/build.gradle.kts), and each node applies one of them through its `bc.<loader>` convention plugin.
 plugins {
     id("dev.kikugie.stonecutter")
-    id("net.neoforged.moddev") version "2.0.147" apply false
 }
 
 // The active node — what the IDE/runClient sees and what `compileJava` builds.
@@ -40,8 +39,10 @@ tasks.register<Exec>("runReleaseMatrix") {
 // each version is a subproject: `:1.21.1`, `:26.1.2`, …), so it can't silently shrink to one line the
 // way an unqualified subproject-name cascade can. That implicit cascade is exactly how the 1.21.1
 // game-test crash went unnoticed — a `:<node>:` qualifier (or a broken node) quietly dropped coverage.
-// Here every node's unit tests + headless game tests + jar build are hard dependencies; drop a node
-// only by removing it from the tree.
+// Here every node's share is a hard dependency; drop a node only by removing it from the tree. A node's share is
+// its `nodeVerification` task, which its loader convention plugin registers: unit tests + headless game tests + jar
+// build on a NeoForge node (bc.neoforge), compileJava alone on the compile-only Fabric node (bc.fabric). The node
+// owns the list because only the node knows its loader.
 //
 // No active-node switching is needed: each node compiles its OWN stonecutterGenerate output, so
 // `:1.21.1:test` and `:26.2:test` are correct in one invocation regardless of which node is "active"
@@ -52,12 +53,10 @@ tasks.register<Exec>("runReleaseMatrix") {
 // the OUTER Gradle builds them and the matrix can run with -SkipBuild (a nested buildAndCollect would
 // deadlock on the project lock). The matrix itself auto-skips when the gitignored testing/ harness is
 // absent, so third-party clones still get all nodes' unit + game tests.
-val perNodeVerification = subprojects.flatMap { node ->
-    listOf("${node.path}:test", "${node.path}:runGameTestServer", "${node.path}:buildAndCollect")
-}
+val perNodeVerification = subprojects.map { node -> "${node.path}:nodeVerification" }
 tasks.register("fullTestSuite") {
     group = "verification"
-    description = "ALL nodes: unit tests + headless game tests + jar build, then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
+    description = "ALL nodes: unit tests + headless game tests + jar build (compile only on a Fabric node), then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
     dependsOn(perNodeVerification)
     dependsOn(tasks.named("runReleaseMatrix"))
 }

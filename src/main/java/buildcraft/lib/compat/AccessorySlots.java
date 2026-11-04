@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.fml.ModList;
+import buildcraft.platform.Platform;
 
 /**
  * Soft support for the mods that add extra equipment slots, so an item BC treats as worn (the Robot Goggles) also
@@ -25,9 +25,9 @@ import net.neoforged.fml.ModList;
 public final class AccessorySlots {
     private AccessorySlots() {}
 
-    private static final boolean CURIOS = ModList.get().isLoaded("curios");
+    private static final boolean CURIOS = Platform.loader().isModLoaded("curios");
     //? if <1.21.11 {
-    /*private static final boolean ACCESSORIES = ModList.get().isLoaded("accessories");*/
+    /*private static final boolean ACCESSORIES = Platform.loader().isModLoaded("accessories");*/
     //?}
 
     /** Whether {@code entity} has a stack matching {@code filter} in any slot an installed accessory mod adds. */

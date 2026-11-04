@@ -41,10 +41,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforgespi.language.IModInfo;
-
 import buildcraft.lib.misc.JsonUtil;
+import buildcraft.platform.Platform;
 
 public class RulesLoader {
     private static final Logger LOGGER = LogManager.getLogger("BCBlueprint");
@@ -78,8 +76,7 @@ public class RulesLoader {
     public static void loadAll() {
         RULES.clear();
         READ_DOMAINS.clear();
-        for (IModInfo modInfo : ModList.get().getMods()) {
-            String domain = modInfo.getModId();
+        for (String domain : Platform.loader().modIds()) {
             if (!READ_DOMAINS.contains(domain)) {
                 String base = "assets/" + domain + "/compat/buildcraft/builders/";
                 InputStream inputStream = RulesLoader.class.getClassLoader().getResourceAsStream(

@@ -30,6 +30,7 @@ import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.sprite.DyeReplaceSpriteSource;
 import buildcraft.lib.client.sprite.FluidLerpSpriteSource;
 import buildcraft.lib.misc.data.ModelVariableData;
+import buildcraft.platform.Platform;
 
 public class BCLibClient {
     public static void initClient(IEventBus modEventBus) {
@@ -38,7 +39,7 @@ public class BCLibClient {
         // would have been overkill for a couple of booleans). Loads existing state synchronously
         // so the first GUI open already sees restored values.
         buildcraft.lib.gui.config.GuiConfigManager.init(
-            net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get()
+            Platform.loader().configDir()
                 .resolve("buildcraft").resolve("gui_state.json")
         );
 

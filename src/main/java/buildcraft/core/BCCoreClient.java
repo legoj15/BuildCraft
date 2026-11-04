@@ -133,7 +133,7 @@ public class BCCoreClient {
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
                         // Curios draws nothing for a curio without a renderer; Accessories has a default one.
-                        if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+                        if (buildcraft.platform.Platform.loader().isModLoaded("curios")) {
                             buildcraft.lib.compat.client.CuriosHeadItemRenderer.register(BCCoreItems.GOGGLES.get());
                         }
                 })

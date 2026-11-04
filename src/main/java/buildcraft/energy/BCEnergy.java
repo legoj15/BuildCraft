@@ -7,8 +7,6 @@ package buildcraft.energy;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -22,6 +20,7 @@ import buildcraft.core.block.BlockSpring;
 import buildcraft.energy.client.BCEnergyFluidsClient;
 import buildcraft.energy.generation.OilGenerator;
 import buildcraft.energy.tile.TileSpringOil;
+import buildcraft.platform.Platform;
 
 /**
  * BuildCraft Energy initializer. No longer a separate @Mod — called from BCCore.
@@ -40,7 +39,7 @@ public class BCEnergy {
         BCEnergyMenuTypes.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.energy.client.BCEnergyClient.initClient(modEventBus);
         }
 

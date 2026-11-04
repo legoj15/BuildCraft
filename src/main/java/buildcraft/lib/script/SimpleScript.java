@@ -26,13 +26,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLPaths;
-
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
 import buildcraft.lib.script.ScriptAliasFunction.AliasBuilder;
+import buildcraft.platform.Platform;
 
 @SuppressWarnings("this-escape")
 public class SimpleScript {
@@ -215,7 +213,7 @@ public class SimpleScript {
                     if (func.startsWith("is_mod_loaded(") && func.endsWith(")")) {
                         String modId = func.substring("is_mod_loaded(".length(), func.length() - 1)
                             .replace("\"", "").replace("'", "").trim();
-                        shouldCall = ModList.get().isLoaded(modId);
+                        shouldCall = Platform.loader().isModLoaded(modId);
                         log("(" + func + ") = " + shouldCall + " (simple eval)");
                     } else {
                         // Unknown conditional expression, default to true
@@ -537,7 +535,7 @@ public class SimpleScript {
     }
 
     public static AutoCloseable createLogFile(String path) {
-        logDir = FMLPaths.GAMEDIR.get().resolve("logs/buildcraft/scripts").toFile();
+        logDir = Platform.loader().gameDir().resolve("logs/buildcraft/scripts").toFile();
         try {
             logDir.mkdirs();
             File logFile = new File(logDir, path + ".log");

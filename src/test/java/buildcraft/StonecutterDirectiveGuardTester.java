@@ -7,6 +7,7 @@
 package buildcraft;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -75,7 +77,11 @@ import org.junit.jupiter.api.Test;
  * relative to the transform: the generated copies have already been rewritten for their node and differ per node,
  * and the active node's generated copy is not compiled at all. The raw tree is identical on every node, so the
  * verdict is too. Which arms are live is decided against the active node, read from the {@code stonecutter active}
- * line of {@code stonecutter.gradle.kts}, whose text {@code src/} always matches.
+ * line of {@code stonecutter.gradle.kts}, whose text {@code src/} always matches (the node name may carry a
+ * {@code -<loader>} suffix, as a Fabric node's does), and against the loader that node builds against: {@code loader}
+ * in the node's own {@code gradle.properties}, else the root one. The bare identifiers {@code neoforge} and
+ * {@code fabric} are the loader constants build.gradle.kts defines, so {@code //? if neoforge} is live exactly when
+ * that loader is the active one.
  *
  * <p><b>What it cannot see.</b> Whether an inactive arm's block comment holds code or prose. Stonecutter wraps code in
  * exactly that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first
@@ -84,8 +90,8 @@ import org.junit.jupiter.api.Test;
  * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Such prose
  * does not blind the scan to what follows it: a quote or apostrophe in it opens a literal that ends with its line, as
  * Java's string and char literals do, so a nested chain on a later line is still judged. Conditions
- * beyond version comparisons joined by {@code &&} and {@code ||} are reported rather than guessed at, and the arms of
- * such a chain are not judged. */
+ * beyond version comparisons and the two loader constants, joined by {@code &&} and {@code ||}, are reported rather
+ * than guessed at, and the arms of such a chain are not judged. */
 public class StonecutterDirectiveGuardTester {
 
     /** Extensions whose Stonecutter handler is the same slash scanner and block-comment wrapping as {@code .java}. */
@@ -101,17 +107,21 @@ public class StonecutterDirectiveGuardTester {
      *  stray hit is loud and cheap to clear. */
     private static final Pattern ANY_DIRECTIVE = Pattern.compile("(?://|#|/\\*)\\?");
 
-    private static final Pattern ACTIVE_NODE = Pattern.compile("stonecutter\\s+active\\s+\"([^\"]+)\"");
+    /** The node name (group 1) is a version, optionally followed by {@code -<loader>}; group 2 is the version alone. */
+    private static final Pattern ACTIVE_NODE =
+        Pattern.compile("stonecutter\\s+active\\s+\"((\\d+(?:\\.\\d+)*)(?:-[A-Za-z0-9_]+)?)\"");
     private static final Pattern IF = Pattern.compile("^if\\s+(.+?)\\s*\\{$");
     private static final Pattern ELIF = Pattern.compile("^\\}\\s*(?:elif|else\\s+if)\\s+(.+?)\\s*\\{$");
     private static final Pattern ELSE = Pattern.compile("^\\}\\s*else\\s*\\{$");
-    private static final Pattern TERM = Pattern.compile("^(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)$");
+    /** One term of a condition: a version comparison (groups 1 and 2) or a loader constant (group 3). */
+    private static final Pattern TERM =
+        Pattern.compile("^(?:(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)|(neoforge|fabric))$");
 
     @Test
     public void noDirectiveArmIsLeftForStonecutterToMangle() throws IOException {
         Path root = TestHelper.repoRoot();
-        int[] active = activeNode(root);
-        Scan scan = new Scan(active);
+        ActiveNode active = activeNode(root);
+        Scan scan = new Scan(active.version(), active.loader());
         int files = 0;
         try (Stream<Path> walk = Files.walk(root.resolve("src"))) {
             for (Path file : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
@@ -135,7 +145,7 @@ public class StonecutterDirectiveGuardTester {
                 + scan.inactiveArms + " inactive - the directive scanner must have drifted");
         Assertions.assertTrue(scan.findings.isEmpty(),
             scan.findings.size() + " Stonecutter directive arm(s) would be mangled on another node (active node "
-                + versionText(active) + "):\n" + String.join("\n", scan.findings));
+                + active.name() + ", loader " + active.loader() + "):\n" + String.join("\n", scan.findings));
     }
 
     /** The two hazards, at the top level and one level down inside an inactive arm's block comment. */
@@ -216,6 +226,29 @@ public class StonecutterDirectiveGuardTester {
             .replace("\n", "\r\n"));
         Assertions.assertEquals(1, crlf.findings.size(), crlf.findings.toString());
         Assertions.assertTrue(crlf.findings.get(0).startsWith("F.java:4: "), crlf.findings.get(0));
+
+        // Loader constants. On the 26.3 NeoForge node a `neoforge` arm is live and a `fabric` arm is inactive: each
+        // hazard is raised only if the guard judged the arm that way (a prose-only live arm, bare code in an inactive
+        // one). A Fabric node's name carries a `-<loader>` suffix, and the same arms swap.
+        Scan loader = new Scan(active, "neoforge");
+        loader.file("U.java", """
+            //? if neoforge {
+            // prose only
+            //?}
+            //? if fabric {
+            int u = 1;
+            //?}
+            """);
+        Assertions.assertEquals(2, loader.findings.size(), loader.findings.toString());
+        Assertions.assertTrue(loader.findings.get(0).startsWith("U.java:1: "), loader.findings.get(0));
+        Assertions.assertTrue(loader.findings.get(1).startsWith("U.java:4: "), loader.findings.get(1));
+        Assertions.assertEquals(1, loader.liveArms);
+        Assertions.assertEquals(1, loader.inactiveArms);
+        Assertions.assertTrue(holds("fabric || >=26.3", active, "neoforge"));
+        Assertions.assertFalse(holds("fabric && >=26.3", active, "neoforge"));
+        Assertions.assertTrue(holds("fabric && >=26.3", active, "fabric"));
+        Matcher suffixed = ACTIVE_NODE.matcher("stonecutter active \"26.3-fabric\" /* [SC] DO NOT EDIT */");
+        Assertions.assertTrue(suffixed.find() && suffixed.group(1).equals("26.3-fabric") && suffixed.group(2).equals("26.3"));
     }
 
     /** An inactive arm holds its code inside one block comment. Code left bare there is compiled on the active node
@@ -449,12 +482,36 @@ public class StonecutterDirectiveGuardTester {
         return ANY_DIRECTIVE.matcher(text).find();
     }
 
-    /** What {@code stonecutter.gradle.kts} says the active node is, as numeric version parts. */
-    private static int[] activeNode(Path root) throws IOException {
+    /** The active Stonecutter node: its name as written, its numeric version parts, and the loader it builds against. */
+    private record ActiveNode(String name, int[] version, String loader) {}
+
+    /** What {@code stonecutter.gradle.kts} says the active node is. */
+    private static ActiveNode activeNode(Path root) throws IOException {
         Matcher m = ACTIVE_NODE.matcher(Files.readString(root.resolve("stonecutter.gradle.kts"), StandardCharsets.UTF_8));
         Assertions.assertTrue(m.find(),
             "no `stonecutter active \"<node>\"` line in stonecutter.gradle.kts - if it changed shape, update ACTIVE_NODE");
-        return version(m.group(1));
+        return new ActiveNode(m.group(1), version(m.group(2)), loaderOf(root, m.group(1)));
+    }
+
+    /** The loader a node builds against: {@code loader} in {@code versions/<node>/gradle.properties}, else the root
+     *  {@code gradle.properties}, as build.gradle.kts reads it. */
+    private static String loaderOf(Path root, String node) throws IOException {
+        for (Path file : List.of(root.resolve("versions").resolve(node).resolve("gradle.properties"),
+            root.resolve("gradle.properties"))) {
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            Properties properties = new Properties();
+            try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+                properties.load(reader);
+            }
+            String loader = properties.getProperty("loader");
+            if (loader != null) {
+                return loader.trim();
+            }
+        }
+        return Assertions.fail("no `loader` property for node " + node + " in versions/" + node
+            + "/gradle.properties or the root gradle.properties");
     }
 
     private static int[] version(String text) {
@@ -464,14 +521,6 @@ public class StonecutterDirectiveGuardTester {
             out[i] = Integer.parseInt(parts[i]);
         }
         return out;
-    }
-
-    private static String versionText(int[] version) {
-        StringBuilder sb = new StringBuilder();
-        for (int part : version) {
-            sb.append(sb.length() == 0 ? "" : ".").append(part);
-        }
-        return sb.toString();
     }
 
     private static int compare(int[] a, int[] b) {
@@ -521,8 +570,16 @@ public class StonecutterDirectiveGuardTester {
         private String where;
         private int[] lineStarts;
 
+        /** The active node's loader, which decides the loader constants. */
+        final String loader;
+
         Scan(int[] active) {
+            this(active, "neoforge");
+        }
+
+        Scan(int[] active, String loader) {
             this.active = active;
+            this.loader = loader;
         }
 
         void file(String where, String text) {
@@ -583,7 +640,7 @@ public class StonecutterDirectiveGuardTester {
             boolean live = false;
             if (!chain.taken) {
                 try {
-                    live = cond == null || holds(cond, active);
+                    live = cond == null || holds(cond, active, loader);
                 } catch (IllegalArgumentException e) {
                     report(tok, e.getMessage());
                     chain.unknown = true;
@@ -644,8 +701,9 @@ public class StonecutterDirectiveGuardTester {
         }
     }
 
-    /** Whether a version condition ({@code >=26.2}, {@code >=1.21.10 && <26.3}) holds for {@code active}. */
-    private static boolean holds(String cond, int[] active) {
+    /** Whether a condition ({@code >=26.2}, {@code >=1.21.10 && <26.3}, {@code neoforge}) holds for the node with
+     *  version {@code active} and loader {@code loader}. */
+    private static boolean holds(String cond, int[] active, String loader) {
         boolean any = false;
         for (String conjunction : cond.split("\\|\\|")) {
             boolean all = true;
@@ -653,7 +711,12 @@ public class StonecutterDirectiveGuardTester {
                 Matcher m = TERM.matcher(term.trim());
                 if (!m.matches()) {
                     throw new IllegalArgumentException("cannot evaluate the condition `" + cond + "` (only version "
-                        + "comparisons joined by && and || are understood) - extend the guard before using other forms");
+                        + "comparisons and the loader constants neoforge and fabric, joined by && and ||, are "
+                        + "understood) - extend the guard before using other forms");
+                }
+                if (m.group(3) != null) {
+                    all &= m.group(3).equals(loader);
+                    continue;
                 }
                 int cmp = compare(active, version(m.group(2)));
                 all &= switch (m.group(1)) {

@@ -42,11 +42,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.fml.loading.FMLPaths;
-
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.nbt.NbtSquisher;
+import buildcraft.platform.Platform;
 
 public class GlobalSavedDataSnapshots {
     private static final String SNAPSHOT_FILE_EXTENSION = ".bcnbt";
@@ -106,7 +105,7 @@ public class GlobalSavedDataSnapshots {
     private final boolean healKeys;
 
     private GlobalSavedDataSnapshots(Side side) {
-        this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)),
+        this(new File(Platform.loader().gameDir().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)),
             side == Side.CLIENT);
     }
 

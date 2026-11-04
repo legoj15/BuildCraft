@@ -7,8 +7,10 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ```bash
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
 # Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.3 is the primary from its first release; nothing ships until the user says so).
+# Plus one compile-only Fabric node, 26.3-fabric (#100): it builds buildcraft/platform/** alone, ships nothing,
+# and runs no tests (its test and jar tasks are disabled). Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
-# `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY node.
+# `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node (the compile-only 26.3-fabric node runs compileJava).
 # The ACTIVE node (the raw text of src/, what the IDE sees) is 26.3; see stonecutter.gradle.kts.
 
 # Compile the node (fast feedback)
@@ -72,6 +74,10 @@ Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSe
 **Config** — two specs: `BCUnifiedConfig` (COMMON) + `BCUnifiedClientConfig` (CLIENT), each wrapping per-subsystem configs via `.push()/.pop()`. The COMMON/CLIENT split is load-bearing (client-only render/display options must live on the CLIENT spec).
 
 **Recipes** — `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
+
+### Platform layer
+
+Loader-facing seams live in `buildcraft.platform` (`Platform.loader()` today: side, mod list, game/config dirs, current server); common code goes through it, not straight to FML. Contract rule: the files in `buildcraft/platform/` outside the per-loader packages name only the JDK, vanilla and other `buildcraft.platform` types — never a loader type or a BC gameplay class. Loader code lives in `buildcraft/platform/<loader>/`, each file's body inside `//? if <loader> {` (Stonecutter constants `neoforge`/`fabric`, set from the `loader` property), and only the binder names an implementation. Standing design, slice plan and finish line: [docs/platform-layer.md](docs/platform-layer.md) (#98).
 
 ### Conventions
 

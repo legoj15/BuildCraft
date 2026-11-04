@@ -234,7 +234,7 @@ public class BCSiliconClient {
         modEventBus.register(BCSiliconClient.class);
         registerScreens(ClientPlatform.sinks());
         buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.init();
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
+        ClientPlatform.hooks().onLevelRender(buildcraft.silicon.client.RenderLaser::onRenderLevel);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }
 }

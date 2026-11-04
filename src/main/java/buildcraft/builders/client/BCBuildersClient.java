@@ -7,7 +7,6 @@
 package buildcraft.builders.client;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -28,31 +27,22 @@ import buildcraft.platform.client.ClientRegistrationSinks;
 public class BCBuildersClient {
     public static void initClient(IEventBus modEventBus) {
         registerClientContent(ClientPlatform.sinks());
-        NeoForge.EVENT_BUS.addListener(
-                //? if >=26.1 {
-                net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
-                //?} elif >=1.21.10 {
-                /*RenderLevelStageEvent.AfterTranslucentBlocks.class,*/
-                //?} else {
-                /*RenderLevelStageEvent.class,*/
-                //?}
-                event -> {
-                    BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
-                    BCBuildersEventDist.INSTANCE.renderAllFillers(event);
-                    BCBuildersEventDist.INSTANCE.renderAllArchitectTables(event);
-                    BCBuildersEventDist.INSTANCE.renderAllBuilders(event);
-                });
+        // One level-render pass: the laser frames and boxes, then (26.1+) the place-task animations, which used to
+        // sit on a second, adjacent subscription to the same event.
+        ClientPlatform.hooks().onLevelRender(ctx -> {
+            BCBuildersEventDist.INSTANCE.renderAllQuarries(ctx);
+            BCBuildersEventDist.INSTANCE.renderAllFillers(ctx);
+            BCBuildersEventDist.INSTANCE.renderAllArchitectTables(ctx);
+            BCBuildersEventDist.INSTANCE.renderAllBuilders(ctx);
+            //? if >=26.1 {
+            BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(ctx);
+            BCBuildersEventDist.INSTANCE.renderAllBuildersCustomGeometry(ctx);
+            //?}
+        });
         // Fade out architect "digitizing" cubes one tick at a time on the client.
         NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
                 event -> buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.tick());
-        //? if >=26.1 {
-        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
-                event -> {
-                    BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(event);
-                    BCBuildersEventDist.INSTANCE.renderAllBuildersCustomGeometry(event);
-                });
-        //?}
         // Draws a second tooltip-shaped panel below Blueprint/Template tooltips with a rotating
         // 3D preview. Mirrors the 1.12.2 BCBuildersEventDist#onPostText pattern; the 1.12.2
         // PostText event was removed in modern NeoForge, so we hook Pre and run the layout

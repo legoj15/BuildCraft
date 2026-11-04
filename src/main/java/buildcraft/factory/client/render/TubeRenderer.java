@@ -19,11 +19,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=26.1 {
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
-//?}
+import buildcraft.platform.client.BCLevelRenderContext;
 
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserRow;
@@ -71,14 +67,7 @@ public class TubeRenderer {
         ACTIVE_MINERS.remove(miner);
     }
 
-    //? if >=26.1 {
-    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public static void onRenderLevel(BCLevelRenderContext ctx) {
         if (ACTIVE_MINERS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -93,14 +82,10 @@ public class TubeRenderer {
         // flicker at the segmentation boundaries.
         ACTIVE_MINERS.removeIf(miner -> miner.isRemoved() || miner.getLevel() != mc.level);
 
-        PoseStack poseStack = event.getPoseStack();
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
+        PoseStack poseStack = ctx.poseStack();
+        Vec3 cameraPos = ctx.cameraPos();
         //? if >=26.1 {
-        SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        SubmitNodeCollector collector = ctx.collector();
         //?}
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 

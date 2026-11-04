@@ -22,6 +22,23 @@ public final class ClientPlatform {
         return SinksHolder.INSTANCE;
     }
 
+    /** Client game hooks: level render, ticks, connection, recipes, tooltips, block outline. */
+    public static ClientHooks hooks() {
+        return HooksHolder.INSTANCE;
+    }
+
+    private static final class HooksHolder {
+        static final ClientHooks INSTANCE = create();
+
+        private static ClientHooks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.client.NeoForgeClientHooks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.client.FabricClientHooks();
+            *///?}
+        }
+    }
+
     private static final class SinksHolder {
         static final ClientRegistrationSinks INSTANCE = create();
 

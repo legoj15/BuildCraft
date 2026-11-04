@@ -29,16 +29,7 @@ public class BCCoreClient {
 
         ClientPlatform.configScreens().registerConfigScreen();
 
-        NeoForge.EVENT_BUS.addListener(
-                //? if >=26.1 {
-                net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
-                //?} elif >=1.21.10 {
-                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,*/
-                //?} else {
-                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.class,*/
-                //?}
-                event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
-        );
+        ClientPlatform.hooks().onLevelRender(buildcraft.lib.client.render.MarkerRenderer::onRenderLevelStage);
         // Engine BERs
         sinks.blockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE,
                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(BCCoreModels::getWoodEngineQuads));

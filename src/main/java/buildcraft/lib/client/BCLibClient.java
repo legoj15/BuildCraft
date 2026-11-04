@@ -144,7 +144,7 @@ public class BCLibClient {
 
         // Advanced-debug overlay: draws the in-world highlight for whatever tile the player last
         // right-clicked with the Debugger item. Client-authoritative, no networking.
-        NeoForge.EVENT_BUS.register(buildcraft.lib.debug.AdvDebugRenderer.class);
+        ClientPlatform.hooks().onLevelRender(buildcraft.lib.debug.AdvDebugRenderer::onRenderLevel);
     }
 
     public static void openGuideScreen(String bookName) {

@@ -15,17 +15,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.bus.api.SubscribeEvent;
-//? if >=26.1 {
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-//?} else {
-/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
-//?}
-
 import buildcraft.builders.client.render.AdvDebuggerQuarry;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.silicon.client.render.AdvDebuggerLaser;
 import buildcraft.silicon.tile.TileLaser;
+import buildcraft.platform.client.BCLevelRenderContext;
 
 /**
  * Client-side render dispatcher for the advanced-debug overlay. Reads the current debug target
@@ -36,13 +30,11 @@ import buildcraft.silicon.tile.TileLaser;
  * <p>How the per-subject debuggers obtain a draw target differs by MC line, and is bridged through
  * this class's per-frame static context:
  * <ul>
- *   <li><b>&gt;=26.1</b> — MC 26.1 removed immediate-mode rendering. We hook
- *       {@link SubmitCustomGeometryEvent}, stash its {@link net.minecraft.client.renderer.SubmitNodeCollector}
- *       for the frame, and {@link DebugRenderHelper} routes every box through
- *       {@code collector.submitCustomGeometry(...)}.</li>
- *   <li><b>&lt;26.1</b> — 1.21.x still have {@code MultiBufferSource}. We hook
- *       {@link net.neoforged.neoforge.client.event.RenderLevelStageEvent} at AfterTranslucentBlocks,
- *       stash the immediate buffer source, and {@link DebugRenderHelper} draws straight into it.</li>
+ *   <li><b>&gt;=26.1</b> — MC 26.1 removed immediate-mode rendering. We stash the frame's
+ *       {@link net.minecraft.client.renderer.SubmitNodeCollector} from the level-render context, and
+ *       {@link DebugRenderHelper} routes every box through {@code collector.submitCustomGeometry(...)}.</li>
+ *   <li><b>&lt;26.1</b> — 1.21.x still have {@code MultiBufferSource}. We stash the context's immediate
+ *       buffer source, and {@link DebugRenderHelper} draws straight into it.</li>
  * </ul>
  */
 public final class AdvDebugRenderer {
@@ -66,65 +58,37 @@ public final class AdvDebugRenderer {
     }*/
     //?}
 
-    //? if >=26.1 {
     /**
-     * 26.1 entry point. Registered against {@link SubmitCustomGeometryEvent}, which supplies a
-     * {@link net.minecraft.client.renderer.SubmitNodeCollector} for retained-mode submission. There
-     * is no batch to flush — the collector flushes itself after the event returns.
+     * The per-frame entry point ({@link buildcraft.platform.client.ClientHooks#onLevelRender}). On 26.1+ the frame
+     * hands out a {@link net.minecraft.client.renderer.SubmitNodeCollector} for retained-mode submission, with no
+     * batch to flush (the collector flushes itself after the pass); before 26.1 the boxes go straight into the
+     * immediate buffer source, flushed here.
      */
-    @SubscribeEvent
-    public static void onSubmitGeometry(SubmitCustomGeometryEvent event) {
+    public static void onRenderLevel(BCLevelRenderContext ctx) {
         BlockEntity be = resolveTarget();
         if (be == null) {
             return;
         }
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        PoseStack poseStack = event.getPoseStack();
-        currentCollector = event.getSubmitNodeCollector();
+        Vec3 cameraPos = ctx.cameraPos();
+        PoseStack poseStack = ctx.poseStack();
+        //? if >=26.1 {
+        currentCollector = ctx.collector();
         try {
             dispatch(be, poseStack, cameraPos);
         } finally {
             currentCollector = null;
         }
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource = ctx.bufferSource();
+        currentBufferSource = bufferSource;
+        try {
+            dispatch(be, poseStack, cameraPos);
+        } finally {
+            bufferSource.endBatch();
+            currentBufferSource = null;
+        }*/
+        //?}
     }
-    //?} elif >=1.21.10 {
-    /*@SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
-        BlockEntity be = resolveTarget();
-        if (be == null) {
-            return;
-        }
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        currentBufferSource = bufferSource;
-        try {
-            dispatch(be, poseStack, cameraPos);
-        } finally {
-            bufferSource.endBatch();
-            currentBufferSource = null;
-        }
-    }*/
-    //?} else {
-    /*@SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        BlockEntity be = resolveTarget();
-        if (be == null) {
-            return;
-        }
-        Vec3 cameraPos = event.getCamera().getPosition();
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        currentBufferSource = bufferSource;
-        try {
-            dispatch(be, poseStack, cameraPos);
-        } finally {
-            bufferSource.endBatch();
-            currentBufferSource = null;
-        }
-    }*/
-    //?}
 
     /**
      * Resolves the current debug target into a live {@link IAdvDebugTarget} block entity, or returns

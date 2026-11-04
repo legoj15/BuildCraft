@@ -27,7 +27,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import buildcraft.platform.client.BCLevelRenderContext;
 
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
@@ -279,14 +279,7 @@ public enum BCBuildersEventDist {
     /** Called from the render event to render quarry frame outlines and drill beams. On 26.1+ the
      *  source event is SubmitCustomGeometryEvent (immediate-mode rendering was removed); on earlier
      *  nodes it's RenderLevelStageEvent.AfterTranslucentBlocks. */
-    //? if >=26.1 {
-    public void renderAllQuarries(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public void renderAllQuarries(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public void renderAllQuarries(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public void renderAllQuarries(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
@@ -295,14 +288,10 @@ public enum BCBuildersEventDist {
             return;
         }
 
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
-        PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        PoseStack poseStack = ctx.poseStack();
         //? if >=26.1 {
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
         //?} else {
         /*Object collector = null;*/
         //?}
@@ -504,25 +493,14 @@ public enum BCBuildersEventDist {
 
     /** Called from RenderLevelStageEvent to render architect table laser box outlines and the
      * fading green "digitizing" cubes for blocks currently being scanned. */
-    //? if >=26.1 {
-    public void renderAllArchitectTables(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public void renderAllArchitectTables(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public void renderAllArchitectTables(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
-        PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        PoseStack poseStack = ctx.poseStack();
         //? if >=26.1 {
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
         //?} else {
         /*Object collector = null;*/
         //?}
@@ -644,28 +622,17 @@ public enum BCBuildersEventDist {
      *  floating robot cube while it's breaking blocks, and the break lasers from the robot to
      *  each target. Place-task block-throwing animation lives in
      *  {@link #renderAllBuildersCustomGeometry}. */
-    //? if >=26.1 {
-    public void renderAllBuilders(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public void renderAllBuilders(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public void renderAllBuilders(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public void renderAllBuilders(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileBuilder>> builders = allBuilders.get(mc.level);
         if (builders == null || builders.isEmpty()) return;
 
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
-        PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        PoseStack poseStack = ctx.poseStack();
         //? if >=26.1 {
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
         //?} else {
         /*Object collector = null;*/
         //?}
@@ -797,17 +764,17 @@ public enum BCBuildersEventDist {
      *  this event is absent; the animation runs from {@link #renderAllBuilders} via
      *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
     //? if >=26.1 {
-    public void renderAllBuildersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    public void renderAllBuildersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileBuilder>> builders = allBuilders.get(mc.level);
         if (builders == null || builders.isEmpty()) return;
 
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        com.mojang.blaze3d.vertex.PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        com.mojang.blaze3d.vertex.PoseStack poseStack = ctx.poseStack();
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
 
         Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
         while (iter.hasNext()) {
@@ -871,28 +838,17 @@ public enum BCBuildersEventDist {
     /** Called from the render event to render filler laser box outlines. On 26.1+ the source event
      *  is SubmitCustomGeometryEvent (immediate-mode rendering was removed); on earlier nodes it's
      *  RenderLevelStageEvent.AfterTranslucentBlocks. */
-    //? if >=26.1 {
-    public void renderAllFillers(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
-    //?} elif >=1.21.10 {
-    /*public void renderAllFillers(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
-    //?} else {
-    /*public void renderAllFillers(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
-    //?}
+    public void renderAllFillers(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileFiller>> fillers = allFillers.get(mc.level);
         if (fillers == null || fillers.isEmpty()) return;
 
-        //? if >=1.21.10 {
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        //?} else {
-        /*Vec3 cameraPos = event.getCamera().getPosition();*/
-        //?}
-        PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        PoseStack poseStack = ctx.poseStack();
         //? if >=26.1 {
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
         //?} else {
         /*Object collector = null;*/
         //?}
@@ -962,17 +918,17 @@ public enum BCBuildersEventDist {
      *  SubmitNodeCollector. On 1.21.11 the animation runs from {@link #renderAllFillers} via
      *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
     //? if >=26.1 {
-    public void renderAllFillersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    public void renderAllFillersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileFiller>> fillers = allFillers.get(mc.level);
         if (fillers == null || fillers.isEmpty()) return;
 
-        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        com.mojang.blaze3d.vertex.PoseStack poseStack = event.getPoseStack();
+        Vec3 cameraPos = ctx.cameraPos();
+        com.mojang.blaze3d.vertex.PoseStack poseStack = ctx.poseStack();
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        net.minecraft.client.renderer.SubmitNodeCollector collector = ctx.collector();
 
         Iterator<WeakReference<TileFiller>> iter = fillers.iterator();
         while (iter.hasNext()) {

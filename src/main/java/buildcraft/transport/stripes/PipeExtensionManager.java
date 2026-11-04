@@ -23,6 +23,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -35,9 +36,6 @@ import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.BlockSnapshot;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
@@ -54,6 +52,9 @@ import buildcraft.lib.misc.InventoryUtil;
 
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 import buildcraft.transport.tile.TilePipeHolder;
+
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection.CapturedBlock;
 
 /**
  * Extends and retracts a stripes pipe's line (8.0.x's manager, 7.1.x's {@code PipeExtensionListener}): an item pipe
@@ -155,7 +156,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             return null;
         }
         Cell stripesCell = Cell.capture(w, r.pos);
-        BlockSnapshot aheadBefore = BlockSnapshot.create(w.dimension(), w, p);
+        CapturedBlock aheadBefore = Platform.protection().capture(w, p);
 
         // Step 2: move the stripes pipe forward, and ask for the cell it moved into.
         removeQuietly(w, r.pos);
@@ -173,7 +174,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         BlockUtil.ItemUse use;
         List<ItemStack> left;
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(w, owner, p, r.dir.getOpposite())) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             player.setItemInHand(InteractionHand.MAIN_HAND, r.stack);
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(r.pos), r.dir, r.pos, false);
             use = BlockUtil.tryUseItemOnBlock(w, player, InteractionHand.MAIN_HAND, r.stack, hit);
@@ -231,7 +232,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         }
         Cell stripesCell = Cell.capture(w, r.pos);
         Cell behindCell = Cell.capture(w, p);
-        BlockSnapshot behindBefore = BlockSnapshot.create(w.dimension(), w, p);
+        CapturedBlock behindBefore = Platform.protection().capture(w, p);
 
         // Always send back the catalyst pipe, and everything the pipe taken up held (it is not dropped).
         List<ItemStack> stacksToSendBack = new ArrayList<>();
@@ -289,9 +290,9 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
     }
 
     /** Posts the placement event for the block just placed where {@code before} was, as the owner; true if refused. */
-    private static boolean placeRefused(ServerLevel w, BlockSnapshot before, GameProfile owner, Direction direction) {
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(w, owner, before.getPos())) {
-            return EventHooks.onBlockPlace(lease.player(), before, direction);
+    private static boolean placeRefused(ServerLevel w, CapturedBlock before, GameProfile owner, Direction direction) {
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(w, owner, before.pos())) {
+            return !Platform.protection().canPlaceOver(lease.player(), before, direction);
         }
     }
 

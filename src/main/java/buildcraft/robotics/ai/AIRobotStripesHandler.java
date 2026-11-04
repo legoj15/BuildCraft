@@ -15,13 +15,13 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
@@ -108,7 +108,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
                 }
             }
             try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
-                FakePlayer player = lease.player();
+                ServerPlayer player = lease.player();
                 long refusalsBefore = MachineRefusals.count(player);
                 FakePlayerUtil.pose(player, Vec3.atBottomCenterOf(useToBlock), 180, 0);
                 // In the player's hand, as the stripes pipe does it: handlers that act through the player
@@ -233,7 +233,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
      * one the stripes pipe's sweep follows too. {@code original} is the pre-use copy, which still names the item
      * after {@code used} was consumed.
      */
-    private void takeBackFrom(FakePlayer player, ItemStack used, ItemStack original) {
+    private void takeBackFrom(ServerPlayer player, ItemStack used, ItemStack original) {
         FakePlayerUtil.Leftovers left = FakePlayerUtil.takeLeftovers(player, used, original.getItem());
         for (ItemStack product : left.products()) {
             sendItem(product, Direction.NORTH);

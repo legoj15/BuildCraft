@@ -4,8 +4,9 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.lib.misc;
+package buildcraft.platform.neoforge;
 
+//? if neoforge {
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,16 +30,16 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * <p>The event is a PROBE: nothing is placed, cancelled or not, so BuildCraft's own placement listeners must not treat
  * it as a block changing and check {@link #isProbe}. Because nothing has been placed yet, the event's placed state is
  * the cell's current one (air, as a rule), the same limit the break probe has; claim mods judge by position and
- * player. Server thread only, like every caller. Use it through {@link BlockUtil#canMachinePlace}, which honours the
+ * player. Server thread only, like every caller. Use it through {@code BlockUtil#canMachinePlace}, which honours the
  * protection toggle and leases the machine's player.
  */
-public final class PlaceEventProbe {
+final class NeoForgePlaceProbe {
 
     /** The probe {@link #canPlace} is posting right now (the innermost one, if a listener probes again), or null. */
     @Nullable
     private static BlockEvent probeInFlight;
 
-    private PlaceEventProbe() {}
+    private NeoForgePlaceProbe() {}
 
     /**
      * Asks whether {@code player} may place a block filling {@code cells} (the first is the cell the block is placed
@@ -48,7 +49,7 @@ public final class PlaceEventProbe {
      *
      * @throws IllegalArgumentException for no cells
      */
-    public static boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player) {
+    static boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player) {
         if (cells.isEmpty()) {
             throw new IllegalArgumentException("a placement fills at least one cell");
         }
@@ -75,7 +76,8 @@ public final class PlaceEventProbe {
     }
 
     /** True while {@code event} is a permission probe posted by {@link #canPlace} rather than a block being placed. */
-    public static boolean isProbe(BlockEvent event) {
-        return event == probeInFlight;
+    static boolean isProbe(Object event) {
+        return event != null && event == probeInFlight;
     }
 }
+//?}

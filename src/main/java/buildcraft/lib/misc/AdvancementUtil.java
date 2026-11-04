@@ -12,9 +12,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
-
 import buildcraft.api.core.BCLog;
+
+import buildcraft.platform.Platform;
 
 public class AdvancementUtil {
     private static final Set<Identifier> UNKNOWN_ADVANCEMENTS = new HashSet<>();
@@ -30,7 +30,7 @@ public class AdvancementUtil {
      * otherwise. See {@link #unlockAdvancement(UUID, Level, Identifier, String)}.
      */
     public static void unlockAdvancement(Player player, Identifier advancementName, String criterionName) {
-        if (player instanceof FakePlayer) {
+        if (Platform.fakePlayers().isFakePlayer(player)) {
             unlockAdvancement(player.getUUID(), player.level(), advancementName, criterionName);
             return;
         }
@@ -53,7 +53,7 @@ public class AdvancementUtil {
 
     /**
      * Awards the real, connected player with this UUID — the path for a machine acting for its owner, and the one
-     * the {@link Player}-typed overload routes every {@link FakePlayer} through. A fake player's own
+     * the {@link Player}-typed overload routes every fake player through. A fake player's own
      * {@code getAdvancements()} is exactly the surface NeoForge has been changing (a no-op tracker on 1.21.1 and
      * 26.2; on 1.21.10 - 26.1.x a tracker shared by UUID with the real owner). Looking the connected
      * {@link ServerPlayer} up by UUID is correct on every line: it awards the owner if they're online and cleanly
@@ -73,7 +73,7 @@ public class AdvancementUtil {
         }
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         // Never a fake player (they are not in the player list), which also keeps the two overloads from recursing.
-        if (player != null && !(player instanceof FakePlayer)) {
+        if (player != null && !Platform.fakePlayers().isFakePlayer(player)) {
             unlockAdvancement(player, advancementName, criterionName);
             return true;
         }

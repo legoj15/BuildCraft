@@ -15,9 +15,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
@@ -80,7 +80,7 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                 // the block it settles on (and the stripes path asks about the block a hoe tills there).
                 if (RobotProtection.stationOwnerCanBreak(robot, serverLevel, useToBlock)) {
                     try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
-                        FakePlayer player = lease.player();
+                        ServerPlayer player = lease.player();
                         player.setPos(robot.position());
                         // The tool is in the player's main hand for the use, as it would be for a real player: a claim
                         // or tool listener reads the hand, not the stack the context carries.

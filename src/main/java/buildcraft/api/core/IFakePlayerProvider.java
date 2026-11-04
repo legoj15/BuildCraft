@@ -10,12 +10,12 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-
-import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Hands out BuildCraft's fake players. The players are CACHED: one instance per (level, profile), shared by every
- * caller, which is why each method returns it reset to the state of a freshly constructed {@link FakePlayer}
+ * Hands out BuildCraft's fake players: each one the loader's own fake-player class (NeoForge's or Fabric API's
+ * {@code FakePlayer}), typed here as the vanilla {@link ServerPlayer} it extends. The players are CACHED: one instance per (level, profile), shared by every
+ * caller, which is why each method returns it reset to the state of a freshly constructed fake player
  * (empty inventory, hands and equipment, default rotations and flags, no item in use or cooldowns), placed on the
  * requested block or back where it was created.
  * <p>
@@ -39,7 +39,7 @@ public interface IFakePlayerProvider {
      * player is used as a fallback for code paths (worldgen, springs, robots) that legitimately have no associated
      * user.
      */
-    FakePlayer getBuildCraftPlayer(ServerLevel world);
+    ServerPlayer getBuildCraftPlayer(ServerLevel world);
 
     /**
      * @param world
@@ -47,7 +47,7 @@ public interface IFakePlayerProvider {
      * @return The owner's cached fake player, reset, at the position it was created at. Use IN THE CURRENT METHOD
      * CONTEXT ONLY — see the interface contract.
      */
-    FakePlayer getFakePlayer(ServerLevel world, GameProfile profile);
+    ServerPlayer getFakePlayer(ServerLevel world, GameProfile profile);
 
     /**
      * @param world
@@ -56,5 +56,5 @@ public interface IFakePlayerProvider {
      * @return The owner's cached fake player, reset and centred on {@code pos}. Use IN THE CURRENT METHOD CONTEXT
      * ONLY — see the interface contract.
      */
-    FakePlayer getFakePlayer(ServerLevel world, GameProfile profile, BlockPos pos);
+    ServerPlayer getFakePlayer(ServerLevel world, GameProfile profile, BlockPos pos);
 }

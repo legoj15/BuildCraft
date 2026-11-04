@@ -1,5 +1,11 @@
-package buildcraft.lib.misc;
+/*
+ * Copyright (c) 2026 the BuildCraftUnofficial contributors
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+package buildcraft.platform.neoforge;
 
+//? if neoforge {
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.function.Consumer;
@@ -9,12 +15,15 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
+
+import buildcraft.platform.event.PlatformProtection;
 
 /**
  * Cross-version shim for the "a block is being broken" event, which NeoForge restructured
@@ -30,7 +39,7 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * cancellation, and the other accessors all go through the shared {@link BlockEvent} /
  * {@link ICancellableEvent} supertypes, so they stay compile-checked.
  */
-public final class BreakEventCompat {
+final class NeoForgeBreakEvent {
 
     private static final Class<?> EVENT_CLASS;
     private static final Constructor<?> CONSTRUCTOR;
@@ -68,16 +77,13 @@ public final class BreakEventCompat {
         }
     }
 
-    private BreakEventCompat() {}
+    private NeoForgeBreakEvent() {}
 
     /**
-     * Asks whether a machine may break a block: posts the running version's block-break event with the given
-     * context and returns {@code true} if it was NOT cancelled (i.e. the break is permitted by protection mods).
-     * <p>
-     * The event is a PROBE: nothing breaks, cancelled or not. BuildCraft's own break listeners must therefore not
-     * treat it as a real break, and check {@link #isProbe}. Server thread only, like every caller.
+     * Posts the running version's block-break event with the given context as a PROBE (nothing breaks, cancelled or
+     * not) and returns {@code true} if it was NOT cancelled. BuildCraft's own break listeners check {@link #isProbe}.
      */
-    public static boolean canBreak(Level level, BlockPos pos, BlockState state, Player player) {
+    static boolean canBreak(Level level, BlockPos pos, BlockState state, Player player) {
         BlockEvent event = create(level, pos, state, player);
         Object outer = probeInFlight;
         probeInFlight = event;
@@ -90,12 +96,12 @@ public final class BreakEventCompat {
     }
 
     /** True while {@code event} is a permission probe posted by {@link #canBreak} rather than a block breaking. */
-    public static boolean isProbe(BlockEvent event) {
-        return event == probeInFlight;
+    static boolean isProbe(Object event) {
+        return event != null && event == probeInFlight;
     }
 
     /** A new, unposted break event of the running version's class. */
-    public static BlockEvent create(Level level, BlockPos pos, BlockState state, Player player) {
+    private static BlockEvent create(Level level, BlockPos pos, BlockState state, Player player) {
         try {
             return (BlockEvent) CONSTRUCTOR.newInstance(level, pos, state, player);
         } catch (ReflectiveOperationException e) {
@@ -103,8 +109,8 @@ public final class BreakEventCompat {
         }
     }
 
-    /** The player breaking the block, for a break event delivered by {@link #onBreak}. */
-    public static Player playerOf(BlockEvent event) {
+    /** The player breaking the block. */
+    private static Player playerOf(BlockEvent event) {
         try {
             return (Player) GET_PLAYER.invoke(event);
         } catch (ReflectiveOperationException e) {
@@ -112,26 +118,55 @@ public final class BreakEventCompat {
         }
     }
 
-    /** Cancels a break event delivered by {@link #onBreak}: what a protection mod does to refuse a break. */
-    public static void cancel(BlockEvent event) {
-        ((ICancellableEvent) event).setCanceled(true);
-    }
-
-    /**
-     * Registers a listener for the running version's block-break event, delivered as the common
-     * {@link BlockEvent} supertype (which exposes {@code getLevel}/{@code getPos}/{@code getState}).
-     *
-     * @return a token for {@link #removeListener}
-     */
+    /** Registers a listener for the running version's block-break event, at the default priority. */
     @SuppressWarnings("unchecked")
-    public static Object onBreak(Consumer<BlockEvent> handler) {
-        Consumer<Event> listener = event -> handler.accept((BlockEvent) event);
+    static PlatformProtection.Registration onBreak(Consumer<PlatformProtection.BlockBreak> handler) {
+        Consumer<Event> listener = event -> handler.accept(new View((BlockEvent) event));
         NeoForge.EVENT_BUS.addListener((Class<Event>) EVENT_CLASS, listener);
-        return listener;
+        return new PlatformProtection.Registration() {
+            private boolean closed;
+
+            @Override
+            public void close() {
+                if (!closed) {
+                    closed = true;
+                    NeoForge.EVENT_BUS.unregister(listener);
+                }
+            }
+        };
     }
 
-    /** Removes a listener added by {@link #onBreak}; {@code token} is what that call returned. */
-    public static void removeListener(Object token) {
-        NeoForge.EVENT_BUS.unregister(token);
+    /** A delivered break event, as a listener sees it. */
+    private record View(BlockEvent event) implements PlatformProtection.BlockBreak {
+        @Override
+        public LevelAccessor level() {
+            return event.getLevel();
+        }
+
+        @Override
+        public BlockPos pos() {
+            return event.getPos();
+        }
+
+        @Override
+        public BlockState state() {
+            return event.getState();
+        }
+
+        @Override
+        public Player player() {
+            return playerOf(event);
+        }
+
+        @Override
+        public boolean isProbe() {
+            return NeoForgeBreakEvent.isProbe(event);
+        }
+
+        @Override
+        public void cancel() {
+            ((ICancellableEvent) event).setCanceled(true);
+        }
     }
 }
+//?}

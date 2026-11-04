@@ -15,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -31,7 +32,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import buildcraft.api.core.EnumHandlerPriority;
@@ -172,7 +172,7 @@ public class PipeBehaviourStripesDropTester {
         helper.setBlock(soilRel, Blocks.DIRT);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(soil), Direction.UP, soil, false);
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
-            FakePlayer player = lease.player();
+            ServerPlayer player = lease.player();
             ItemStack hoe = new ItemStack(Items.DIAMOND_HOE);
             // In the hand, as the helper's contract has it: the right-click event reads the hand, not the stack.
             player.setItemInHand(InteractionHand.MAIN_HAND, hoe);

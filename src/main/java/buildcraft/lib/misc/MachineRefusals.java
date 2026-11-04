@@ -18,9 +18,10 @@ import net.minecraft.world.entity.player.Player;
 
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+
+import buildcraft.platform.Platform;
 
 /**
  * How many clicks a machine's fake player has had refused, kept per player. A stripes pipe tries several handlers on
@@ -117,7 +118,8 @@ public final class MachineRefusals {
      * {@link #registerRecorder}); a real player's refused click needs no tally, nothing asks it.
      */
     private static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        if (event.isCanceled() && event.getEntity() instanceof FakePlayer machine) {
+        Player machine = event.getEntity();
+        if (event.isCanceled() && Platform.fakePlayers().isFakePlayer(machine)) {
             record(machine);
         }
     }
@@ -139,13 +141,14 @@ public final class MachineRefusals {
 
     /**
      * A protection mod cancelling a placement by the player {@link #countingPlacements} is counting for. Last priority
-     * and even when cancelled, like {@link #onEntityInteract}; a permission probe ({@link PlaceEventProbe}) places
-     * nothing and answers its own caller, so it is not counted.
+     * and even when cancelled, like {@link #onEntityInteract}; a permission probe
+     * ({@link buildcraft.platform.event.PlatformProtection#canPlace}) places nothing and answers its own caller, so it
+     * is not counted.
      */
     private static void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         Player counting = placingFor;
         if (counting != null && event.isCanceled() && event.getEntity() == counting
-                && !PlaceEventProbe.isProbe(event)) {
+                && !Platform.protection().isProbe(event)) {
             record(counting);
         }
     }

@@ -18,6 +18,7 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -57,13 +58,13 @@ public class FakePlayerUtilTester {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
 
-        FakePlayer generic = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level);
+        ServerPlayer generic = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level);
         check(generic == BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level),
                 "the generic BuildCraft player is cached");
         check("[BuildCraft]".equals(GameProfileUtil.getName(generic.getGameProfile())),
                 "the generic player carries the [BuildCraft] identity");
 
-        FakePlayer first = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer first = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(first == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner), "an owner's player is cached");
         check(first == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner, helper.absolutePos(BlockPos.ZERO)),
                 "the position overload shares the owner's cached player");
@@ -87,7 +88,7 @@ public class FakePlayerUtilTester {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
 
-        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         Vec3 home = player.position();
         // A fresh player's yaw is not a constant (LivingEntity's constructor rolls a small random one on every node),
         // so the rotations are compared to what this player was created with.
@@ -129,7 +130,7 @@ public class FakePlayerUtilTester {
         player.setRemainingFireTicks(100);
         player.setPos(home.x + 100, home.y + 20, home.z - 100);
 
-        FakePlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(again == player, "the same cached player comes back");
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {
@@ -179,19 +180,19 @@ public class FakePlayerUtilTester {
         Vec3 home = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner).position();
 
         BlockPos a = helper.absolutePos(new BlockPos(1, 2, 1));
-        FakePlayer atA = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner, a);
+        ServerPlayer atA = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner, a);
         check(atA.position().equals(new Vec3(a.getX() + 0.5, a.getY() + 0.5, a.getZ() + 0.5)),
                 "the player is centred on the first block, was " + atA.position());
         check(atA.xo == atA.getX() && atA.yo == atA.getY() && atA.zo == atA.getZ(),
                 "the previous-tick position follows, so nothing interpolates from a stale spot");
 
         BlockPos b = helper.absolutePos(new BlockPos(4, 1, 5));
-        FakePlayer atB = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner, b);
+        ServerPlayer atB = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner, b);
         check(atB == atA, "the same cached player is re-positioned");
         check(atB.position().equals(new Vec3(b.getX() + 0.5, b.getY() + 0.5, b.getZ() + 0.5)),
                 "the player is centred on the second block, was " + atB.position());
 
-        FakePlayer back = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer back = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(back.position().equals(home), "the plain overload restores the creation position, was " + back.position());
 
         helper.succeed();
@@ -207,7 +208,7 @@ public class FakePlayerUtilTester {
         GameProfile owner = uniqueProfile();
         ItemStack tool = new ItemStack(Items.DIAMOND_PICKAXE);
 
-        FakePlayer cached;
+        ServerPlayer cached;
         try (FakePlayerUtil.Lease outer = FakePlayerUtil.lease(level, owner, helper.absolutePos(BlockPos.ZERO))) {
             cached = outer.player();
             cached.setItemInHand(InteractionHand.MAIN_HAND, tool);
@@ -219,7 +220,7 @@ public class FakePlayerUtilTester {
                         "the separate player still acts as the owner");
                 check(inner.player().getMainHandItem().isEmpty(), "the separate player starts empty-handed");
             }
-            FakePlayer viaApi = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+            ServerPlayer viaApi = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
             check(viaApi != cached, "an API fetch during a lease does not hand out the leased player");
 
             check(cached.getMainHandItem() == tool, "the outer caller's tool survives the nested fetches");
@@ -246,9 +247,9 @@ public class FakePlayerUtilTester {
         GameProfile owner = uniqueProfile();
         ItemStack addonTool = new ItemStack(Items.SHEARS);
 
-        FakePlayer api = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer api = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         api.setItemInHand(InteractionHand.MAIN_HAND, addonTool);
-        FakePlayer leased;
+        ServerPlayer leased;
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, owner, helper.absolutePos(BlockPos.ZERO))) {
             leased = lease.player();
             check(leased != api, "a lease never hands out the API player");
@@ -339,7 +340,7 @@ public class FakePlayerUtilTester {
         GameProfile owner = uniqueProfile();
         FakePlayer fresh = new FakePlayer(level, owner);
 
-        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         player.getFoodData().setFoodLevel(3);
         player.getFoodData().setSaturation(0);
         player.getFoodData().addExhaustion(3);
@@ -356,7 +357,7 @@ public class FakePlayerUtilTester {
         player.setTicksFrozen(100);
         player.setPortalCooldown(300);
 
-        FakePlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(again == player, "the same cached player comes back");
         check(again.getFoodData().getFoodLevel() == fresh.getFoodData().getFoodLevel(), "hunger is restored");
         check(again.getFoodData().getSaturationLevel() == fresh.getFoodData().getSaturationLevel(),
@@ -386,7 +387,7 @@ public class FakePlayerUtilTester {
         }
     }
 
-    private static void setDead(FakePlayer player, boolean value) {
+    private static void setDead(ServerPlayer player, boolean value) {
         try {
             deadField().setBoolean(player, value);
         } catch (ReflectiveOperationException e) {
@@ -394,7 +395,7 @@ public class FakePlayerUtilTester {
         }
     }
 
-    private static boolean isDead(FakePlayer player) {
+    private static boolean isDead(ServerPlayer player) {
         try {
             return deadField().getBoolean(player);
         } catch (ReflectiveOperationException e) {
@@ -412,9 +413,9 @@ public class FakePlayerUtilTester {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
 
-        FakePlayer before = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer before = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         FakePlayerUtil.onLevelUnload(new LevelEvent.Unload(level));
-        FakePlayer after = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer after = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(after != before, "the unloaded level's player is gone");
         check(after == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner), "the replacement is cached again");
 
@@ -432,14 +433,14 @@ public class FakePlayerUtilTester {
         GameProfile owner = uniqueProfile();
         GameProfile bystander = uniqueProfile();
 
-        FakePlayer generic = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level);
-        FakePlayer other = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, bystander);
+        ServerPlayer generic = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level);
+        ServerPlayer other = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, bystander);
 
-        FakePlayer beforeLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer beforeLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         // Stands in for the owner's real ServerPlayer: the handlers only read the UUID.
         FakePlayer ownerSession = new FakePlayer(level, owner);
         FakePlayerUtil.onPlayerLoggedOut(new PlayerEvent.PlayerLoggedOutEvent(ownerSession));
-        FakePlayer afterLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        ServerPlayer afterLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(afterLogout != beforeLogout, "the owner's logout evicts the owner's cached player");
         check(afterLogout == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner),
                 "the rebuilt player is cached again");
@@ -473,7 +474,7 @@ public class FakePlayerUtilTester {
         };
         NeoForge.EVENT_BUS.addListener(listener);
         try {
-            FakePlayer leased;
+            ServerPlayer leased;
             try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, owner, helper.absolutePos(new BlockPos(1, 1, 1)))) {
                 leased = lease.player();
                 leased.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 2));
@@ -483,11 +484,11 @@ public class FakePlayerUtilTester {
             check(!leased.isUsingItem() && leased.getUseItem().isEmpty(), "closing the lease ends the use");
             check(!finishCauses.contains(leased), "closing the lease emits no ITEM_INTERACT_FINISH vibration");
 
-            FakePlayer fetched = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+            ServerPlayer fetched = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
             fetched.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.SHIELD));
             fetched.startUsingItem(InteractionHand.OFF_HAND);
             check(fetched.isUsingItem(), "precondition: the fetched player is raising a shield");
-            FakePlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+            ServerPlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
             check(again == fetched, "the same cached player comes back");
             check(!again.isUsingItem() && again.getUseItem().isEmpty(), "the fetch-time reset ends the use");
             check(again.getUsedItemHand() == InteractionHand.MAIN_HAND, "the used-hand flag is back to a fresh player's");

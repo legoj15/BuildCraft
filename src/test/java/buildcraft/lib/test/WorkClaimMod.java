@@ -34,9 +34,10 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * (the crop cell, above the soil) for a placement, the block the using player STANDS in for an item right-click.
  *
  * <p>On Fabric the right-click is {@code UseBlockCallback} and the item use {@code UseItemCallback}, each registered
- * once (Fabric events cannot be unregistered) and handed to the open claims. Fabric API has no placement event, so
- * there a claim never sees a placement (FabricProtection.canPlace's gap) and a test of a placement refusal is not in
- * the Fabric set.
+ * once (Fabric events cannot be unregistered) and handed to the open claims. Fabric API has no placement event; a
+ * Fabric claim mod answers placements through Common Protection API, so there the placement half is a
+ * {@code ProtectionProvider} each claim registers and removes again. The provider is asked once per cell, where
+ * NeoForge posts one event for a multi-cell placement (at its first cell).
  */
 public final class WorkClaimMod implements AutoCloseable {
 
@@ -52,7 +53,10 @@ public final class WorkClaimMod implements AutoCloseable {
     private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
     private final Consumer<PlayerInteractEvent.RightClickItem> itemListener;
     //?} else {
-    /*private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /*private static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /^* This claim's Common Protection API provider id: registered by the constructor, removed by close. *^/
+    private net.minecraft.resources.Identifier providerId;
 
     static {
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
@@ -115,9 +119,35 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem.class, itemListener);
         //?} else {
-        /*OPEN.add(this);*/
+        /*OPEN.add(this);
+        // The placement: a Common Protection API provider, as a Fabric claim mod answers one (it refuses nothing else:
+        // the right-click and the item use are the callbacks above).
+        providerId = net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcraftunofficial_gametest",
+                "work_claim_" + IDS.incrementAndGet());
+        eu.pb4.common.protection.api.CommonProtection.register(providerId, new PlaceProvider());*/
         //?}
     }
+
+    //? if fabric {
+    /*/^* The placement half of the claim, asked by FabricProtection.canPlace and canPlaceOver. *^/
+    private final class PlaceProvider implements eu.pb4.common.protection.api.ProtectionProvider {
+        @Override
+        public boolean isProtected(net.minecraft.world.level.Level level, BlockPos pos) {
+            return false;
+        }
+
+        @Override
+        public boolean isAreaProtected(net.minecraft.world.level.Level level, net.minecraft.world.phys.AABB area) {
+            return false;
+        }
+
+        @Override
+        public boolean canPlaceBlock(net.minecraft.world.level.Level level, BlockPos pos,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return !placeAsk(pos);
+        }
+    }*/
+    //?}
 
     /** Counts a right-click at {@code pos} if watched; true if it is refused. */
     private boolean toolAsk(BlockPos pos) {
@@ -179,7 +209,8 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.unregister(placeListener);
         NeoForge.EVENT_BUS.unregister(itemListener);
         //?} else {
-        /*OPEN.remove(this);*/
+        /*OPEN.remove(this);
+        eu.pb4.common.protection.api.CommonProtection.remove(providerId);*/
         //?}
     }
 }

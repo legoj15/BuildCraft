@@ -46,9 +46,10 @@ import buildcraft.platform.event.HookOrder;
  *
  * <p><b>Gaps</b> (Fabric API has no such event; the hook registers nothing and its listener never runs):
  * {@link #onChunkSent} (wire systems reach a newly watching player on their next change instead),
- * {@link #onFinalizeSpawn}, {@link #onBlockPlace} (no placement event, as in {@code FabricProtection}),
- * {@link #onNeighborNotify}, {@link #onExplosionDetonate} and {@link #syncRecipeTypes} (Fabric syncs recipes per
- * serializer, not per type). Narrower than NeoForge: {@link #onLevelUnload} sees server levels only (a client level's
+ * {@link #onFinalizeSpawn}, {@link #onNeighborNotify}, {@link #onExplosionDetonate} and {@link #syncRecipeTypes}
+ * (Fabric syncs recipes per serializer, not per type). Narrower than NeoForge: {@link #onBlockPlace} sees only the
+ * placements BuildCraft's machines make through {@code FabricProtection} (Fabric API has no placement event, so a
+ * player's own placement is not seen), {@link #onLevelUnload} sees server levels only (a client level's
  * unload is a client hook), {@link #onPlayerTickEnd} runs once per server tick for every player rather than inside each
  * player's own tick, {@link #onLivingDrops} adds its drops to the level after vanilla's own (Fabric's after-death
  * callback has no drop list), and a {@code receiveCancelled} {@link #onEntityInteract} listener is never told about a
@@ -183,7 +184,8 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onBlockPlace(HookOrder order, boolean receiveCancelled, Consumer<BlockPlace> listener) {
-        // Gap: Fabric API has no block-placement event (see the class documentation)
+        // Narrower: Fabric API has no block-placement event, so only machine placements are seen (class documentation).
+        FabricProtection.addPlaceListener(order, receiveCancelled, listener);
     }
 
     @Override

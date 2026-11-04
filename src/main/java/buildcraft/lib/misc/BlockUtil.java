@@ -408,7 +408,7 @@ public class BlockUtil {
         if (ask != ClickVerdict.FORCE_ITEM && itemGateStops(player, stack)) {
             return refused(player);
         }
-        InteractionResult result = stack.useOn(new UseOnContext(level, player, hand, stack, hit));
+        InteractionResult result = Platform.protection().useItemOn(new UseOnContext(level, player, hand, stack, hit));
         // Behaviour, not API: vanilla's useItemOn swaps the hand only from 26.3 (see the Javadoc above).
         //? if >=26.3 {
         if (result instanceof InteractionResult.Success success) {

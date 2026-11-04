@@ -219,6 +219,11 @@ repositories {
         forRepository { maven("https://maven.modmuss50.me/") }
         filter { includeGroup("teamreborn") }
     }
+    // Nucleoid's maven, for Common Protection API alone.
+    exclusiveContent {
+        forRepository { maven("https://maven.nucleoid.xyz/") }
+        filter { includeGroup("eu.pb4") }
+    }
 }
 
 dependencies {
@@ -246,6 +251,11 @@ dependencies {
     // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are
     // unchanged in the 8.x this node has, so its own transitive transfer-api pin is left out.
     compileOnly("teamreborn:energy:5.0.0") { isTransitive = false }
+    // Common Protection API, the API Fabric claim mods answer "may this player break, place or use here" through
+    // (FabricProtection). MIT, so it ships inside the jar (Loom's jar-in-jar `include`, carrying its own licence
+    // file), as Fabric mods conventionally ship it; the loader keeps the newest copy when several mods bundle it.
+    implementation("eu.pb4:common-protection-api:2.0.0") { isTransitive = false }
+    include("eu.pb4:common-protection-api:2.0.0")
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

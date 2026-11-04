@@ -21,21 +21,24 @@ import buildcraft.api.template.ITemplateHandler;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.BlockUtil;
 
+import buildcraft.platform.Platform;
+
 public enum TemplateHandlerDefault implements ITemplateHandler {
     INSTANCE;
 
     /**
      * Clicks {@code stack} (held in {@code player}'s main hand) on the top face of the target cell, the way a player
      * places a block. With protection checks on (the default) the click asks first like a player's does, through
-     * {@link BlockUtil#tryUseItemOnBlock}: a claim mod can refuse the right-click, and NeoForge's placement capture
-     * still asks about the placement itself. With {@link BCCoreConfig#minePlayerProtected} on, the item is used
-     * straight away (the capture is NeoForge's own and still runs).
+     * {@link BlockUtil#tryUseItemOnBlock}: a claim mod can refuse the right-click, and the placement capture
+     * ({@code PlatformProtection.useItemOn}) still asks about the placement itself. With
+     * {@link BCCoreConfig#minePlayerProtected} on, the item is used straight away (the capture still runs).
      */
     @Override
     public boolean handle(Level world, BlockPos pos, Player player, ItemStack stack) {
         BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
         if (BCCoreConfig.minePlayerProtected.get()) {
-            return stack.useOn(new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitResult))
+            return Platform.protection()
+                .useItemOn(new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitResult))
                 .consumesAction();
         }
         return BlockUtil.tryUseItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hitResult)

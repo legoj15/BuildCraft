@@ -198,13 +198,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:machine_protection_place_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::placeProbeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:builder_claim_filler_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::fillerAsksLikeAPlayerAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
-        //?}
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.
         reg.accept("buildcraftunofficial:builder_stall_floating_torch_cant_stand", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderReportsAFloatingTorchAsCantStand);
         reg.accept("buildcraftunofficial:builder_stall_unbreakable_does_not_block_placing", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderPlacesAroundUnbreakableBlockAndReportsIt);
@@ -233,21 +230,15 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_hoe_asks_right_click_before_tilling", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHoeAsksTheRightClickEventBeforeTilling);
         reg.accept("buildcraftunofficial:stripes_refused_click_ends_dispenser_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickEndsTheDispenserFallthrough);
         reg.accept("buildcraftunofficial:stripes_refused_soil_click_ends_seed_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedSoilClickEndsTheSeedFallthrough);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_refused_claim_stops_block_placement", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClaimStopsAStripesPipePlacingABlock);
         reg.accept("buildcraftunofficial:stripes_fire_needs_placement_ask_at_target", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testFireNeedsThePlacementAskAtTheTarget);
-        //?}
         // Not on Fabric: Fabric has no shearable-block extension (FabricShearServices gap).
         //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_shears_ask_break_protection", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testShearsAskBreakProtectionBeforeCutting);
         reg.accept("buildcraftunofficial:stripes_refused_click_after_shears_pass_keeps_digging", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickAfterShearsPassDoesNotStopTheDig);
         //?}
         reg.accept("buildcraftunofficial:stripes_air_use_asks_item_right_click", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseAsksTheItemRightClickEvent);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_air_use_bucket_asks_cells_it_touches", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseBucketAsksTheCellsItTouches);
-        //?}
         reg.accept("buildcraftunofficial:stripes_air_use_hands_product_back_down_pipe", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseHandsTheProductBackDownThePipe);
         reg.accept("buildcraftunofficial:stripes_refused_till_ends_hoe_handler", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedTillEndsTheHoeHandler);
         // Not on Fabric: NeoForge's EntityInteract cancellation result and listener priorities.
@@ -268,10 +259,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);
         reg.accept("buildcraftunofficial:stripes_refused_extension_returns_stack", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedExtensionSendsTheStackBack);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_refused_placement_returns_same_tick_stacks", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedPlacementSendsBothSameTickStacksBack);
-        //?}
         reg.accept("buildcraftunofficial:stripes_lone_pipe_drops_what_it_cannot_send_back", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testLoneStripesPipeDropsWhatItCannotSendBack);
         
         // Shape Patterns
@@ -480,13 +468,10 @@ public class BuildCraftGameTests {
         // The frame block is placed by the quarry itself, so it asks for the placement like the Builder does: a frame-line
         // cell a claim refuses is a parked gap, asked again once its window ends (the cell stays air, so the retry cannot
         // tell the lift by the cell changing), and a claim that appears while the block is being made still stops it.
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:quarry_frame_skips_cell_where_placement_refused", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameSkipsCellWherePlacementIsRefused);
         reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementClaimIsLifted);
         reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_lifted_under_break_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementLiftedUnderBreakClaim);
         reg.accept("buildcraftunofficial:quarry_frame_cell_claimed_mid_task_not_framed", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCellClaimedMidTaskIsNotFramed);
-        //?}
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -673,10 +658,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through", () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:flood_gate_respects_claimed_cells", () -> buildcraft.factory.FloodGateTester::testRefusedCellIsNotFlooded);
-        //?}
 
         // The wrenches as real tools (issue #34): mining rules, wear, and the zombies that carry or drop one
         reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);
@@ -757,11 +739,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_water", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedWaterAlone);
         // ... and a tube is a block placed: it asks for the placement of an air cell too (and of a water cell, besides the
         // break ask), and asks only about the cells that are to receive a tube.
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:mining_well_tube_asks_placement_before_air", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeAsksPlacementBeforeTakingAir);
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_water_where_placement_refused", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesWaterWherePlacementIsRefused);
-        //?}
 
         // An idle pump backs its flood-fill rebuilds off, yet still finds fluid reaching its column at the old cadence
         // and wakes on an adjacent block change.
@@ -1268,14 +1247,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_farmer_moves_on_from_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerMovesOnFromARefusedTill);
         reg.accept("buildcraftunofficial:robot_farmer_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSleepsAfterRepeatedRefusals);
         reg.accept("buildcraftunofficial:robot_farmer_skips_dirt_it_may_not_break", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSkipsDirtItMayNotBreak);
-        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_plant_failure_keeps_seed", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::refusedPlantingKeepsTheSeed);
         reg.accept("buildcraftunofficial:robot_plant_asks_right_click_first", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::plantingAsksTheRightClickEventFirst);
         reg.accept("buildcraftunofficial:robot_planter_does_not_retry_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterDoesNotRetryARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_moves_on_from_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterMovesOnFromARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);
-        //?}
         // The break boards and the harvester remember a break that simply failed (a block that refuses), then sleep.
         reg.accept("buildcraftunofficial:robot_break_board_does_not_retry_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardDoesNotRetryABlockItCannotBreak);
         reg.accept("buildcraftunofficial:robot_break_board_moves_on_from_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardMovesOnFromABlockItCannotBreak);

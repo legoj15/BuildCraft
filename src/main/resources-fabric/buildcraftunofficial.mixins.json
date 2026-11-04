@@ -10,6 +10,7 @@
     "FireBlockMixin",
     "FlowingFluidAccessor",
     "LavaFluidMixin",
+    "LevelMixin",
     "LivingEntityMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",

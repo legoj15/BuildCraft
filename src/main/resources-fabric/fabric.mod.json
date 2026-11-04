@@ -44,6 +44,7 @@
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": ">=${fabric_api_version}",
     "minecraft": "~${minecraft_version}",
-    "forgeconfigapiport": ">=26.3.1"
+    "forgeconfigapiport": ">=26.3.1",
+    "common-protection-api": ">=2.0.0"
   }
 }

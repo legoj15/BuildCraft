@@ -12,8 +12,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -88,6 +90,14 @@ public interface PlatformProtection {
      * refused the use.
      */
     boolean canUseItem(Player player, InteractionHand hand);
+
+    /**
+     * Runs the item's use on a block ({@code context.getItemInHand().useOn(context)}) with the placement protection a
+     * player's click gets: once the use is done, the blocks it set down are asked about as a placement, and if that is
+     * refused every block the use changed is put back, the stack is restored and the use answers {@code FAIL}. A
+     * bucket's use is not asked about. Asks nothing before the use: {@link #rightClickBlock} is the click's own ask.
+     */
+    InteractionResult useItemOn(UseOnContext context);
 
     /** Records the block (state and block entity data) at {@code pos}, to ask {@link #canPlaceOver} about later, or
      *  to put back. */

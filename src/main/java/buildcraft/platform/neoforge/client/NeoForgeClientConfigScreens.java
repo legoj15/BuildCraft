@@ -6,10 +6,10 @@
 package buildcraft.platform.neoforge.client;
 
 //? if neoforge {
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
+import buildcraft.platform.neoforge.NeoForgeModBus;
 import buildcraft.platform.client.ClientConfigScreens;
 
 /** {@link ClientConfigScreens} on NeoForge: NeoForge's generated {@link ConfigurationScreen}. */
@@ -17,7 +17,7 @@ public final class NeoForgeClientConfigScreens implements ClientConfigScreens {
 
     @Override
     public void registerConfigScreen() {
-        ModLoadingContext.get().getActiveContainer()
+        NeoForgeModBus.container()
                 .registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 }

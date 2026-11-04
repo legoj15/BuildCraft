@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.item.ItemModel;
 //?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.ModelEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 
@@ -60,8 +58,7 @@ public class BCSiliconClient {
      * This event fires after all models are baked and after EntityRenderersEvent has
      * completed, so PipeApiClient.registry is guaranteed to be set by Transport.
      */
-    @SubscribeEvent
-    public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+    public static void onModifyBakingResult() {
         // Register facade baker via API (fires after Transport's registerRenderers)
         if (PipeApiClient.registry != null) {
             PipeApiClient.registry.registerBaker(KeyPlugGate.class, buildcraft.silicon.client.model.plug.PlugGateBaker.INSTANCE);
@@ -75,10 +72,21 @@ public class BCSiliconClient {
             LOGGER.warn("[silicon.client] PipeApiClient.registry is null at ModifyBakingResult! "
                 + "Facade in-world rendering will not work.");
         }
+    }
 
+    /**
+     * Swap the vanilla facade, gate and lens item models for the dynamic ones, and cache the blockstate models for
+     * the deferred facade deduplication. Runs right after {@link #onModifyBakingResult} on each bake.
+     */
+    //? if >=1.21.10 {
+    public static void onEditBakedModels(net.minecraft.client.resources.model.ModelBakery.BakingResult bakingResult) {
+    //?} else {
+    /*public static void onEditBakedModels(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel> bakedModels) {*/
+    //?}
         //? if >=1.21.10 {
         // Swap vanilla item model with dynamic facade model
-        var itemModels = event.getBakingResult().itemStackModels();
+        var itemModels = bakingResult.itemStackModels();
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
         // MC 26.1: FacadeItemModel no longer needs the vanilla wrapper
         // (BlockStateModelWrapper fields completely changed)
@@ -103,7 +111,7 @@ public class BCSiliconClient {
         //?} else {
         /*// 1.21.1: all baked models live in one Map<ModelResourceLocation, BakedModel>. Swap each
         // plug item's "inventory" model with its dynamic BakedModel (Facade/Gate/LensItemModel).
-        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models = event.getModels();
+        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models = bakedModels;
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
         net.minecraft.client.resources.model.ModelResourceLocation facadeMrl = net.minecraft.client.resources.model.ModelResourceLocation.inventory(facadeId);
         if (models.get(facadeMrl) != null) {
@@ -125,11 +133,11 @@ public class BCSiliconClient {
         // We can't run dedup here because ItemStack components aren't bound yet
         // during the initial resource reload. Dedup runs later via runDeferredDedup().
         //? if >=1.21.10 {
-        cachedBlockStateModels = event.getBakingResult().blockStateModels();
+        cachedBlockStateModels = bakingResult.blockStateModels();
         //?} else {
         /*// 1.21.1 has no blockStateModels() accessor — build a BlockState->BakedModel view of the
         // unified model map (keyed via BlockModelShaper.stateToModelLocation) for FacadeDeduplicator.
-        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> allModels = event.getModels();
+        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> allModels = bakedModels;
         java.util.Map<net.minecraft.world.level.block.state.BlockState, net.minecraft.client.resources.model.BakedModel> byState = new java.util.HashMap<>();
         for (net.minecraft.world.level.block.Block block : BuiltInRegistries.BLOCK) {
             for (net.minecraft.world.level.block.state.BlockState state : block.getStateDefinition().getPossibleStates()) {
@@ -151,8 +159,7 @@ public class BCSiliconClient {
      * reload. The joined per-pipe cache above these goes after them, in
      * {@code BCTransportClient#onBakingCompleted} (LOWEST priority).
      */
-    @SubscribeEvent
-    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+    public static void onBakingCompleted() {
         FacadeItemModel.onModelBake();
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
         buildcraft.silicon.client.model.LensItemModel.onModelBake();
@@ -224,8 +231,11 @@ public class BCSiliconClient {
         }
     }
 
-    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
-        modEventBus.register(BCSiliconClient.class);
+    public static void initClient() {
+        ClientPlatform.sinks().onModelsBaking(BCSiliconClient::onModifyBakingResult);
+        ClientPlatform.sinks().editBakedModels(BCSiliconClient::onEditBakedModels);
+        ClientPlatform.sinks().onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT,
+                BCSiliconClient::onBakingCompleted);
         registerScreens(ClientPlatform.sinks());
         buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.init();
         ClientPlatform.hooks().onLevelRender(buildcraft.silicon.client.RenderLaser::onRenderLevel);

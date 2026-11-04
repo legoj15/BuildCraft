@@ -8,7 +8,6 @@ package buildcraft.energy;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import java.util.function.Supplier;
 
@@ -39,7 +38,7 @@ public class BCEnergyMenuTypes {
             "mj_dynamo",
             () -> Platform.menus().create(ContainerDynamoMJ::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

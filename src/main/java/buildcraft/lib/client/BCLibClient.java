@@ -8,8 +8,6 @@ package buildcraft.lib.client;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
@@ -25,7 +23,7 @@ import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCLibClient {
-    public static void initClient(IEventBus modEventBus) {
+    public static void initClient() {
         // Persist ledger open/closed state across MC restarts. Stored alongside the other
         // BuildCraft per-mod files, separate from the NeoForge ModConfigSpec configs (which
         // would have been overkill for a couple of booleans). Loads existing state synchronously
@@ -59,7 +57,7 @@ public class BCLibClient {
         sinks.spriteSourceType(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.TYPE);*/
         //?}
 
-        modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
+        sinks.onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT, () -> {
             // The atlases are live by now; every holder re-resolves its sprite on next use.
             buildcraft.lib.client.sprite.SpriteHolderRegistry.invalidateAll();
             java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();

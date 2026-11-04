@@ -23,7 +23,13 @@ sourceSets {
         // Only the platform layer compiles here until the rest of BC has a Fabric route. The filter applies to
         // whichever directory Stonecutter points the source set at (src/ raw, or this node's generated copy).
         // buildcraft/api/fluids is the loader-neutral BCFluidStack the platform converts (vanilla types only).
-        java { include("buildcraft/platform/**", "buildcraft/api/fluids/**") }
+        java {
+            include("buildcraft/platform/**", "buildcraft/api/fluids/**")
+            // The Fabric entrypoints call BuildCraft's common and client init (buildcraft.core), which this node does
+            // not compile yet: written, but left out until Phase 2 widens the filter.
+            exclude("buildcraft/platform/fabric/BCFabricEntrypoint.java",
+                    "buildcraft/platform/fabric/client/BCFabricClientEntrypoint.java")
+        }
         // BC's resources are NeoForge's (mods.toml, the data down-ports); a Fabric node ships none yet.
         resources { exclude("**") }
     }

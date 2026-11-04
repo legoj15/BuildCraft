@@ -8,7 +8,6 @@ package buildcraft.builders;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import java.util.function.Supplier;
 
@@ -49,7 +48,7 @@ public class BCBuildersBlockEntities {
             "quarry",
             () -> BlockEntityTypeUtilBC.create(TileQuarry::new, BCBuildersBlocks.QUARRY.get()));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

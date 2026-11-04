@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders;
 
-import net.neoforged.bus.api.IEventBus;
 import buildcraft.lib.item.ItemEnchantableMachine;
 
 import buildcraft.api.enums.EnumSnapshotType;
@@ -69,7 +68,7 @@ public class BCBuildersItems {
             props -> new ItemSchematicSingle(props, true),
             props -> props.stacksTo(1));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
     }
 }

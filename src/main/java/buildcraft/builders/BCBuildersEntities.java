@@ -9,7 +9,6 @@ package buildcraft.builders;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.neoforged.bus.api.IEventBus;
 
 import java.util.function.Supplier;
 
@@ -32,7 +31,7 @@ public class BCBuildersEntities {
                     /*.build(key.toString()));*/
                     //?}
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ENTITIES.subscribe();
     }
 }

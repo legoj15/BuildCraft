@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.factory.container.ContainerChute;
@@ -44,7 +43,7 @@ public class BCFactoryMenuTypes {
             MENU_TYPES.register("heat_exchange",
                     () -> Platform.menus().create(ContainerHeatExchange::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

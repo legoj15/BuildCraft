@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.platform.Platform;
 import buildcraft.robotics.container.ContainerProgrammingTable;
@@ -40,7 +39,7 @@ public class BCRoboticsMenuTypes {
             MENU_TYPES.register("requester",
                     () -> Platform.menus().create(ContainerRequester::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

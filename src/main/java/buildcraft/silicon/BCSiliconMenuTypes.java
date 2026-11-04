@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.platform.Platform;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
@@ -36,7 +35,7 @@ public class BCSiliconMenuTypes {
     public static final Supplier<MenuType<buildcraft.silicon.container.ContainerGate>> GATE =
         MENU_TYPES.register("gate", () -> Platform.menus().create(buildcraft.silicon.container.ContainerGate::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

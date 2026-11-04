@@ -13,7 +13,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.DyeColor;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.BCLibItems;
 import buildcraft.core.item.ItemPaintbrush_BC8;
@@ -138,7 +137,7 @@ public class BCCoreCreativeTabs {
                             })
                             .build());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         CREATIVE_MODE_TABS.subscribe();
     }
 }

@@ -5,7 +5,6 @@
 
 package buildcraft.energy;
 
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.slf4j.Logger;
@@ -26,22 +25,22 @@ public class BCEnergy {
     public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCEnergy.class);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Register all deferred registries
-        BCEnergyFluids.init(modEventBus);
-        BCEnergyFeatures.init(modEventBus);
-        BCEnergyBlocks.init(modEventBus);
-        BCEnergyItems.init(modEventBus);
-        BCEnergyBlockEntities.init(modEventBus);
-        BCEnergyMenuTypes.init(modEventBus);
+        BCEnergyFluids.init();
+        BCEnergyFeatures.init();
+        BCEnergyBlocks.init();
+        BCEnergyItems.init();
+        BCEnergyBlockEntities.init();
+        BCEnergyMenuTypes.init();
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.energy.client.BCEnergyClient.initClient(modEventBus);
+            buildcraft.energy.client.BCEnergyClient.initClient();
         }
 
         // Register NeoForge capabilities for engines
-        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
 

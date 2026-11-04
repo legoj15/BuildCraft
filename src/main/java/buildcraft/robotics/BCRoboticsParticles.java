@@ -11,7 +11,6 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.robotics.particle.RobotEnergyParticleOptions;
 import buildcraft.platform.registry.BCRegistrar;
@@ -38,7 +37,7 @@ public class BCRoboticsParticles {
                 }
             });
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         PARTICLE_TYPES.subscribe();
     }
 }

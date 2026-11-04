@@ -6,7 +6,10 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import java.util.List;
+/*import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
@@ -32,6 +35,7 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -41,9 +45,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.world.level.material.Fluid;
 
+import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
@@ -52,8 +58,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.SpriteSourceRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
+import net.fabricmc.fabric.api.resource.v1.reloader.ResourceReloaderKeys;
 
 import buildcraft.platform.client.ClientRegistrationSinks;
+import buildcraft.platform.event.HookOrder;
 
 /^*
  * {@link ClientRegistrationSinks} on Fabric: every call registers immediately, as Fabric runs client initialisation
@@ -62,6 +70,7 @@ import buildcraft.platform.client.ClientRegistrationSinks;
  * access wideners open.
  *^/
 public final class FabricClientRegistrationSinks implements ClientRegistrationSinks {
+    private final EnumMap<HookOrder, List<Runnable>> modelsBaked = new EnumMap<>(HookOrder.class);
 
     @Override
     public <M extends AbstractContainerMenu, U extends Screen & MenuAccess<M>> void menuScreen(
@@ -125,6 +134,38 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public void clientReloadListener(Identifier id, PreparableReloadListener listener) {
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(id, listener);
+    }
+
+    @Override
+    public void onModelsBaking(Runnable listener) {
+        // A model loading plugin's initializer runs at the start of every model load, before anything bakes.
+        ModelLoadingPlugin.register(context -> listener.run());
+    }
+
+    @Override
+    public void editBakedModels(Consumer<ModelBakery.BakingResult> editor) {
+        // Gap: Fabric API 26.3 offers per-model after-bake modifiers only (ModelModifier.AfterBakeBlock/AfterBakeItem),
+        // never the whole baked set, so a whole-set editor cannot run; the editor's model swaps are absent on Fabric.
+    }
+
+    @Override
+    public synchronized void onModelsBaked(HookOrder order, Runnable listener) {
+        if (modelsBaked.isEmpty()) {
+            // One reload listener, ordered after the model manager's, whose apply step makes the new models live.
+            Identifier id = Identifier.fromNamespaceAndPath("buildcraftunofficial", "models_baked");
+            ResourceLoader loader = ResourceLoader.get(PackType.CLIENT_RESOURCES);
+            loader.registerReloadListener(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
+            loader.addListenerOrdering(ResourceReloaderKeys.Client.MODELS, id);
+        }
+        modelsBaked.computeIfAbsent(order, key -> new ArrayList<>()).add(listener);
+    }
+
+    private synchronized void runModelsBaked() {
+        for (HookOrder order : HookOrder.values()) {
+            for (Runnable listener : modelsBaked.getOrDefault(order, List.of())) {
+                listener.run();
+            }
+        }
     }
 
     @Override

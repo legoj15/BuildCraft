@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
@@ -97,7 +96,7 @@ public class BCRoboticsCreativeTabs {
                             })
                             .build());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         CREATIVE_MODE_TABS.subscribe();
     }
 }

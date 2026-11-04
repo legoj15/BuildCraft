@@ -29,10 +29,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import net.neoforged.bus.api.Event;
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.event.IModBusEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -40,12 +40,15 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 import buildcraft.platform.client.ClientRegistrationSinks;
+import buildcraft.platform.event.HookOrder;
+import buildcraft.platform.neoforge.NeoForgeGameHooks;
+import buildcraft.platform.neoforge.NeoForgeModBus;
 
 /**
  * {@link ClientRegistrationSinks} on NeoForge: each call is queued and replayed inside its mod-bus event.
  *
- * <p><b>Replay.</b> The first call for an event type subscribes one listener for it on the mod bus of the mod being
- * constructed (BuildCraft: the calls are made from its client init), and that listener replays the event type's
+ * <p><b>Replay.</b> The first call for an event type subscribes one listener for it on BuildCraft's mod bus
+ * ({@link NeoForgeModBus}; the calls are made from its client init), and that listener replays the event type's
  * queue in call order every time the event fires, exactly as the hand-written listeners it replaces did. Suppliers
  * are read only then, once the registries are filled.
  */
@@ -176,6 +179,34 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
     }*/
     //?}
 
+    // The model hooks fire on every reload, not once, and are added straight to the bus (no replay queue), so each
+    // listener keeps its own place among the others: what the hand-written listeners they replace did.
+    @Override
+    public void onModelsBaking(Runnable listener) {
+        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class, event -> listener.run());
+    }
+
+    //? if >=1.21.10 {
+    @Override
+    public void editBakedModels(
+            Consumer<net.minecraft.client.resources.model.ModelBakery.BakingResult> editor) {
+        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class,
+                event -> editor.accept(event.getBakingResult()));
+    }
+    //?} else {
+    /*@Override
+    public void editBakedModels(Consumer<Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel>> editor) {
+        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class, event -> editor.accept(event.getModels()));
+    }*/
+    //?}
+
+    @Override
+    public void onModelsBaked(HookOrder order, Runnable listener) {
+        NeoForgeModBus.get().addListener(NeoForgeGameHooks.priority(order), false, ModelEvent.BakingCompleted.class,
+                event -> listener.run());
+    }
+
     //? if >=26.2 {
     @Override
     public <S extends net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState> void pipRenderer(
@@ -237,7 +268,7 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
             registrations = new ArrayList<>();
             pending.put(type, registrations);
             List<Consumer<?>> replayed = registrations;
-            ModLoadingContext.get().getActiveContainer().getEventBus()
+            NeoForgeModBus.get()
                     .addListener(type, event -> replay(replayed, event));
         }
         registrations.add(registration);

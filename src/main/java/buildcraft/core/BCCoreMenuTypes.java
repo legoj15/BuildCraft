@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.core.list.ContainerList;
 import buildcraft.platform.Platform;
@@ -24,7 +23,7 @@ public class BCCoreMenuTypes {
             MENU_TYPES.register("list",
                     () -> Platform.menus().create(ContainerList::fromNetwork));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
@@ -49,7 +48,7 @@ public class BCSiliconCreativeTabs {
                             .displayItems(CreativeTabContents.generator(FACADE_TAB_KEY))
                             .build());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         CREATIVE_MODE_TABS.subscribe();
     }
 }

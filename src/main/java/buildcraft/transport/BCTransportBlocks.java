@@ -6,7 +6,6 @@
 
 package buildcraft.transport;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.transport.block.BlockFilteredBuffer;
@@ -35,7 +34,7 @@ public class BCTransportBlocks {
                 .dynamicShape()
                 .sound(SoundType.METAL));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

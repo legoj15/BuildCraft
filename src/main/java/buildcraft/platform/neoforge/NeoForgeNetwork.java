@@ -21,7 +21,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -37,7 +36,7 @@ import buildcraft.platform.network.PacketHandler;
  * {@link BCNetwork} on NeoForge: {@link PayloadRegistrar} and {@link PacketDistributor}.
  *
  * <p><b>Registration replay.</b> Register calls are queued, and the first one subscribes a single
- * {@link RegisterPayloadHandlersEvent} listener on the mod bus of the mod being constructed (BuildCraft: the calls
+ * {@link RegisterPayloadHandlersEvent} listener on BuildCraft's mod bus ({@link NeoForgeModBus}; the calls
  * are made from its init). The listener replays the queue in call order, each entry on a registrar of its own
  * version with the registrar's defaults ({@code HandlerThread.MAIN}, not optional), so every payload is registered
  * exactly as a hand-written {@code event.registrar(version).playToClient(...)} would. A call after the event has
@@ -89,7 +88,7 @@ public final class NeoForgeNetwork implements BCNetwork {
         pending.add(registration);
         if (!subscribed) {
             subscribed = true;
-            ModLoadingContext.get().getActiveContainer().getEventBus()
+            NeoForgeModBus.get()
                     .addListener(RegisterPayloadHandlersEvent.class, this::replay);
         }
     }

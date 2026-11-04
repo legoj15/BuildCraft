@@ -15,7 +15,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -25,8 +24,8 @@ import buildcraft.platform.registry.DataServices;
 
 /**
  * {@link DataServices} on NeoForge: a condition codec ({@link NeoForgeFlagCondition}) and a biome-modifier serializer
- * ({@link NeoForgeAllBiomesFeatureModifier}), each in a deferred register attached at once to the mod bus of the mod
- * being constructed. The biome modifier's feature comes from its JSON, so the {@code feature} argument is unused here.
+ * ({@link NeoForgeAllBiomesFeatureModifier}), each in a deferred register attached at once to BuildCraft's mod bus
+ * ({@link NeoForgeModBus}). The biome modifier's feature comes from its JSON, so the {@code feature} argument is unused here.
  */
 public final class NeoForgeDataServices implements DataServices {
     @Override
@@ -35,7 +34,7 @@ public final class NeoForgeDataServices implements DataServices {
                 DeferredRegister.create(NeoForgeRegistries.Keys.CONDITION_CODECS, id.getNamespace());
         NeoForgeFlagCondition condition = new NeoForgeFlagCondition(id.getPath(), test);
         register.register(id.getPath(), () -> condition.codec);
-        register.register(ModLoadingContext.get().getActiveContainer().getEventBus());
+        register.register(NeoForgeModBus.get());
     }
 
     @Override
@@ -45,7 +44,7 @@ public final class NeoForgeDataServices implements DataServices {
                 DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, id.getNamespace());
         MapCodec<NeoForgeAllBiomesFeatureModifier> codec = NeoForgeAllBiomesFeatureModifier.codec(step);
         register.register(id.getPath(), () -> codec);
-        register.register(ModLoadingContext.get().getActiveContainer().getEventBus());
+        register.register(NeoForgeModBus.get());
     }
 }
 //?}

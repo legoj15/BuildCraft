@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
@@ -67,7 +66,7 @@ public class BCFactoryBlockEntities {
                     () -> BlockEntityTypeUtilBC.create(TileHeatExchange::new,
                             BCFactoryBlocks.HEAT_EXCHANGE.get()));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

@@ -8,7 +8,6 @@ package buildcraft.robotics;
 
 import net.minecraft.world.level.Level;
 
-import net.neoforged.bus.api.IEventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +101,7 @@ public class BCRobotics {
     public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCRobotics.class);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Un-orphan the robotics API: wire the registry provider and board registry the rest of the
         // robotics system (DockingStation, boards) reaches through these statics. Harmless without any
         // robots present, and required the moment a docking station or board is created.
@@ -121,17 +120,17 @@ public class BCRobotics {
         BCRoboticsStatements.preInit();
 
         // Register all deferred registries
-        BCRoboticsBlocks.init(modEventBus);
-        BCRoboticsItems.init(modEventBus);
-        BCRoboticsBlockEntities.init(modEventBus);
-        BCRoboticsEntities.init(modEventBus);
-        BCRoboticsParticles.init(modEventBus);
-        BCRoboticsMenuTypes.init(modEventBus);
-        BCRoboticsCreativeTabs.init(modEventBus);
+        BCRoboticsBlocks.init();
+        BCRoboticsItems.init();
+        BCRoboticsBlockEntities.init();
+        BCRoboticsEntities.init();
+        BCRoboticsParticles.init();
+        BCRoboticsMenuTypes.init();
+        BCRoboticsCreativeTabs.init();
 
         // Ph8: the Requester's item handler — lets pipes and hoppers deliver into (and drain) the
         // request slots' paired delivery slots, each face gated by the template-matching checker.
-        modEventBus.addListener((net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
             //? if >=1.21.10 {
             event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
                 BCRoboticsBlockEntities.REQUESTER.get(),
@@ -145,7 +144,7 @@ public class BCRobotics {
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.robotics.client.BCRoboticsClient.initClient(modEventBus);
+            buildcraft.robotics.client.BCRoboticsClient.initClient();
         }
 
         // Ph4: the AI tree + the first two real boards. Each AI (and board, which is itself an AIRobot) is

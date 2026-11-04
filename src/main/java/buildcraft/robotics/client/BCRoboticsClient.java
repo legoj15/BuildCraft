@@ -9,9 +9,7 @@ package buildcraft.robotics.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.ModelEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
@@ -100,8 +98,7 @@ public class BCRoboticsClient {
      * BakingCompleted. The baked side is doubly load-bearing: PlugBakerSimple only re-bakes when the
      * quad ARRAY's identity changes, so dropping the cache is what makes the rebuilt array reach it.
      */
-    @SubscribeEvent
-    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+    public static void onBakingCompleted() {
         RobotStationModel.onModelBake();
         PlugRobotStationRenderer.onModelBake();
     }
@@ -111,8 +108,7 @@ public class BCRoboticsClient {
      * after {@link EntityRenderersEvent} has completed, so {@code PipeApiClient.registry} is
      * guaranteed to be set by Transport — mirrors {@code BCSiliconClient}'s facade/gate registration.
      */
-    @SubscribeEvent
-    public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+    public static void onModifyBakingResult() {
         if (PipeApiClient.registry != null) {
             PipeApiClient.registry.registerBaker(KeyPlugRobotStation.class, BAKER_PLUG_ROBOT_STATION);
             PipeApiClient.registry.registerRenderer(RobotStationPluggable.class, PlugRobotStationRenderer.INSTANCE);
@@ -172,8 +168,10 @@ public class BCRoboticsClient {
         }
     }
 
-    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
-        modEventBus.register(BCRoboticsClient.class);
+    public static void initClient() {
+        ClientPlatform.sinks().onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT,
+                BCRoboticsClient::onBakingCompleted);
+        ClientPlatform.sinks().onModelsBaking(BCRoboticsClient::onModifyBakingResult);
         registerClientContent(ClientPlatform.sinks());
         // Guide book: Programming/Integration Table steps on board and robot pages (type="programming"/"integration").
         buildcraft.robotics.client.guide.RoboticsGuideRecipes.register();

@@ -45,7 +45,7 @@ The 1.12.2 (8.0.x) and 1.7.10 (7.1.x) versions we're based on used a coremod and
 
 ### Initialization Pattern
 
-`BCCore` is the single `@Mod` entry point. It calls per-subsystem `BC{Name}.init(modEventBus)` (e.g. `BCTransport.init`) which registers that subsystem's `DeferredRegister<T>` instances onto the mod event bus. `BC{Name}` classes are registration helpers grouped by topic — *not* sub-mods. Client-only code lives in `BC{Name}Client` classes, instantiated only on `Dist.CLIENT`.
+`platform/neoforge/BCNeoForgeEntrypoint` is the single `@Mod` entry point and the only class that sees `IEventBus`/`ModContainer` (it hands them to `NeoForgeModBus` for the platform implementations). It runs the loader-neutral `BCCore.init()`, then `BCCoreClient.init()` on a physical client; `BCCore.init()` calls per-subsystem `BC{Name}.init()` (e.g. `BCTransport.init`), which subscribes that subsystem's `BCRegistrar`s. `BC{Name}` classes are registration helpers grouped by topic — *not* sub-mods. Client-only code lives in `BC{Name}Client` classes, instantiated only on `Dist.CLIENT`.
 
 Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSetupEvent` → `FMLLoadCompleteEvent`.
 

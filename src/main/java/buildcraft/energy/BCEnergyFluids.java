@@ -25,12 +25,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.fluids.BaseFlowingFluid;
 import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.energy.block.BCFluidBlock;
@@ -55,8 +52,8 @@ public class BCEnergyFluids {
 
     // ─── Deferred Registers ───────────────────────────────────────────
 
-    public static final DeferredRegister<FluidType> FLUID_TYPES =
-            DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, BCEnergy.MODID);
+    public static final BCRegistrar<FluidType> FLUID_TYPES =
+            BCRegistrar.create(NeoForgeRegistries.Keys.FLUID_TYPES, BCEnergy.MODID);
 
     public static final BCRegistrar<Fluid> FLUIDS =
             BCRegistrar.create(Registries.FLUID, BCEnergy.MODID);
@@ -82,7 +79,7 @@ public class BCEnergyFluids {
             int tintColor,
             int texLight,
             int texDark,
-            DeferredHolder<FluidType, FluidType> fluidType,
+            BCHolder<FluidType, FluidType> fluidType,
             BCHolder<Fluid, BaseFlowingFluid.Source> source,
             BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
             BCBlockHolder<LiquidBlock> block,
@@ -251,7 +248,7 @@ public class BCEnergyFluids {
         boolean waterLike = !crude && !baseName.equals("oil_residue");
 
         // FluidType
-        DeferredHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
+        BCHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
                 () -> new BCCustomFluidType(FluidType.Properties.create()
                         .density(density)
                         .viscosity(viscosity)
@@ -322,7 +319,7 @@ public class BCEnergyFluids {
     }
 
     private static BaseFlowingFluid.Properties makeProps(
-            DeferredHolder<FluidType, FluidType> type,
+            BCHolder<FluidType, FluidType> type,
             BCHolder<Fluid, BaseFlowingFluid.Source> source,
             BCHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
             BCBlockHolder<LiquidBlock> block,
@@ -360,8 +357,8 @@ public class BCEnergyFluids {
     }
 
     /** Register all deferred registers on the mod event bus. */
-    public static void init(IEventBus modEventBus) {
-        FLUID_TYPES.register(modEventBus);
+    public static void init() {
+        FLUID_TYPES.subscribe();
         FLUIDS.subscribe();
         BLOCKS.subscribe();
         ITEMS.subscribe();

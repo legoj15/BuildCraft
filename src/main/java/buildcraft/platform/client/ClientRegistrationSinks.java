@@ -104,6 +104,32 @@ public interface ClientRegistrationSinks {
     /** A client resource reload listener (resource packs, F3+T). The id is ignored where the loader has none. */
     void clientReloadListener(Identifier id, PreparableReloadListener listener);
 
+    /**
+     * Runs {@code listener} each time the models bake (at startup and on every resource reload), before the baked
+     * models go live (NeoForge: {@code ModelEvent.ModifyBakingResult}; Fabric: the start of each model load). Listeners
+     * run in registration order, interleaved with the {@link #editBakedModels} editors.
+     */
+    void onModelsBaking(Runnable listener);
+
+    //? if >=1.21.10 {
+    /**
+     * Edits the baked models each time they bake, before they go live (NeoForge: {@code ModelEvent.ModifyBakingResult}).
+     * Fabric API has per-model after-bake modifiers only, no whole-set edit, so there the editor does not run.
+     */
+    void editBakedModels(java.util.function.Consumer<net.minecraft.client.resources.model.ModelBakery.BakingResult> editor);
+    //?} else {
+    /*/^* Edits the baked models (block and item, one map on this line) each time they bake, before they go live. *^/
+    void editBakedModels(java.util.function.Consumer<java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel>> editor);*/
+    //?}
+
+    /**
+     * Runs {@code listener} each time the models have baked and the new atlases and models are live (at startup and on
+     * every resource reload; NeoForge: {@code ModelEvent.BakingCompleted}; Fabric: a client reload listener ordered
+     * after the model manager). Listeners run by {@code order}, then in registration order.
+     */
+    void onModelsBaked(buildcraft.platform.event.HookOrder order, Runnable listener);
+
     //? if >=26.2 {
     /** A picture-in-picture GUI renderer for one render-state class. */
     <S extends net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState> void pipRenderer(

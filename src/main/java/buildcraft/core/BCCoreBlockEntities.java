@@ -8,7 +8,6 @@ package buildcraft.core;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import java.util.function.Supplier;
 
@@ -44,7 +43,7 @@ public class BCCoreBlockEntities {
             "power_tester",
             () -> BlockEntityTypeUtilBC.create(TilePowerConsumerTester::new, BCCoreBlocks.POWER_TESTER.get()));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

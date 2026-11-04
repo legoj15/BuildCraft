@@ -8,7 +8,6 @@ package buildcraft.builders;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import java.util.function.Supplier;
 
@@ -44,7 +43,7 @@ public class BCBuildersMenuTypes {
             "replacer",
             () -> Platform.menus().create(ContainerReplacer::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

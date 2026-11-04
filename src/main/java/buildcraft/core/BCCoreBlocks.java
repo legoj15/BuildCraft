@@ -6,7 +6,6 @@
 package buildcraft.core;
 
 import buildcraft.lib.misc.SoundUtil;
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -63,7 +62,7 @@ public class BCCoreBlocks {
             BlockPowerConsumerTester::new,
             () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders;
 
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -33,13 +32,13 @@ import buildcraft.platform.Platform;
 public class BCBuilders {
     public static final String MODID = BCCore.MODID;
 
-    public static void init(IEventBus modEventBus) {
-        BCBuildersBlocks.init(modEventBus);
-        BCBuildersItems.init(modEventBus);
-        BCBuildersBlockEntities.init(modEventBus);
-        BCBuildersEntities.init(modEventBus);
-        BCBuildersMenuTypes.init(modEventBus);
-        BCBuildersFeatures.init(modEventBus);
+    public static void init() {
+        BCBuildersBlocks.init();
+        BCBuildersItems.init();
+        BCBuildersBlockEntities.init();
+        BCBuildersEntities.init();
+        BCBuildersMenuTypes.init();
+        BCBuildersFeatures.init();
 
         Platform.lifecycle().onCommonSetup(BCBuildersRecipes::init);
         Platform.lifecycle().onCommonSetup(() -> {
@@ -56,7 +55,7 @@ public class BCBuilders {
             // READ_DOMAINS with "minecraft".
             RulesLoader.loadAll();
         });
-        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
 
@@ -66,7 +65,7 @@ public class BCBuilders {
         Platform.gameHooks().onServerTickEnd(server -> BCBuildersEventDist.INSTANCE.onServerTick());
 
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);
+            buildcraft.builders.client.BCBuildersClient.initClient();
         }
     }
 

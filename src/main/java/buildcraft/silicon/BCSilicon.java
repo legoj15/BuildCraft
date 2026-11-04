@@ -6,7 +6,6 @@
 
 package buildcraft.silicon;
 
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.resources.ResourceKey;
@@ -32,14 +31,14 @@ public class BCSilicon {
     public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCSilicon.class);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Register all deferred registries
-        BCSiliconBlocks.init(modEventBus);
-        BCSiliconItems.init(modEventBus);
-        BCSiliconBlockEntities.init(modEventBus);
-        BCSiliconMenuTypes.init(modEventBus);
-        BCSiliconCreativeTabs.init(modEventBus);
-        BCSiliconRecipeSerializers.init(modEventBus);
+        BCSiliconBlocks.init();
+        BCSiliconItems.init();
+        BCSiliconBlockEntities.init();
+        BCSiliconMenuTypes.init();
+        BCSiliconCreativeTabs.init();
+        BCSiliconRecipeSerializers.init();
 
         // Register pluggable definitions (facade, etc.)
         BCSiliconPlugs.preInit();
@@ -47,12 +46,12 @@ public class BCSilicon {
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.silicon.client.BCSiliconClient.initClient(modEventBus);
+            buildcraft.silicon.client.BCSiliconClient.initClient();
         }
 
         // Register capabilities, lifecycle events, and creative tab contents (after transport's on the plugs tab:
         // transport inits first)
-        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
         Platform.lifecycle().onCommonSetupOnMain(BCSilicon::commonSetup);

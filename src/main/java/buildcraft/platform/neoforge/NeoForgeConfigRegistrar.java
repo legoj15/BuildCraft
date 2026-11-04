@@ -6,19 +6,18 @@
 package buildcraft.platform.neoforge;
 
 //? if neoforge {
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import buildcraft.platform.config.BCConfigType;
 import buildcraft.platform.config.ConfigRegistrar;
 
-/** {@link ConfigRegistrar} on NeoForge: registers the spec on the mod container under construction. */
+/** {@link ConfigRegistrar} on NeoForge: registers the spec on BuildCraft's mod container. */
 public final class NeoForgeConfigRegistrar implements ConfigRegistrar {
 
     @Override
     public void register(BCConfigType type, Object spec, String fileName) {
-        var container = ModLoadingContext.get().getActiveContainer();
+        var container = NeoForgeModBus.container();
         ModConfigSpec modSpec = (ModConfigSpec) spec;
         //? if >=26.3 {
         // FML 12 split COMMON into LOCAL (both sides, global file, never synced: the old COMMON behaviour) and

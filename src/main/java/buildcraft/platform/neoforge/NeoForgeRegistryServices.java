@@ -16,7 +16,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -26,8 +25,8 @@ import buildcraft.platform.registry.RegistryServices;
 
 /**
  * {@link RegistryServices} on NeoForge: each registrar wraps a {@link DeferredRegister}, and each holder a
- * {@link DeferredHolder}. {@link BCRegistrar#subscribe()} attaches the deferred register to the mod bus of the mod
- * being constructed (BuildCraft: the calls are made from its init), exactly where {@code register(modBus)} was called.
+ * {@link DeferredHolder}. {@link BCRegistrar#subscribe()} attaches the deferred register to BuildCraft's mod bus
+ * ({@link NeoForgeModBus}; the calls are made from its init), exactly where {@code register(modBus)} was called.
  */
 public final class NeoForgeRegistryServices implements RegistryServices {
     @Override
@@ -76,7 +75,7 @@ public final class NeoForgeRegistryServices implements RegistryServices {
 
         @Override
         public void subscribe() {
-            register.register(ModLoadingContext.get().getActiveContainer().getEventBus());
+            register.register(NeoForgeModBus.get());
         }
     }
 }

@@ -5,13 +5,10 @@
 
 package buildcraft.core;
 
-import net.neoforged.fml.common.Mod;
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -47,7 +44,6 @@ import buildcraft.robotics.zone.ZoneMapRef;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
-@Mod(BCCore.MODID)
 @SuppressWarnings("this-escape")
 public class BCCore {
     public static final String MODID = "buildcraftunofficial";
@@ -78,34 +74,42 @@ public class BCCore {
                     builder -> builder.persistent(ZoneMapRef.CODEC)
                                       .networkSynchronized(ZoneMapRef.STREAM_CODEC));
 
-    public BCCore(IEventBus modEventBus, ModContainer modContainer) {
+    /**
+     * BuildCraft's common init, run once by the loader entrypoint ({@code platform/neoforge/BCNeoForgeEntrypoint}) while
+     * the mod loads. The client init ({@link BCCoreClient#init}) follows it on a physical client.
+     */
+    public static void init() {
+        new BCCore();
+    }
+
+    private BCCore() {
         INSTANCE = this;
 
         // ─── Initialize each subsystem ──────────────────────────────────────
         // Lib must be first — other subsystems depend on its shared utilities.
-        buildcraft.lib.BCLib.init(modEventBus);
+        buildcraft.lib.BCLib.init();
 
         // Core registries
         BCCoreItems.ITEMS.subscribe();
         DATA_COMPONENTS.subscribe();
-        BCCoreBlocks.init(modEventBus);
-        BCCoreBlockEntities.init(modEventBus);
-        BCCoreFeatures.init(modEventBus);
-        BCCoreCreativeTabs.init(modEventBus);
-        BCCoreMenuTypes.init(modEventBus);
+        BCCoreBlocks.init();
+        BCCoreBlockEntities.init();
+        BCCoreFeatures.init();
+        BCCoreCreativeTabs.init();
+        BCCoreMenuTypes.init();
 
         // Per-subsystem registration helpers (order matches 1.12.2 load order)
-        buildcraft.transport.BCTransport.init(modEventBus);
-        buildcraft.factory.BCFactory.init(modEventBus);
-        buildcraft.energy.BCEnergy.init(modEventBus);
-        buildcraft.silicon.BCSilicon.init(modEventBus);
-        buildcraft.builders.BCBuilders.init(modEventBus);
-        buildcraft.robotics.BCRobotics.init(modEventBus);
+        buildcraft.transport.BCTransport.init();
+        buildcraft.factory.BCFactory.init();
+        buildcraft.energy.BCEnergy.init();
+        buildcraft.silicon.BCSilicon.init();
+        buildcraft.builders.BCBuilders.init();
+        buildcraft.robotics.BCRobotics.init();
 
         // ─── Backwards-compat aliases for older world / inventory IDs ────────
         // Must run after every subsystem register is populated (LegacyAliases reads them) and
         // before RegisterEvent fires (constructor time qualifies).
-        buildcraft.lib.registry.LegacyAliases.init(modEventBus);
+        buildcraft.lib.registry.LegacyAliases.init();
 
         // ─── Single unified config ──────────────────────────────────────────
         // Both sides, never synced, in the legacy file name so a tuned buildcraftunofficial-common.toml is still the
@@ -114,15 +118,14 @@ public class BCCore {
                 MODID + "-common.toml");
         Platform.configHooks().onLoad(BCUnifiedConfig.SPEC, BCCore::applyConfig);
         Platform.configHooks().onReload(BCUnifiedConfig.SPEC, BCCore::applyConfig);
-        if (Platform.loader().isPhysicalClient()) {
-            BCCoreClient.init(modContainer, modEventBus);
-        }
+        // BCCoreClient#init ran here; the entrypoint now runs it after this init. Nothing below listens to an event
+        // it listens to, so no event's listener order changed.
 
         Platform.lifecycle().onCommonSetup(this::preInit);
-        Platform.lifecycle().onCommonSetup(this::init);
+        Platform.lifecycle().onCommonSetup(this::commonInit);
         // Last, after every listener the other mods registered while loading: see the method's javadoc.
         Platform.lifecycle().onLoadCompleteOnMain(buildcraft.lib.misc.MachineRefusals::registerRecorder);
-        modEventBus.addListener(this::registerCapabilities);
+        buildcraft.lib.misc.CapabilityListeners.add(this::registerCapabilities);
         registerPayloads();
 
         // Block-break notifier: the break-event class differs across 26.1.x, so register it
@@ -205,8 +208,8 @@ public class BCCore {
     }
 
     /**
-     * The listeners of the classes that were {@code @EventBusSubscriber}s. FML registered those after this constructor
-     * returned (FML 12 {@code FMLModContainer.constructMod}: the constructor, then {@code AutomaticEventSubscriber}),
+     * The listeners of the classes that were {@code @EventBusSubscriber}s. FML registered those after the {@code @Mod}
+     * constructor (now {@code BCNeoForgeEntrypoint}'s, which runs this init) returned (FML 12 {@code FMLModContainer.constructMod}: the constructor, then {@code AutomaticEventSubscriber}),
      * so they are registered last here, keeping each event's listener order.
      */
     private static void registerFormerSubscribers() {
@@ -297,7 +300,7 @@ public class BCCore {
         BCCoreRecipes.fmlPreInit();
     }
 
-    private void init() {
+    private void commonInit() {
         buildcraft.core.block.VanillaPaintHandlers.fmlInit();
         buildcraft.lib.block.VanillaRotationHandlers.fmlInit();
         buildcraft.lib.list.VanillaListHandlers.register();

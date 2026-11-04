@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.neoforged.bus.api.IEventBus;
 
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 
@@ -43,7 +42,7 @@ public class BCTransportRecipeSerializers {
      *  {@code buildcraftunofficial:rf_enabled}. */
     public static final Identifier RF_ENABLED = Identifier.fromNamespaceAndPath(BCTransport.MODID, "rf_enabled");
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         RECIPE_SERIALIZERS.subscribe();
         Platform.data().registerCondition(RF_ENABLED, BCTransportConfig::rfPipeRecipesEnabled);
     }

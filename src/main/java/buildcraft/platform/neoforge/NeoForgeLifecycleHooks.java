@@ -12,7 +12,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -23,15 +22,15 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import buildcraft.platform.event.LifecycleHooks;
 
 /**
- * {@link LifecycleHooks} on NeoForge. The setup and load-complete hooks are listeners on the mod bus of the mod being
- * constructed (BuildCraft: the calls are made from its init), added at the call, so they run in the order they were
+ * {@link LifecycleHooks} on NeoForge. The setup and load-complete hooks are listeners on BuildCraft's mod bus
+ * ({@link NeoForgeModBus}; the calls are made from its init), added at the call, so they run in the order they were
  * registered; the {@code OnMain} ones are the event's {@code enqueueWork}. The server and save hooks are listeners on
  * {@link NeoForge#EVENT_BUS}.
  */
 public final class NeoForgeLifecycleHooks implements LifecycleHooks {
 
     private static IEventBus modBus() {
-        return ModLoadingContext.get().getActiveContainer().getEventBus();
+        return NeoForgeModBus.get();
     }
 
     @Override

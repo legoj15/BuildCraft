@@ -6,7 +6,6 @@
 
 package buildcraft.transport;
 
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.resources.ResourceKey;
@@ -41,24 +40,24 @@ public class BCTransport {
     public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCTransport.class);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Initialize pipe and pluggable definitions BEFORE items register
         BCTransportPipes.preInit();
         BCTransportPlugs.preInit();
         BCTransportStatements.preInit();
 
         // Register all deferred registries
-        BCTransportBlocks.init(modEventBus);
-        BCTransportItems.init(modEventBus);
-        BCTransportBlockEntities.init(modEventBus);
-        BCTransportMenuTypes.init(modEventBus);
-        BCTransportCreativeTabs.init(modEventBus);
-        BCTransportRecipeSerializers.init(modEventBus);
-        BCTransportAttachments.init(modEventBus);
+        BCTransportBlocks.init();
+        BCTransportItems.init();
+        BCTransportBlockEntities.init();
+        BCTransportMenuTypes.init();
+        BCTransportCreativeTabs.init();
+        BCTransportRecipeSerializers.init();
+        BCTransportAttachments.init();
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.transport.client.BCTransportClient.initClient(modEventBus);
+            buildcraft.transport.client.BCTransportClient.initClient();
         }
 
         // Register power/RF/fluid transfer data for pipes (deferred to commonSetup
@@ -80,7 +79,7 @@ public class BCTransport {
                 (params, output) -> addCreativeTabItems(BCTransportCreativeTabs.PIPES_TAB_KEY, output));
 
         // Register NeoForge capabilities for pipe holders
-        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
 

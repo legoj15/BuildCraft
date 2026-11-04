@@ -12,20 +12,20 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.core.BCCoreCreativeTabs;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
 
 public class BCTransportCreativeTabs {
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCTransport.MODID);
+    public static final BCRegistrar<CreativeModeTab> CREATIVE_MODE_TABS =
+            BCRegistrar.create(Registries.CREATIVE_MODE_TAB, BCTransport.MODID);
 
     public static final ResourceKey<CreativeModeTab> PIPES_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipes"));
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PIPES_TAB =
+    public static final BCHolder<CreativeModeTab, CreativeModeTab> PIPES_TAB =
             CREATIVE_MODE_TABS.register("pipes", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.pipes"))
@@ -37,7 +37,7 @@ public class BCTransportCreativeTabs {
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath(BCTransport.MODID, "plugs"));
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PLUGS_TAB =
+    public static final BCHolder<CreativeModeTab, CreativeModeTab> PLUGS_TAB =
             CREATIVE_MODE_TABS.register("plugs", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.plugs"))
@@ -46,6 +46,6 @@ public class BCTransportCreativeTabs {
                             .build());
 
     public static void init(IEventBus modEventBus) {
-        CREATIVE_MODE_TABS.register(modEventBus);
+        CREATIVE_MODE_TABS.subscribe();
     }
 }

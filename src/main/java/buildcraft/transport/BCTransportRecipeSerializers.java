@@ -23,11 +23,12 @@ import buildcraft.transport.recipe.DyedPipeRecipe;
 import buildcraft.transport.recipe.HiddenShapelessRecipe;
 import buildcraft.transport.recipe.PipePaintRecipe;
 import buildcraft.transport.recipe.RfEnabledCondition;
+import buildcraft.platform.registry.BCRegistrar;
 
 /** Custom crafting-recipe serializers for the Transport subsystem. */
 public class BCTransportRecipeSerializers {
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-            DeferredRegister.create(Registries.RECIPE_SERIALIZER, BCTransport.MODID);
+    public static final BCRegistrar<RecipeSerializer<?>> RECIPE_SERIALIZERS =
+            BCRegistrar.create(Registries.RECIPE_SERIALIZER, BCTransport.MODID);
 
     public static final Supplier<RecipeSerializer<PipePaintRecipe>> PIPE_PAINT =
             RECIPE_SERIALIZERS.register("pipe_paint", () -> PipePaintRecipe.SERIALIZER);
@@ -52,7 +53,7 @@ public class BCTransportRecipeSerializers {
             CONDITION_CODECS.register("rf_enabled", () -> RfEnabledCondition.CODEC);
 
     public static void init(IEventBus modEventBus) {
-        RECIPE_SERIALIZERS.register(modEventBus);
+        RECIPE_SERIALIZERS.subscribe();
         CONDITION_CODECS.register(modEventBus);
     }
 }

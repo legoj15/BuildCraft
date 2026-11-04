@@ -21,6 +21,8 @@ val minecraftVersion = property("minecraft_version") as String
 val fabricLoaderVersion = property("fabric_loader_version") as String
 val fabricApiVersion = property("fabric_api_version") as String
 val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
+val jeiVersion = property("jei_version") as String
+val reiVersion = property("rei_version") as String
 
 sourceSets {
     named("main") {
@@ -82,6 +84,9 @@ tasks.named<ProcessResources>("processResources") {
 // Loom registers this itself; declared so the source of fabric-loader / fabric-api is visible here.
 repositories {
     maven("https://maven.fabricmc.net/")
+    // The recipe viewers' own mavens (JEI; REI and its architectury/cloth-config).
+    maven("https://maven.blamejared.com")
+    maven("https://maven.shedaniel.me/")
     // Modrinth's maven, for Forge Config API Port alone.
     exclusiveContent {
         forRepository { maven("https://api.modrinth.com/maven") }
@@ -98,6 +103,12 @@ dependencies {
     implementation("maven.modrinth:forge-config-api-port:$forgeConfigApiPortVersion")
     compileOnly("com.electronwill.night-config:core:3.8.4")
     compileOnly("com.electronwill.night-config:toml:3.8.4")
+    // javax.annotation (@Nullable/@Nonnull, used throughout BC): ModDevGradle brings it transitively on NeoForge.
+    compileOnly("com.google.code.findbugs:jsr305:3.0.2")
+    // Recipe viewers, compile-only like on NeoForge (BC's plugins are found by the viewers' own entrypoints).
+    compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
+    compileOnly("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:$reiVersion")
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

@@ -34,10 +34,14 @@ import buildcraft.transport.BCTransportAttachments;
  * Golden save format of BuildCraft's player attachments (wire colours placed, pluggables placed, oil and fuel
  * production): the {@code neoforge:attachments} compound an entity writes, through NeoForge's own attachment holder,
  * so the platform attachment seam ({@code NeoForgeAttachmentServices}) is proven to write today's bytes. Also pins
- * that all three survive death.
+ * that all three are flagged to be copied on death.
  *
  * <p>What breaks it: a changed attachment id, a changed payload key or type, or a serializer that no longer writes
  * through the payload's own save method.
+ *
+ * <p>Whether the attachments survive death is pinned as far as BuildCraft owns it: all three are flagged copy-on-death
+ * (NeoForge's own copy then runs each through its serializer, which the round-trip test covers). The copy itself is
+ * NeoForge's, and is not run here.
  */
 public class AttachmentGoldenTest extends VanillaSetupBaseTester {
 
@@ -109,7 +113,7 @@ public class AttachmentGoldenTest extends VanillaSetupBaseTester {
     }
 
     @Test
-    public void playerAttachmentsAreCopiedOnDeath() throws ReflectiveOperationException {
+    public void playerAttachmentsAreFlaggedCopyOnDeath() throws ReflectiveOperationException {
         Field copyOnDeath = AttachmentType.class.getDeclaredField("copyOnDeath");
         copyOnDeath.setAccessible(true);
         for (AttachmentType<?> type : types()) {

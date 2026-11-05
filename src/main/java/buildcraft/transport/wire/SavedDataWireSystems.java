@@ -143,7 +143,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         return this.elementsToWireSystemsIndex.getOrDefault(element, Collections.emptyList());
     }
 
-    /** Called from the {@code ChunkWatchEvent.Sent} listener in {@code BCTransport} — after the chunk packet
+    /** Called from the chunk-sent hook {@code BCTransport} registers ({@code Platform.gameHooks().onChunkSent}:
+     *  NeoForge's {@code ChunkWatchEvent.Sent}, Fabric's chunk-send mixin) — after the chunk packet
      *  is queued on the player's connection, so the wire payloads that follow it are sent behind the chunk (1.12.2
      *  {@code BCTransportEventDist.onChunkWatch}). That send is paced: at the next {@link #tick} when the player
      *  has had none within {@link #RESEND_INTERVAL_TICKS}, otherwise when the interval is up (see

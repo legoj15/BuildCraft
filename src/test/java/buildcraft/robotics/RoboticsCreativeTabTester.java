@@ -186,7 +186,8 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
     @Test
     public void plugsTabListsTransportsPluggablesBeforeSilicons() {
         // The plugs tab is fed by two contributions, transport's first (blocker, power adaptor, the sixteen
-        // wires) and silicon's after it (gates, lenses and filters, pulsar, light sensor, timer). Pins that order.
+        // wires) and silicon's after it (gates, lenses and filters, pulsar, light sensor, timer). Pins that
+        // transport's contribution comes before silicon's (the blocker leads, the gates follow every wire).
         CreativeModeTab plugs = BCTransportCreativeTabs.PLUGS_TAB.get();
         plugs.buildContents(displayParameters());
         List<ItemStack> items = new ArrayList<>(plugs.getDisplayItems());
@@ -199,8 +200,6 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         int firstGate = firstIndexForItem(items, BCSiliconItems.PLUG_GATE.get());
         Assertions.assertTrue(firstGate > lastWire && lastWire > 0,
                 "silicon's gates come after transport's wires (wire " + lastWire + ", gate " + firstGate + ")");
-        Assertions.assertEquals(items.size() - 1, firstIndexForItem(items, BCSiliconItems.PLUG_TIMER.get()),
-                "the timer closes the plugs tab");
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

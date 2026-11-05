@@ -64,7 +64,7 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
     }
 
     // BC's own stack, for the tanks and snapshot rules that take one since S13 (same codec shape: see
-    // buildcraft.api.fluids.BCFluidStackCodecParityTest).
+    // buildcraft.platform.neoforge.BCFluidStackCodecParityTest).
     private static BCFluidStack bcLava(int mb) {
         return new BCFluidStack(Fluids.LAVA, mb);
     }
@@ -259,6 +259,47 @@ public class GoldenSaveFormatTester extends VanillaSetupBaseTester {
         });
         pinTile("tile_heat_exchange_end", tile, GoldenSaveFormatTester::newExchange,
                 GoldenSaveFormatTester::saveTo, GoldenSaveFormatTester::loadFrom);
+    }
+
+    // ---- Empty tanks ------------------------------------------------------------------------------------------------
+
+    @Test
+    public void emptyTanksLeaveNoKeyInTheSaveAndLoadBackEmpty() {
+        // Every fixture above is populated; this is the other half. A save omits an empty tank's key (the fluid codec
+        // refuses an empty stack, so a written {} would not load back either), and loading a save without the key
+        // empties a tank that held fluid: the client relies on that to see a server drain.
+        List<String> distillerKeys = List.of("fluidIn", "fluidGasOut", "fluidLiquidOut");
+        TileDistiller_BC8 distiller = newDistiller();
+        distiller.getTankIn().setFluidStack(0, bcLava(1500));
+        distiller.getTankGasOut().setFluidStack(0, bcWater(300));
+        distiller.getTankLiquidOut().setFluidStack(0, bcLava(40));
+        CompoundTag emptyDistiller = ValueIoTestUtil.write(out -> saveTo(newDistiller(), out));
+        loadFrom(distiller, ValueIoTestUtil.inputOf(emptyDistiller));
+        CompoundTag distillerReloaded = ValueIoTestUtil.write(out -> saveTo(distiller, out));
+        for (String key : distillerKeys) {
+            Assertions.assertFalse(emptyDistiller.contains(key), "an empty distiller tank writes no " + key);
+            Assertions.assertFalse(distillerReloaded.contains(key),
+                    "a distiller loaded from a save without " + key + " must hold no fluid there");
+        }
+
+        List<String> sectionKeys = List.of("sectionInput", "sectionOutput");
+        TileHeatExchange exchanger = exchangeFrom(out -> {
+            out.putBoolean("hasSection", true);
+            out.putBoolean("isStart", true);
+            out.store("sectionInput", FluidStack.CODEC, lava(1200));
+            out.store("sectionOutput", FluidStack.CODEC, water(80));
+        });
+        CompoundTag emptyExchanger = ValueIoTestUtil.write(out -> saveTo(exchangeFrom(shape -> {
+            shape.putBoolean("hasSection", true);
+            shape.putBoolean("isStart", true);
+        }), out));
+        loadFrom(exchanger, ValueIoTestUtil.inputOf(emptyExchanger));
+        CompoundTag exchangerReloaded = ValueIoTestUtil.write(out -> saveTo(exchanger, out));
+        for (String key : sectionKeys) {
+            Assertions.assertFalse(emptyExchanger.contains(key), "an empty heat exchanger tank writes no " + key);
+            Assertions.assertFalse(exchangerReloaded.contains(key),
+                    "a heat exchanger loaded from a save without " + key + " must hold no fluid there");
+        }
     }
 
     // ---- Snapshot / blueprint fluid entries -------------------------------------------------------------------------

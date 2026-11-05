@@ -6,7 +6,9 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.List;
+/*import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import net.minecraft.core.BlockPos;
@@ -125,9 +127,11 @@ public final class FabricProtection implements PlatformProtection {
         return probe != null && probe.matches(level, pos, player);
     }
 
-    /^* The {@link #onBreak} listeners, in registration order: one {@link PlayerBlockBreakEvents#BEFORE} callback (Fabric
-     *  events cannot be unregistered) hands each break to them, so a closed registration leaves nothing behind. *^/
-    private static final List<Consumer<BlockBreak>> BREAK_LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /^*
+     * The {@link #onBreak} listeners, in registration order: one {@link PlayerBlockBreakEvents#BEFORE} callback (Fabric
+     * events cannot be unregistered) hands each break to them, so a closed registration leaves nothing behind.
+     *^/
+    private static final List<Consumer<BlockBreak>> BREAK_LISTENERS = new CopyOnWriteArrayList<>();
     private static boolean breakCallbackRegistered;
 
     /^*
@@ -232,8 +236,10 @@ public final class FabricProtection implements PlatformProtection {
      * NeoForge's placement capture ({@code CommonHooks.onPlaceItemIntoWorld}) for Fabric: the block changes the use
      * makes are recorded ({@code LevelMixin}), and each changed cell is asked of the protection providers as a
      * placement. A refused placement is put back as NeoForge puts it back: in reverse, with nothing dropping while it
-     * is ({@link #isRestoring}: a half that breaks when the cell beside it is put back pops nothing). Gap: unlike NeoForge, the blocks' own placement side effects and neighbour updates have already run when
-     * a refused placement is put back.
+     * is ({@link #isRestoring}: a half that breaks when the cell beside it is put back pops nothing).
+     *
+     * <p>Gap: unlike NeoForge, the blocks' own placement side effects and neighbour updates have already run when a
+     * refused placement is put back.
      *^/
     @Override
     public InteractionResult useItemOn(UseOnContext context) {
@@ -279,7 +285,7 @@ public final class FabricProtection implements PlatformProtection {
         if (!refused) {
             return result;
         }
-        List<Captured> changed = new java.util.ArrayList<>(capture.before.values());
+        List<Captured> changed = new ArrayList<>(capture.before.values());
         Level outerRestore = restoringIn;
         restoringIn = level;
         try {

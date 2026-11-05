@@ -209,7 +209,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_refusals_belong_to_owner", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchRefusalsBelongToTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft", () -> buildcraft.lib.misc.MachineProtectionTester::namelessOwnerAsksAsBuildCraft);
-        reg.accept("buildcraftunofficial:loader_parity_refused_door_drops_nothing", () -> buildcraft.lib.misc.LoaderProtectionParityTester::refusedDoorPlacementDropsNothing);
+        reg.accept("buildcraftunofficial:loader_parity_refused_two_cell_drops_nothing", () -> buildcraft.lib.misc.LoaderProtectionParityTester::refusedTwoCellPlacementDropsNothing);
+        reg.accept("buildcraftunofficial:loader_parity_placement_ignores_world_border", () -> buildcraft.lib.misc.LoaderProtectionParityTester::machinePlacementIgnoresWorldBorder);
+        reg.accept("buildcraftunofficial:loader_parity_block_entity_joins_after_block_ticks", () -> buildcraft.lib.misc.LoaderProtectionParityTester::blockEntityJoinsAfterBlockTicks);
         reg.accept("buildcraftunofficial:loader_parity_wrench_asks_claim_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::wrenchRotationAsksClaimFirst);
         reg.accept("buildcraftunofficial:loader_parity_click_ask_runs_no_use_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::machineClickAskRunsNoUseFirst);
         reg.accept("buildcraftunofficial:loader_parity_tube_probe_is_not_player_break", () -> buildcraft.lib.misc.LoaderProtectionParityTester::tubeProbeIsNotAPlayerBreak);

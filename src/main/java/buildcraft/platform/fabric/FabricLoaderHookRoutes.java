@@ -6,7 +6,9 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.Queue;
+/*import java.util.ArrayDeque;
+import java.util.Iterator;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import net.minecraft.core.BlockPos;
@@ -117,8 +119,8 @@ public final class FabricLoaderHookRoutes {
         if (SERVER_JOINED.isEmpty()) {
             return;
         }
-        Queue<BlockEntity> due = new java.util.ArrayDeque<>();
-        for (java.util.Iterator<BlockEntity> it = SERVER_JOINED.iterator(); it.hasNext();) {
+        Queue<BlockEntity> due = new ArrayDeque<>();
+        for (Iterator<BlockEntity> it = SERVER_JOINED.iterator(); it.hasNext();) {
             BlockEntity blockEntity = it.next();
             if (blockEntity.getLevel() == level) {
                 it.remove();

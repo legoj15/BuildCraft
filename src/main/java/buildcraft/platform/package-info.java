@@ -12,13 +12,17 @@
  * per-loader ones, are loader-neutral contracts. They may name only the JDK, vanilla, other
  * {@code buildcraft.platform} types, {@code buildcraft.api.fluids} (the {@code BCFluidStack} value type) and
  * {@code buildcraft.api.capability} (the {@code BCCapability} token): both are vanilla-only, and every loader's node
- * compiles those packages. Never a loader type, and never any other BuildCraft class. That is what lets a node for
- * another loader compile the contracts alone.
+ * compiles those packages. Nullness is marked with JSR-305's {@code javax.annotation.Nullable}, as the hook
+ * contracts already do (the Fabric node has it as a compile-only dependency). Never a loader type, and never any
+ * other BuildCraft class. That is what lets a node for another loader compile the contracts alone.
  *
  * <p><b>Binder rule.</b> {@link buildcraft.platform.Platform} has one static accessor per service, each reading a
  * {@code static final} field of its own lazy holder class, so reaching one service never loads another's
- * implementation. The holders hold the only loader directive common code is allowed to carry:
- * {@code //? if neoforge} builds the NeoForge implementation, {@code //? if fabric} the Fabric one.
+ * implementation. The holders carry the binder's own loader directives: {@code //? if neoforge} builds the NeoForge
+ * implementation, {@code //? if fabric} the Fabric one. The rest of common code names a loader constant only on a
+ * patched-override arm (a member a loader's own patch gives a vanilla or BuildCraft base class, written once per
+ * loader) and in the two documented loader-metadata exceptions, the recipe-viewer plugins' REI annotations and the
+ * robot entity's class header; {@code docs/platform-layer.md} (Rules for directives) is the list.
  *
  * <p><b>Implementation-package rule.</b> Loader code lives in {@code buildcraft.platform.<loader>}, one package per
  * loader. Each of its files keeps its {@code package} line live and sits whole inside that loader's directive arm,

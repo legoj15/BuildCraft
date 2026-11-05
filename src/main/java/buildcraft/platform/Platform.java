@@ -77,7 +77,7 @@ public final class Platform {
         return SoundHolder.INSTANCE;
     }
 
-    /** Fluids: what the loader adds to a fluid stack (its display name). */
+    /** Fluids: BC fluid registration, per-fluid properties, bucket and content lookups, the stack's display name. */
     public static FluidServices fluids() {
         return FluidsHolder.INSTANCE;
     }

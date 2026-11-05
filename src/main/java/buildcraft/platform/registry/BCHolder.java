@@ -13,7 +13,9 @@ import net.minecraft.resources.ResourceKey;
 
 /**
  * One entry a {@link BCRegistrar} registered: its id and key, available at once, and its value, available once the
- * loader has registered it ({@link #get()} throws before that, as a NeoForge {@code DeferredHolder} does).
+ * loader has registered it. Asked for before that, {@link #get()} throws on NeoForge (as a {@code DeferredHolder}
+ * does; {@link #holder()} hands back the still-unbound holder), whereas on Fabric, which builds an entry when it is
+ * first asked for, both register it then, out of call order.
  *
  * <p>{@code R} is the registry's element type and {@code T} the entry's own type, mirroring NeoForge's
  * {@code DeferredHolder<R, T>}: {@link #key()} and {@link #holder()} need the registry type, {@link #get()} the
@@ -57,14 +59,20 @@ public class BCHolder<R, T extends R> implements Supplier<T> {
         return key;
     }
 
-    /** The vanilla holder of the entry, for an API that takes a {@link Holder}. */
+    /**
+     * The vanilla holder of the entry, for an API that takes a {@link Holder}. Before the entry is registered it is
+     * unbound on NeoForge (reading its value throws); on Fabric asking registers the entry now, out of call order.
+     */
     public Holder<R> holder() {
         return delegate.get();
     }
 
-    /** The registered value. Throws while the entry is not registered yet. */
+    /**
+     * The registered value. Before the entry is registered it throws on NeoForge; on Fabric it registers the entry
+     * now, out of call order (and throws only when asked for again while the entry's own factory is running).
+     */
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // the registrar made this holder for an entry of type T, so the value is a T
     public T get() {
         return (T) delegate.get().value();
     }

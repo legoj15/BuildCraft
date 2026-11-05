@@ -15,7 +15,9 @@ public interface ConfigRegistrar {
      * Registers {@code spec} for the mod being constructed.
      *
      * @param spec     the loader's spec object, built by the config class
-     * @param fileName the toml file name, or {@code null} for the loader's default name for {@code type}
+     * @param fileName the toml file name, or {@code null} for the loader's default name for {@code type}. NeoForge
+     *     honours a name from 26.3 (FML 12) only; before it the file is always named after the type's default, so a
+     *     second spec of one type cannot be told apart by name there
      */
     void register(BCConfigType type, Object spec, String fileName);
 }

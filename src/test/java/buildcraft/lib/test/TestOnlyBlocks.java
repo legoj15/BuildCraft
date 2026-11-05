@@ -7,7 +7,9 @@ package buildcraft.lib.test;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.WoodType;
 
 import buildcraft.platform.registry.BCRegistrar;
 
@@ -32,6 +34,13 @@ public final class TestOnlyBlocks {
 
     /** A shearable block that is never ready for shears; see {@link UnshearableBlock}. */
     public static final Identifier UNSHEARABLE_ID = Identifier.parse(NAMESPACE + ":unshearable");
+
+    /** A vanilla fence gate, the class BuildCraft's wrench rotation handlers are scanned for; see
+     *  {@code LateRegisteredBlockTester}. */
+    public static final Identifier SCANNED_FENCE_GATE_ID = Identifier.parse(NAMESPACE + ":scanned_fence_gate");
+
+    /** A plant, the class BuildCraft's setup lists as a soft block; see {@link ScannedPlantBlock}. */
+    public static final Identifier SCANNED_PLANT_ID = Identifier.parse(NAMESPACE + ":scanned_plant");
 
     private TestOnlyBlocks() {}
 
@@ -59,6 +68,18 @@ public final class TestOnlyBlocks {
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, UNSHEARABLE_ID);
     }
 
+    /** The registered fence gate (valid once registries are populated). */
+    public static Block scannedFenceGate() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, SCANNED_FENCE_GATE_ID);
+    }
+
+    /** The registered {@link ScannedPlantBlock} (valid once registries are populated). */
+    public static Block scannedPlant() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, SCANNED_PLANT_ID);
+    }
+
     /**
      * Registers the loader-neutral test blocks through BuildCraft's registrar, during mod construction. Only a
      * game-test run calls it (the loader hook knows which run that is): the test source set is also on the NeoForge
@@ -71,6 +92,9 @@ public final class TestOnlyBlocks {
         blocks.registerBlock(DRY_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, true), TestOnlyBlocks::properties);
         blocks.registerBlock(WET_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, false), TestOnlyBlocks::properties);
         blocks.registerBlock(UNSHEARABLE_ID.getPath(), UnshearableBlock::new, TestOnlyBlocks::properties);
+        blocks.registerBlock(SCANNED_FENCE_GATE_ID.getPath(), p -> new FenceGateBlock(WoodType.OAK, p),
+                TestOnlyBlocks::properties);
+        blocks.registerBlock(SCANNED_PLANT_ID.getPath(), ScannedPlantBlock::new, TestOnlyBlocks::properties);
         blocks.subscribe();
     }
 

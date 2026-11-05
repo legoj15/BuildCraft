@@ -10,10 +10,13 @@ package buildcraft.platform.fabric;
 import java.util.List;
 import java.util.function.Consumer;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback;
 
 import buildcraft.platform.event.LifecycleHooks;
 
@@ -21,8 +24,10 @@ import buildcraft.platform.event.LifecycleHooks;
  * {@link LifecycleHooks} on Fabric. Fabric has no setup phases after mod initialisation: the setup and load-complete
  * actions are queued, in registration order, and {@link #finishInit} runs them (common setup, then its main-thread
  * work, then load complete), all on the thread that initialises the mod. The Fabric entrypoint calls it once
- * BuildCraft's init has returned; until a Fabric entrypoint exists nothing does, which is harmless because this node
- * runs nothing.
+ * BuildCraft's init has returned.
+ *
+ * <p>That is inside BuildCraft's own mod initializer, so a mod initialised after it has not registered its blocks yet
+ * when a setup action scans the block registry; {@link #onLateBlock} hands such a scan the blocks that arrive later.
  *
  * <p>Fabric's {@code SERVER_STARTING} runs where NeoForge's about-to-start does, before the levels load. A level save is
  * Fabric's {@code AFTER_SAVE} of the whole server, told to each of its levels: there is no per-level save event.
@@ -46,6 +51,11 @@ public final class FabricLifecycleHooks implements LifecycleHooks {
     @Override
     public void onLoadCompleteOnMain(Runnable action) {
         loadComplete.add(action);
+    }
+
+    @Override
+    public void onLateBlock(Consumer<Block> listener) {
+        RegistryEntryAddedCallback.event(BuiltInRegistries.BLOCK).register((rawId, id, block) -> listener.accept(block));
     }
 
     /^* Runs the queued setup and load-complete actions, once; the Fabric entrypoint calls it after BuildCraft's init. *^/

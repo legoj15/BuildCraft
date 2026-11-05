@@ -26,7 +26,13 @@ public enum CustomRotationHelper {
 
     private final Map<Block, List<ICustomRotationHandler>> handlers = Maps.newIdentityHashMap();
 
+    /** Every class-based registration, in call order, for {@link #registerClassHandlersFor}. */
+    private final List<ClassRegistration> classRegistrations = Lists.newArrayList();
+
+    private record ClassRegistration(Class<? extends Block> blockClass, ICustomRotationHandler handler) {}
+
     public void registerHandlerForAll(Class<? extends Block> blockClass, ICustomRotationHandler handler) {
+        classRegistrations.add(new ClassRegistration(blockClass, handler));
         // Must be called after the block registry has been populated (e.g. from
         // FMLCommonSetupEvent). The 1.12.2 version walked Block.REGISTRY; modern
         // equivalent is BuiltInRegistries.BLOCK.
@@ -37,6 +43,20 @@ public enum CustomRotationHelper {
                     BCLog.logger.info("[api.rotation] Found an assignable block " + block.toString() + " (" + foundClass + ") for " + blockClass);
                 }
                 registerHandlerInternal(block, handler);
+            }
+        }
+    }
+
+    /**
+     * Gives a block registered after the {@link #registerHandlerForAll} scans the handlers those scans would have given
+     * it, in the order they were made. Call it once per such block; a block the scans already walked would get its
+     * handlers twice.
+     */
+    public void registerClassHandlersFor(Block block) {
+        Class<? extends Block> foundClass = block.getClass();
+        for (ClassRegistration registration : classRegistrations) {
+            if (registration.blockClass().isAssignableFrom(foundClass)) {
+                registerHandlerInternal(block, registration.handler());
             }
         }
     }

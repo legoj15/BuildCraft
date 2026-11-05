@@ -637,6 +637,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:vanilla_rotation_double_chest", () -> buildcraft.lib.block.VanillaRotationTester::testDoubleChestRotatesBothHalves);
         reg.accept("buildcraftunofficial:vanilla_rotation_wrench_useon_furnace", () -> buildcraft.lib.block.VanillaRotationTester::testWrenchUseOnRotatesFurnace);
         reg.accept("buildcraftunofficial:vanilla_rotation_wrench_crouch_gate", () -> buildcraft.lib.block.VanillaRotationTester::testWrenchOnItemUseFirstCrouchGate);
+        reg.accept("buildcraftunofficial:setup_scans_find_late_registered_blocks", () -> buildcraft.lib.block.LateRegisteredBlockTester::testSetupScansFindBlocksRegisteredByLaterMods);
 
         // Flood gate wrench toggle (advancement-granting useItemOn path)
         reg.accept("buildcraftunofficial:flood_gate_wrench_toggles_side", () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);

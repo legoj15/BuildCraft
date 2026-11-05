@@ -35,7 +35,8 @@ import buildcraft.platform.registry.RegistryServices;
  * init, registry by registry in NeoForge's order and in call order within one (the block and item helpers have
  * already set the id on the properties, as on NeoForge). A registrar subscribed after that (another mod's initializer
  * running after BuildCraft's, such as the game-test mod) has its queued entries built at its {@link
- * BCRegistrar#subscribe}, since nothing else would build them. Aliases ({@link BCRegistrar#addAlias}) go through
+ * BCRegistrar#subscribe}, since nothing else would build them, and an entry such a registrar registers after its
+ * subscribe is built at its register call, for the same reason. Aliases ({@link BCRegistrar#addAlias}) go through
  * Fabric API's {@code FabricRegistry.addAlias}, whose {@code MappedRegistry} lookups by id and by key resolve them as
  * NeoForge's do; they are queued like the entries and added once the entries are built, since Fabric warns about an
  * alias whose target is not registered yet.
@@ -62,20 +63,26 @@ public final class FabricRegistryServices implements RegistryServices {
                 order.add(registry.key());
             }
         }
-        List<Pending<?>> pending;
-        synchronized (PENDING) {
-            pending = new ArrayList<>(PENDING);
-            PENDING.clear();
-        }
-        for (ResourceKey<? extends Registry<?>> registry : order) {
-            for (Pending<?> entry : pending) {
-                if (entry.key.registryKey().equals(registry.identifier())) {
-                    entry.holder();
+        // A factory that registers another entry while it runs queues it behind the snapshot taken here: go round again.
+        while (true) {
+            List<Pending<?>> pending;
+            synchronized (PENDING) {
+                if (PENDING.isEmpty()) {
+                    break;
+                }
+                pending = new ArrayList<>(PENDING);
+                PENDING.clear();
+            }
+            for (ResourceKey<? extends Registry<?>> registry : order) {
+                for (Pending<?> entry : pending) {
+                    if (entry.key.registryKey().equals(registry.identifier())) {
+                        entry.holder();
+                    }
                 }
             }
-        }
-        for (Pending<?> entry : pending) {
-            entry.holder(); // any registry the order above did not name
+            for (Pending<?> entry : pending) {
+                entry.holder(); // any registry the order above did not name
+            }
         }
         addPendingAliases();
         initRegistered = true;
@@ -103,6 +110,8 @@ public final class FabricRegistryServices implements RegistryServices {
         final Identifier id;
         Function<Identifier, ? extends T> factory;
         Holder<T> holder;
+        /^* What the factory threw, so a later call reports the cause and not a construction cycle. ^/
+        Throwable failure;
 
         Pending(Registry<T> registry, ResourceKey<T> key, Identifier id, Function<Identifier, ? extends T> factory) {
             this.registry = registry;
@@ -113,12 +122,20 @@ public final class FabricRegistryServices implements RegistryServices {
 
         synchronized Holder<T> holder() {
             if (holder == null) {
+                if (failure != null) {
+                    throw new IllegalStateException("Registry entry " + key + " could not be built", failure);
+                }
                 Function<Identifier, ? extends T> build = factory;
                 factory = null;
                 if (build == null) {
                     throw new IllegalStateException("Registry entry " + key + " asked for while it is being built");
                 }
-                holder = Registry.registerForHolder(registry, key, build.apply(id));
+                try {
+                    holder = Registry.registerForHolder(registry, key, build.apply(id));
+                } catch (RuntimeException | Error e) {
+                    failure = e;
+                    throw e;
+                }
             }
             return holder;
         }
@@ -145,6 +162,8 @@ public final class FabricRegistryServices implements RegistryServices {
         private final String namespace;
         private final List<BCHolder<T, ? extends T>> entries = new ArrayList<>();
         private final Collection<BCHolder<T, ? extends T>> entriesView = Collections.unmodifiableList(entries);
+        /^* Set once {@link #subscribe} has built this registrar's entries after {@link #registerPending}. ^/
+        private boolean subscribedLate;
 
         FabricRegistrar(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
             this.registryKey = registryKey;
@@ -170,6 +189,9 @@ public final class FabricRegistryServices implements RegistryServices {
             }
             BCHolder<T, I> wrapped = new BCHolder<>(id, key, pending::holder);
             entries.add(wrapped);
+            if (subscribedLate) {
+                wrapped.holder(); // subscribe() is past: nothing else would build it
+            }
             return wrapped;
         }
 
@@ -200,7 +222,8 @@ public final class FabricRegistryServices implements RegistryServices {
             // Entries are registered when first asked for, or by registerPending after BuildCraft's init. A registrar
             // subscribed after that has no later point to be built at, so it is built now.
             if (initRegistered) {
-                for (BCHolder<T, ? extends T> entry : entries) {
+                subscribedLate = true;
+                for (BCHolder<T, ? extends T> entry : new ArrayList<>(entries)) {
                     entry.holder();
                 }
                 addPendingAliases();

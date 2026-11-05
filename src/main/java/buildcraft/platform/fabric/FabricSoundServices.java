@@ -10,8 +10,8 @@ package buildcraft.platform.fabric;
 
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.material.Fluid;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.SoundServices;
 
 /^* {@link SoundServices} on Fabric: a {@link SoundType} subclass that resolves its events on read, and vanilla's pickup sound. ^/
@@ -52,9 +52,9 @@ public final class FabricSoundServices implements SoundServices {
     }
 
     @Override
-    public SoundEvent bucketSound(Fluid fluid, boolean fill) {
+    public SoundEvent bucketSound(BCFluidStack stack, boolean fill) {
         // Fabric has no per-fluid sound table: a fill uses vanilla's pickup sound, an empty uses the caller's default.
-        return fill ? fluid.getPickupSound().orElse(null) : null;
+        return fill ? stack.getFluid().getPickupSound().orElse(null) : null;
     }
 }
 *///?}

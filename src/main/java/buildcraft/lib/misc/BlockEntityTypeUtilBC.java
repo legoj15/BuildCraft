@@ -14,13 +14,17 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
  * 1.21.1 takes {@code (BlockEntitySupplier, Set<Block>, Type<?>)} — including a datafixer {@code Type} that
  * mods pass {@code null} for — whereas 1.21.10+ takes {@code (BlockEntitySupplier, Block...)}. There is no
  * single call form valid on both, so BuildCraft's {@code BC*BlockEntities} registries route construction
- * through here. The {@code >=1.21.10} branch is exactly the call BuildCraft already makes today, so the
- * released nodes are unchanged.
+ * through here. The {@code >=1.21.10} branch builds the {@code Set} constructor, which is where NeoForge's varargs
+ * constructor delegates (vanilla, and so a Fabric node, has only the {@code Set} one), and keeps the check that
+ * varargs constructor makes: a type with no valid block is a registration mistake, so it throws at startup.
  */
 public class BlockEntityTypeUtilBC {
     public static <T extends BlockEntity> BlockEntityType<T> create(
             BlockEntityType.BlockEntitySupplier<T> factory, Block... validBlocks) {
         //? if >=1.21.10 {
+        if (validBlocks.length == 0) {
+            throw new IllegalArgumentException("Block entity type instantiated without valid blocks.");
+        }
         return new BlockEntityType<T>(factory, java.util.Set.of(validBlocks));
         //?} else {
         /*return new BlockEntityType<T>(factory, java.util.Set.of(validBlocks), null);*/

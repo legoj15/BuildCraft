@@ -69,7 +69,12 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
             searchedFluid = FluidUtilBC.getFluidContained(stack);
         }
+        return isBelow(handler, searchedFluid, type.level);
+    }
 
+    /** Whether the first tank of {@code handler} that holds {@code searchedFluid} (any fluid, if empty) is below
+     *  {@code level}, or an empty tank could take it. */
+    public static boolean isBelow(BCFluidStorage handler, BCFluidStack searchedFluid, float level) {
         int tanks = handler.size();
         if (tanks == 0) {
             return false;
@@ -87,14 +92,20 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
                 }
                 // An unbounded, uncommitted probe (see TriggerFluidContainer): a cauldron refuses a 1 mB one.
                 try (BCTransaction tx = BCTransaction.openRoot()) {
-                    if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
+                    //? if >=1.21.10 {
+                    int accepted = handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx);
+                    //?} else {
+                    /*// 1.21.1 asked the whole classic handler, which cannot fill one tank on its own.
+                    int accepted = handler.insert(searchedFluid, Integer.MAX_VALUE, tx);*/
+                    //?}
+                    if (accepted > 0) {
                         return true;
                     }
                 }
             } else {
                 if (searchedFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(fluid, searchedFluid)) {
                     float percentage = handler.getAmount(i) / (float) capacity;
-                    return percentage < type.level;
+                    return percentage < level;
                 }
             }
         }

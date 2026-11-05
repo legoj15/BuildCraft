@@ -5,17 +5,12 @@
  */
 package buildcraft.lib.transfer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.annotation.Nullable;
 
-import buildcraft.api.core.BCLog;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.transfer.BCFluidStorage;
-import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.platform.transfer.BCTransactionContext;
 
@@ -28,7 +23,7 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * nested in the one open on this thread, else a root), committed unless the call simulates. A handler that is not
  * one of these adapters, seen as a storage, can only simulate inside a transaction: its view answers each insert
  * and extract by simulating and replays the real calls, in order, when the root transaction commits (none if it
- * aborts), as the platform's classic-handler views do.
+ * aborts), as the platform's classic-handler views do ({@link DeferredFluidCalls}).
  */
 public final class FluidHandlerAdvs {
     private FluidHandlerAdvs() {}
@@ -139,28 +134,16 @@ public final class FluidHandlerAdvs {
 
     private static final class StorageView implements BCFluidStorage {
         final IFluidHandlerAdv handler;
-        private final List<Runnable> pending = new ArrayList<>();
-        private final BCSnapshotJournal<Integer> journal = new BCSnapshotJournal<>() {
-            @Override
-            protected Integer createSnapshot() {
-                return pending.size();
-            }
-
-            @Override
-            protected void revertToSnapshot(Integer snapshot) {
-                pending.subList(snapshot, pending.size()).clear();
-            }
-
-            @Override
-            protected void onRootCommit(Integer originalState) {
-                List<Runnable> replay = new ArrayList<>(pending);
-                pending.clear();
-                replay.forEach(Runnable::run);
-            }
-        };
+        private final DeferredFluidCalls calls;
 
         StorageView(IFluidHandlerAdv handler) {
             this.handler = handler;
+            this.calls = new DeferredFluidCalls(handler,
+                (stack, simulate) -> handler.fill(stack, simulate),
+                (stack, simulate) -> {
+                    BCFluidStack drained = handler.drain(stack, simulate);
+                    return BCFluidStack.isSameFluidSameComponents(drained, stack) ? drained.getAmount() : 0;
+                });
         }
 
         @Override
@@ -185,47 +168,27 @@ public final class FluidHandlerAdvs {
         }
 
         // The API handler has no per-tank fill: an insert or extract on index 0 stands for the whole handler, and
-        // the other indices refuse (BuildCraft's callers go through the resource-wide defaults, which stop at the
-        // first index that takes everything).
+        // the other indices refuse (BuildCraft's callers go through the resource-wide calls, which come here).
         @Override
         public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (index != 0 || resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            BCFluidStack offer = resource.copyWithAmount(amount);
-            int filled = handler.fill(offer, true);
-            if (filled > 0) {
-                journal.updateSnapshots(transaction);
-                BCFluidStack real = resource.copyWithAmount(filled);
-                pending.add(() -> {
-                    int done = handler.fill(real, false);
-                    if (done != filled) {
-                        BCLog.logger.warn("[transfer] {} took {} of a simulated fill of {}", handler, done, real);
-                    }
-                });
-            }
-            return filled;
+            return index == 0 ? calls.fill(resource, amount, transaction) : 0;
         }
 
         @Override
         public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (index != 0 || resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            BCFluidStack want = resource.copyWithAmount(amount);
-            BCFluidStack simulated = handler.drain(want, true);
-            int drained = simulated.isEmpty() ? 0 : simulated.getAmount();
-            if (drained > 0) {
-                journal.updateSnapshots(transaction);
-                BCFluidStack real = resource.copyWithAmount(drained);
-                pending.add(() -> {
-                    BCFluidStack done = handler.drain(real, false);
-                    if (done.getAmount() != drained) {
-                        BCLog.logger.warn("[transfer] {} gave {} of a simulated drain of {}", handler, done, real);
-                    }
-                });
-            }
-            return drained;
+            return index == 0 ? calls.drain(resource, amount, transaction) : 0;
+        }
+
+        @Override
+        public int insert(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return calls.fill(resource, amount, transaction);
+        }
+
+        @Override
+        public int extract(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return calls.drain(resource, amount, transaction);
         }
     }
 }

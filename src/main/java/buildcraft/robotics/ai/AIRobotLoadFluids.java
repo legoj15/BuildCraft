@@ -27,10 +27,11 @@ import buildcraft.lib.transfer.FluidHandlerAdvs;
  *  <p>The transfer is an exact, transactional move: the robot's insert and the station's extract happen
  *  under one {@code Transaction}, and the extract asks for exactly what was inserted — so a simulation
  *  (uncommitted close) leaves both sides untouched, and a commit never loses or creates fluid. One bucket
- *  per pass is the 7.1.x rhythm (it also keeps the pump's 40-tick unload check meaningful). The 1.21.1 branch
- *  has no transactions, so it gets the same guarantee by ordering: simulate the drain, simulate the fill,
- *  execute only when the fill accepts everything the drain yields - a station that gives less than it reported
- *  never leaves fluid in both tanks. */
+ *  per pass is the 7.1.x rhythm (it also keeps the pump's 40-tick unload check meaningful). Every node runs
+ *  this transaction. On 1.21.1 another mod's classic station input can only simulate, so its real drain
+ *  replays when the root commits: a handler whose real drain gives less than its own simulation promised
+ *  leaves the robot with the difference (logged). Before the platform layer 1.21.1 drained the station first
+ *  and handed back what the robot could not take, which no handler could fool. */
 public class AIRobotLoadFluids extends AIRobot {
 
     private static final int BUCKET = 1000;

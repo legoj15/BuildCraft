@@ -13,14 +13,10 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 //?} else {
-/*import java.util.ArrayList;
-import java.util.List;
-
-import net.neoforged.neoforge.fluids.FluidStack;
+/*import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
-import buildcraft.api.core.BCLog;
-import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.lib.transfer.DeferredFluidCalls;
 import buildcraft.platform.transfer.BCTransaction;
 *///?}
 
@@ -35,12 +31,15 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * is the same object again. Stacks cross through {@link NeoForgeFluids}.
  *
  * <p><b>1.21.1.</b> A BuildCraft storage seen as an {@code IFluidHandler} runs each call in a transaction of its own
- * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates; {@code fill} goes across the
- * indices in order and {@code drain} takes from the first index holding the fluid, as BuildCraft's classic tanks did.
- * A classic handler seen as a {@link BCFluidStorage} can only simulate inside a transaction, so its view answers by
- * simulating and replays the real calls, in order, when the root transaction commits (none if it aborts). Classic
- * fills are not per tank, so the view takes every insert through index 0 (the handler spreads it) and refuses the
- * other indices; an extract at any index is a fluid-matched drain.
+ * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates. It answers as BuildCraft's classic
+ * tanks did before the platform layer: {@code fill} and {@code drain(FluidStack)} are the storage's resource-wide
+ * calls, which on 1.21.1 stop at the first index that moves anything (see {@link BCFluidStorage}), and
+ * {@code drain(int)} drains the first index that gives anything (a fuelled iron engine gives its residue). A classic
+ * handler seen as a {@link BCFluidStorage} can only simulate inside a transaction, so its view answers by simulating
+ * and replays the real calls when the root transaction commits ({@code DeferredFluidCalls}, which also keeps a second
+ * call in one transaction from promising the same fluid twice). Classic fills are not per tank, so the view takes
+ * every insert through index 0 (the handler spreads it) and refuses the other indices; an extract at any index is a
+ * fluid-matched drain of the whole handler, and each resource-wide call is one handler call.
  */
 public final class NeoForgeFluidStorages {
     private NeoForgeFluidStorages() {}
@@ -108,13 +107,26 @@ public final class NeoForgeFluidStorages {
 
         @Override
         public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-            // No precondition check: BuildCraft storages answer 0 to an empty or negative offer, as they did as handlers.
+            // No precondition check: each BuildCraft storage answers an empty or negative offer itself (the tanks
+            // answer 0). Before the platform layer the tanks inherited NeoForge's IllegalArgumentException; only a
+            // caller breaking the ResourceHandler contract can tell the difference.
             return storage.insert(index, stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
         }
 
         @Override
         public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
             return storage.extract(index, stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
+        }
+
+        // The resource-wide calls go to the storage's own, so a storage that answers them itself keeps its answer.
+        @Override
+        public int insert(FluidResource resource, int amount, TransactionContext transaction) {
+            return storage.insert(stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
+        }
+
+        @Override
+        public int extract(FluidResource resource, int amount, TransactionContext transaction) {
+            return storage.extract(stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
         }
 
         @Override
@@ -163,6 +175,20 @@ public final class NeoForgeFluidStorages {
                 return 0;
             }
             return handler.extract(index, resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
+        }
+
+        // The resource-wide calls are the handler's own (what BuildCraft called before the platform layer), so a
+        // handler that overrides NeoForge's index-by-index default keeps its answer.
+        @Override
+        public int insert(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return handler.insert(resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
+        }
+
+        @Override
+        public int extract(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return handler.extract(resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
         }
 
         @Override
@@ -230,67 +256,62 @@ public final class NeoForgeFluidStorages {
 
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            if (resource.isEmpty()) {
+            if (resource.isEmpty() || resource.getAmount() <= 0) {
                 return FluidStack.EMPTY;
             }
             BCFluidStack wanted = NeoForgeFluids.fromNeo(resource);
-            for (int i = 0; i < storage.size(); i++) {
-                if (BCFluidStack.isSameFluidSameComponents(storage.getStack(i), wanted)) {
-                    return drainIndex(i, wanted, resource.getAmount(), action);
-                }
-            }
-            return FluidStack.EMPTY;
-        }
-
-        @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            for (int i = 0; i < storage.size(); i++) {
-                BCFluidStack held = storage.getStack(i);
-                if (!held.isEmpty()) {
-                    return drainIndex(i, held, maxDrain, action);
-                }
-            }
-            return FluidStack.EMPTY;
-        }
-
-        private FluidStack drainIndex(int index, BCFluidStack fluid, int amount, FluidAction action) {
-            if (amount <= 0) {
-                return FluidStack.EMPTY;
-            }
             try (BCTransaction tx = LegacyTransactions.openInCurrent()) {
-                int drained = storage.extract(index, fluid, amount, tx);
+                int drained = storage.extract(wanted, resource.getAmount(), tx);
                 if (action.execute()) {
                     tx.commit();
                 }
-                return drained <= 0 ? FluidStack.EMPTY : NeoForgeFluids.toNeo(fluid.copyWithAmount(drained));
+                return drained <= 0 ? FluidStack.EMPTY : NeoForgeFluids.toNeo(wanted.copyWithAmount(drained));
             }
+        }
+
+        /^* The first index that gives anything: one that holds fluid but will not give it (an iron engine's fuel and
+         *  coolant) is passed over, as the classic handlers this replaces never offered it. ^/
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            if (maxDrain <= 0) {
+                return FluidStack.EMPTY;
+            }
+            for (int i = 0; i < storage.size(); i++) {
+                BCFluidStack held = storage.getStack(i);
+                if (held.isEmpty()) {
+                    continue;
+                }
+                try (BCTransaction tx = LegacyTransactions.openInCurrent()) {
+                    int drained = storage.extract(i, held, maxDrain, tx);
+                    if (drained > 0) {
+                        if (action.execute()) {
+                            tx.commit();
+                        }
+                        return NeoForgeFluids.toNeo(held.copyWithAmount(drained));
+                    }
+                }
+            }
+            return FluidStack.EMPTY;
         }
     }
 
     private static final class FromClassic implements BCFluidStorage {
         final IFluidHandler handler;
-        private final List<Runnable> pending = new ArrayList<>();
-        private final BCSnapshotJournal<Integer> journal = new BCSnapshotJournal<>() {
-            @Override
-            protected Integer createSnapshot() {
-                return pending.size();
-            }
-
-            @Override
-            protected void revertToSnapshot(Integer snapshot) {
-                pending.subList(snapshot, pending.size()).clear();
-            }
-
-            @Override
-            protected void onRootCommit(Integer originalState) {
-                List<Runnable> replay = new ArrayList<>(pending);
-                pending.clear();
-                replay.forEach(Runnable::run);
-            }
-        };
+        private final DeferredFluidCalls calls;
 
         FromClassic(IFluidHandler handler) {
             this.handler = handler;
+            this.calls = new DeferredFluidCalls(handler,
+                (stack, simulate) -> handler.fill(NeoForgeFluids.toNeo(stack), action(simulate)),
+                (stack, simulate) -> {
+                    FluidStack request = NeoForgeFluids.toNeo(stack);
+                    FluidStack drained = handler.drain(request.copy(), action(simulate));
+                    return FluidStack.isSameFluidSameComponents(drained, request) ? drained.getAmount() : 0;
+                });
+        }
+
+        private static IFluidHandler.FluidAction action(boolean simulate) {
+            return simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE;
         }
 
         @Override
@@ -315,44 +336,24 @@ public final class NeoForgeFluidStorages {
 
         @Override
         public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (index != 0 || resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            FluidStack offer = NeoForgeFluids.toNeo(resource.copyWithAmount(amount));
-            int filled = handler.fill(offer.copy(), IFluidHandler.FluidAction.SIMULATE);
-            if (filled > 0) {
-                journal.updateSnapshots(transaction);
-                FluidStack real = offer.copyWithAmount(filled);
-                pending.add(() -> {
-                    int done = handler.fill(real.copy(), IFluidHandler.FluidAction.EXECUTE);
-                    if (done != filled) {
-                        BCLog.logger.warn("[platform] {} took {} of a simulated fill of {}", handler, done, real);
-                    }
-                });
-            }
-            return filled;
+            return index == 0 ? calls.fill(resource, amount, transaction) : 0;
         }
 
         @Override
         public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            FluidStack request = NeoForgeFluids.toNeo(resource.copyWithAmount(amount));
-            FluidStack simulated = handler.drain(request.copy(), IFluidHandler.FluidAction.SIMULATE);
-            if (simulated.isEmpty() || !FluidStack.isSameFluidSameComponents(simulated, request)) {
-                return 0;
-            }
-            int drained = simulated.getAmount();
-            journal.updateSnapshots(transaction);
-            FluidStack real = request.copyWithAmount(drained);
-            pending.add(() -> {
-                FluidStack done = handler.drain(real.copy(), IFluidHandler.FluidAction.EXECUTE);
-                if (done.getAmount() != drained) {
-                    BCLog.logger.warn("[platform] {} gave {} of a simulated drain of {}", handler, done.getAmount(), real);
-                }
-            });
-            return drained;
+            return calls.drain(resource, amount, transaction);
+        }
+
+        @Override
+        public int insert(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return calls.fill(resource, amount, transaction);
+        }
+
+        @Override
+        public int extract(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return calls.drain(resource, amount, transaction);
         }
     }
     *///?}

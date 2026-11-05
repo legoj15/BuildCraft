@@ -73,17 +73,25 @@ else
     [ -n "$nv" ] || { note "no versions/*/gradle.properties and no root neo_version"; exit 0; }
     node_ids+=("(root)"); node_neos+=("$nv"); node_mcs+=("$mv")
 fi
-[ "${#node_neos[@]}" -gt 0 ] || { note "no node versions found"; exit 0; }
+# A NeoForge-side failure (no NeoForge node, maven unreachable, no versions) only skips the NeoForge comparison
+# below (neo_ok=0): the Fabric block after it still runs, as its own comment says.
+neo_ok=1
+[ "${#node_neos[@]}" -gt 0 ] || { note "no NeoForge node versions found"; neo_ok=0; }
 
 # -- Fetch NeoForge maven-metadata ONCE (it holds every line) -----------------
 meta_url="https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
-xml="$(curl -fsS --max-time 10 "$meta_url" 2>/dev/null)" || { note "could not reach NeoForge maven"; exit 0; }
-mapfile -t all_versions < <(
-    printf '%s' "$xml" \
-        | grep -oE '<version>[^<]+</version>' \
-        | sed -E 's:</?version>::g'
-)
-[ "${#all_versions[@]}" -gt 0 ] || { note "no versions found in maven-metadata"; exit 0; }
+all_versions=()
+if [ "$neo_ok" = 1 ]; then
+    xml="$(curl -fsS --max-time 10 "$meta_url" 2>/dev/null)" || { note "could not reach NeoForge maven"; neo_ok=0; }
+fi
+if [ "$neo_ok" = 1 ]; then
+    mapfile -t all_versions < <(
+        printf '%s' "$xml" \
+            | grep -oE '<version>[^<]+</version>' \
+            | sed -E 's:</?version>::g'
+    )
+    [ "${#all_versions[@]}" -gt 0 ] || { note "no versions found in maven-metadata"; neo_ok=0; }
+fi
 
 build_of() { local v="${1##*.}"; echo "${v%-beta}"; }   # last dot-segment, minus -beta
 line_of()  { echo "${1%.*}"; }                            # neo_version minus the trailing .<build>
@@ -92,8 +100,12 @@ line_of()  { echo "${1%.*}"; }                            # neo_version minus th
 behind_msgs=()   # human-readable lines (--plain)
 behind_ctx=()    # hook additionalContext fragments
 any_behind=0
+neo_behind=0     # a NeoForge entry is in the list (its bump instruction differs from a Fabric one)
+fabric_behind=0  # a Fabric Loader / Fabric API entry is in the list
 
-for i in "${!node_ids[@]}"; do
+neo_idx=("${!node_ids[@]}")
+[ "$neo_ok" = 1 ] || neo_idx=()   # NeoForge metadata unavailable: nothing to compare, Fabric still runs
+for i in "${neo_idx[@]}"; do
     id="${node_ids[$i]}"; neo="${node_neos[$i]}"; mc="${node_mcs[$i]}"
     prefix="$(line_of "$neo")"
     cur_build="$(build_of "$neo")"
@@ -121,7 +133,7 @@ for i in "${!node_ids[@]}"; do
         continue
     fi
 
-    any_behind=1
+    any_behind=1; neo_behind=1
     changelog="https://maven.neoforged.net/releases/net/neoforged/neoforge/$latest/neoforge-$latest-changelog.txt"
     behind_msgs+=("node $id (Minecraft $mc): pinned $neo -> latest $latest ($nbehind build(s) behind); changelog $changelog")
     behind_ctx+=("$id [MC $mc]: $neo -> $latest ($nbehind behind) -- $changelog")
@@ -148,7 +160,7 @@ for f in "${fabric_props[@]}"; do
         if [ "${#lv[@]}" -gt 0 ]; then
             latest="$(newest "${lv[@]}")"
             if [ "$latest" != "$fl" ] && [ "$(newest "$latest" "$fl")" = "$latest" ]; then
-                any_behind=1
+                any_behind=1; fabric_behind=1
                 behind_msgs+=("node $id (Fabric, Minecraft $mc): Fabric Loader $fl -> latest $latest")
                 behind_ctx+=("$id [Fabric Loader]: $fl -> $latest")
             else
@@ -160,12 +172,12 @@ for f in "${fabric_props[@]}"; do
     fi
     if [ -n "$fa" ] && [ -n "$mc" ]; then
         [ -n "$api_xml" ] || api_xml="$(curl -fsS --max-time 10 https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml 2>/dev/null)"
-        mc_re="${mc//./\.}"
+        mc_re="${mc//./\\.}"
         mapfile -t av < <(printf '%s' "$api_xml" | grep -oE "<version>[0-9.]+\+${mc_re}</version>" | sed -E 's:</?version>::g')
         if [ "${#av[@]}" -gt 0 ]; then
             latest="$(newest "${av[@]}")"
             if [ "$latest" != "$fa" ] && [ "$(newest "$latest" "$fa")" = "$latest" ]; then
-                any_behind=1
+                any_behind=1; fabric_behind=1
                 behind_msgs+=("node $id (Fabric, Minecraft $mc): Fabric API $fa -> latest $latest")
                 behind_ctx+=("$id [Fabric API]: $fa -> $latest")
             else
@@ -192,10 +204,19 @@ fi
 # strict version/numeric regexes plus a maven URL (no JSON-special chars), and
 # fragments are joined with the two-char sequence \n -- a valid JSON escape that
 # renders as a newline (printf's %s does not expand it, so the backslash survives).
-ctx="NeoForge version check: one or more Stonecutter nodes are behind upstream."
+ctx="Loader version check: one or more Stonecutter nodes are behind upstream."
 for frag in "${behind_ctx[@]}"; do
     ctx="$ctx\\n  - $frag"
 done
-ctx="$ctx\\nFor each node: read the cumulative changelog entries above the pinned build, cross-reference the open GitHub issues (bash ~/.claude/skills/issues/issues.sh list), classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version). See AGENTS.md -> 'NeoForge version tracking'."
+# The instruction depends on what is behind: a NeoForge pin has a cumulative changelog and lives in neo_version; a
+# Fabric pin has neither (its dev pins are fabric_loader_version / fabric_api_version, the shipped minimums are the
+# separate fabric_*_dep_range lines beside them).
+if [ "$neo_behind" = 1 ]; then
+    ctx="$ctx\\nFor each NeoForge entry: read the cumulative changelog entries above the pinned build, cross-reference the open GitHub issues (bash ~/.claude/skills/issues/issues.sh list), classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version)."
+fi
+if [ "$fabric_behind" = 1 ]; then
+    ctx="$ctx\\nFor each Fabric entry: offer a per-node bump of the dev pin (edit that node's versions/<id>/gradle.properties -> fabric_loader_version or fabric_api_version; the shipped minimums fabric_loader_dep_range / fabric_api_dep_range stay as they are unless the jar needs the newer build), then run the node's :<id>:checkDeprecations and :<id>:runGameTest."
+fi
+ctx="$ctx\\nSee AGENTS.md -> 'NeoForge version tracking'."
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$ctx"
 exit 0

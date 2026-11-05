@@ -8,6 +8,6 @@
  * The Fabric implementation of the {@code buildcraft.platform} contracts (#98, Phase 2). Every file keeps its
  * {@code package} line live and holds its whole body in a {@code //? if fabric} arm, so on a node for another loader
  * it is an empty compilation unit. Only the binder in {@code buildcraft.platform} names these classes. Today only the
- * compile-only {@code 26.3-fabric} node (#100) builds them.
+ * {@code 26.3-fabric} node builds them.
  */
 package buildcraft.platform.fabric;

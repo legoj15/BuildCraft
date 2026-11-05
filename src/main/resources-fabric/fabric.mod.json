@@ -41,8 +41,8 @@
   ],
   "accessWidener": "buildcraftunofficial.classtweaker",
   "depends": {
-    "fabricloader": ">=${fabric_loader_version}",
-    "fabric-api": ">=${fabric_api_version}",
+    "fabricloader": "${fabric_loader_dep_range}",
+    "fabric-api": "${fabric_api_dep_range}",
     "minecraft": "~${minecraft_version}",
     "forgeconfigapiport": ">=26.3.1",
     "common-protection-api": ">=2.0.0"

@@ -6,6 +6,7 @@
 package buildcraft.lib.transfer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,7 @@ import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
 
@@ -109,6 +111,21 @@ public class DeferredFluidCallsTest extends VanillaSetupBaseTester {
             tx.commit();
         }
         assertEquals(0, handler.held.getAmount());
+    }
+
+    /** A station's input is asked for on every candidate of a robot's search: each lookup of one handler or
+     *  storage is the same view, so it is not wrapped again and its callers share one queue of owed calls. */
+    @Test
+    public void eachHandlerOrStorageIsOneViewWhileItIsInUse() {
+        OneTank handler = new OneTank();
+        BCFluidStorage view = FluidHandlerAdvs.storage(handler);
+        assertSame(view, FluidHandlerAdvs.storage(handler));
+        assertSame(handler, FluidHandlerAdvs.of(view), "a view unwraps to the handler itself");
+
+        BCFluidTank tank = new BCFluidTank(1, 1000);
+        IFluidHandlerAdv asHandler = FluidHandlerAdvs.of(tank);
+        assertSame(asHandler, FluidHandlerAdvs.of(tank));
+        assertSame(tank, FluidHandlerAdvs.storage(asHandler));
     }
 
     @Test

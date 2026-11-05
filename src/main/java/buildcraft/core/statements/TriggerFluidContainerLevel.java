@@ -82,7 +82,9 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
         for (int i = 0; i < tanks; i++) {
             BCFluidStack fluid = handler.getStack(i);
-            int capacity = handler.getCapacity(i, fluid);
+            // Narrowed, not saturated, as before the platform layer: a tank of 2^31 mB or more (another mod's
+            // "infinite" tank) usually comes out non-positive and is passed over instead of reading as nearly empty.
+            int capacity = (int) handler.getCapacityAsLong(i, fluid);
             if (capacity <= 0) continue;
 
             if (fluid.isEmpty()) {

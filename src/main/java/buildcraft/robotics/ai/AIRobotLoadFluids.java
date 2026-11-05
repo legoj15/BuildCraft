@@ -17,6 +17,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.lib.transfer.DeferredFluidCalls;
 import buildcraft.lib.transfer.FluidHandlerAdvs;
 
 /** Loads fluid from the robot's station input into the robot's own tank, one bucket per pass, until the
@@ -28,10 +29,12 @@ import buildcraft.lib.transfer.FluidHandlerAdvs;
  *  under one {@code Transaction}, and the extract asks for exactly what was inserted — so a simulation
  *  (uncommitted close) leaves both sides untouched, and a commit never loses or creates fluid. One bucket
  *  per pass is the 7.1.x rhythm (it also keeps the pump's 40-tick unload check meaningful). Every node runs
- *  this transaction. On 1.21.1 another mod's classic station input can only simulate, so its real drain
- *  replays when the root commits: a handler whose real drain gives less than its own simulation promised
- *  leaves the robot with the difference (logged). Before the platform layer 1.21.1 drained the station first
- *  and handed back what the robot could not take, which no handler could fool. */
+ *  this transaction, except when the station input is a handler that can only simulate (another mod's
+ *  classic handler on 1.21.1, another mod's robot-API handler): its real drain would replay only after the
+ *  robot's tank committed, so that move is made as 1.21.1 made it before the platform layer, outside any
+ *  transaction: both halves simulated, the station drained for real, the robot filled with what it gave,
+ *  and the rest handed back ({@link DeferredFluidCalls#drainInto}). A station whose real drain gives less
+ *  than its simulation promised then cannot create fluid. */
 public class AIRobotLoadFluids extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -100,6 +103,9 @@ public class AIRobotLoadFluids extends AIRobot {
         int amount = Math.min(Math.min(available, room), BUCKET);
         if (amount <= 0) {
             return 0;
+        }
+        if (input instanceof DeferredFluidCalls.Owner deferred) {
+            return deferred.deferredCalls().drainInto(robotTank, resource, amount, doLoad);
         }
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = robotTank.insert(0, resource, amount, tx);

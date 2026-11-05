@@ -34,6 +34,14 @@ public interface BCFluidStorage {
      */
     int getCapacity(int index, BCFluidStack resource);
 
+    /**
+     * {@link #getCapacity} without the cap at {@code Integer.MAX_VALUE}, for a view of another mod's handler whose
+     * capacity is a {@code long}; a BuildCraft storage's is its {@code int} capacity.
+     */
+    default long getCapacityAsLong(int index, BCFluidStack resource) {
+        return getCapacity(index, resource);
+    }
+
     /** Whether {@code resource} may ever go into {@code index} (ignoring how full it is). */
     boolean isValid(int index, BCFluidStack resource);
 

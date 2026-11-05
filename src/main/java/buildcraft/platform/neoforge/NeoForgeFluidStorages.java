@@ -21,6 +21,7 @@ import buildcraft.platform.transfer.BCTransaction;
 *///?}
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.transfer.AdapterCache;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransactionContext;
 
@@ -28,7 +29,9 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * The two-way adapter between {@link BCFluidStorage} and NeoForge's fluid handler type:
  * {@code ResourceHandler<FluidResource>} on 1.21.10+, the classic {@code IFluidHandler} on 1.21.1. Each direction
  * unwraps the other's adapter, so a BuildCraft storage that went out as a capability and came back through a lookup
- * is the same object again. Stacks cross through {@link NeoForgeFluids}.
+ * is the same object again. Each direction also hands out one adapter per wrapped object ({@link AdapterCache}), so
+ * a BuildCraft storage's capability is the same handler on every query, as the storage itself was before the platform
+ * layer, and a steady neighbour looked up every tick is not wrapped again. Stacks cross through {@link NeoForgeFluids}.
  *
  * <p><b>1.21.1.</b> A BuildCraft storage seen as an {@code IFluidHandler} runs each call in a transaction of its own
  * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates. It answers as BuildCraft's classic
@@ -45,6 +48,10 @@ public final class NeoForgeFluidStorages {
     private NeoForgeFluidStorages() {}
 
     //? if >=1.21.10 {
+    private static final AdapterCache<BCFluidStorage, ToNeo> TO_NEO = new AdapterCache<>(ToNeo::new);
+    private static final AdapterCache<ResourceHandler<FluidResource>, FromNeo> FROM_NEO =
+        new AdapterCache<>(FromNeo::new);
+
     /** The NeoForge handler for a BuildCraft storage (null stays null). */
     @Nullable
     public static ResourceHandler<FluidResource> toNeo(@Nullable BCFluidStorage storage) {
@@ -54,7 +61,7 @@ public final class NeoForgeFluidStorages {
         if (storage instanceof FromNeo view) {
             return view.handler;
         }
-        return new ToNeo(storage);
+        return TO_NEO.get(storage);
     }
 
     /** The BuildCraft view of a NeoForge handler (null stays null). */
@@ -66,7 +73,7 @@ public final class NeoForgeFluidStorages {
         if (handler instanceof ToNeo adapter) {
             return adapter.storage;
         }
-        return new FromNeo(handler);
+        return FROM_NEO.get(handler);
     }
 
     /** The BuildCraft stack of {@code amount} of a resource (empty for an empty resource or amount). */
@@ -157,6 +164,11 @@ public final class NeoForgeFluidStorages {
         }
 
         @Override
+        public long getCapacityAsLong(int index, BCFluidStack resource) {
+            return handler.getCapacityAsLong(index, resourceOf(resource));
+        }
+
+        @Override
         public boolean isValid(int index, BCFluidStack resource) {
             return !resource.isEmpty() && handler.isValid(index, resourceOf(resource));
         }
@@ -197,7 +209,10 @@ public final class NeoForgeFluidStorages {
         }
     }
     //?} else {
-    /*@Nullable
+    /*private static final AdapterCache<BCFluidStorage, ToClassic> TO_CLASSIC = new AdapterCache<>(ToClassic::new);
+    private static final AdapterCache<IFluidHandler, FromClassic> FROM_CLASSIC = new AdapterCache<>(FromClassic::new);
+
+    @Nullable
     public static IFluidHandler toNeo(@Nullable BCFluidStorage storage) {
         if (storage == null) {
             return null;
@@ -205,7 +220,7 @@ public final class NeoForgeFluidStorages {
         if (storage instanceof FromClassic view) {
             return view.handler;
         }
-        return new ToClassic(storage);
+        return TO_CLASSIC.get(storage);
     }
 
     @Nullable
@@ -216,7 +231,7 @@ public final class NeoForgeFluidStorages {
         if (handler instanceof ToClassic adapter) {
             return adapter.storage;
         }
-        return new FromClassic(handler);
+        return FROM_CLASSIC.get(handler);
     }
 
     private record ToClassic(BCFluidStorage storage) implements IFluidHandler {
@@ -295,7 +310,7 @@ public final class NeoForgeFluidStorages {
         }
     }
 
-    private static final class FromClassic implements BCFluidStorage {
+    private static final class FromClassic implements BCFluidStorage, DeferredFluidCalls.Owner {
         final IFluidHandler handler;
         private final DeferredFluidCalls calls;
 
@@ -308,6 +323,11 @@ public final class NeoForgeFluidStorages {
                     FluidStack drained = handler.drain(request.copy(), action(simulate));
                     return FluidStack.isSameFluidSameComponents(drained, request) ? drained.getAmount() : 0;
                 });
+        }
+
+        @Override
+        public DeferredFluidCalls deferredCalls() {
+            return calls;
         }
 
         private static IFluidHandler.FluidAction action(boolean simulate) {

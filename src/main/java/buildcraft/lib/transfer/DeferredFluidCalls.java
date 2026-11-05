@@ -10,7 +10,9 @@ import java.util.List;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
@@ -24,9 +26,21 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * reported. Each simulation therefore asks for what this transaction already owes of that fluid plus the new amount
  * and answers only the difference: the queued calls never add up to more than one call of their total would move.
  * A fill offered while a fill of another fluid is queued is refused, since the handler cannot be asked about both at
- * once. (Two views of one handler keep separate queues; each lookup builds its own view.)
+ * once. (A lookup hands out the view already in use for a handler, so callers share its queue; a view nobody holds
+ * any more is replaced by a new one with its own.)
+ *
+ * <p>A replayed call that moves less than its simulation promised is only logged, which a move between two storages
+ * cannot afford: the other side already committed. {@link #drainInto} and {@link #fillFrom} make such a move outside
+ * any transaction in the order the classic handlers needed before the platform layer (both halves simulated, then
+ * the handler's real call, then the other side's, and what that side cannot take handed back), so a handler whose
+ * real call breaks its own simulation can neither create nor destroy fluid.
  */
 public final class DeferredFluidCalls {
+    /** A storage view whose fluid calls are owed to a handler that can only simulate. */
+    public interface Owner {
+        DeferredFluidCalls deferredCalls();
+    }
+
     /** One direction of the handler: how much a call of {@code stack} (its amount included) moves. */
     @FunctionalInterface
     public interface Call {
@@ -79,6 +93,89 @@ public final class DeferredFluidCalls {
     /** Promises up to {@code amount} of {@code resource} out of the handler, replayed at the root commit. */
     public int drain(BCFluidStack resource, int amount, BCTransactionContext transaction) {
         return promise(false, resource, amount, transaction);
+    }
+
+    /**
+     * Moves up to {@code amount} of {@code resource} out of the handler into index 0 of {@code into}, now and
+     * outside any transaction; {@code execute} false only simulates. Returns the mB that reached {@code into}.
+     */
+    public int drainInto(BCFluidStorage into, BCFluidStack resource, int amount, boolean execute) {
+        checkNothingOwed();
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
+        int extractable = drain.apply(resource.copyWithAmount(amount), true);
+        if (extractable <= 0 || insertNow(into, resource, extractable, false) < extractable) {
+            return 0;
+        }
+        if (!execute) {
+            return extractable;
+        }
+        int extracted = drain.apply(resource.copyWithAmount(extractable), false);
+        if (extracted <= 0) {
+            return 0;
+        }
+        int filled = insertNow(into, resource, extracted, true);
+        if (filled < extracted) {
+            fill.apply(resource.copyWithAmount(extracted - filled), false);
+        }
+        return filled;
+    }
+
+    /**
+     * Moves up to {@code amount} of {@code resource} out of index 0 of {@code from} into the handler, now and
+     * outside any transaction; {@code execute} false only simulates. Returns the mB the handler took.
+     */
+    public int fillFrom(BCFluidStorage from, BCFluidStack resource, int amount, boolean execute) {
+        checkNothingOwed();
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
+        int extractable = extractNow(from, resource, amount, false);
+        if (extractable <= 0 || fill.apply(resource.copyWithAmount(extractable), true) < extractable) {
+            return 0;
+        }
+        if (!execute) {
+            return extractable;
+        }
+        int extracted = extractNow(from, resource, extractable, true);
+        if (extracted <= 0) {
+            return 0;
+        }
+        int filled = fill.apply(resource.copyWithAmount(extracted), false);
+        if (filled < extracted) {
+            insertNow(from, resource, extracted - filled, true);
+        }
+        return filled;
+    }
+
+    private void checkNothingOwed() {
+        if (!pending.isEmpty()) {
+            throw new IllegalStateException("A direct fluid move needs no open transaction, but " + handler
+                + " is owed " + pending);
+        }
+    }
+
+    // The BuildCraft side's own root transaction, so a call made inside an open one fails here instead of moving
+    // fluid that transaction could not take back.
+    private static int insertNow(BCFluidStorage storage, BCFluidStack resource, int amount, boolean execute) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int moved = storage.insert(0, resource, amount, tx);
+            if (execute) {
+                tx.commit();
+            }
+            return moved;
+        }
+    }
+
+    private static int extractNow(BCFluidStorage storage, BCFluidStack resource, int amount, boolean execute) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int moved = storage.extract(0, resource, amount, tx);
+            if (execute) {
+                tx.commit();
+            }
+            return moved;
+        }
     }
 
     private int promise(boolean isFill, BCFluidStack resource, int amount, BCTransactionContext transaction) {

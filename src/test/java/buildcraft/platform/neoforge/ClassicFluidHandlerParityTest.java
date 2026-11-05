@@ -25,6 +25,8 @@ import buildcraft.core.statements.TriggerFluidContainerLevel;
 import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.transfer.DeferredFluidCalls;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.lib.transfer.FluidStorageUtil;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
@@ -148,6 +150,27 @@ public class ClassicFluidHandlerParityTest {
         assertTrue(TriggerFluidContainerLevel.isBelow(view, WATER, 0.5f),
             "tank 1 is empty and takes water, so water is below 50%");
         assertEquals(0, handler.tanks[1].getFluidAmount(), "the probe never fills");
+    }
+
+    /^* A docked robot loading from another mod's classic handler drained the station for real first and filled the
+     *  robot with what came out, so a handler whose real drain gives less than its simulation could not create
+     *  fluid. The station's input, seen as the robot sees it, is the handler's deferred view, which moves that way. ^/
+    @Test
+    public void aRobotLoadFromAClassicStationConservesFluid() {
+        FluidTank lying = new FluidTank(1000) {
+            @Override
+            public FluidStack drain(FluidStack resource, FluidAction action) {
+                return super.drain(action.execute() ? resource.copyWithAmount(Math.min(resource.getAmount(), 400))
+                    : resource, action);
+            }
+        };
+        lying.setFluid(water(1000));
+        BCFluidStorage input = FluidHandlerAdvs.storage(FluidHandlerAdvs.of(NeoForgeFluidStorages.fromNeo(lying)));
+        assertTrue(input instanceof DeferredFluidCalls.Owner, "the robot sees a view that can only simulate");
+        BCFluidTank robot = new BCFluidTank(1, 4000);
+        int loaded = ((DeferredFluidCalls.Owner) input).deferredCalls().drainInto(robot, WATER, 1000, true);
+        assertEquals(400, loaded, "the robot took what the station really gave");
+        assertEquals(1000, robot.getAmount(0) + lying.getFluidAmount(), "no fluid made or lost");
     }
 
     private static TileBuilder newBuilder() {

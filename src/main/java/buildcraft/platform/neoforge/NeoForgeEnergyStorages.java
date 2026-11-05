@@ -22,13 +22,16 @@ import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransaction;
 *///?}
 
+import buildcraft.lib.transfer.AdapterCache;
 import buildcraft.platform.transfer.BCEnergyStorage;
 import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
  * The two-way adapter between {@link BCEnergyStorage} and NeoForge's energy handler type: {@code EnergyHandler} on
  * 1.21.10+, the classic {@code IEnergyStorage} on 1.21.1. Each direction unwraps the other's adapter, so a BuildCraft
- * storage that went out as a capability and came back through a lookup is the same object again.
+ * storage that went out as a capability and came back through a lookup is the same object again. Each direction
+ * hands out one adapter per wrapped object ({@link AdapterCache}), so a steady neighbour looked up every tick is not
+ * wrapped again.
  *
  * <p><b>1.21.1.</b> As {@link NeoForgeItemStorages}: a BuildCraft storage seen as an {@code IEnergyStorage} runs each
  * call in a transaction of its own ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates; a
@@ -39,6 +42,9 @@ public final class NeoForgeEnergyStorages {
     private NeoForgeEnergyStorages() {}
 
     //? if >=1.21.10 {
+    private static final AdapterCache<BCEnergyStorage, ToNeo> TO_NEO = new AdapterCache<>(ToNeo::new);
+    private static final AdapterCache<EnergyHandler, FromNeo> FROM_NEO = new AdapterCache<>(FromNeo::new);
+
     /** The NeoForge handler for a BuildCraft storage (null stays null). */
     @Nullable
     public static EnergyHandler toNeo(@Nullable BCEnergyStorage storage) {
@@ -48,7 +54,7 @@ public final class NeoForgeEnergyStorages {
         if (storage instanceof FromNeo view) {
             return view.handler;
         }
-        return new ToNeo(storage);
+        return TO_NEO.get(storage);
     }
 
     /** The BuildCraft view of a NeoForge handler (null stays null). */
@@ -60,7 +66,7 @@ public final class NeoForgeEnergyStorages {
         if (handler instanceof ToNeo adapter) {
             return adapter.storage;
         }
-        return new FromNeo(handler);
+        return FROM_NEO.get(handler);
     }
 
     private record ToNeo(BCEnergyStorage storage) implements EnergyHandler {
@@ -107,7 +113,10 @@ public final class NeoForgeEnergyStorages {
         }
     }
     //?} else {
-    /*@Nullable
+    /*private static final AdapterCache<BCEnergyStorage, ToClassic> TO_CLASSIC = new AdapterCache<>(ToClassic::new);
+    private static final AdapterCache<IEnergyStorage, FromClassic> FROM_CLASSIC = new AdapterCache<>(FromClassic::new);
+
+    @Nullable
     public static IEnergyStorage toNeo(@Nullable BCEnergyStorage storage) {
         if (storage == null) {
             return null;
@@ -115,7 +124,7 @@ public final class NeoForgeEnergyStorages {
         if (storage instanceof FromClassic view) {
             return view.handler;
         }
-        return new ToClassic(storage);
+        return TO_CLASSIC.get(storage);
     }
 
     @Nullable
@@ -126,7 +135,7 @@ public final class NeoForgeEnergyStorages {
         if (handler instanceof ToClassic adapter) {
             return adapter.storage;
         }
-        return new FromClassic(handler);
+        return FROM_CLASSIC.get(handler);
     }
 
     private record ToClassic(BCEnergyStorage storage) implements IEnergyStorage {

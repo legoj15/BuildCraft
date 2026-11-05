@@ -28,6 +28,11 @@ import buildcraft.platform.transfer.BCTransactionContext;
 public final class FluidHandlerAdvs {
     private FluidHandlerAdvs() {}
 
+    // One view per wrapped object while it is in use, so a station's input asked for on every candidate of a search
+    // is not wrapped again, and callers of one handler share its owed calls.
+    private static final AdapterCache<BCFluidStorage, HandlerView> HANDLERS = new AdapterCache<>(HandlerView::new);
+    private static final AdapterCache<IFluidHandlerAdv, StorageView> STORAGES = new AdapterCache<>(StorageView::new);
+
     /** The API handler for a storage (null stays null). */
     @Nullable
     public static IFluidHandlerAdv of(@Nullable BCFluidStorage storage) {
@@ -37,7 +42,7 @@ public final class FluidHandlerAdvs {
         if (storage instanceof StorageView view) {
             return view.handler;
         }
-        return new HandlerView(storage);
+        return HANDLERS.get(storage);
     }
 
     /** The storage view of an API handler (null stays null). */
@@ -49,7 +54,7 @@ public final class FluidHandlerAdvs {
         if (handler instanceof HandlerView view) {
             return view.storage;
         }
-        return new StorageView(handler);
+        return STORAGES.get(handler);
     }
 
     /** What {@code storage} would give (or gives, unless simulating) of the first fluid {@code filter} accepts. */
@@ -132,7 +137,7 @@ public final class FluidHandlerAdvs {
         }
     }
 
-    private static final class StorageView implements BCFluidStorage {
+    private static final class StorageView implements BCFluidStorage, DeferredFluidCalls.Owner {
         final IFluidHandlerAdv handler;
         private final DeferredFluidCalls calls;
 
@@ -144,6 +149,11 @@ public final class FluidHandlerAdvs {
                     BCFluidStack drained = handler.drain(stack, simulate);
                     return BCFluidStack.isSameFluidSameComponents(drained, stack) ? drained.getAmount() : 0;
                 });
+        }
+
+        @Override
+        public DeferredFluidCalls deferredCalls() {
+            return calls;
         }
 
         @Override

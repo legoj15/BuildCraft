@@ -76,7 +76,7 @@ public class BCTransport {
         CreativeTabContents.contribute(BCTransportCreativeTabs.PIPES_TAB_KEY,
                 (params, output) -> addCreativeTabItems(BCTransportCreativeTabs.PIPES_TAB_KEY, output));
 
-        // Register NeoForge capabilities for pipe holders
+        // Pipe-holder and filtered-buffer capabilities, through the transfer seam (every loader)
         Platform.transfer().registerCapabilities(BCTransport::registerCapabilities);
         Platform.transfer().registerCapabilities(registrar -> {
             registrar.blockItems(BCTransportBlockEntities.FILTERED_BUFFER.get(), (tile, side) -> tile.getItemHandler(side));

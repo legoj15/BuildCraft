@@ -295,6 +295,8 @@ public final class NeoForgeTransfer implements TransferServices {
         return new Borrowed(context);
     }
 
+    // The Fabric twin (FabricTransfer: unwrap, Borrowed, Owned) is the same shape over Fabric's Transaction; a new kind
+    // of BCTransaction has to be taught to both.
     /** The NeoForge transaction behind a BuildCraft one. */
     public static TransactionContext unwrap(BCTransactionContext transaction) {
         if (transaction instanceof Owned owned) {

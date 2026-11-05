@@ -28,8 +28,13 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * the other's adapter. A BuildCraft storage goes out as a {@link SlottedStorage}, one {@link SingleSlotStorage} per
  * index; a slotted Fabric storage comes back index for index.
  *
+ * <p>{@link FabricFluidStorages} is this adapter's twin over fluid variants (the same {@code toFabric}/{@code fromFabric}
+ * and nested adapter classes, with different types): a change to the shape of one has to be made in the other.
+ *
  * <p><b>Gap.</b> A Fabric storage that is not slotted has no stable indices, so its view is one virtual slot: it shows
- * the first non-blank view's contents, and insert and extract go to the storage as a whole.
+ * the first non-blank view's contents and capacity (the first view's when all are blank; no capacity at all when it has
+ * no views, as the top of a composter, which only takes items in), and insert and extract go to the storage as a whole.
+ * So a level gate reads such a storage as one slot, whatever it holds besides.
  ^/
 public final class FabricItemStorages {
     private FabricItemStorages() {}
@@ -222,17 +227,33 @@ public final class FabricItemStorages {
             return 1;
         }
 
+        /^* The view this slot shows: the first holding something, else the first at all (null if there is none). ^/
+        private StorageView<ItemVariant> shown() {
+            for (StorageView<ItemVariant> view : storage.nonEmptyViews()) {
+                return view;
+            }
+            for (StorageView<ItemVariant> view : storage) {
+                return view;
+            }
+            return null;
+        }
+
         @Override
         public ItemStack getStack(int index) {
-            for (StorageView<ItemVariant> view : storage.nonEmptyViews()) {
-                return stackOf(view.getResource(), view.getAmount());
-            }
-            return ItemStack.EMPTY;
+            StorageView<ItemVariant> view = shown();
+            return view == null ? ItemStack.EMPTY : stackOf(view.getResource(), view.getAmount());
         }
 
         @Override
         public int getCapacity(int index, ItemStack resource) {
-            return resource.isEmpty() ? 64 : resource.getMaxStackSize();
+            // The shown view's own capacity, as the slotted adapter reads it. With no view at all (an insertion-only
+            // storage) there is nothing to measure, so a level gate reads no space instead of an invented 64.
+            StorageView<ItemVariant> view = shown();
+            if (view == null) {
+                return 0;
+            }
+            int capacity = clamp(view.getCapacity());
+            return resource.isEmpty() ? capacity : Math.min(capacity, resource.getMaxStackSize());
         }
 
         @Override

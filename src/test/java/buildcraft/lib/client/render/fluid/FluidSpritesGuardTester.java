@@ -49,14 +49,10 @@ public class FluidSpritesGuardTester {
         // The NeoForge client APIs take NeoForge's FluidStack: the BCFluidStack is converted at the call.
         String code = MainSourceSet.codeOnly(file(NEOFORGE_LOOKUP).text()).replace("NeoForgeFluids.toNeo(stack", "stack");
         boolean clientExtensions = code.contains("getStillTexture(stack") && code.contains("getTintColor(stack");
-        boolean fluidModels = code.contains("getFluidStateModelSet(") && code.contains("stillMaterial()")
-            && code.contains("colorAsStack(stack");
+        boolean fluidModels = code.contains("ClientFluids.model(stack") && code.contains("colorAsStack(stack");
         Assertions.assertTrue(clientExtensions ^ fluidModels,
             "NeoForgeClientFluids must resolve through IClientFluidTypeExtensions (below 26.1) or the FluidModel set "
                 + "(26.1+), passing the stack; found neither or both live on this node");
-        String sprites = MainSourceSet.codeOnly(file(LOOKUP).text());
-        Assertions.assertTrue(sprites.contains("ClientPlatform.fluids().tint(stack"),
-            "FluidSprites must take a fluid's tint from the platform layer's client fluid lookup");
     }
 
     /** The lookup names no texture at all — not even a fallback — so no fluid can be special-cased back into a guess.

@@ -155,8 +155,9 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         poseStack.pushPose();
 
-        // Static pipe body geometry is rendered by the chunk mesh via the pipe block model (PipeBlockModelQuads)
-        // (DynamicBlockStateModel). The BER only handles dynamic content.
+        // Static pipe body geometry is rendered by the chunk mesh via the loader's pipe block model (NeoForge's
+        // NeoForgePipeBlockStateModel, Fabric's FabricPipeBlockModel), both fed by PipeBlockModelQuads.
+        // The BER only handles dynamic content.
 
         // --- Render wires ---
         //? if >=26.2 {

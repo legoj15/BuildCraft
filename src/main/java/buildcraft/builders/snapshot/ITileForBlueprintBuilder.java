@@ -6,7 +6,6 @@
 
 package buildcraft.builders.snapshot;
 
-import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.inventory.IItemTransactor;
 
 public interface ITileForBlueprintBuilder extends ITileForSnapshotBuilder {

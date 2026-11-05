@@ -6,8 +6,7 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
+/*import net.minecraft.resources.Identifier;
 
 import net.fabricmc.fabric.api.transfer.v1.client.fluid.FluidVariantRendering;
 
@@ -15,12 +14,13 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.client.ClientFluids;
 import buildcraft.platform.fabric.FabricFluids;
 
-/^* {@link ClientFluids} on Fabric: the fluid's baked model for the sprite, Fabric's variant rendering for the tint. ^/
+/^* {@link ClientFluids} on Fabric: the fluid's baked model ({@link ClientFluids#model}) for the sprite, Fabric's
+ *  variant rendering for the tint. ^/
 public final class FabricClientFluids implements ClientFluids {
     @Override
     public Identifier stillTexture(BCFluidStack stack) {
-        return Minecraft.getInstance().getModelManager().getFluidStateModelSet()
-            .get(stack.getFluid().defaultFluidState()).stillMaterial().sprite().contents().name();
+        // The same missing-texture-to-water rule as the sprite FluidSprites draws and as NeoForge's lookup.
+        return ClientFluids.model(stack).stillMaterial().sprite().contents().name();
     }
 
     @Override

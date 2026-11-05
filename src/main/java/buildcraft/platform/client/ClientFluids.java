@@ -16,4 +16,21 @@ public interface ClientFluids {
 
     /** The stack's ARGB tint as the loader reports it (it may carry zero alpha); opaque white for no tint. */
     int tint(BCFluidStack stack);
+
+    //? if >=26.1 {
+    /**
+     * The stack's fluid's baked model, the one place that decides what a fluid with no usable model looks like: the
+     * model set hands back a missing-texture model (never null) for a fluid with none registered, and this falls back
+     * to water's instead of drawing that. It reads vanilla's own model set, so both loaders answer from it; the 26.1+
+     * still sprite ({@code FluidSprites}) and each loader's still texture and tint all go through it.
+     */
+    static net.minecraft.client.renderer.block.FluidModel model(BCFluidStack stack) {
+        net.minecraft.client.renderer.block.FluidStateModelSet models =
+            net.minecraft.client.Minecraft.getInstance().getModelManager().getFluidStateModelSet();
+        net.minecraft.client.renderer.block.FluidModel model = models.get(stack.getFluid().defaultFluidState());
+        boolean missing = model.stillMaterial().sprite().contents().name()
+            .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
+        return missing ? models.get(net.minecraft.world.level.material.Fluids.WATER.defaultFluidState()) : model;
+    }
+    //?}
 }

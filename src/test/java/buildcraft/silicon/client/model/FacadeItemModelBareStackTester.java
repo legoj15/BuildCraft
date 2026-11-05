@@ -5,8 +5,7 @@
  */
 package buildcraft.silicon.client.model;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,56 +17,37 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.item.ItemPluggableFacade;
-import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadePhasedState;
 import buildcraft.silicon.plug.FacadeStateManager;
 
 /**
- * The crash window of issue #127: a bare facade stack (no NBT) resolved by the item model before
- * {@link FacadeStateManager#init()} has ever run. {@code defaultState} is only assigned at
- * {@code ServerAboutToStart} / {@code LoggingIn}, so on the title screen — no world joined — the
- * stack's {@link FacadePhasedState#stateInfo} is null and the model arms must render nothing rather
- * than dereference it. Found in the wild via Moonlight's config-screen item carousel, which feeds
- * {@code getDefaultInstance()} stacks of every mod item through {@code ItemRenderer.getModel}.
+ * Issue #127: a bare facade stack (no NBT) reaches the item model before {@link FacadeStateManager#init()}
+ * has run, on the title screen with no world joined. Moonlight's config-screen item carousel feeds
+ * {@code getDefaultInstance()} stacks of every mod item through {@code ItemRenderer.getModel}, and the
+ * model used to dereference a null {@link FacadePhasedState#stateInfo}. {@code defaultState} is now a
+ * class-load constant, so the bare stack resolves to the air facade before init exactly as after it.
  */
 public class FacadeItemModelBareStackTester extends VanillaSetupBaseTester {
 
     @Test
-    public void bareStackRendersNothingBeforeFacadeStateInit() {
-        // Force the pre-init window deterministically: whatever earlier tests did to the static
-        // facade state, this is the exact state a fresh client's title screen sees.
-        FacadeBlockStateInfo savedDefault = FacadeStateManager.defaultState;
-        FacadeStateManager.defaultState = null;
-        try {
-            ItemStack bare = new ItemStack(BCSiliconItems.PLUG_FACADE.get());
-            FacadePhasedState state = ItemPluggableFacade.getStates(bare).getCurrentStateForStack();
-            assertNull(state.stateInfo, "precondition: a bare stack carries no facade state pre-init");
-
-            //? if <1.21.10 {
-            /*// 1.21.1: the per-stack ItemOverrides arm (FacadeItemModel.java:157 in the #127 report).
-            // Resolve with the registry-level model as ItemRenderer does; it used to NPE here.
-            FacadeItemModel registry = new FacadeItemModel();
-            registry.getOverrides().resolve(registry, bare, null, null, 0);
-            *///?}
-            //? if >=1.21.10 {
-            // The ItemModel arm shares the same unguarded stateInfo dereference; GUI context is
-            // what a config-screen carousel uses.
-            new FacadeItemModel().update(new net.minecraft.client.renderer.item.ItemStackRenderState(),
-                bare, null, ItemDisplayContext.GUI, null, null, 0);
-            //?}
-            // Reaching here without a NullPointerException is the whole assertion.
-        } finally {
-            FacadeStateManager.defaultState = savedDefault;
-        }
-    }
-
-    /** Positive control: once facade state init has run, the same bare stack resolves to the air
-     *  fallback instead of null — the guards above must never fire for a normal client again. */
-    @Test
-    public void bareStackResolvesToAirAfterFacadeStateInit() {
-        FacadeStateManager.ensureInitialized();
+    public void bareStackResolvesToAirAndRendersNothing() {
         ItemStack bare = new ItemStack(BCSiliconItems.PLUG_FACADE.get());
-        assertNotNull(ItemPluggableFacade.getStates(bare).getCurrentStateForStack().stateInfo,
-            "post-init a bare stack must resolve to the air default state, not null");
+        FacadePhasedState state = ItemPluggableFacade.getStates(bare).getCurrentStateForStack();
+        assertSame(FacadeStateManager.defaultState, state.stateInfo,
+            "a bare stack must resolve to the non-null air default state, before or after facade init");
+
+        //? if <1.21.10 {
+        /*// 1.21.1: the per-stack ItemOverrides arm (FacadeItemModel.java:157 in the #127 report),
+        // resolved with the registry-level model as ItemRenderer does.
+        FacadeItemModel registry = new FacadeItemModel();
+        registry.getOverrides().resolve(registry, bare, null, null, 0);
+        *///?}
+        //? if >=1.21.10 {
+        // The ItemModel arm, in the GUI context a config-screen carousel uses. The air facade bakes no
+        // quads (no block model to draw), so update() must return before touching the client.
+        net.minecraft.client.renderer.item.ItemStackRenderState renderState =
+            new net.minecraft.client.renderer.item.ItemStackRenderState();
+        new FacadeItemModel().update(renderState, bare, null, ItemDisplayContext.GUI, null, null, 0);
+        //?}
     }
 }

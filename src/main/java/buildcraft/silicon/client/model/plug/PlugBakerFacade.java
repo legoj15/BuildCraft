@@ -236,6 +236,11 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     }
 
     public List<MutableQuad> bakeForKey(KeyPlugFacade key) {
+        // The air default state (a bare facade stack, issue #127) has no block model: vanilla would hand
+        // back the missing model and the facade would draw as a magenta panel. There is nothing to show.
+        if (key.state.isAir()) {
+            return new ArrayList<>();
+        }
         //? if >=26.1 {
         BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(key.state);
         //?} elif >=1.21.10 {
@@ -329,6 +334,9 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
 
     @Override
     public List<BakedQuad> bake(KeyPlugFacade key) {
+        if (key.state.isAir()) {
+            return List.of();
+        }
         List<MutableQuad> mutableQuads = bakeForKey(key);
         List<BakedQuad> baked = new ArrayList<>();
         for (MutableQuad quad : mutableQuads) {

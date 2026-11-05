@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:facade_bare_name_survives_null_default_state",
+    "function": "buildcraftunofficial:facade_bare_name_uses_air_default",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

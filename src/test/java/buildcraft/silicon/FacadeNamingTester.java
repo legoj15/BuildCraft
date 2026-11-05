@@ -10,7 +10,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.silicon.item.ItemPluggableFacade;
-import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadePhasedState;
 import buildcraft.silicon.plug.FacadeStateManager;
 
@@ -20,54 +19,43 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * <p>On a multiplayer client {@link FacadeStateManager#init()} is deferred to
  * {@code ClientPlayerNetworkEvent.LoggingIn} (no integrated server runs it earlier via
  * {@code ServerAboutToStartEvent}). The guide book's "index every registered item" warm fires on the
- * same event and, if it runs first, calls {@code getHoverName()} on a bare facade while
- * {@link FacadeStateManager#defaultState} is still null — which used to dereference a null
- * {@link FacadePhasedState#stateInfo} and kill the login packet handler, disconnecting the player.
+ * same event and, if it ran first, called {@code getHoverName()} on a bare facade while
+ * {@link FacadeStateManager#defaultState} was still null — which dereferenced a null
+ * {@link FacadePhasedState#stateInfo} and killed the login packet handler, disconnecting the player.
  *
- * <p>The ordering is now pinned (the facade-init login listener runs at HIGH priority), but naming is
- * also null-guarded as a backstop. This test pins the backstop directly: force
- * {@code defaultState = null} to recreate the pre-init window and assert that naming a bare facade
- * neither throws nor yields an empty name. The {@code static} mutation is bracketed in try/finally so
- * it doesn't leak into other game tests.
+ * <p>The ordering is now pinned (the facade-init login listener runs at HIGH priority), and
+ * {@code defaultState} is a class-load constant (issue #127), so a bare facade is named before init the
+ * same as after it. This pins the naming fallback: a bare facade's name is never empty, and the display
+ * helper stays null-safe for a hand-built state with no info.
  */
 public final class FacadeNamingTester {
 
     private FacadeNamingTester() {}
 
-    public static void testBareFacadeNameSurvivesNullDefaultState(GameTestHelper helper) {
-        FacadeStateManager.ensureInitialized();
-        FacadeBlockStateInfo priorDefault = FacadeStateManager.defaultState;
+    public static void testBareFacadeNameUsesAirDefault(GameTestHelper helper) {
+        // getHoverName -> ItemPluggableFacade.getName -> getFacadeStateDisplayName. getStates on a
+        // bare stack resolves to createSingle(defaultState), the air facade, which must name as the bare item.
+        ItemStack bareFacade = new ItemStack(BCSiliconItems.PLUG_FACADE.get());
+        Component name;
         try {
-            // Recreate the multiplayer pre-init window: defaultState not yet populated on the client.
-            FacadeStateManager.defaultState = null;
-
-            // getHoverName -> ItemPluggableFacade.getName -> getFacadeStateDisplayName. getStates on a
-            // bare stack resolves to createSingle(defaultState=null) -> phasedStates[0].stateInfo=null.
-            // Before the fix this NPEd; now it must fall back to the bare item name.
-            ItemStack bareFacade = new ItemStack(BCSiliconItems.PLUG_FACADE.get());
-            Component name;
-            try {
-                name = bareFacade.getHoverName();
-            } catch (Exception e) {
-                helper.fail("Naming a bare facade with defaultState=null threw " + e
-                    + " — the login-disconnect regression is back.");
-                return;
-            }
-            if (name == null || name.getString().isBlank()) {
-                helper.fail("Bare facade name was empty/null with defaultState=null.");
-                return;
-            }
-
-            // The static helper must be null-safe directly too (appendHoverText calls it as well).
-            String suffix = ItemPluggableFacade.getFacadeStateDisplayName(new FacadePhasedState(null, null));
-            if (!suffix.isEmpty()) {
-                helper.fail("getFacadeStateDisplayName(null stateInfo) returned \"" + suffix
-                    + "\" instead of an empty string.");
-                return;
-            }
-            helper.succeed();
-        } finally {
-            FacadeStateManager.defaultState = priorDefault;
+            name = bareFacade.getHoverName();
+        } catch (Exception e) {
+            helper.fail("Naming a bare facade before facade init threw " + e
+                + " — the login-disconnect regression is back.");
+            return;
         }
+        if (name == null || name.getString().isBlank()) {
+            helper.fail("Bare facade name was empty/null before facade init.");
+            return;
+        }
+
+        // The static helper must be null-safe directly too (appendHoverText calls it as well).
+        String suffix = ItemPluggableFacade.getFacadeStateDisplayName(new FacadePhasedState(null, null));
+        if (!suffix.isEmpty()) {
+            helper.fail("getFacadeStateDisplayName(null stateInfo) returned \"" + suffix
+                + "\" instead of an empty string.");
+            return;
+        }
+        helper.succeed();
     }
 }

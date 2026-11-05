@@ -159,11 +159,6 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     public Set<IngredientStack> getInputsFor(@Nonnull ItemStack output) {
         FacadePhasedState state = ItemPluggableFacade.getStates(output).getCurrentStateForStack();
         FacadeBlockStateInfo targetInfo = state.stateInfo;
-        // A bare facade stack before FacadeStateManager.init() has no stateInfo (the same pre-init
-        // window as the model arms — issue #127): no block recorded, so nothing to price as input.
-        if (targetInfo == null) {
-            return Collections.emptySet();
-        }
         ItemStack stateRequirement = targetInfo.requiredStack;
 
         // If the facade has no item requirement (e.g. air default state), skip

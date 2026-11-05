@@ -118,10 +118,8 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
         FacadeInstance fullState = getStates(stack);
         if (fullState.type == FacadeType.Basic) {
             String displayName = getFacadeStateDisplayName(fullState.phasedStates[0]);
-            // Empty when the facade state hasn't resolved to a real block — a bare/default facade
-            // stack, or one named before FacadeStateManager.init() has populated defaultState on a
-            // multiplayer client (the guide/JEI indexing every item on login). Drop the ": <block>"
-            // suffix rather than appending ": Air" or dereferencing a null stateInfo.
+            // Empty when the facade is the air default (a bare stack). Drop the ": <block>" suffix
+            // rather than appending ": Air".
             if (displayName.isEmpty()) {
                 return super.getName(stack);
             }
@@ -131,11 +129,10 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
         }
     }
 
-    /** Display name of the block this facade mimics, or {@code ""} when the facade state hasn't
-     *  resolved to a real block: a null {@link FacadePhasedState#stateInfo} (e.g. a bare facade
-     *  named before {@link FacadeStateManager#init()} runs on a multiplayer client, where
-     *  {@code defaultState} is still null) or the empty/AIR default state. Callers treat an empty
-     *  result as "no block suffix" instead of dereferencing null. */
+    /** Display name of the block this facade mimics, or {@code ""} when there is no real block to
+     *  name: the air default state ({@link FacadeStateManager#defaultState}, never null) or a
+     *  hand-built state with a null {@link FacadePhasedState#stateInfo}. Callers treat an empty
+     *  result as "no block suffix". */
     public static String getFacadeStateDisplayName(FacadePhasedState state) {
         if (state == null || state.stateInfo == null) {
             return "";
@@ -179,12 +176,6 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
                     getFacadeStateDisplayName(defaultState)));
             }
         } else {
-            // A bare facade stack before FacadeStateManager.init() has no stateInfo — the same
-            // pre-first-world-join window the model arms guard against (issue #127). There is no
-            // block to name, so the whole block below (registry id + varying properties) is skipped.
-            if (states.phasedStates[0].stateInfo == null) {
-                return;
-            }
             if (flag.isAdvanced()) {
                 tooltip.accept(Component.literal(
                     BuiltInRegistries.BLOCK.getKey(states.phasedStates[0].stateInfo.state.getBlock()).toString()));

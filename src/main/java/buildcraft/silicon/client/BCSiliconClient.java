@@ -217,9 +217,7 @@ public class BCSiliconClient {
         // always follows LoggingIn — so facade state and the assembly registry below are both
         // ready before the guide indexes every item. On a multiplayer client this is the only
         // init trigger for either (ServerAboutToStartEvent never fires there); without it the
-        // guide would see a null FacadeStateManager.defaultState and an empty assembly registry.
-        // (Naming is also null-guarded in ItemPluggableFacade as a backstop; this keeps the
-        // names correct, not just crash-free.)
+        // guide would index facades with no valid states and an empty assembly registry.
         public static void onClientLoggingIn() {
             FacadeStateManager.ensureInitialized();
             // Assembly recipes (gates, chipsets, lenses, wires, facades): populated at

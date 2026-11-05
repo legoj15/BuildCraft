@@ -109,12 +109,6 @@ public class FacadeItemModel implements ItemModel {
                        @Nullable ItemOwner owner, int seed) {
         FacadeInstance inst = ItemPluggableFacade.getStates(stack);
         FacadePhasedState state = inst.getCurrentStateForStack();
-        // A bare facade stack (no NBT) resolved before FacadeStateManager.init() has run — the title
-        // screen, before the first world join — has a null stateInfo (issue #127: Moonlight's item
-        // carousel feeds getDefaultInstance() stacks through here). There is no facade to render.
-        if (state.stateInfo == null) {
-            return;
-        }
 
         List<BakedQuad> quads;
         KeyPlugFacade key;
@@ -160,12 +154,6 @@ public class FacadeItemModel implements ItemModel {
                     net.minecraft.world.entity.LivingEntity entity, int seed) {
                 FacadeInstance inst = ItemPluggableFacade.getStates(stack);
                 FacadePhasedState state = inst.getCurrentStateForStack();
-                // Same pre-init window as update(): a bare stack's stateInfo is null. Return the
-                // registry model unchanged — applyTransform renders nothing without a resolved
-                // state (issue #127).
-                if (state.stateInfo == null) {
-                    return model;
-                }
                 return new FacadeItemModel(state.stateInfo.state, inst.isHollow());
             }
         };

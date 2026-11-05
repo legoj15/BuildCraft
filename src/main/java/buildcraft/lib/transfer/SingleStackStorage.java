@@ -11,6 +11,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.BCModifiableItemStorage;
 import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransactionContext;
 
@@ -18,9 +19,11 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * A one-slot {@link BCItemStorage} over a stack the owner keeps ({@link #getStack()}/{@link #setStack}): the loader-neutral
  * twin of NeoForge's {@code ItemStackResourceHandler}, with the same rules. It takes any item {@link #isValid(ItemStack)}
  * allows, up to the item's own stack size (never above {@link Item#ABSOLUTE_MAX_STACK_SIZE}), gives up whatever it
- * holds, and reports a committed change through {@link #onRootCommit}.
+ * holds, and reports a committed change through {@link #onRootCommit}. It is also a {@link BCModifiableItemStorage}
+ * (the 1.21.1 fuel slot of the stone engine was an {@code IItemHandlerModifiable}), whose
+ * {@link #setStackInSlot} reports its change the same way.
  */
-public abstract class SingleStackStorage implements BCItemStorage {
+public abstract class SingleStackStorage implements BCModifiableItemStorage {
     private final BCSnapshotJournal<ItemStack> journal = new BCSnapshotJournal<>() {
         @Override
         protected ItemStack createSnapshot() {
@@ -68,6 +71,17 @@ public abstract class SingleStackStorage implements BCItemStorage {
     public ItemStack getStack(int index) {
         Objects.checkIndex(index, size());
         return getStack().copy();
+    }
+
+    /** Overwrites the slot outside any transaction and reports the change through {@link #onRootCommit}; any index but
+     *  the one slot is ignored, as the stone engine's classic fuel handler ignored it. */
+    @Override
+    public void setStackInSlot(int index, ItemStack stack) {
+        if (index == 0) {
+            ItemStack before = getStack();
+            setStack(stack);
+            onRootCommit(before);
+        }
     }
 
     @Override

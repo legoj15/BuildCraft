@@ -312,6 +312,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         }
     }
 
+    @Override
     public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
         if (badSlotIndex(slot)) {
             throw new IndexOutOfBoundsException("Slot index out of range: " + slot);

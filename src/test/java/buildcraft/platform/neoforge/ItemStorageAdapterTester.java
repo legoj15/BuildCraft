@@ -178,6 +178,59 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         assertEquals(5, handler.getStack(0).getCount());
         assertEquals(3, classic.extractItem(0, 3, false).getCount());
         assertEquals(64, classic.getSlotLimit(0));
+    }
+
+    /^* 1.21.1 handed BuildCraft's plain inventories out as {@code IItemHandlerModifiable}, and NeoForge's own
+     *  {@code SlotItemHandler.set} casts to it, so a foreign container wrapping a BuildCraft machine died with a
+     *  ClassCastException once the platform adapter stopped being one. The wrapped (insert-only, extract-only,
+     *  combined) and empty handlers were never modifiable, and stay that way. ^/
+    @Test
+    public void aPlainBuildCraftInventoryIsAnIItemHandlerModifiable() {
+        ItemHandlerSimple handler = simple(ItemStack.EMPTY, new ItemStack(Items.DIRT, 3));
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(handler);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable,
+            "a plain BuildCraft inventory must be settable through the classic handler, as it was");
+        ((net.neoforged.neoforge.items.IItemHandlerModifiable) classic).setStackInSlot(0, new ItemStack(Items.APPLE, 7));
+        assertEquals(7, handler.getStack(0).getCount(), "the set reached the BuildCraft inventory");
+        assertSame(handler, NeoForgeItemStorages.fromNeo(classic), "and it still unwraps to itself");
+
+        assertTrue(!(NeoForgeItemStorages.toNeo(new buildcraft.lib.tile.item.WrappedItemHandlerExtract(handler))
+            instanceof net.neoforged.neoforge.items.IItemHandlerModifiable), "a wrapped handler was never modifiable");
+        assertTrue(!(NeoForgeItemStorages.toNeo(ItemStorageUtil.EMPTY)
+            instanceof net.neoforged.neoforge.items.IItemHandlerModifiable), "the empty handler was never modifiable");
+    }
+
+    /^* The stone engine's fuel slot was an anonymous {@code IItemHandlerModifiable}: {@code setStackInSlot} replaced
+     *  the stack and marked the tile changed, and ignored any slot but 0. ^/
+    @Test
+    public void aSingleStackStorageIsAnIItemHandlerModifiableThatReportsTheSet() {
+        ItemStack[] held = { ItemStack.EMPTY };
+        int[] changed = { 0 };
+        buildcraft.lib.transfer.SingleStackStorage fuel = new buildcraft.lib.transfer.SingleStackStorage() {
+            @Override
+            protected ItemStack getStack() {
+                return held[0];
+            }
+
+            @Override
+            protected void setStack(ItemStack stack) {
+                held[0] = stack;
+            }
+
+            @Override
+            protected void onRootCommit(ItemStack originalState) {
+                changed[0]++;
+            }
+        };
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(fuel);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable);
+        var modifiable = (net.neoforged.neoforge.items.IItemHandlerModifiable) classic;
+        modifiable.setStackInSlot(0, new ItemStack(Items.COAL, 5));
+        assertEquals(5, held[0].getCount());
+        assertEquals(1, changed[0], "the owner is told once");
+        modifiable.setStackInSlot(1, new ItemStack(Items.COAL, 9));
+        assertEquals(5, held[0].getCount(), "a slot past the only one is ignored");
+        assertEquals(1, changed[0]);
     }*/
     //?}
 }

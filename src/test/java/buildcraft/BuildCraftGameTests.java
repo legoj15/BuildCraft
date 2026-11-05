@@ -1001,9 +1001,8 @@ public class BuildCraftGameTests {
         // FacadeRedirectTester and the todos.md "Facade redirects are client-only" entry.
         reg.accept("buildcraftunofficial:facade_empty_redirects_produce_no_facade", () -> buildcraft.silicon.FacadeRedirectTester::testEmptyRedirectsProduceNoFacadeForMappedItem);
         reg.accept("buildcraftunofficial:facade_populated_redirects_make_facade", () -> buildcraft.silicon.FacadeRedirectTester::testPopulatedRedirectsMakeFacadeForMappedItem);
-        // Bare facade naming must survive FacadeStateManager.defaultState being null — the
-        // multiplayer-join window before facade init, where the guide's item-index warm names a
-        // bare facade and used to NPE the login handler (client disconnect). See FacadeNamingTester.
+        // Bare facade naming: the guide's item-index warm on a multiplayer join names a bare facade,
+        // which used to NPE the login handler before facade init (client disconnect). See FacadeNamingTester.
         reg.accept("buildcraftunofficial:facade_bare_name_survives_null_default_state", () -> buildcraft.silicon.FacadeNamingTester::testBareFacadeNameSurvivesNullDefaultState);
         // Pins the Logic Gates guide page's <recipe_cycle match="..."/> selectors: each assembly
         // match picks one variant's AND+OR pair, and each swap direction has its 12 crafting recipes.

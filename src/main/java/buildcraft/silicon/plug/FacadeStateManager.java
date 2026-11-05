@@ -85,7 +85,12 @@ public enum FacadeStateManager implements IFacadeRegistry {
      *  computes nothing, and a connected client withholds its own copy) — redirects simply don't apply
      *  there, by design. See the {@code todos.md} "Facade redirects are client-only" entry. */
     public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> stackRedirects;
-    public static FacadeBlockStateInfo defaultState, previewState;
+    /** The air facade every bare, unknown or unresolvable facade stack falls back to. Built at class load, not
+     *  in {@link #init()}: item models, tooltips and recipe viewers reach a bare facade before any world starts
+     *  (issue #127, a config screen's item carousel on the title screen), so this must never be null. */
+    public static final FacadeBlockStateInfo defaultState =
+        new FacadeBlockStateInfo(Blocks.AIR.defaultBlockState(), ItemStack.EMPTY, ImmutableSet.of());
+    public static FacadeBlockStateInfo previewState = defaultState;
 
     private static volatile boolean initialized = false;
 
@@ -199,7 +204,6 @@ public enum FacadeStateManager implements IFacadeRegistry {
         if (initialized) {
             return;
         }
-        defaultState = new FacadeBlockStateInfo(Blocks.AIR.defaultBlockState(), ItemStack.EMPTY, ImmutableSet.of());
         generationDisabled = isFacadeGenerationDisabled();
         if (FacadeAPI.facadeItem == null) {
             previewState = defaultState;
@@ -208,8 +212,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
         if (generationDisabled) {
             // Issue #29: no enumeration scan, no derivation. Republish the EMPTY seed snapshots
             // (a re-init after a populated run must clear them), mark initialized so this is
-            // once-only, and stop before the scan. defaultState/previewState stay assigned so
-            // facade read paths keep working.
+            // once-only, and stop before the scan. previewState falls back to the air default.
             validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
             stackFacades = Map.of();
             stackRedirects = Map.of();

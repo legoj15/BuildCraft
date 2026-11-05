@@ -179,6 +179,12 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
                     getFacadeStateDisplayName(defaultState)));
             }
         } else {
+            // A bare facade stack before FacadeStateManager.init() has no stateInfo — the same
+            // pre-first-world-join window the model arms guard against (issue #127). There is no
+            // block to name, so the whole block below (registry id + varying properties) is skipped.
+            if (states.phasedStates[0].stateInfo == null) {
+                return;
+            }
             if (flag.isAdvanced()) {
                 tooltip.accept(Component.literal(
                     BuiltInRegistries.BLOCK.getKey(states.phasedStates[0].stateInfo.state.getBlock()).toString()));

@@ -1,5 +1,6 @@
 ###### Changes since 2026.3.1:
 
+- Fixed a crash when another mod asked a bare facade item for its model or tooltip before any world was joined (seen with Moonlight's config screen item carousel on 1.21.1). The facade state is only initialised when a world starts, and the item model dereferenced it anyway; it now simply renders nothing.
 - **Fabric support for Minecraft 26.3 (in development).** BuildCraft now also builds for Fabric (with Fabric API and Forge Config API Port); the NeoForge versions are unchanged. Machines respect Fabric claim mods through the bundled Common Protection API, placements included. Known Fabric differences so far: no Curios/Accessories slot for the Robot Goggles, and fluids move in whole millibuckets, so a transfer of less than 1 mB moves nothing.
 - Fixed mobs and players being stuck in place in crude oil and residue on Minecraft 26.1.2 and later: they now wade through slowly (residue the slowest, and slower again with `oilIsSticky`), sink gently, and can climb out at the edge.
 - Fixed a living entity's hands and armour reading as one unnamed slot to BuildCraft's machines on Fabric, instead of the six indexed slots NeoForge's entity item capability hands out.

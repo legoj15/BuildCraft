@@ -59,7 +59,8 @@ public final class ThickFluidMotion {
     }
 
     /** The extra downward pull per tick in a fluid of this density: vanilla water's at water's density, less in a
-     *  denser one, lava's at most (a fluid lighter than air or than a tenth of water). */
+     *  denser one, lava's ({@code gravity / 4}) at most, which a fluid of a quarter of water's density or lighter
+     *  (and one with no density, or lighter than air) reaches. */
     public static double sinkPull(int density, double gravity) {
         double waterPull = gravity / 16.0D;
         if (density <= 0) {

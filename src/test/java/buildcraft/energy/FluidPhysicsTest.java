@@ -20,7 +20,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 
 public class FluidPhysicsTest {
 
-    /** How long the pig is watched in the oil shaft before the test passes. */
+    /** How long the pig is watched in the oil shaft before the test passes (both arms of the test read it). */
     private static final int BOB_SETTLE_TICKS = 100;
 
     public static void testOilBobbing(GameTestHelper helper) {
@@ -108,7 +108,7 @@ public class FluidPhysicsTest {
         //?} else {
         /*// 1.21.1: GameTestHelper has no assertEntityNotPresent(EntityType, AABB) overload yet — use the
         // (EntityType, Vec3 min, Vec3 max) corner form against the same surface region.
-        helper.runAtTickTime(100, () -> {
+        helper.runAtTickTime(BOB_SETTLE_TICKS, () -> {
             helper.assertEntityNotPresent(EntityType.PIG, surface.getMinPosition(), surface.getMaxPosition());
             helper.succeed();
         });

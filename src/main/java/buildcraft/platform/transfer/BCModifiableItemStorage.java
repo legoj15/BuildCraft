@@ -15,6 +15,11 @@ import net.minecraft.world.item.ItemStack;
  * platform layer. The other loaders have no such handler type and ignore it.
  */
 public interface BCModifiableItemStorage extends BCItemStorage {
+    /** The stack the storage holds at {@code index} itself, not a copy ({@link ItemStack#EMPTY} for a slot it does not
+     *  have): what 1.21.1's classic {@code getStackInSlot} handed out, so a foreign slot that shrinks it in place
+     *  changes the storage, as it did. Common code reads {@link #getStack(int)}, which copies. */
+    ItemStack getStackInSlot(int index);
+
     /** Replaces the stack at {@code index} with {@code stack} (the storage keeps its own copy if it needs one). */
     void setStackInSlot(int index, ItemStack stack);
 }

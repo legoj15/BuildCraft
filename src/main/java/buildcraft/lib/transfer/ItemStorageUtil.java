@@ -34,6 +34,11 @@ public final class ItemStorageUtil {
         public void setStackInSlot(int index, ItemStack stack) {}
 
         @Override
+        public ItemStack getStackInSlot(int index) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
         public ItemStack getStack(int index) {
             return ItemStack.EMPTY;
         }

@@ -207,8 +207,16 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable,
             "the empty storage must be modifiable through the classic handler, as EmptyItemHandler is");
         new net.neoforged.neoforge.items.SlotItemHandler(classic, 0, 0, 0).set(new ItemStack(Items.DIRT));
-        assertEquals(0, classic.getSlots(), "and the set leaves it without slots");
-        assertTrue(classic.getStackInSlot(0).isEmpty());
+    }
+
+    /^* 1.21.1's classic {@code getStackInSlot} on a BuildCraft inventory handed out the stack the inventory holds, not
+     *  a copy, so a foreign slot that shrinks {@code getItem()} in place (vanilla's {@code Slot} pattern) changed the
+     *  inventory. ^/
+    @Test
+    public void aClassicSlotOfABuildCraftInventoryIsTheLiveStack() {
+        ItemHandlerSimple handler = simple(new ItemStack(Items.DIRT, 3));
+        new net.neoforged.neoforge.items.SlotItemHandler(NeoForgeItemStorages.toNeo(handler), 0, 0, 0).getItem().shrink(1);
+        assertEquals(2, handler.getStack(0).getCount(), "the shrink wrote through to the inventory, as it did");
     }
 
     /^* The stone engine's fuel slot was an anonymous {@code IItemHandlerModifiable}: {@code setStackInSlot} replaced
@@ -242,6 +250,17 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         modifiable.setStackInSlot(1, new ItemStack(Items.COAL, 9));
         assertEquals(5, held[0].getCount(), "a slot past the only one is ignored");
         assertEquals(1, changed[0]);
+
+        modifiable.getStackInSlot(0).shrink(1);
+        assertEquals(4, held[0].getCount(), "getStackInSlot is the held stack, not a copy");
+
+        // Any other slot answered as an empty, refusing slot instead of throwing.
+        assertTrue(classic.getStackInSlot(1).isEmpty());
+        assertEquals(3, classic.insertItem(1, new ItemStack(Items.COAL, 3), false).getCount());
+        assertTrue(classic.extractItem(1, 1, false).isEmpty());
+        assertTrue(!classic.isItemValid(1, new ItemStack(Items.COAL)));
+        assertEquals(net.minecraft.world.item.Item.ABSOLUTE_MAX_STACK_SIZE, classic.getSlotLimit(1));
+        assertEquals(4, held[0].getCount(), "and left the fuel alone");
     }*/
     //?}
 }

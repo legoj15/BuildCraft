@@ -67,10 +67,30 @@ public abstract class SingleStackStorage implements BCModifiableItemStorage {
         return 1;
     }
 
+    /**
+     * Whether {@code index} is the one slot. Past it, each node answers as the handler this class replaced did: NeoForge's
+     * {@code ItemStackResourceHandler} on 1.21.10+ throws, and 1.21.1's classic fuel handler answered an empty slot that
+     * takes nothing.
+     */
+    private boolean hasIndex(int index) {
+        //? if >=1.21.10 {
+        Objects.checkIndex(index, size());
+        return true;
+        //?} else {
+        /*return index == 0;
+        *///?}
+    }
+
     @Override
     public ItemStack getStack(int index) {
-        Objects.checkIndex(index, size());
-        return getStack().copy();
+        return hasIndex(index) ? getStack().copy() : ItemStack.EMPTY;
+    }
+
+    /** The held stack itself for slot 0, as the stone engine's classic fuel handler handed it out; any other index is
+     *  empty. */
+    @Override
+    public ItemStack getStackInSlot(int index) {
+        return index == 0 ? getStack() : ItemStack.EMPTY;
     }
 
     /** Overwrites the slot outside any transaction and reports the change through {@link #onRootCommit}; any index but
@@ -86,20 +106,21 @@ public abstract class SingleStackStorage implements BCModifiableItemStorage {
 
     @Override
     public int getCapacity(int index, ItemStack resource) {
-        Objects.checkIndex(index, size());
+        if (!hasIndex(index)) {
+            // The classic fuel handler's slot limit ignored the slot.
+            return Item.ABSOLUTE_MAX_STACK_SIZE;
+        }
         return resource.isEmpty() || isValid(resource) ? getCapacity(resource) : 0;
     }
 
     @Override
     public boolean isValid(int index, ItemStack resource) {
-        Objects.checkIndex(index, size());
-        return !resource.isEmpty() && isValid(resource);
+        return hasIndex(index) && !resource.isEmpty() && isValid(resource);
     }
 
     @Override
     public int insert(int index, ItemStack resource, int amount, BCTransactionContext transaction) {
-        Objects.checkIndex(index, size());
-        if (resource.isEmpty() || amount <= 0) {
+        if (!hasIndex(index) || resource.isEmpty() || amount <= 0) {
             return 0;
         }
         ItemStack current = getStack();
@@ -122,8 +143,7 @@ public abstract class SingleStackStorage implements BCModifiableItemStorage {
 
     @Override
     public int extract(int index, ItemStack resource, int amount, BCTransactionContext transaction) {
-        Objects.checkIndex(index, size());
-        if (resource.isEmpty() || amount <= 0) {
+        if (!hasIndex(index) || resource.isEmpty() || amount <= 0) {
             return 0;
         }
         ItemStack current = getStack();

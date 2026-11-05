@@ -207,6 +207,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return size();
     }
 
+    @Override
     public net.minecraft.world.item.ItemStack getStackInSlot(int slot) {
         if (badSlotIndex(slot)) return net.minecraft.world.item.ItemStack.EMPTY;
         return stacks.get(slot);

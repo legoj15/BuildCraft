@@ -42,7 +42,8 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * to the same slot in one transaction are each simulated against the slot as it was; BuildCraft's callers touch a
  * slot once per transaction. A {@link BCModifiableItemStorage} (the plain BuildCraft inventories, and the empty storage
  * the Quarry and Mining Well expose in place of {@code EmptyItemHandler}) goes out as an {@code IItemHandlerModifiable},
- * as it always did: NeoForge's own {@code SlotItemHandler} casts to it.
+ * as it always did: NeoForge's own {@code SlotItemHandler} casts to it. Its {@code getStackInSlot} is the stack the
+ * storage holds, not a copy, as BuildCraft's classic handlers returned it.
  */
 public final class NeoForgeItemStorages {
     private NeoForgeItemStorages() {}
@@ -264,6 +265,12 @@ public final class NeoForgeItemStorages {
         ToClassicModifiable(BCModifiableItemStorage storage) {
             super(storage);
             this.modifiable = storage;
+        }
+
+        // The live stack, as 1.21.1's BuildCraft handlers returned it (IItemHandler asks callers not to modify it).
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return modifiable.getStackInSlot(slot);
         }
 
         @Override

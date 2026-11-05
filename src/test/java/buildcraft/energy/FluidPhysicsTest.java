@@ -9,11 +9,18 @@ package buildcraft.energy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.test.EntityArenaUtil;
@@ -141,7 +148,7 @@ public class FluidPhysicsTest {
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WADE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WADE_WORK_TICKS, () -> {
                     if (pig[0] == null) {
-                        buildCrudePool(helper);
+                        buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
                         //? if >=26.2 {
                         pig[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 3, 3);
                         //?} else {
@@ -161,10 +168,10 @@ public class FluidPhysicsTest {
                 helper::succeed, "a pig in crude oil never waded and sank", () -> EntityArenaUtil.discard(pig[0]));
     }
 
-    /** A sealed pool of crude-oil sources, x 1..4, y 1..3, z 2..4, on a stone floor, walled one block higher. Every
-     *  block of the cell's x 0..5, z 1..5 box up to y 4 is written, which also replaces the barriers the framework
-     *  leaves in the origin corner. */
-    private static void buildCrudePool(GameTestHelper helper) {
+    /** A sealed pool of {@code fluid} sources, x 1..4, y 1..3, z 2..4, on a stone floor, walled one block higher.
+     *  Every block of the cell's x 0..5, z 1..5 box up to y 4 is written, which also replaces the barriers the
+     *  framework leaves in the origin corner. */
+    private static void buildPool(GameTestHelper helper, Block fluid) {
         for (int x = 0; x <= 5; x++) {
             for (int z = 1; z <= 5; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -173,12 +180,168 @@ public class FluidPhysicsTest {
                     if (wall) {
                         helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
                     } else {
-                        helper.setBlock(new BlockPos(x, y, z),
-                                y <= 3 ? BCEnergyFluids.OIL_COOL.block().get() : Blocks.AIR);
+                        helper.setBlock(new BlockPos(x, y, z), y <= 3 ? fluid : Blocks.AIR);
                     }
                 }
             }
         }
+    }
+
+    /** The poll's budget once the cell ticks: the two tests below answer on the first poll that finds it ticking. */
+    private static final int POOL_WORK_TICKS = 20;
+
+    /** Where the item and the boat float in the pool: the middle of its three layers. */
+    private static final BlockPos POOL_MIDDLE = new BlockPos(2, 2, 3);
+
+    /**
+     * An item dropped into crude oil floats. NeoForge's {@code ItemEntity.tick} gives any fluid type that is not
+     * vanilla's, deeper than a tenth of a block, the item movement of water (a small upward nudge, no gravity),
+     * whether or not the fluid is water-like; vanilla's own test is {@code isInWater()}, which crude oil (not
+     * water-like) fails, so on Fabric the item fell through the lake to its floor. A motionless item in the
+     * middle of a sealed crude pool is ticked once: it must rise, where gravity would pull it down. The same pool
+     * of water is the control, since a pool where nothing rises would pass any test of falling. Gated on the cell
+     * ticking so the fluid scan sees loaded chunks; the entity is ticked by hand so the answer is the one tick's,
+     * never a race with the level's own.
+     */
+    public static void crudeOilFloatsItems(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
+        ItemEntity[] item = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + POOL_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, POOL_WORK_TICKS, () -> {
+                    item[0] = spawnItem(helper);
+                    buildPool(helper, Blocks.WATER);
+                    double waterDy = tickedMotion(helper, item[0], POOL_MIDDLE).y;
+                    if (waterDy <= 0.0) {
+                        helper.fail("control: an item in water must float (vertical motion after a tick " + waterDy + ")");
+                    }
+                    buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
+                    double oilDy = tickedMotion(helper, item[0], POOL_MIDDLE).y;
+                    if (oilDy <= 0.0) {
+                        helper.fail("an item in crude oil must float like one in water, not fall (vertical motion after"
+                                + " a tick " + oilDy + ")");
+                    }
+                    return true;
+                }), helper::succeed, "an item in crude oil was never checked", () -> EntityArenaUtil.discard(item[0]));
+    }
+
+    /** A cobblestone item added to the level; {@link #tickedMotion} puts it where the test reads it. */
+    private static ItemEntity spawnItem(GameTestHelper helper) {
+        BlockPos at = helper.absolutePos(BlockPos.ZERO);
+        ItemEntity item = new ItemEntity(helper.getLevel(), at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5,
+                new ItemStack(Items.COBBLESTONE));
+        helper.getLevel().addFreshEntity(item);
+        return item;
+    }
+
+    /**
+     * A flowing crude-oil current pushes an item along it, by the fluid's own motion scale (NeoForge sums one
+     * current per fluid type; Fabric's {@code EntityFluidInteractionMixin} sums one per BuildCraft fluid, since
+     * vanilla's water current would otherwise take every fluid in the water tag). A three-block channel steps down
+     * from a source through two shallower flowing blocks, walled on every side, so the middle block flows toward +x;
+     * a motionless item in it is ticked once and must gain +x motion and none in z. Still crude oil is the control:
+     * the same item in a pool of sources moves nowhere sideways, so the push is the current's and not the item's own.
+     */
+    public static void crudeOilCurrentPushesItems(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
+        ItemEntity[] item = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + POOL_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, POOL_WORK_TICKS, () -> {
+                    item[0] = spawnItem(helper);
+                    buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
+                    Vec3 still = tickedMotion(helper, item[0], CHANNEL_MIDDLE);
+                    if (Math.abs(still.x) > 1.0E-6 || Math.abs(still.z) > 1.0E-6) {
+                        helper.fail("control: an item in still crude oil must not be pushed sideways (motion " + still + ")");
+                    }
+                    buildChannel(helper);
+                    Vec3 flowing = tickedMotion(helper, item[0], CHANNEL_MIDDLE);
+                    if (flowing.x < MIN_PUSH || Math.abs(flowing.z) > 1.0E-6) {
+                        helper.fail("a current flowing toward +x must push the item along it by at least " + MIN_PUSH
+                                + " a tick, and not sideways (motion " + flowing + ")");
+                    }
+                    return true;
+                }), helper::succeed, "an item in a crude-oil current was never checked",
+                () -> EntityArenaUtil.discard(item[0]));
+    }
+
+    /** The middle block of the channel, where the current is read: its neighbours are a source and a shallower block. */
+    private static final BlockPos CHANNEL_MIDDLE = new BlockPos(2, 1, 3);
+
+    /** The least +x motion one tick of the current must give the item: vanilla keeps a current's push to at least
+     *  0.0045 while the item is nearly at rest, and gravity and drag leave x alone. */
+    private static final double MIN_PUSH = 0.001;
+
+    /** A one-block-wide channel along z = 3, x 1..3, y = 1, in the same stone box as {@link #buildPool}: a source,
+     *  then crude oil of amount 4 and of amount 2, each lower than the last, with air above, so its middle block
+     *  flows toward +x. */
+    private static void buildChannel(GameTestHelper helper) {
+        for (int x = 0; x <= 5; x++) {
+            for (int z = 1; z <= 5; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                for (int y = 1; y <= 4; y++) {
+                    boolean above = z == 3 && x >= 1 && x <= 3;
+                    helper.setBlock(new BlockPos(x, y, z), above ? Blocks.AIR : Blocks.STONE);
+                }
+            }
+        }
+        Block oil = BCEnergyFluids.OIL_COOL.block().get();
+        helper.setBlock(new BlockPos(1, 1, 3), oil.defaultBlockState());
+        helper.setBlock(new BlockPos(2, 1, 3), oil.defaultBlockState().setValue(LiquidBlock.LEVEL, 4));
+        helper.setBlock(new BlockPos(3, 1, 3), oil.defaultBlockState().setValue(LiquidBlock.LEVEL, 6));
+    }
+
+    /** Puts {@code item} motionless low in {@code block}, ticks it once and returns its motion. */
+    private static Vec3 tickedMotion(GameTestHelper helper, ItemEntity item, BlockPos block) {
+        BlockPos at = helper.absolutePos(block);
+        item.setPos(at.getX() + 0.5, at.getY() + 0.05, at.getZ() + 0.5);
+        item.setDeltaMovement(Vec3.ZERO);
+        item.tick();
+        return item.getDeltaMovement();
+    }
+
+    /**
+     * A boat does not float on crude oil. NeoForge asks each fluid type whether a boat can float on it
+     * ({@code canBoatInFluid}: off by default, and BuildCraft's fluid types leave it off); vanilla asks the water
+     * tag, which every BuildCraft fluid is in, so on Fabric a boat sailed on oil. A boat in the middle of a sealed
+     * crude pool is ticked once and must not count as under water; the same pool of water is the control.
+     */
+    public static void crudeOilDoesNotFloatBoats(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
+        Entity[] boat = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + POOL_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, POOL_WORK_TICKS, () -> {
+                    buildPool(helper, Blocks.WATER);
+                    //? if >=26.2 {
+                    boat[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.OAK_BOAT, POOL_MIDDLE.getX(),
+                            POOL_MIDDLE.getY(), POOL_MIDDLE.getZ());
+                    //?} elif >=1.21.10 {
+                    /*boat[0] = helper.spawn(EntityType.OAK_BOAT, POOL_MIDDLE.getX(), POOL_MIDDLE.getY(),
+                            POOL_MIDDLE.getZ());
+                    *///?} else {
+                    /*boat[0] = helper.spawn(EntityType.BOAT, POOL_MIDDLE.getX(), POOL_MIDDLE.getY(),
+                            POOL_MIDDLE.getZ());
+                    *///?}
+                    boat[0].tick();
+                    if (!boatUnderWater(boat[0])) {
+                        helper.fail("control: a boat in a pool of water must count as under water");
+                    }
+                    buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
+                    boat[0].tick();
+                    if (boatUnderWater(boat[0])) {
+                        helper.fail("a boat in a pool of crude oil must not count as under water: oil is not a fluid"
+                                + " boats float on");
+                    }
+                    return true;
+                }), helper::succeed, "a boat in crude oil was never checked", () -> EntityArenaUtil.discard(boat[0]));
+    }
+
+    private static boolean boatUnderWater(Entity boat) {
+        //? if >=1.21.11 {
+        return ((net.minecraft.world.entity.vehicle.boat.AbstractBoat) boat).isUnderWater();
+        //?} elif >=1.21.10 {
+        /*return ((net.minecraft.world.entity.vehicle.AbstractBoat) boat).isUnderWater();
+        *///?} else {
+        /*return ((net.minecraft.world.entity.vehicle.Boat) boat).isUnderWater();
+        *///?}
     }
 
     /**

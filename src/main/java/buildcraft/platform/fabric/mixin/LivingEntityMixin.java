@@ -66,12 +66,18 @@ abstract class LivingEntityMixin {
     @Unique
     private FluidProperties buildcraft$thickFluid() {
         LivingEntity self = (LivingEntity) (Object) this;
+        FabricFluidPhysics.Interaction interaction =
+                (FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction();
+        // The entity's own fluid tracking says first whether any BuildCraft fluid is near: the answer for nearly
+        // every entity on every tick, and no block lookup for it (vanilla's travel makes its own right after).
+        if (!interaction.buildcraft$inBuildCraftFluid()) {
+            return null;
+        }
         FluidState state = self.level().getFluidState(self.blockPosition());
         FluidProperties declared = FabricFlowingFluids.declared(state.getType());
         if (declared != null && ThickFluidMotion.isThick(declared) && !self.isInWater() && !self.isInLava()
                 && self.isAffectedByFluids() && !self.canStandOnFluid(state)
-                && ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
-                        .buildcraft$inKindOf(declared)) {
+                && interaction.buildcraft$inKindOf(declared)) {
             return declared;
         }
         return null;

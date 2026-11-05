@@ -162,8 +162,9 @@ public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlow
             super(side);
         }
 
-        // Journals the F3 "OFFERED" counter with the power it counts: a rolled-back insert (every demand probe is one)
-        // was never offered power, which is what 1.21.1's simulate flag always meant.
+        // On 1.21.1 the F3 "OFFERED" counter is journalled with the power it counts, so a rolled-back insert (every
+        // demand probe is one) counts nothing: the classic receiveEnergy counted only a non-simulated insert. The
+        // transaction nodes always counted every insert, probes and aborts included, and still do (debug only).
         private final BCSnapshotJournal<long[]> powerJournal = new BCSnapshotJournal<long[]>() {
             @Override
             protected long[] createSnapshot() {
@@ -173,7 +174,9 @@ public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlow
             @Override
             protected void revertToSnapshot(long[] snapshot) {
                 internalNextPower = snapshot[0];
-                debugPowerOffered = snapshot[1];
+                //? if <1.21.10 {
+                /*debugPowerOffered = snapshot[1];*/
+                //?}
             }
         };
 

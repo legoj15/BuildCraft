@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fe_pipe_demand_probe_not_counted_as_offered",
+    "function": "buildcraftunofficial:fe_pipe_demand_probe_rolls_back",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

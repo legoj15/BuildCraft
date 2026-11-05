@@ -96,8 +96,9 @@ public class BCEventLoaderBusTest {
     @Test
     public void reloadStagesReachNeoForgeBusListeners() {
         ReloadSubscriber subscriber = new ReloadSubscriber();
-        NeoForge.EVENT_BUS.register(subscriber);
         try {
+            // Inside the try: a register that throws part-way leaves its earlier handlers on the shared bus.
+            NeoForge.EVENT_BUS.register(subscriber);
             ReloadableRegistryManager.DATA_PACKS.reload(Collections.emptySet());
         } finally {
             NeoForge.EVENT_BUS.unregister(subscriber);
@@ -111,12 +112,13 @@ public class BCEventLoaderBusTest {
         RobotSubscriber subscriber = new RobotSubscriber();
         List<String> bcListOrder = new ArrayList<>();
         Consumer<RobotEvent.Place> bcListener = event -> bcListOrder.add(event.isCanceled() ? "cancelled" : "open");
-        NeoForge.EVENT_BUS.register(subscriber);
-        RobotEvent.Place.LISTENERS.addListener(bcListener);
         RobotEvent.Place place;
         RobotEvent.Interact interact;
         RobotEvent.Dismantle dismantle;
         try {
+            // Inside the try, so a part-way register never leaves a veto handler on the shared bus.
+            NeoForge.EVENT_BUS.register(subscriber);
+            RobotEvent.Place.LISTENERS.addListener(bcListener);
             // The calls ItemRobot and EntityRobot make.
             place = RobotEvent.Place.LISTENERS.post(new RobotEvent.Place(null, null));
             interact = RobotEvent.Interact.LISTENERS.post(new RobotEvent.Interact(null, null, null));

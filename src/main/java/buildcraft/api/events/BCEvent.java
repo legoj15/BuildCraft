@@ -11,8 +11,9 @@ package buildcraft.api.events;
  *
  * <p>On NeoForge this is also a NeoForge {@code Event}, and {@link BCEventListeners#post} posts it on
  * {@code NeoForge.EVENT_BUS} after the BuildCraft listeners, so a NeoForge addon's {@code @SubscribeEvent} or
- * {@code addListener} on these classes keeps working exactly as it did before the platform layer. On Fabric it is a
- * plain class and the lists are the only listeners.
+ * {@code addListener} on these classes still receives every post. NeoForge listeners run after the BuildCraft list,
+ * with the cancel state it left: a cancel there skips the NeoForge listeners that do not take cancelled events. On
+ * Fabric it is a plain class and the lists are the only listeners.
  */
 //? if neoforge {
 public abstract class BCEvent extends net.neoforged.bus.api.Event {

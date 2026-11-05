@@ -34,9 +34,6 @@ import buildcraft.platform.render.PipeRenderData;
  * {@code ClientModels#withVertexColours}), so vertex-coloured BC quads draw untinted here.
  *^/
 final class FabricPipeBlockModel extends WrapperBlockStateModel {
-    /^* Sentinel key returned when there is no pipe render data. *^/
-    private static final Object EMPTY_KEY = new Object();
-
     private final PipeModelQuads quads;
 
     FabricPipeBlockModel(BlockStateModel wrapped, PipeModelQuads quads) {
@@ -70,10 +67,12 @@ final class FabricPipeBlockModel extends WrapperBlockStateModel {
         }
     }
 
+    /^* The geometry the mesh gets, keyed: the pipe's own quads, or (as {@link #emitQuads} draws) the wrapped model's,
+     *  under that model's key. *^/
     @Override
     public Object createGeometryKey(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random) {
         PipeRenderData data = renderData(level, pos);
-        return data == null ? EMPTY_KEY : quads.geometryKey(data);
+        return data == null ? super.createGeometryKey(level, pos, state, random) : quads.geometryKey(data);
     }
 }
 *///?}

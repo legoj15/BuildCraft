@@ -24,7 +24,8 @@ abstract class LavaFluidMixin {
 
     @Inject(method = "isFlammable(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z",
             at = @At("HEAD"), cancellable = true)
-    // The very guard the target method opens with; LevelReader has no undeprecated chunk-presence query (hasChunk too).
+    // The very guard the target method opens with. LevelReader.getChunk(x, z, status, false) is not deprecated, but it
+    // answers a different question (is the chunk at least at that status) and is no drop-in for hasChunkAt.
     @SuppressWarnings("deprecation")
     private void buildcraft$lavaIgnites(LevelReader level, BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         // Vanilla's own guard first: never load a chunk to answer.

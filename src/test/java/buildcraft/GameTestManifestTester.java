@@ -158,4 +158,61 @@ public class GameTestManifestTester {
                 + "\n    Orphans never run (dead weight); a mismatched \"function\" field usually means a rename"
                 + " that only half-happened. Register the test or delete/fix the manifest.");
     }
+
+    /** The Fabric client game test (it holds the list of game tests Fabric runs in its own world). */
+    private static final String FABRIC_CLIENT_TEST = "src/test/java/buildcraft/platform/fabric/BCFabricClientGameTest.java";
+
+    /** An entry of BCFabricClientGameTest.CLIENT_CLASS_GAME_TESTS: new ClientClassGameTest("<id>", ... */
+    private static final Pattern CLIENT_CLASS_ENTRY = Pattern.compile("new ClientClassGameTest\\(\\s*\"([a-z0-9_/]+)\"");
+
+    /** The ids registered inside a {@code //? if neoforge} arm of {@code registerAll}: the tests the Fabric node
+     * does not register. */
+    private static List<String> neoforgeOnlyIds() {
+        Path registrar = TestHelper.repoRoot().resolve(REGISTRAR);
+        List<String> ids = new ArrayList<>();
+        boolean inArm = false;
+        for (String line : read(registrar).split("\\R")) {
+            String trimmed = line.strip();
+            if (trimmed.startsWith("//? if neoforge")) {
+                inArm = true;
+            } else if (trimmed.startsWith("//?")) {
+                inArm = false;
+            } else if (inArm) {
+                Matcher m = REGISTRATION.matcher(trimmed);
+                if (m.find()) {
+                    ids.add(m.group(1));
+                }
+            }
+        }
+        return ids;
+    }
+
+    /** Every game test Fabric's dedicated game-test server cannot load (it sits in a {@code //? if neoforge} arm) must
+     * run in the Fabric client game test instead, whose list is copied by hand: a test left out of it runs on
+     * NeoForge only, and nothing else (the client game test is outside {@code fullTestSuite}) would say so. */
+    @Test
+    public void everyNeoForgeOnlyTestRunsInTheFabricClientGameTest() {
+        Path clientTest = TestHelper.repoRoot().resolve(FABRIC_CLIENT_TEST);
+        Assertions.assertTrue(Files.isRegularFile(clientTest),
+            FABRIC_CLIENT_TEST + " not found - if BCFabricClientGameTest moved, update GameTestManifestTester.FABRIC_CLIENT_TEST");
+        // Read as text, so the Stonecutter comment the file sits in on a NeoForge node does not matter.
+        List<String> listed = new ArrayList<>();
+        Matcher m = CLIENT_CLASS_ENTRY.matcher(read(clientTest));
+        while (m.find()) {
+            listed.add(m.group(1));
+        }
+        List<String> skipped = neoforgeOnlyIds();
+        Assertions.assertFalse(skipped.isEmpty(),
+            "no registration found in a '//? if neoforge' arm of " + REGISTRAR + " - the arm markup must have drifted."
+                + " Update neoforgeOnlyIds so this guard keeps working.");
+        List<String> notRunOnFabric = new ArrayList<>(skipped);
+        notRunOnFabric.removeAll(listed);
+        List<String> notSkipped = new ArrayList<>(listed);
+        notSkipped.removeAll(skipped);
+        Assertions.assertTrue(notRunOnFabric.isEmpty() && notSkipped.isEmpty(),
+            "BCFabricClientGameTest.CLIENT_CLASS_GAME_TESTS and the '//? if neoforge' arms of BuildCraftGameTests disagree.\n"
+                + "    Skipped on Fabric but not in the client game test (never run on Fabric): " + notRunOnFabric + "\n"
+                + "    In the client game test but not in such an arm (registered on Fabric too, or not registered at all): "
+                + notSkipped);
+    }
 }

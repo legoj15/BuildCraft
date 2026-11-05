@@ -49,11 +49,6 @@ public final class NeoForgeProtection implements PlatformProtection {
     }
 
     @Override
-    public boolean isProbe(Object event) {
-        return NeoForgeBreakEvent.isProbe(event) || NeoForgePlaceProbe.isProbe(event);
-    }
-
-    @Override
     public Registration onBreak(Consumer<BlockBreak> listener) {
         return NeoForgeBreakEvent.onBreak(listener);
     }

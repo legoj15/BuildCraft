@@ -8,8 +8,10 @@ package buildcraft.platform.neoforge.client;
 //? if neoforge {
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -51,11 +53,15 @@ import buildcraft.platform.neoforge.NeoForgeModBus;
  * <p><b>Replay.</b> The first call for an event type subscribes one listener for it on BuildCraft's mod bus
  * ({@link NeoForgeModBus}; the calls are made from its client init), and that listener replays the event type's
  * queue in call order every time the event fires, exactly as the hand-written listeners it replaces did. Suppliers
- * are read only then, once the registries are filled.
+ * are read only then, once the registries are filled. A call made after its event type has fired would never be
+ * replayed for the registration it adds, so it throws instead (as {@code NeoForgeNetwork} does for a late payload):
+ * every call belongs in the client init.
  */
 public final class NeoForgeClientRegistrationSinks implements ClientRegistrationSinks {
 
     private final Map<Class<?>, List<Consumer<?>>> pending = new HashMap<>();
+    /** The event types whose listener has started replaying. */
+    private final Set<Class<?>> fired = new HashSet<>();
 
     @Override
     public <M extends AbstractContainerMenu, U extends net.minecraft.client.gui.screens.Screen
@@ -302,19 +308,24 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
     }
 
     private synchronized <E extends Event & IModBusEvent> void queue(Class<E> type, Consumer<E> registration) {
+        if (fired.contains(type)) {
+            throw new IllegalStateException(type.getSimpleName() + " registration queued after the event fired; "
+                    + "register during client init");
+        }
         List<Consumer<?>> registrations = pending.get(type);
         if (registrations == null) {
             registrations = new ArrayList<>();
             pending.put(type, registrations);
             List<Consumer<?>> replayed = registrations;
             NeoForgeModBus.get()
-                    .addListener(type, event -> replay(replayed, event));
+                    .addListener(type, event -> replay(type, replayed, event));
         }
         registrations.add(registration);
     }
 
     @SuppressWarnings("unchecked") // each list only ever holds consumers of the event type it is keyed by
-    private synchronized <E> void replay(List<Consumer<?>> registrations, E event) {
+    private synchronized <E> void replay(Class<?> type, List<Consumer<?>> registrations, E event) {
+        fired.add(type);
         for (Consumer<?> registration : registrations) {
             ((Consumer<E>) registration).accept(event);
         }

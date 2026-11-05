@@ -279,9 +279,9 @@ public class BlockUtil {
      * {@link MachineIdentity}, the rule the machine's own fake player follows too.
      * <p>
      * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
-     * pipes and robots), so the player is the cached one, leased for the duration of the event. The
-     * event is a probe — {@link buildcraft.platform.event.PlatformProtection#isProbe} tells BuildCraft's own break listeners to
-     * ignore it.
+     * pipes and robots), so the player is the cached one, leased for the duration of the event. The event is a
+     * probe — {@link buildcraft.platform.event.PlatformProtection.BlockBreak#isProbe} tells BuildCraft's own break
+     * listeners to ignore it.
      */
     public static boolean canMachineBreak(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {

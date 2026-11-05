@@ -29,7 +29,7 @@ import net.minecraft.world.phys.BlockHitResult;
  *
  * <p><b>Probes.</b> {@link #canBreak} and {@link #canPlace} post a PROBE: an event asking about an act that never
  * happens, cancelled or not. BuildCraft's own listeners for those events must therefore not take one for a block
- * changing; {@link #isProbe} and {@link BlockBreak#isProbe} tell them apart.
+ * changing; {@link BlockBreak#isProbe} and {@code GameHooks.BlockPlace#isProbe} tell them apart.
  *
  * <p>This is a contract (see the package documentation of {@code buildcraft.platform}): JDK and vanilla types only.
  */
@@ -51,12 +51,6 @@ public interface PlatformProtection {
      * @throws IllegalArgumentException for no cells
      */
     boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player);
-
-    /**
-     * True while {@code event} (a loader event object, delivered to a listener) is a permission probe posted by
-     * {@link #canBreak} or {@link #canPlace} rather than a block changing.
-     */
-    boolean isProbe(Object event);
 
     /**
      * Listens for a player's block break, probes included ({@link BlockBreak#isProbe}). The listener runs at the

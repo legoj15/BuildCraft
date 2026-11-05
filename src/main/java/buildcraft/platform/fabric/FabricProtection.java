@@ -57,8 +57,7 @@ import buildcraft.platform.event.PlatformProtection;
  * <p><b>Gaps.</b> A claim mod that guards placements through its own mixins alone, not Common Protection API, is not
  * asked about a placement. Common Protection API has no item-use check: an item used in the air asks
  * whether the block the player stands in may be interacted with. Fabric has no harvest-check event:
- * {@link #canHarvest} is vanilla's tool check. Fabric callbacks carry no event object, and cannot be unregistered: see
- * {@link #isProbe} and {@link #onBreak}.
+ * {@link #canHarvest} is vanilla's tool check. Fabric callbacks cannot be unregistered: see {@link #onBreak}.
  *^/
 public final class FabricProtection implements PlatformProtection {
 
@@ -98,12 +97,6 @@ public final class FabricProtection implements PlatformProtection {
             }
         }
         return true;
-    }
-
-    /^* Fabric callbacks carry no event object, so only BuildCraft's own {@link BlockBreak} views can be told apart. *^/
-    @Override
-    public boolean isProbe(Object event) {
-        return event instanceof BlockBreak view && view.isProbe();
     }
 
     /^*

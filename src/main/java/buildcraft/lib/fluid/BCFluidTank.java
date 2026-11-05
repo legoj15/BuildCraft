@@ -101,7 +101,7 @@ public class BCFluidTank implements BCFluidStorage {
     @Override
     public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         Objects.checkIndex(index, stacks.length);
-        if (resource.isEmpty() || amount <= 0) {
+        if (movesNothing(resource, amount)) {
             return 0;
         }
         BCFluidStack current = stacks[index];
@@ -120,7 +120,7 @@ public class BCFluidTank implements BCFluidStorage {
     @Override
     public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         Objects.checkIndex(index, stacks.length);
-        if (resource.isEmpty() || amount <= 0) {
+        if (movesNothing(resource, amount)) {
             return 0;
         }
         BCFluidStack current = stacks[index];
@@ -136,6 +136,22 @@ public class BCFluidTank implements BCFluidStorage {
             }
         }
         return 0;
+    }
+
+    /**
+     * Whether an offer to one index moves nothing: an empty resource or an amount of 0 or less. On NeoForge 1.21.10+
+     * an empty resource or a negative amount throws {@code IllegalArgumentException} instead, as it did before the
+     * platform layer, when this tank was NeoForge's {@code FluidStacksResourceHandler} and the Tank's column handler
+     * called {@code TransferPreconditions.checkNonEmptyNonNegative} itself. NeoForge 1.21.1's classic tanks answered
+     * 0, and Fabric keeps that answer.
+     */
+    public static boolean movesNothing(BCFluidStack resource, int amount) {
+        //? if neoforge && >=1.21.10 {
+        BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+        return amount == 0;
+        //?} else {
+        /*return resource.isEmpty() || amount <= 0;*/
+        //?}
     }
 
     // --- Convenience API ---

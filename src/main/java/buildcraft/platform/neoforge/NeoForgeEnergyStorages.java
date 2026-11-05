@@ -30,8 +30,8 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * The two-way adapter between {@link BCEnergyStorage} and NeoForge's energy handler type: {@code EnergyHandler} on
  * 1.21.10+, the classic {@code IEnergyStorage} on 1.21.1. Each direction unwraps the other's adapter, so a BuildCraft
  * storage that went out as a capability and came back through a lookup is the same object again. Each direction
- * hands out one adapter per wrapped object ({@link AdapterCache}), so a steady neighbour looked up every tick is not
- * wrapped again.
+ * hands out one adapter per wrapped object while that adapter is held ({@link AdapterCache}), so a lookup made while
+ * an earlier view of the same handler is still in use gives that view.
  *
  * <p><b>1.21.1.</b> As {@link NeoForgeItemStorages}: a BuildCraft storage seen as an {@code IEnergyStorage} runs each
  * call in a transaction of its own ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates; a

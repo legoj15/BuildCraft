@@ -26,8 +26,9 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * reported. Each simulation therefore asks for what this transaction already owes of that fluid plus the new amount
  * and answers only the difference: the queued calls never add up to more than one call of their total would move.
  * A fill offered while a fill of another fluid is queued is refused, since the handler cannot be asked about both at
- * once. (A lookup hands out the view already in use for a handler, so callers share its queue; a view nobody holds
- * any more is replaced by a new one with its own.)
+ * once. (A lookup hands out the view already in use for a handler, so callers share its queue; a transaction that
+ * queued a call keeps its view in use until it closes, and a view nobody holds any more is replaced by a new one with
+ * its own.)
  *
  * <p>A replayed call that moves less than its simulation promised is only logged, which a move between two storages
  * cannot afford: the other side already committed. {@link #drainInto} and {@link #fillFrom} make such a move outside
@@ -49,6 +50,11 @@ public final class DeferredFluidCalls {
 
     private record Owed(boolean fill, BCFluidStack stack) {}
 
+    // An open transaction holds the journal, and through it this object; holding the owning view here keeps that
+    // view in use for the transaction's whole life, so a lookup of the same handler inside it gets this queue again
+    // instead of a fresh view with nothing owed.
+    @SuppressWarnings("unused")
+    private final Owner owner;
     private final Object handler;
     private final Call fill;
     private final Call drain;
@@ -78,8 +84,12 @@ public final class DeferredFluidCalls {
         }
     };
 
-    /** {@code handler} names the handler in log lines; the calls reach it. */
-    public DeferredFluidCalls(Object handler, Call fill, Call drain) {
+    /**
+     * {@code owner} is the view this queue belongs to; {@code handler} names the handler in log lines; the calls
+     * reach it.
+     */
+    public DeferredFluidCalls(Owner owner, Object handler, Call fill, Call drain) {
+        this.owner = owner;
         this.handler = handler;
         this.fill = fill;
         this.drain = drain;

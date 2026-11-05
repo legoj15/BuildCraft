@@ -30,8 +30,9 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * {@code ResourceHandler<FluidResource>} on 1.21.10+, the classic {@code IFluidHandler} on 1.21.1. Each direction
  * unwraps the other's adapter, so a BuildCraft storage that went out as a capability and came back through a lookup
  * is the same object again. Each direction also hands out one adapter per wrapped object ({@link AdapterCache}), so
- * a BuildCraft storage's capability is the same handler on every query, as the storage itself was before the platform
- * layer, and a steady neighbour looked up every tick is not wrapped again. Stacks cross through {@link NeoForgeFluids}.
+ * a BuildCraft storage's capability is the same handler on every query while that handler is held, as the storage
+ * itself was before the platform layer, and a lookup made while an earlier view of the same handler is in use gives
+ * that view. Stacks cross through {@link NeoForgeFluids}.
  *
  * <p><b>1.21.1.</b> A BuildCraft storage seen as an {@code IFluidHandler} runs each call in a transaction of its own
  * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates. It answers as BuildCraft's classic
@@ -114,9 +115,9 @@ public final class NeoForgeFluidStorages {
 
         @Override
         public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-            // No precondition check: each BuildCraft storage answers an empty or negative offer itself (the tanks
-            // answer 0). Before the platform layer the tanks inherited NeoForge's IllegalArgumentException; only a
-            // caller breaking the ResourceHandler contract can tell the difference.
+            // No precondition check here: each BuildCraft storage answers an empty or negative offer itself, as it did
+            // before the platform layer. The tanks and the Tank's column throw (BCFluidTank.movesNothing); a face that
+            // refuses this direction outright, or a pipe section, answers 0.
             return storage.insert(index, stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
         }
 
@@ -316,7 +317,7 @@ public final class NeoForgeFluidStorages {
 
         FromClassic(IFluidHandler handler) {
             this.handler = handler;
-            this.calls = new DeferredFluidCalls(handler,
+            this.calls = new DeferredFluidCalls(this, handler,
                 (stack, simulate) -> handler.fill(NeoForgeFluids.toNeo(stack), action(simulate)),
                 (stack, simulate) -> {
                     FluidStack request = NeoForgeFluids.toNeo(stack);

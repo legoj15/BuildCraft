@@ -13,10 +13,12 @@ import com.google.common.collect.MapMaker;
 /**
  * One adapter per wrapped object, for the views a transfer boundary hands out. While anyone holds the adapter of a
  * storage or handler, asking again gives that same object: a capability query answers the same handler twice, as
- * the BuildCraft storage itself did before the platform layer, and a steady neighbour looked up every tick costs no
- * allocation. Keys are compared by identity (never {@code equals}) and held weakly. The adapters are held weakly
- * too, since each holds its key, so an adapter nobody holds is collected and the next query makes a new one, which
- * no caller can tell apart because none still holds the old one.
+ * the BuildCraft storage itself did before the platform layer. Keys are compared by identity (never {@code equals})
+ * and held weakly. The adapters are held weakly too, since each holds its key, so an adapter nobody holds is
+ * collected and the next query makes a new one, which no caller can tell apart because none still holds the old one.
+ * A caller that drops its view after each use (a per-tick neighbour lookup) therefore reuses it only until a garbage
+ * collection clears it: the saving is real but GC-dependent, and a caller that must not allocate holds its view, or
+ * a {@code BCLookupCache}, itself.
  */
 public final class AdapterCache<K, V> {
     private final ConcurrentMap<K, V> adapters = new MapMaker().weakKeys().weakValues().makeMap();

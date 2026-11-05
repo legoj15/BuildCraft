@@ -28,8 +28,8 @@ import buildcraft.platform.transfer.BCTransactionContext;
 public final class FluidHandlerAdvs {
     private FluidHandlerAdvs() {}
 
-    // One view per wrapped object while it is in use, so a station's input asked for on every candidate of a search
-    // is not wrapped again, and callers of one handler share its owed calls.
+    // One view per wrapped object while it is in use, so a station's input asked for again while a caller still
+    // holds its view is that view, and callers of one handler share its owed calls.
     private static final AdapterCache<BCFluidStorage, HandlerView> HANDLERS = new AdapterCache<>(HandlerView::new);
     private static final AdapterCache<IFluidHandlerAdv, StorageView> STORAGES = new AdapterCache<>(StorageView::new);
 
@@ -143,7 +143,7 @@ public final class FluidHandlerAdvs {
 
         StorageView(IFluidHandlerAdv handler) {
             this.handler = handler;
-            this.calls = new DeferredFluidCalls(handler,
+            this.calls = new DeferredFluidCalls(this, handler,
                 (stack, simulate) -> handler.fill(stack, simulate),
                 (stack, simulate) -> {
                     BCFluidStack drained = handler.drain(stack, simulate);

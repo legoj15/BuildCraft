@@ -35,9 +35,9 @@ import buildcraft.platform.transfer.BCFluidStorage;
 
 /**
  * The adapters every BuildCraft fluid or energy capability, and every lookup of another mod's handler, goes through
- * hand out one object per wrapped storage or handler, as the storage itself was before the platform layer: two
- * capability queries of a BuildCraft tank answer the same handler, and a neighbour looked up every tick is the same
- * view (no new wrapper per tick).
+ * hand out one object per wrapped storage or handler while that object is held, as the storage itself was before the
+ * platform layer: two capability queries of a BuildCraft tank answer the same handler, and a second lookup of another
+ * mod's handler, made while the first view is still held, gives that same view.
  */
 public class NeoForgeAdapterIdentityTest extends VanillaSetupBaseTester {
 

@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -21,7 +22,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.PlayerPickItemEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -29,6 +31,7 @@ import net.fabricmc.fabric.api.item.v1.EnchantingContext;
 import net.fabricmc.fabric.api.item.v1.EnchantmentEvents;
 import net.fabricmc.fabric.api.util.TriState;
 
+import buildcraft.platform.event.HookOrder;
 import buildcraft.platform.hook.EnchantmentFilterItem;
 import buildcraft.platform.hook.LevelLifecycleBlockEntity;
 import buildcraft.platform.hook.LevelRemovalEntity;
@@ -49,23 +52,31 @@ import buildcraft.platform.hook.UseFirstItem;
  *^/
 public final class FabricLoaderHookRoutes {
 
-    /^* Block entities that joined a server level since the last server tick: NeoForge runs onLoad from the level's next
-     *  block-entity tick, never from inside the chunk load that placed it, so Fabric's load event only queues. *^/
+    /^* Block entities that joined a server level and have not been told yet: NeoForge runs onLoad at the head of the
+     *  level's next block-entity tick, never from inside the chunk load that placed it, so Fabric's load event only
+     *  queues and {@code LevelMixin} drains a level's entries where NeoForge would ({@link #levelTicksBlockEntities}). *^/
     private static final Queue<BlockEntity> SERVER_JOINED = new ConcurrentLinkedQueue<>();
 
     private FabricLoaderHookRoutes() {}
 
     /^* Registers every listener; the Fabric entrypoint calls it once, before BuildCraft's init. *^/
     public static void register() {
-        UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+        // NeoForge's onItemUseFirst: after the right-click event (every default-phase callback, a claim mod's
+        // included, answers first, as NeoForge posts RightClickBlock before it), and never for a machine's ask
+        // (NeoForge's ask posts the event alone).
+        FabricGameHooks.register(UseBlockCallback.EVENT, HookOrder.LATE, (player, level, hand, hit) -> {
             ItemStack stack = player.getItemInHand(hand);
-            if (!player.isSpectator() && stack.getItem() instanceof UseFirstItem item) {
+            if (!player.isSpectator() && !FabricProtection.isClickAsk(player)
+                    && stack.getItem() instanceof UseFirstItem item) {
                 return item.useBeforeBlock(stack, new UseOnContext(player, hand, hit));
             }
             return InteractionResult.PASS;
         });
+        // NeoForge's onDestroyedByPlayer, which a machine's break probe (NeoForge's break event alone) never reaches.
         PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
-            !(state.getBlock() instanceof PlayerBreakGuard guard && guard.keepsBlockOnPlayerBreak(state, level, pos, player)));
+            FabricProtection.isBreakProbe(level, pos, player)
+                || !(state.getBlock() instanceof PlayerBreakGuard guard
+                    && guard.keepsBlockOnPlayerBreak(state, level, pos, player)));
         PlayerPickItemEvents.BLOCK.register((player, pos, state, includeData) ->
             state.getBlock() instanceof PickStackBlock block ? block.pickedStack(player.level(), pos, player) : null);
         EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment, stack, context) -> {
@@ -83,7 +94,9 @@ public final class FabricLoaderHookRoutes {
                 SERVER_JOINED.add(blockEntity);
             }
         });
-        ServerTickEvents.START_SERVER_TICK.register(server -> runJoined(SERVER_JOINED));
+        // A level that unloads never ticks again: its queued entries would pin it (and its server) until a later one.
+        ServerLevelEvents.UNLOAD.register((server, level) -> SERVER_JOINED.removeIf(be -> be.getLevel() == level));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> SERVER_JOINED.clear());
         ServerChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> chunkUnloading(chunk));
         // NeoForge's onRemovedFromLevel, server side (BuildCraft's only user, the robot, deregisters there alone).
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
@@ -93,6 +106,26 @@ public final class FabricLoaderHookRoutes {
         });
         // NeoForge's IEntityWithComplexSpawn: the extra spawn data follows the spawn packet as a payload.
         FabricSpawnData.register();
+    }
+
+    /^*
+     * Called by {@code LevelMixin} at the head of a server level's {@code tickBlockEntities}, where NeoForge runs its
+     * fresh block entities' onLoad: tells each block entity queued for {@code level} that it joined it, before any
+     * block entity of that tick ticks.
+     *^/
+    public static void levelTicksBlockEntities(Level level) {
+        if (SERVER_JOINED.isEmpty()) {
+            return;
+        }
+        Queue<BlockEntity> due = new java.util.ArrayDeque<>();
+        for (java.util.Iterator<BlockEntity> it = SERVER_JOINED.iterator(); it.hasNext();) {
+            BlockEntity blockEntity = it.next();
+            if (blockEntity.getLevel() == level) {
+                it.remove();
+                due.add(blockEntity);
+            }
+        }
+        runJoined(due);
     }
 
     /^* Tells each queued block entity still in its level that it joined it (NeoForge's onLoad). *^/

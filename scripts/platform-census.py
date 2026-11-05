@@ -90,6 +90,16 @@ ALLOWLIST = {
         ],
         "paths": [],
     },
+    "api-events-on-neoforge-bus": {
+        "reason": "BuildCraft's API events stay NeoForge Events posted on NeoForge.EVENT_BUS on NeoForge, so addon "
+                  "listeners keep working (user decision, 2026-11: no NeoForge behaviour change); the //? if neoforge "
+                  "arms are confined to these two files and are absent on Fabric",
+        "types": [],
+        "paths": [
+            "buildcraft/api/events/BCEvent.java",
+            "buildcraft/api/events/ICancellableBCEvent.java",
+        ],
+    },
 }
 
 # ----------------------------------------------------------------------------------------------------------------------

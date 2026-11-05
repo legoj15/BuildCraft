@@ -7,7 +7,7 @@ package buildcraft.api.events;
 import net.minecraft.world.entity.player.Player;
 
 /** Fired when a robot program is about to be deployed; cancel to veto the placement. Nothing posts it yet. */
-public class RobotPlacementEvent implements ICancellableBCEvent {
+public class RobotPlacementEvent extends BCEvent implements ICancellableBCEvent {
     public static final BCEventListeners<RobotPlacementEvent> LISTENERS = new BCEventListeners<>();
 
     public Player player;

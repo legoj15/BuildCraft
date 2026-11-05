@@ -6,8 +6,13 @@
 package buildcraft.api.events;
 
 /** A BuildCraft event a listener may cancel; what cancelling does is documented on each event. See
- *  {@link BCEventListeners}. */
-public interface ICancellableBCEvent {
+ *  {@link BCEventListeners}. Only a {@link BCEvent} implements it. On NeoForge it is also NeoForge's
+ *  {@code ICancellableEvent}, whose bus reads the cancel state through these same two methods. */
+//? if neoforge {
+public interface ICancellableBCEvent extends net.neoforged.bus.api.ICancellableEvent {
+//?} else {
+/*public interface ICancellableBCEvent {
+*///?}
     boolean isCanceled();
 
     void setCanceled(boolean canceled);

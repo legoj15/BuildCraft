@@ -53,6 +53,10 @@ import net.minecraft.world.level.material.Fluids;
  * {@code amount}, {@code components}; the stream form is a var-int amount, then the fluid holder and the component
  * patch), which {@code BCFluidStackCodecParityTest} pins against NeoForge's own output and the golden fixtures.
  *
+ * <p>{@link #limitSize}, {@link #copyAndClear}, {@link #isComponentsPatchEmpty} and {@link #lenientOptionalFieldOf} have
+ * no caller in BuildCraft: they are the rest of that mirror, kept for addon code written against NeoForge's
+ * {@code FluidStack} (the decision recorded in {@code docs/platform-layer.md}, "Fluids (value type)").
+ *
  * <p>Converting to and from a loader's own fluid type happens only in that loader's platform implementation. (No
  * nullness annotations: this class also compiles on the Fabric node, which has no {@code javax.annotation}.)
  */
@@ -320,7 +324,10 @@ public final class BCFluidStack implements DataComponentHolder {
         return 31 * i + stack.getComponents().hashCode();
     }
 
-    /** An optional field reading a broken stack as {@link #EMPTY} instead of failing. */
+    /**
+     * An optional field reading a broken stack as {@link #EMPTY} instead of failing. {@link #EMPTY} encodes as an
+     * absent field, so saving what was read drops the broken stack, as NeoForge's method of the same name does.
+     */
     public static MapCodec<BCFluidStack> lenientOptionalFieldOf(String fieldName) {
         return CODEC.lenientOptionalFieldOf(fieldName)
             .xmap(optional -> optional.orElse(EMPTY), stack -> stack.isEmpty() ? Optional.empty() : Optional.of(stack));

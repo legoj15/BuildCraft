@@ -126,6 +126,8 @@ public class BuildCraftGameTests {
         // FE pipes must size a receiver's demand by a simulated insert, not buffer headroom —
         // otherwise bufferless pass-through sinks (AE2's Energy Acceptor) are never fed.
         reg.accept("buildcraftunofficial:fe_pipe_bufferless_receiver_demand", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testBufferlessReceiverReportsDemand);
+        // ... and the probe is not power "offered": the F3 counter counts only committed inserts.
+        reg.accept("buildcraftunofficial:fe_pipe_demand_probe_not_counted_as_offered", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testDemandProbeDoesNotCountAsOffered);
 
         // Transport Storage
         reg.accept("buildcraftunofficial:filtered_buffer_drops", () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);

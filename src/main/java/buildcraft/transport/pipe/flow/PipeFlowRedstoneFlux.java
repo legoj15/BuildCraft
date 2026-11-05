@@ -162,15 +162,18 @@ public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlow
             super(side);
         }
 
-        private final BCSnapshotJournal<Long> powerJournal = new BCSnapshotJournal<Long>() {
+        // Journals the F3 "OFFERED" counter with the power it counts: a rolled-back insert (every demand probe is one)
+        // was never offered power, which is what 1.21.1's simulate flag always meant.
+        private final BCSnapshotJournal<long[]> powerJournal = new BCSnapshotJournal<long[]>() {
             @Override
-            protected Long createSnapshot() {
-                return internalNextPower;
+            protected long[] createSnapshot() {
+                return new long[] { internalNextPower, debugPowerOffered };
             }
 
             @Override
-            protected void revertToSnapshot(Long snapshot) {
-                internalNextPower = snapshot;
+            protected void revertToSnapshot(long[] snapshot) {
+                internalNextPower = snapshot[0];
+                debugPowerOffered = snapshot[1];
             }
         };
 

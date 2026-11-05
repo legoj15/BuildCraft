@@ -40,8 +40,9 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * {@link BCItemStorage} can only simulate inside a transaction, so its view answers every insert and extract by
  * simulating and replays the real calls, in order, when the root transaction commits (none if it aborts). Two changes
  * to the same slot in one transaction are each simulated against the slot as it was; BuildCraft's callers touch a
- * slot once per transaction. A {@link BCModifiableItemStorage} (the plain BuildCraft inventories) goes out as an
- * {@code IItemHandlerModifiable}, as it always did: NeoForge's own {@code SlotItemHandler} casts to it.
+ * slot once per transaction. A {@link BCModifiableItemStorage} (the plain BuildCraft inventories, and the empty storage
+ * the Quarry and Mining Well expose in place of {@code EmptyItemHandler}) goes out as an {@code IItemHandlerModifiable},
+ * as it always did: NeoForge's own {@code SlotItemHandler} casts to it.
  */
 public final class NeoForgeItemStorages {
     private NeoForgeItemStorages() {}

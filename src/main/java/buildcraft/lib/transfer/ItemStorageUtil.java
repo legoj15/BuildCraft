@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.platform.transfer.BCItemStorage;
+import buildcraft.platform.transfer.BCModifiableItemStorage;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.platform.transfer.BCTransactionContext;
 
@@ -20,12 +21,17 @@ public final class ItemStorageUtil {
     private ItemStorageUtil() {}
 
     /** A storage with no slots: present (pipes connect to it) but never holds anything. NeoForge's
-     *  {@code EmptyResourceHandler} / the classic {@code EmptyItemHandler}. */
-    public static final BCItemStorage EMPTY = new BCItemStorage() {
+     *  {@code EmptyResourceHandler} / the classic {@code EmptyItemHandler}. It is modifiable with a no-op set, as
+     *  {@code EmptyItemHandler} is an {@code IItemHandlerModifiable}: the Quarry and the Mining Well expose it, and on
+     *  1.21.1 a foreign {@code SlotItemHandler} over them casts to the modifiable type to set a slot. */
+    public static final BCModifiableItemStorage EMPTY = new BCModifiableItemStorage() {
         @Override
         public int size() {
             return 0;
         }
+
+        @Override
+        public void setStackInSlot(int index, ItemStack stack) {}
 
         @Override
         public ItemStack getStack(int index) {

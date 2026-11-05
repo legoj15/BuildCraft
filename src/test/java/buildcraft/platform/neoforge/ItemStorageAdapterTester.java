@@ -183,7 +183,7 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
     /^* 1.21.1 handed BuildCraft's plain inventories out as {@code IItemHandlerModifiable}, and NeoForge's own
      *  {@code SlotItemHandler.set} casts to it, so a foreign container wrapping a BuildCraft machine died with a
      *  ClassCastException once the platform adapter stopped being one. The wrapped (insert-only, extract-only,
-     *  combined) and empty handlers were never modifiable, and stay that way. ^/
+     *  combined) handlers were never modifiable, and stay that way. ^/
     @Test
     public void aPlainBuildCraftInventoryIsAnIItemHandlerModifiable() {
         ItemHandlerSimple handler = simple(ItemStack.EMPTY, new ItemStack(Items.DIRT, 3));
@@ -196,8 +196,19 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
 
         assertTrue(!(NeoForgeItemStorages.toNeo(new buildcraft.lib.tile.item.WrappedItemHandlerExtract(handler))
             instanceof net.neoforged.neoforge.items.IItemHandlerModifiable), "a wrapped handler was never modifiable");
-        assertTrue(!(NeoForgeItemStorages.toNeo(ItemStorageUtil.EMPTY)
-            instanceof net.neoforged.neoforge.items.IItemHandlerModifiable), "the empty handler was never modifiable");
+    }
+
+    /^* The Quarry and the Mining Well exposed NeoForge's {@code EmptyItemHandler}, an {@code IItemHandlerModifiable}
+     *  whose set does nothing; they now expose {@link ItemStorageUtil#EMPTY}, which must answer a foreign slot's set
+     *  the same way instead of a ClassCastException. ^/
+    @Test
+    public void theQuarryAndMiningWellEmptyStorageTakesASlotSetAsANoOp() {
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(ItemStorageUtil.EMPTY);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable,
+            "the empty storage must be modifiable through the classic handler, as EmptyItemHandler is");
+        new net.neoforged.neoforge.items.SlotItemHandler(classic, 0, 0, 0).set(new ItemStack(Items.DIRT));
+        assertEquals(0, classic.getSlots(), "and the set leaves it without slots");
+        assertTrue(classic.getStackInSlot(0).isEmpty());
     }
 
     /^* The stone engine's fuel slot was an anonymous {@code IItemHandlerModifiable}: {@code setStackInSlot} replaced

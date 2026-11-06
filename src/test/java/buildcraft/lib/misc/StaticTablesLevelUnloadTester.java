@@ -76,6 +76,73 @@ public class StaticTablesLevelUnloadTester {
         }
     }
 
+    /**
+     * The Fabric chunk tickets' owner sets, keyed by dimension on an instance that outlives every world: one left
+     * behind by an unloaded level makes the next world's first claim on that chunk look already held, so it adds no
+     * ticket and every BuildCraft chunk loader silently stops loading. Driven through the tickets' claim seam, not
+     * {@code forceChunk}, so no chunk of the secondary level is loaded (#114). NeoForge's tickets carry their owners
+     * with the level, so there is nothing to probe there.
+     */
+    private static final class ChunkOwnersProbe {
+        /** A chunk no real BuildCraft tile is in: far outside any test's arena. */
+        private static final int CHUNK = 30_000;
+        private static final BlockPos FIRST = new BlockPos(1, 2, 3);
+        private static final BlockPos NEXT = new BlockPos(4, 5, 6);
+
+        private final ServerLevel arena;
+        private final ServerLevel other;
+
+        private ChunkOwnersProbe(ServerLevel arena, ServerLevel other) {
+            this.arena = arena;
+            this.other = other;
+        }
+
+        static ChunkOwnersProbe open(GameTestHelper helper, ServerLevel arena, ServerLevel other) {
+            ChunkOwnersProbe probe = new ChunkOwnersProbe(arena, other);
+            //? if fabric {
+            /*buildcraft.platform.fabric.FabricChunkTickets tickets = tickets();
+            probe.releaseAll();
+            helper.assertTrue(tickets.claim(other.dimension(), FIRST, CHUNK, CHUNK)
+                    && tickets.claim(arena.dimension(), FIRST, CHUNK, CHUNK),
+                    "precondition: the probe's claims are each their chunk's first");
+            // A client level of the same dimension unloading (a player leaving it) must leave the server's sets alone.
+            LoaderTestEvents.levelUnload(buildcraft.lib.test.FakeLevels.fake(true, other.dimension()));
+            helper.assertFalse(tickets.claim(other.dimension(), NEXT, CHUNK, CHUNK),
+                    "a client level's unload must not drop the owner sets of the still-loaded server level");
+            tickets.release(other.dimension(), NEXT, CHUNK, CHUNK);*/
+            //?}
+            return probe;
+        }
+
+        void assertForgotten(GameTestHelper helper) {
+            //? if fabric {
+            /*buildcraft.platform.fabric.FabricChunkTickets tickets = tickets();
+            try {
+                helper.assertTrue(tickets.claim(other.dimension(), NEXT, CHUNK, CHUNK),
+                        "the unloaded level's chunk owners must be dropped: the next world's first claim on the chunk"
+                                + " must add a ticket");
+                helper.assertFalse(tickets.claim(arena.dimension(), NEXT, CHUNK, CHUNK),
+                        "...but another level's chunk owners must be kept");
+            } finally {
+                releaseAll();
+            }*/
+            //?}
+        }
+
+        //? if fabric {
+        /*private static buildcraft.platform.fabric.FabricChunkTickets tickets() {
+            return (buildcraft.platform.fabric.FabricChunkTickets) buildcraft.platform.Platform.chunkTickets();
+        }
+
+        private void releaseAll() {
+            for (ServerLevel level : new ServerLevel[] {arena, other}) {
+                tickets().release(level.dimension(), FIRST, CHUNK, CHUNK);
+                tickets().release(level.dimension(), NEXT, CHUNK, CHUNK);
+            }
+        }*/
+        //?}
+    }
+
     public static void unloadingALevelClearsTheTablesThatPinIt(GameTestHelper helper) {
         ServerLevel arena = helper.getLevel();
         ServerLevel other = secondaryLevel(helper);
@@ -102,8 +169,11 @@ public class StaticTablesLevelUnloadTester {
             helper.assertTrue(BoardRobotPicker.isTargetted(otherItem) && BoardRobotPicker.isTargetted(arenaItem),
                     "precondition: both claims are live");
 
+            ChunkOwnersProbe chunkOwners = ChunkOwnersProbe.open(helper, arena, other);
+
             LoaderTestEvents.levelUnload(other);
 
+            chunkOwners.assertForgotten(helper);
             helper.assertTrue(LocalBlockUpdateNotifier.instance(other) != otherNotifier,
                     "the unloaded level's block-update notifier (and the lasers it holds) must be dropped");
             helper.assertTrue(LocalBlockUpdateNotifier.instance(arena) == arenaNotifier,

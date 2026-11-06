@@ -50,9 +50,11 @@ public final class FabricChunkTickets implements ChunkTickets {
                 | TicketType.FLAG_KEEP_DIMENSION_ACTIVE));
         // The level's tickets die with it, but this instance and its dimension key outlive it (see the class doc):
         // drop the stale owner sets, or no ticket is added for them in the next world. Client levels share the hook
-        // and must be ignored (a player's dimension change replaces the client's level of a still-loaded server one).
+        // and must be ignored (a player's dimension change replaces the client's level of a still-loaded server
+        // one); the side is asked, not just the class, as the game tests' fake client level is a ServerLevel
+        // underneath.
         Platform.gameHooks().onLevelUnload(unloaded -> {
-            if (unloaded instanceof ServerLevel level) {
+            if (!unloaded.isClientSide() && unloaded instanceof ServerLevel level) {
                 forget(level);
             }
         });
@@ -62,25 +64,45 @@ public final class FabricChunkTickets implements ChunkTickets {
         owners.remove(level.dimension());
     }
 
+    /^*
+     * Records {@code owner} as holding the chunk in {@code dimension}: whether it is the chunk's first owner, the one
+     * whose claim adds the ticket. Public as the game tests' seam onto the owner sets
+     * ({@code StaticTablesLevelUnloadTester}), which they cannot reach through {@link #forceChunk} without loading a
+     * chunk of a level no test stands in.
+     ^/
+    public synchronized boolean claim(ResourceKey<Level> dimension, BlockPos owner, int chunkX, int chunkZ) {
+        Set<BlockPos> held = owners.computeIfAbsent(dimension, k -> new HashMap<>())
+            .computeIfAbsent(ChunkPos.pack(chunkX, chunkZ), k -> new HashSet<>());
+        boolean first = held.isEmpty();
+        held.add(owner.immutable());
+        return first;
+    }
+
+    /^* Lets {@code owner}'s hold on the chunk go: whether it was the last owner, whose release removes the ticket. ^/
+    public synchronized boolean release(ResourceKey<Level> dimension, BlockPos owner, int chunkX, int chunkZ) {
+        Map<Long, Set<BlockPos>> byChunk = owners.get(dimension);
+        long key = ChunkPos.pack(chunkX, chunkZ);
+        Set<BlockPos> held = byChunk == null ? null : byChunk.get(key);
+        if (held == null) {
+            return false;
+        }
+        boolean last = held.remove(owner.immutable()) && held.isEmpty();
+        if (held.isEmpty()) {
+            byChunk.remove(key);
+        }
+        return last;
+    }
+
     @Override
     public synchronized void forceChunk(ServerLevel level, BlockPos owner, int chunkX, int chunkZ, boolean add) {
-        Map<Long, Set<BlockPos>> byChunk = owners.computeIfAbsent(level.dimension(), k -> new HashMap<>());
-        long key = ChunkPos.pack(chunkX, chunkZ);
-        Set<BlockPos> held = byChunk.computeIfAbsent(key, k -> new HashSet<>());
-        BlockPos immutable = owner.immutable();
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
         if (add) {
-            boolean first = held.isEmpty();
-            held.add(immutable);
-            if (first) {
+            if (claim(level.dimension(), owner, chunkX, chunkZ)) {
                 level.getChunkSource().addTicketWithRadius(type, pos, RADIUS);
                 level.getChunk(chunkX, chunkZ); // loaded now, as setChunkForced does
             }
-        } else if (held.remove(immutable) && held.isEmpty()) {
-            byChunk.remove(key);
+        } else if (release(level.dimension(), owner, chunkX, chunkZ)) {
             level.getChunkSource().removeTicketWithRadius(type, pos, RADIUS);
-        } else if (held.isEmpty()) {
-            byChunk.remove(key);
         }
     }
 }

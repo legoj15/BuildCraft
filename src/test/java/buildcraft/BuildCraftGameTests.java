@@ -250,6 +250,14 @@ public class BuildCraftGameTests {
         // The living-entity item-storage fallback both loaders answer: an equine's chest inventory, any other living
         // entity's hands then armour, each slot taking only what the entity can equip there.
         reg.accept("buildcraftunofficial:entity_item_storage_living_fallback", () -> buildcraft.lib.test.EntityItemStorageTester::livingEntityItemStorageFallback);
+        // The transaction contract of Platform.transfer() on every loader (BCTransactionTester pins the NeoForge engines
+        // under JUnit; the Fabric node has none).
+        reg.accept("buildcraftunofficial:transaction_nested_abort_leaves_no_stale_original", () -> buildcraft.platform.TransactionSeamTester::nestedOnlyAbortLeavesNoStaleOriginal);
+        reg.accept("buildcraftunofficial:transaction_root_commit_callback_may_open_a_transaction", () -> buildcraft.platform.TransactionSeamTester::rootCommitCallbackMayOpenATransaction);
+        reg.accept("buildcraftunofficial:transaction_refused_commit_leaves_transaction_open_for_close", () -> buildcraft.platform.TransactionSeamTester::refusedCommitLeavesTheTransactionOpenForClose);
+        // The adapters over Fabric's own storage types (FabricFluidStorages, FabricItemStorages); a NeoForge node has no
+        // such adapter, so its body is empty there.
+        reg.accept("buildcraftunofficial:fabric_foreign_storage_adapters", () -> buildcraft.platform.fabric.FabricAdapterTester::foreignStorageViews);
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);

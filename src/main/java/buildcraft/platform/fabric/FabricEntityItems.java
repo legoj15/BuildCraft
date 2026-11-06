@@ -8,8 +8,11 @@ package buildcraft.platform.fabric;
 //? if fabric {
 /*import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.MapMaker;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
@@ -18,7 +21,9 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
@@ -60,6 +65,9 @@ public final class FabricEntityItems {
         });
     }
 
+    /^* Each living entity's equipment storage, for as long as anything holds it (NeoForge: a weak map of wrappers). ^/
+    private static final Map<LivingEntity, Storage<ItemVariant>> EQUIPMENT = new MapMaker().weakKeys().weakValues().makeMap();
+
     private FabricEntityItems() {}
 
     private static EntityType<?>[] containerEntities() {
@@ -83,14 +91,23 @@ public final class FabricEntityItems {
     /^*
      * NeoForge's {@code LivingEntityEquipmentWrapper} hands and humanoid-armour handlers, combined: one slot per
      * {@link EquipmentSlot} of those types in {@link EquipmentSlot#VALUES} order. A slot takes what the entity can
-     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}); the stack is set without side
+     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}), up to the slot's count limit (one
+     * in an armour slot); the stack is set without side
      * effects while the transaction is open and {@code onEquipItem} runs once the outer transaction commits.
      *
      * <p>Slotted on purpose: a plain {@code CombinedStorage} is no {@code SlottedStorage}, so the adapter
      * ({@code FabricItemStorages.fromFabric}) would fall back to its one-virtual-slot view and lose the slot
      * indices NeoForge's capability keeps.
+     *
+     * <p>One storage per entity, as NeoForge's wrapper is ({@link #EQUIPMENT}, weakly held): Fabric's entity lookup
+     * caches nothing, and two storages over the same slot would each snapshot it and each report the equip change when
+     * one outer transaction touched both.
      ^/
     private static Storage<ItemVariant> equipment(LivingEntity entity) {
+        return EQUIPMENT.computeIfAbsent(entity, FabricEntityItems::newEquipment);
+    }
+
+    private static Storage<ItemVariant> newEquipment(LivingEntity entity) {
         List<SlotStorage> slots = new ArrayList<>();
         for (EquipmentSlot.Type type : List.of(EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR)) {
             for (EquipmentSlot slot : EquipmentSlot.VALUES) {
@@ -105,12 +122,19 @@ public final class FabricEntityItems {
     private static final class SlotStorage extends SingleStackStorage {
         private final LivingEntity entity;
         private final EquipmentSlot slot;
+        /^*
+         * How many the slot holds at most, whatever the item: one for a humanoid-armour slot, no limit (the absolute
+         * stack maximum) for a hand. {@code EquipmentSlot.limit} splits the limit off the stack it is given, which is
+         * the one way to read it (the field is private).
+         ^/
+        private final int countLimit;
         /^* The stack before the open outer transaction first touched this slot, for {@code onEquipItem}. *^/
         private @Nullable ItemStack original;
 
         SlotStorage(LivingEntity entity, EquipmentSlot slot) {
             this.entity = entity;
             this.slot = slot;
+            this.countLimit = slot.limit(new ItemStack(Items.STONE, Item.ABSOLUTE_MAX_STACK_SIZE)).getCount();
         }
 
         @Override
@@ -132,8 +156,8 @@ public final class FabricEntityItems {
 
         @Override
         protected int getCapacity(ItemVariant variant) {
-            // Hand and humanoid-armour slots have no count limit, so the cap is the item's own stack size.
-            return variant.toStack().getMaxStackSize();
+            // The slot's own count limit, then the item's stack size, as NeoForge's wrapper caps it.
+            return Math.min(countLimit, variant.toStack().getMaxStackSize());
         }
 
         @Override

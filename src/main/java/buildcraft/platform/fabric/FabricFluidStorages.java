@@ -16,6 +16,7 @@ import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StoragePreconditions;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 
 import buildcraft.api.fluids.BCFluidStack;
@@ -28,8 +29,17 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * droplets come back floored to whole millibuckets, and an offer to a BuildCraft storage is floored too (so less than
  * one millibucket is refused).
  *
+ * <p>{@link FabricItemStorages} is this adapter's twin over item variants (the same {@code toFabric}/{@code fromFabric}
+ * and nested adapter classes, with different types): a change to the shape of one has to be made in the other.
+ *
+ * <p>A foreign storage may move a droplet count that is not a whole number of millibuckets (a water cauldron level is
+ * 27000 droplets). BuildCraft books whole millibuckets, so the remainder would be minted on an insert and destroyed on
+ * an extract; {@link #moveWhole} moves only a whole number of millibuckets, and a storage that cannot (a single
+ * cauldron level) moves nothing.
+ *
  * <p><b>Gap.</b> A Fabric storage that is not slotted has no stable indices, so its view is one virtual tank: it shows
- * the first non-blank view's contents, and insert and extract go to the storage as a whole.
+ * the first non-blank view's contents and capacity (the first view's when all are blank), and insert and extract go to
+ * the storage as a whole.
  ^/
 public final class FabricFluidStorages {
     private FabricFluidStorages() {}
@@ -183,8 +193,10 @@ public final class FabricFluidStorages {
             if (resource.isEmpty() || amount <= 0) {
                 return 0;
             }
-            return FabricFluids.toMillibuckets(storage.getSlot(index).insert(FabricFluids.toVariant(resource),
-                FabricFluids.toDroplets(amount), FabricTransfer.unwrap(transaction)));
+            FluidVariant variant = FabricFluids.toVariant(resource);
+            SingleSlotStorage<FluidVariant> slot = storage.getSlot(index);
+            return moveWhole((droplets, tx) -> slot.insert(variant, droplets, tx), amount,
+                FabricTransfer.unwrap(transaction));
         }
 
         @Override
@@ -192,9 +204,50 @@ public final class FabricFluidStorages {
             if (resource.isEmpty() || amount <= 0) {
                 return 0;
             }
-            return FabricFluids.toMillibuckets(storage.getSlot(index).extract(FabricFluids.toVariant(resource),
-                FabricFluids.toDroplets(amount), FabricTransfer.unwrap(transaction)));
+            FluidVariant variant = FabricFluids.toVariant(resource);
+            SingleSlotStorage<FluidVariant> slot = storage.getSlot(index);
+            return moveWhole((droplets, tx) -> slot.extract(variant, droplets, tx), amount,
+                FabricTransfer.unwrap(transaction));
         }
+    }
+
+    /^* One call into a foreign storage: moves up to {@code droplets} inside {@code transaction}, returns how many. ^/
+    @FunctionalInterface
+    private interface Mover {
+        long move(long droplets, TransactionContext transaction);
+    }
+
+    /^*
+     * Moves up to {@code millibuckets} through {@code mover} inside {@code transaction}, and returns how many whole
+     * millibuckets moved, with exactly that many droplets moved on the foreign side. A foreign storage may move a count
+     * that is no whole number of millibuckets (a water cauldron takes a 27000-droplet level at a time), and booking
+     * the floor of it would mint the remainder on an insert and destroy it on an extract. So the call is tried in a
+     * nested transaction; if it moved a fractional count, it is undone and repeated capped at the whole millibuckets
+     * it covered, and if that is still not whole (or moves nothing), nothing moves.
+     ^/
+    private static int moveWhole(Mover mover, int millibuckets, TransactionContext transaction) {
+        long moved;
+        try (Transaction probe = transaction.openNested()) {
+            moved = mover.move(FabricFluids.toDroplets(millibuckets), probe);
+            if (moved % FabricFluids.DROPLETS_PER_MB == 0) {
+                if (moved > 0) {
+                    probe.commit();
+                }
+                return FabricFluids.toMillibuckets(moved);
+            }
+        }
+        long whole = moved - moved % FabricFluids.DROPLETS_PER_MB;
+        if (whole <= 0) {
+            return 0;
+        }
+        try (Transaction retry = transaction.openNested()) {
+            long again = mover.move(whole, retry);
+            if (again > 0 && again % FabricFluids.DROPLETS_PER_MB == 0) {
+                retry.commit();
+                return FabricFluids.toMillibuckets(again);
+            }
+        }
+        return 0;
     }
 
     private static final class FromPlain implements BCFluidStorage {
@@ -219,6 +272,11 @@ public final class FabricFluidStorages {
 
         @Override
         public int getCapacity(int index, BCFluidStack resource) {
+            // The capacity of the view getStack shows: the first holding fluid, else the first at all. A level gate
+            // divides one by the other, so they must come from the same view.
+            for (StorageView<FluidVariant> view : storage.nonEmptyViews()) {
+                return FabricFluids.toMillibuckets(view.getCapacity());
+            }
             for (StorageView<FluidVariant> view : storage) {
                 return FabricFluids.toMillibuckets(view.getCapacity());
             }
@@ -235,8 +293,9 @@ public final class FabricFluidStorages {
             if (resource.isEmpty() || amount <= 0) {
                 return 0;
             }
-            return FabricFluids.toMillibuckets(storage.insert(FabricFluids.toVariant(resource),
-                FabricFluids.toDroplets(amount), FabricTransfer.unwrap(transaction)));
+            FluidVariant variant = FabricFluids.toVariant(resource);
+            return moveWhole((droplets, tx) -> storage.insert(variant, droplets, tx), amount,
+                FabricTransfer.unwrap(transaction));
         }
 
         @Override
@@ -244,8 +303,9 @@ public final class FabricFluidStorages {
             if (resource.isEmpty() || amount <= 0) {
                 return 0;
             }
-            return FabricFluids.toMillibuckets(storage.extract(FabricFluids.toVariant(resource),
-                FabricFluids.toDroplets(amount), FabricTransfer.unwrap(transaction)));
+            FluidVariant variant = FabricFluids.toVariant(resource);
+            return moveWhole((droplets, tx) -> storage.extract(variant, droplets, tx), amount,
+                FabricTransfer.unwrap(transaction));
         }
     }
 }

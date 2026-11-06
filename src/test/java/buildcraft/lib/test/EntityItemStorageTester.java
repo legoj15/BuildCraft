@@ -135,6 +135,16 @@ public final class EntityItemStorageTester {
         helper.assertTrue(storage.getStack(accepting).is(Items.IRON_HELMET), "the storage reads it back");
         helper.assertTrue(extract(storage, accepting, helmet) == 1, "the helmet comes back out of the head slot");
         helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "the head slot is empty again");
+
+        // An armour slot holds one item however many fit its stack (NeoForge's wrapper caps it at the slot's count
+        // limit; a hand has none): eight carved pumpkins offered to the head slot, one goes on.
+        ItemStack pumpkins = new ItemStack(Items.CARVED_PUMPKIN, 8);
+        helper.assertTrue(insert(storage, accepting, pumpkins) == 1, "the head slot takes one of eight pumpkins");
+        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).getCount() == 1, "and holds one");
+        helper.assertTrue(extract(storage, accepting, pumpkins) == 1, "the pumpkin comes back out");
+        ItemStack sticks = new ItemStack(Items.STICK, 20);
+        helper.assertTrue(insert(storage, 0, sticks) == 20, "a hand has no count limit, only the stack's");
+        helper.assertTrue(extract(storage, 0, sticks) == 20, "the sticks come back out of the hand");
         //?}
     }
 }

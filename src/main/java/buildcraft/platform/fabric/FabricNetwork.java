@@ -43,12 +43,18 @@ import buildcraft.platform.network.PacketHandler;
  *
  * <p><b>Size.</b> Every payload is registered with {@code registerLarge}, so Fabric splits one above vanilla's packet
  * limit (a huge blueprint in a snapshot response) and reassembles it, as NeoForge's packet splitter does for every
- * payload; a small payload goes out unsplit. The reassembled cap is {@link #MAX_PAYLOAD_BYTES}.
+ * payload; a small payload goes out unsplit. The reassembled cap is {@link #MAX_PAYLOAD_BYTES} towards a client and
+ * {@link #MAX_SERVERBOUND_PAYLOAD_BYTES} towards the server.
  *^/
 public final class FabricNetwork implements BCNetwork {
 
-    /^* The largest payload a receiver reassembles: NeoForge's default {@code splitPacketMaxSizeLimitMb}, 128 MB. *^/
+    /^* The largest server-to-client payload a client reassembles: NeoForge's default {@code splitPacketMaxSizeLimitMb}. *^/
     static final int MAX_PAYLOAD_BYTES = 128 * 1024 * 1024;
+    /^*
+     * The largest client-to-server payload the server reassembles. Every serverbound payload is small, so this stays
+     * far under {@link #MAX_PAYLOAD_BYTES}: an untrusted client cannot make the server buffer 128 MB.
+     *^/
+    static final int MAX_SERVERBOUND_PAYLOAD_BYTES = 8 * 1024 * 1024;
 
     private final FabricNetworkVersions versions = new FabricNetworkVersions();
 
@@ -66,7 +72,7 @@ public final class FabricNetwork implements BCNetwork {
     public <T extends CustomPacketPayload> void serverbound(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
         versions.record(type, version);
-        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
+        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_SERVERBOUND_PAYLOAD_BYTES);
         registerServerReceiver(type, handler);
     }
 
@@ -75,7 +81,7 @@ public final class FabricNetwork implements BCNetwork {
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
         versions.record(type, version);
         PayloadTypeRegistry.clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
-        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
+        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_SERVERBOUND_PAYLOAD_BYTES);
         registerServerReceiver(type, handler);
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerReceiver(type, handler);

@@ -7,11 +7,14 @@ package buildcraft.platform.fabric;
 
 //? if fabric {
 /*import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.Set;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
@@ -46,12 +49,15 @@ import buildcraft.platform.fabric.client.FabricClientNetwork;
  *^/
 public final class FabricNetworkVersions {
 
-    private static final String MOD_ID = "buildcraftunofficial";
+    private static final String MOD_ID = FabricConfigRegistrar.MOD_ID;
     /^* How many mismatched payloads the disconnect screen names before it summarises the rest. *^/
     private static final int LISTED_MISMATCHES = 5;
 
     /^* Payload id to version, sorted so the table goes over the wire in a stable order. *^/
     private final Map<String, String> versions = new TreeMap<>();
+    /^* Connections whose check is queued and unanswered; a reply from any other is dropped. *^/
+    private final Set<ServerConfigurationPacketListenerImpl> awaiting =
+            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
     FabricNetworkVersions() {
         PayloadTypeRegistry.clientboundConfiguration().register(VersionTable.TYPE, VersionTable.STREAM_CODEC);
@@ -85,10 +91,14 @@ public final class FabricNetworkVersions {
                     "This server needs the same version of BuildCraft Redux installed on your game."));
             return;
         }
+        awaiting.add(handler);
         ((FabricServerConfigurationPacketListenerImpl) handler).addTask(new Task(table()));
     }
 
     private void check(ServerConfigurationPacketListenerImpl handler, VersionTable client) {
+        if (!awaiting.remove(handler)) {
+            return; // not answering a queued check: completing a task that is not current would throw
+        }
         List<String> mismatches = mismatches(table().versions(), client.versions());
         if (mismatches.isEmpty()) {
             ((FabricServerConfigurationPacketListenerImpl) handler).completeTask(Task.TYPE);

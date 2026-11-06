@@ -36,7 +36,7 @@ public final class FabricClientNetwork {
      * own table; the server compares the two and decides.
      *^/
     public static <T extends CustomPacketPayload> void registerVersionReply(CustomPacketPayload.Type<T> type,
-            Supplier<? extends CustomPacketPayload> ownTable) {
+            Supplier<T> ownTable) {
         ClientConfigurationNetworking.registerGlobalReceiver(type,
                 (serverTable, ctx) -> ctx.responseSender().sendPacket(ownTable.get()));
     }

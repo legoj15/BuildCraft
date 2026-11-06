@@ -103,8 +103,30 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     public PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand) {
         FacadeInstance fullState = getStates(stack);
+        // A bare stack (no NBT: /give, another mod's default instance) or one whose every block failed to
+        // resolve reads back as the air default, which bakes no quads: refuse it rather than place an
+        // invisible pluggable (#129). A phased facade with at least one real state still places. canPlace is the
+        // same test for the placement outline.
+        if (isAirOnly(fullState)) {
+            return null;
+        }
         SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), fullState.phasedStates[0].stateInfo.state);
         return new PluggableFacade(BCSiliconPlugs.facade, holder, side, fullState);
+    }
+
+    /** True when every state of {@code facade} is air, i.e. it would render as nothing on a pipe. */
+    public static boolean isAirOnly(FacadeInstance facade) {
+        for (FacadePhasedState state : facade.phasedStates) {
+            if (state.stateInfo != null && !state.stateInfo.state.isAir()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean canPlace(@Nonnull ItemStack stack) {
+        return !isAirOnly(getStates(stack));
     }
 
     @Nonnull

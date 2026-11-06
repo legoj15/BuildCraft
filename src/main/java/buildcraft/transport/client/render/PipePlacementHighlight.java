@@ -80,6 +80,10 @@ public final class PipePlacementHighlight {
                 return null;
             }
             IItemPluggable item = (IItemPluggable) pluggableStack.getItem();
+            // A stack the item would refuse (a blank facade, #129) places nothing, so promise nothing.
+            if (!item.canPlace(pluggableStack)) {
+                return null;
+            }
             return Shapes.create(item.getPlacementBoundingBox(pluggableStack, face));
         }
         if (heldStackOf(player, ItemWire.class) != null) {

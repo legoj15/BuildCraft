@@ -5,9 +5,12 @@
  */
 package buildcraft.transport.client.render;
 
+import com.google.common.collect.ImmutableSet;
+
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.IItemPluggable;
@@ -16,6 +19,9 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.RobotStationPluggable;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.item.ItemPluggableFacade;
+import buildcraft.silicon.plug.FacadeBlockStateInfo;
+import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.silicon.plug.PluggableLens;
 
@@ -55,8 +61,15 @@ public class PipePlacementHighlightTester {
     }
 
     public static void testFacadePreviewMatchesPlacedBox(GameTestHelper helper) {
-        assertMatches(helper, "Facade", (IItemPluggable) BCSiliconItems.PLUG_FACADE.get(),
-            new ItemStack(BCSiliconItems.PLUG_FACADE.get()), PluggableFacade::boundingBoxFor);
+        ItemPluggableFacade facadeItem = (ItemPluggableFacade) BCSiliconItems.PLUG_FACADE.get();
+        ItemStack stoneFacade = facadeItem.createItemStack(FacadeInstance.createSingle(
+            new FacadeBlockStateInfo(Blocks.STONE.defaultBlockState(), new ItemStack(Blocks.STONE), ImmutableSet.of()),
+            false));
+        // #129: a blank (air) facade is refused by onPlace, so the outline must not promise a placement for it.
+        helper.assertTrue(facadeItem.canPlace(stoneFacade), "A stone facade must be placeable");
+        helper.assertTrue(!facadeItem.canPlace(new ItemStack(facadeItem)),
+            "A blank (air) facade must not be placeable, or the outline promises a refused placement");
+        assertMatches(helper, "Facade", facadeItem, stoneFacade, PluggableFacade::boundingBoxFor);
     }
 
     public static void testRobotStationPreviewMatchesPlacedBox(GameTestHelper helper) {

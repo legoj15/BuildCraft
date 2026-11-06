@@ -9,9 +9,9 @@ This project ships code under three licences. Which one applies to a given file 
   header, so other mods can compile against the API freely. Seven files that live in the
   `buildcraft.api` packages are *not* MIT — they are in the MMPL list below. The package is genuinely
   mixed; the header is authoritative, never the directory.
-- **93 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
-  License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header. (The count
-  below is live: Ph9's ports added to it.)
+- **The files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
+  License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header. The list
+  below names every one of them and is the only count; a test keeps it in step with the tree.
 
 Upstream BuildCraft has never relicensed these files away from MMPL — every upstream branch, up to and
 including `master`, still ships MMPL as its root licence — so this fork does not either. The root
@@ -41,6 +41,17 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
   node's bucket fluid mask) was drawn for this project, fitted to the opening of vanilla's bucket; it stands in
   for NeoForge's `neoforge:item/mask/bucket_fluid_drip`, which is not copied.
 
+## Bundled third-party code (Fabric jar only)
+
+The Fabric jar (`+mc26.3-fabric`) nests one third-party library as a jar-in-jar under `META-INF/jars/`. The
+NeoForge jars bundle none.
+
+- `eu.pb4:common-protection-api` 2.0.0 (`META-INF/jars/common-protection-api-2.0.0.jar`) — MIT, Copyright (c)
+  2022 Patbox, <https://github.com/Patbox/common-protection-api>. It is the API Fabric claim and protection
+  mods answer BuildCraft's "may this player act here" questions through. Its licence text ships inside the nested
+  jar (`LICENSE_common-protection-api`), which is how the MIT notice requirement is met; it is listed here so
+  this map is complete. It does not change the licence of any BuildCraft file.
+
 ## Files under the Minecraft Mod Public License 1.0.1
 
 Three of them carry **two** notices, upstream's first, because they are original work built on top of
@@ -50,7 +61,7 @@ carried-over code:
 - `src/main/java/buildcraft/robotics/item/ItemRedstoneBoard.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotBuilder.java`
 
-The remaining 97 carry the upstream notice alone:
+The rest carry the upstream notice alone:
 
 - `src/main/java/buildcraft/api/core/IFluidFilter.java`
 - `src/main/java/buildcraft/api/core/IStackFilter.java`

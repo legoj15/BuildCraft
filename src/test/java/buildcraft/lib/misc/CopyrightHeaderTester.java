@@ -251,7 +251,7 @@ public class CopyrightHeaderTester {
                 + (stale.isEmpty() ? ""
                     : "    Listed in NOTICE.md but no longer carry an MMPL notice:\n      "
                         + String.join("\n      ", stale) + "\n")
-                + "    Update NOTICE.md (including the file count in its prose) to match.");
+                + "    Update NOTICE.md's file lists to match (the prose carries no count).");
     }
 
     /** A file may not credit this fork and upstream on the SAME line - that is a half-applied edit.

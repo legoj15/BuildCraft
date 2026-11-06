@@ -32,25 +32,20 @@ Please check if the bug or feature request has been reported beforehand. Also, p
 **Please** mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
 
 ### Fabric
-A Fabric build for **Minecraft 26.3** is built from the same source tree. It is in development and not released yet.
-It is the same mod, with the same mod id (`buildcraftunofficial`), and it needs:
+A Fabric version of BuildCraft for **Minecraft 26.3** is built from the same source. It is in development and not released yet. It is the same mod, and it needs:
 
 * [Fabric Loader](https://fabricmc.net/use/) 0.20.1 or newer,
 * [Fabric API](https://modrinth.com/mod/fabric-api) 0.165.2+26.3 or newer,
-* [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) 26.3.1 or newer (BuildCraft's config files),
-* optionally Team Reborn Energy, for RF/FE interop with other mods' machines (without it BuildCraft offers and
-  finds no RF/FE),
-* optionally JEI or REI, for recipe viewing.
+* [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) 26.3.1 or newer,
+* optionally Team Reborn Energy, so BuildCraft can share power with other mods' machines,
+* optionally JEI or REI, for browsing recipes.
 
-Common Protection API, through which claim and protection mods answer BuildCraft's "may this player build here"
-questions, is bundled inside the jar.
+Claim and protection mods are respected without anything extra to install.
 
-Known differences from the NeoForge build:
+Known differences from the NeoForge version:
 
-* Robot Goggles have no Curios/Accessories slot (neither mod has a Fabric 26.3 build); they count only when worn in
-  the head slot.
-* Fluids are counted in whole millibuckets. Fabric measures fluids in droplets (81 to the millibucket), so a transfer
-  of less than 1 mB moves nothing and any fraction of a millibucket is ignored.
+* The Robot Goggles can only be worn on the head (Curios and Accessories have no Fabric build for 26.3 yet).
+* Fluid amounts below a thousandth of a bucket do not transfer.
 
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` for 26.1.2 and newer, and `Java 21` for 1.21.x (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
@@ -153,7 +148,7 @@ Most of this project is under the Mozilla Public License 2.0 — see [LICENSE](L
 Most of the `buildcraft.api` package is under the MIT license instead, so other mods can build against it
 freely — see [LICENSE.API](LICENSE.API).
 
-Three dozen files were carried over from the original BuildCraft for Minecraft 1.7.10 and 1.12.2, and those
+About a hundred files were carried over from the original BuildCraft for Minecraft 1.7.10 and 1.12.2, and those
 stay under the license their original authors released them under, the Minecraft Mod Public License — see
 [LICENSE.MMPL](LICENSE.MMPL).
 

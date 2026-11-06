@@ -58,7 +58,8 @@ import net.minecraft.world.level.material.Fluids;
  * {@code FluidStack} (the decision recorded in {@code docs/platform-layer.md}, "Fluids (value type)").
  *
  * <p>Converting to and from a loader's own fluid type happens only in that loader's platform implementation. (No
- * nullness annotations: this class also compiles on the Fabric node, which has no {@code javax.annotation}.)
+ * nullness annotations: no member here returns or accepts null except {@link #hashFluidAndComponents}, which hashes a
+ * null stack to 0. {@code javax.annotation} is available on every node, compile-only on Fabric.)
  */
 public final class BCFluidStack implements DataComponentHolder {
     private static final String FIELD_ID = "id";

@@ -73,6 +73,11 @@ public class FacadePhasedState implements IFacadePhasedState {
         BlockState state = Block.BLOCK_STATE_REGISTRY.byId(stateId);
         boolean hasColour = buf.readBoolean();
         DyeColor colour = hasColour ? buf.readEnumValue(DyeColor.class) : null;
+        if (state == null) {
+            // An id outside this side's state registry (drifted or corrupt): the fallback below would NPE on
+            // state.getBlock() while generation is disabled and kill the pluggable sync handler (#128).
+            return new FacadePhasedState(FacadeStateManager.defaultState, colour);
+        }
         FacadeBlockStateInfo info = FacadeStateManager.validFacadeStates.get(state);
         if (info == null) {
             info = FacadeStateManager.createFallbackInfo(state);

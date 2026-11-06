@@ -6,6 +6,7 @@
 package buildcraft.lib.transfer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
@@ -154,5 +155,23 @@ public class DeferredFluidCallsTest extends VanillaSetupBaseTester {
             tx.commit();
         }
         assertEquals(1000, handler.held.getAmount());
+    }
+
+    /**
+     * A drain-only or fill-only face over such a handler still hands a robot its direct move (the replay path could
+     * create fluid), but only in the direction the face allows.
+     */
+    @Test
+    public void aLimitedFaceHandsOutItsHandlersCallsOnlyInTheDirectionItAllows() {
+        OneTank handler = new OneTank();
+        BCFluidStorage view = FluidHandlerAdvs.storage(handler);
+        DeferredFluidCalls calls = ((DeferredFluidCalls.Owner) view).deferredCalls();
+        assertSame(calls, FluidStorageUtil.deferredCalls(view, true));
+        assertSame(calls, FluidStorageUtil.deferredCalls(FluidStorageUtil.extractOnly(view), false));
+        assertSame(calls, FluidStorageUtil.deferredCalls(FluidStorageUtil.insertOnly(view), true));
+        assertNull(FluidStorageUtil.deferredCalls(FluidStorageUtil.extractOnly(view), true));
+        assertNull(FluidStorageUtil.deferredCalls(FluidStorageUtil.insertOnly(view), false));
+        assertNull(FluidStorageUtil.deferredCalls(FluidStorageUtil.extractOnly(new BCFluidTank(1, 1000)), false),
+            "a storage that answers its own calls has none owed");
     }
 }

@@ -87,17 +87,17 @@ public abstract class SingleStackStorage implements BCModifiableItemStorage {
     }
 
     /** The held stack itself for slot 0, as the stone engine's classic fuel handler handed it out; any other index is
-     *  empty. */
+     *  empty on every node, as {@link BCModifiableItemStorage#getStackInSlot} promises (a read never throws). */
     @Override
     public ItemStack getStackInSlot(int index) {
         return index == 0 ? getStack() : ItemStack.EMPTY;
     }
 
-    /** Overwrites the slot outside any transaction and reports the change through {@link #onRootCommit}; any index but
-     *  the one slot is ignored, as the stone engine's classic fuel handler ignored it. */
+    /** Overwrites the slot outside any transaction and reports the change through {@link #onRootCommit}; past it, as
+     *  {@link #hasIndex} says (1.21.1's classic fuel handler ignored the write). */
     @Override
     public void setStackInSlot(int index, ItemStack stack) {
-        if (index == 0) {
+        if (hasIndex(index)) {
             ItemStack before = getStack();
             setStack(stack);
             onRootCommit(before);

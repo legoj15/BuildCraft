@@ -112,6 +112,24 @@ public final class FluidStorageUtil {
         return new Limited(storage, true, false);
     }
 
+    /**
+     * The calls owed to a handler that can only simulate behind {@code storage} ({@link DeferredFluidCalls.Owner}),
+     * seen through {@link #extractOnly}/{@link #insertOnly} views, for a move in one direction ({@code insert} into the
+     * storage, or extract out of it). Null when the storage answers its own calls, or when a view on the way refuses
+     * that direction: the caller's transactional path then moves nothing, as the view says.
+     */
+    @Nullable
+    public static DeferredFluidCalls deferredCalls(BCFluidStorage storage, boolean insert) {
+        BCFluidStorage at = storage;
+        while (at instanceof Limited limited) {
+            if (!(insert ? limited.canInsert : limited.canExtract)) {
+                return null;
+            }
+            at = limited.storage;
+        }
+        return at instanceof DeferredFluidCalls.Owner owner ? owner.deferredCalls() : null;
+    }
+
     private record Limited(BCFluidStorage storage, boolean canInsert, boolean canExtract) implements BCFluidStorage {
         @Override
         public int size() {

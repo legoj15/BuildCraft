@@ -99,7 +99,8 @@ public class FacadeGenerationToggleTester extends VanillaSetupBaseTester {
 
             // Issue #128: a state id this side's registry does not know (drift, corruption) decodes to the air
             // default with its colour, and leaves the buffer aligned for the caller's next read. It used to NPE
-            // in the disabled-mode fallback and kill the pluggable sync handler.
+            // in the disabled-mode fallback and kill the facade buffer decode (no in-tree caller today: facades
+            // sync as NBT).
             PacketBufferBC unknown = PacketBufferBC.asPacketBufferBc(Unpooled.buffer());
             unknown.writeVarInt(Block.BLOCK_STATE_REGISTRY.size() + 100);
             unknown.writeBoolean(true);

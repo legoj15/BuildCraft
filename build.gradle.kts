@@ -49,8 +49,8 @@ stonecutter {
     // Loader constants: `//? if neoforge {` is live on a node whose `loader` is neoforge, `//? if fabric {` on a fabric
     // one. match() sets the key equal to `loader` true and the other false (verified against 0.9.8's
     // ConstantContainer). Directives in common main code stay about MC versions; a loader arm belongs only in a
-    // buildcraft/platform/<loader>/ file, a binder holder, or one of the documented patched-override and
-    // loader-metadata arms (docs/platform-layer.md, Rules for directives). Shared test code is looser: game-test
+    // buildcraft/platform/<loader>/ file, a binder holder, or one of the documented exceptions
+    // (docs/platform-layer.md, Rules for directives). Shared test code is looser: game-test
     // bodies carry loader arms where a loader's own route differs (docs/platform-layer.md, Phase 2c).
     constants.match(loader, "neoforge", "fabric")
     replacements {

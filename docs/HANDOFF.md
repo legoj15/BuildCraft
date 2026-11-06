@@ -7,7 +7,9 @@
 - A read-only review of `platform/**` and the Fabric node followed. Twelve fix packets answered it (neo-fluids,
   fabric-protection, events-bus, oil-spread, fabric-lifecycle, neo-items-transfer, fabric-transfer,
   fabric-physics-client, build-scripts, platform-contracts, tests-misc, client-misc). They are merged on the
-  integration branch `claude/review-98-fixes` (`0bc21ba64`), and this docs packet (`fix/98-docs`) sits on top. None of
+  integration branch `claude/review-98-fixes` (`0bc21ba64`), with the docs packet on top and two fixes from the
+  third-party review of `0bc21ba64` (`a40cdd037` logs a refused hand-back, `c9b519984` refuses a mixed fill/drain
+  on a simulate-only view; 26.3, 1.21.1 and Fabric game tests green on `c9b519984`). None of
   that is in `main` yet; merging it is the orchestrator's call.
 - To continue elsewhere, check that branch out. Re-run `bash scripts/neoforge-sources-sync.sh` there; `.neoforge-ref/`
   is gitignored.

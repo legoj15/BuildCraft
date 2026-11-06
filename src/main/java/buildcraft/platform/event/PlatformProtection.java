@@ -28,7 +28,8 @@ import net.minecraft.world.phys.BlockHitResult;
  * refuses the machine. Every method runs on the server thread, like every caller.
  *
  * <p><b>Probes.</b> {@link #canBreak} and {@link #canPlace} post a PROBE: an event asking about an act that never
- * happens, cancelled or not. BuildCraft's own listeners for those events must therefore not take one for a block
+ * happens, cancelled or not (on Fabric, which has no place event, {@link #canPlace} asks the providers and posts
+ * nothing). BuildCraft's own listeners for those events must therefore not take one for a block
  * changing; {@link BlockBreak#isProbe} and {@code GameHooks.BlockPlace#isProbe} tell them apart.
  *
  * <p>This is a contract (see the package documentation of {@code buildcraft.platform}): JDK and vanilla types only.

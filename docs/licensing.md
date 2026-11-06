@@ -6,7 +6,7 @@ remain, or should it say MPL instead?"* — **it remains.** Player-facing summar
 
 ## The verdict
 
-Keep the MMPL headers exactly as they are on all 38 files. Do not change them to MPL, and do not rewrite a
+Keep the MMPL headers exactly as they are on every MMPL file (38 at the time of this decision; NOTICE.md's list is the live count). Do not change them to MPL, and do not rewrite a
 file in order to shed one. What was genuinely broken was the *packaging* around them, not the attribution:
 the files pointed at a licence text the repo did not carry, the jar shipped MPL and MIT but not MMPL, and
 nothing anywhere stated that the jar is a three-licence artefact. Those are fixed.

@@ -42,7 +42,7 @@ import buildcraft.transport.BCTransportItems;
  *
  * <p>Tab contents are rebuilt the way the game does it, {@link CreativeModeTab#buildContents}, which
  * runs the tab's {@code CreativeTabContents} contributions (on NeoForge delivered through BuildCraft's low priority
- * tab-contents listeners, where the loader has no such hook replayed by the tab's own generator) — so the plugs-tab
+ * tab-contents listeners; on Fabric, which has no such hook, replayed by the tab's own generator) — so the plugs-tab
  * assertions exercise the real contributions the robot station used to ride on, not a mock. The liveness precondition (the blocker must be
  * present) guards against that path being silently dead in the FML-JUnit environment, which would make
  * the "station is gone" assertion vacuously true.

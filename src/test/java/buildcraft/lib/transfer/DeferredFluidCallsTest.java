@@ -113,6 +113,20 @@ public class DeferredFluidCallsTest extends VanillaSetupBaseTester {
         assertEquals(0, handler.held.getAmount());
     }
 
+    /** A queued drain can be displaced by a fill the handler's simulation cannot see coming: the fill is refused. */
+    @Test
+    public void aFillWhileADrainIsOwedIsRefused() {
+        OneTank handler = new OneTank();
+        handler.held = WATER.copyWithAmount(500);
+        BCFluidStorage view = FluidHandlerAdvs.storage(handler);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(400, view.extract(WATER, 400, tx));
+            assertEquals(0, view.insert(WATER, 700, tx), "a drain is owed: the handler cannot be asked about both");
+            tx.commit();
+        }
+        assertEquals(100, handler.held.getAmount(), "only the drain replayed");
+    }
+
     /** A station's input is asked for on every candidate of a robot's search: each lookup of one handler or
      *  storage is the same view, so it is not wrapped again and its callers share one queue of owed calls. */
     @Test

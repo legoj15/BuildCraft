@@ -26,6 +26,15 @@ public interface IItemPluggable {
     PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand);
 
+    /** Whether {@code stack} can make a pluggable at all, judged from the stack alone: false means {@link #onPlace}
+     * refuses it on every pipe and face. A refusal that depends on the pipe (its flow or behaviour) cannot be
+     * expressed here. The placement-preview outline is drawn only when this is true, so an item whose
+     * {@link #onPlace} refuses some stacks overrides it to keep the outline honest. Called every frame the outline is
+     * rendered: keep it side-effect-free and cheap. Default true. */
+    default boolean canPlace(@Nonnull ItemStack stack) {
+        return true;
+    }
+
     /** Bounding box this item would occupy as a pluggable on {@code side} of a pipe — drives the
      * placement-preview outline so it traces exactly what {@link #onPlace} will produce, instead
      * of always showing a gate-sized panel that larger pluggables (facades, power adaptors, lenses)

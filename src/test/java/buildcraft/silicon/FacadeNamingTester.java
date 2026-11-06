@@ -5,11 +5,18 @@
  */
 package buildcraft.silicon;
 
+import com.google.common.collect.ImmutableSet;
+
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.silicon.item.ItemPluggableFacade;
+import buildcraft.silicon.plug.FacadeBlockStateInfo;
+import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadePhasedState;
 import buildcraft.silicon.plug.FacadeStateManager;
 
@@ -54,6 +61,20 @@ public final class FacadeNamingTester {
         if (!suffix.isEmpty()) {
             helper.fail("getFacadeStateDisplayName(null stateInfo) returned \"" + suffix
                 + "\" instead of an empty string.");
+            return;
+        }
+
+        // #129: the same air default bakes no quads, so placing a bare facade must be refused (null), not
+        // become an invisible pluggable. The refusal precedes any holder use, so a null holder is enough.
+        ItemPluggableFacade facadeItem = (ItemPluggableFacade) bareFacade.getItem();
+        if (facadeItem.onPlace(bareFacade, null, Direction.NORTH, null, InteractionHand.MAIN_HAND) != null) {
+            helper.fail("A bare (air) facade placed onto a pipe instead of being refused.");
+            return;
+        }
+        FacadeInstance stone = FacadeInstance.createSingle(new FacadeBlockStateInfo(Blocks.STONE.defaultBlockState(),
+            new ItemStack(Blocks.STONE), ImmutableSet.of()), false);
+        if (ItemPluggableFacade.isAirOnly(stone)) {
+            helper.fail("A stone facade was classed as air-only and would be refused placement.");
             return;
         }
         helper.succeed();

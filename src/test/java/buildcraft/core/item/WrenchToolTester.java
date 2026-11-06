@@ -151,8 +151,8 @@ public class WrenchToolTester {
     /**
      * Zombies carry a wrench only when their spawn was finalized and vanilla left their hand empty (so a mob that never
      * went through a spawn finalize, a mob already holding something, and a mob that is not a zombie never get one),
-     * and the events reach the mod through the game bus (the tests post them there, so a handler that was never
-     * subscribed fails too),
+     * and the events reach the mod through the loader's own route (the tests post them through LoaderTestEvents,
+     * NeoForge's bus or the Fabric hook, so a handler that was never subscribed fails too),
      * and some of the finalized ones do. The chance is a 1% roll, so the counts are bounded far from both ends over
      * {@value #TRIALS} rolls: a roll that never hits, or hits on most, fails.
      */

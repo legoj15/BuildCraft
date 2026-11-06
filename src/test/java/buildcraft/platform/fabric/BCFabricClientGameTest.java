@@ -12,7 +12,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -32,10 +34,16 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache;
+import buildcraft.transport.recipe.DyedPipeRecipe;
 
 /^*
  * The Fabric node's in-world visual check ({@code :26.3-fabric:runClientGameTest}, Fabric API's client game-test
@@ -90,6 +98,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             if (!"east".equals(clientEngine)) {
                 problems.add("the client's redstone engine faces " + clientEngine + ", not east");
             }
+            checkRecipeSync(ctx, problems);
 
             // The world shots, HUD hidden (F1): the whole rig, then each part close up.
             setHudHidden(ctx, true);
@@ -144,6 +153,35 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 + String.join("\n  ", problems));
         }
         LOGGER.info(PASS_MARKER);
+    }
+
+    /^*
+     * The guide's recipe panels read the recipes the server sends (vanilla stopped sending them in 1.21.2; #141). A
+     * singleplayer guide falls back to the integrated server's own recipes, which hides a missing sync, so this reads
+     * the received store alone: on a dedicated server that store is all the guide has. It wants a recipe of each kind
+     * a panel shows: vanilla shaped and smelting, and one of BuildCraft's own crafting serializers.
+     *^/
+    private static void checkRecipeSync(ClientGameTestContext ctx, List<String> problems) {
+        List<String> missing = ctx.computeOnClient(mc -> {
+            Set<RecipeSerializer<?>> received = new HashSet<>();
+            for (RecipeHolder<?> holder : ClientGuideRecipeCache.syncedRecipeHolders()) {
+                received.add(holder.value().getSerializer());
+            }
+            List<String> absent = new ArrayList<>();
+            if (!received.contains(ShapedRecipe.SERIALIZER)) {
+                absent.add("shaped");
+            }
+            if (!received.contains(SmeltingRecipe.SERIALIZER)) {
+                absent.add("smelting");
+            }
+            if (!received.contains(DyedPipeRecipe.SERIALIZER)) {
+                absent.add("BuildCraft's dyed pipe");
+            }
+            return absent;
+        });
+        if (!missing.isEmpty()) {
+            problems.add("the server sent the client no recipes of these kinds: " + missing);
+        }
     }
 
     /^*

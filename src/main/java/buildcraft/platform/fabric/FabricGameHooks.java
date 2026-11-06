@@ -22,6 +22,7 @@ import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -34,7 +35,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
@@ -58,7 +63,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.recipe.v1.sync.RecipeSynchronization;
 
+import buildcraft.platform.Platform;
 import buildcraft.platform.event.GameHooks;
 import buildcraft.platform.event.HookOrder;
 
@@ -74,8 +81,8 @@ import buildcraft.platform.event.HookOrder;
  * {@code BlockBehaviourMixin} through {@link #digSpeedAt}, as NeoForge's position-aware {@code getDestroySpeed}) and the
  * client level's unload ({@code client.MinecraftMixin}).
  *
- * <p><b>Gap</b> (the hook registers nothing): {@link #syncRecipeTypes} (Fabric syncs recipes per serializer, not per
- * type). Narrower than NeoForge: {@link #onBlockPlace} sees only the placements BuildCraft's machines make through
+ * <p>Narrower than NeoForge: {@link #syncRecipeTypes} (Fabric syncs per serializer, not per type: it sends the
+ * serializers a guide panel can show; see the method), {@link #onBlockPlace} sees only the placements BuildCraft's machines make through
  * {@code FabricProtection} (Fabric API has no placement event; a player's own placement still reaches the
  * neighbour-notify listeners), {@link #onFinalizeSpawn} runs from inside {@code Mob}'s own finalize (a mob whose
  * override never calls it is not seen, and a spawner that skips the finalize posts nothing), and a
@@ -270,9 +277,41 @@ public final class FabricGameHooks implements GameHooks {
                 (player, joined) -> listener.onSync(player.level().getServer(), List.of(player)));
     }
 
+    /^*
+     * Fabric API's recipe sync ({@code RecipeSynchronization}) is per serializer, and both sides must name the set
+     * before a connection opens (the client advertises it while configuring), so no recipe can be looked at to find
+     * the serializers of a type. Each type maps to the serializers whose recipes a guide panel shows instead: for
+     * crafting, vanilla's shaped and shapeless plus every BuildCraft serializer (all of them are crafting recipes);
+     * for smelting, vanilla's. Vanilla's other crafting serializers (dye, transmute, the special recipes) and another
+     * mod's own are not sent, where NeoForge sends every recipe of the type. A type with no mapping here throws.
+     * <p>
+     * BuildCraft's serializers are registered after the common init, so the set is named at common setup: call this
+     * from the common init only ({@code FabricLifecycleHooks.finishInit} runs the setup queue once).
+     *^/
     @Override
     public void syncRecipeTypes(List<RecipeType<?>> types) {
-        // Gap: Fabric syncs recipes per serializer (RecipeSynchronization), not per type (see the class documentation)
+        for (RecipeType<?> type : types) {
+            if (type != RecipeType.CRAFTING && type != RecipeType.SMELTING) {
+                throw new IllegalArgumentException("No Fabric recipe-sync serializers mapped for " + type);
+            }
+        }
+        boolean crafting = types.contains(RecipeType.CRAFTING);
+        boolean smelting = types.contains(RecipeType.SMELTING);
+        Platform.lifecycle().onCommonSetup(() -> {
+            if (crafting) {
+                RecipeSynchronization.synchronizeRecipeSerializer(ShapedRecipe.SERIALIZER);
+                RecipeSynchronization.synchronizeRecipeSerializer(ShapelessRecipe.SERIALIZER);
+                for (RecipeSerializer<?> serializer : BuiltInRegistries.RECIPE_SERIALIZER) {
+                    Identifier id = BuiltInRegistries.RECIPE_SERIALIZER.getKey(serializer);
+                    if (id != null && "buildcraftunofficial".equals(id.getNamespace())) {
+                        RecipeSynchronization.synchronizeRecipeSerializer(serializer);
+                    }
+                }
+            }
+            if (smelting) {
+                RecipeSynchronization.synchronizeRecipeSerializer(SmeltingRecipe.SERIALIZER);
+            }
+        });
     }
 
     // ── Where the mixins post (and the game tests, as NeoForge's tests post its events) ──────────────────────

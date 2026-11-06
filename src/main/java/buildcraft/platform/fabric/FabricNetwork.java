@@ -37,17 +37,26 @@ import buildcraft.platform.network.PacketHandler;
  * here, behind {@link buildcraft.platform.LoaderServices#isPhysicalClient()}, means no client entrypoint is needed:
  * registering a global receiver before the client has connected is what Fabric's own client initializers do.
  *
- * <p><b>Gaps against NeoForge.</b> Fabric has no per-payload version negotiation, so {@code version} is unused and a
- * mismatched peer misreads instead of being refused at login; and the payloads are registered without Fabric's
- * {@code registerLarge} splitting, so one above vanilla's packet size limit (a huge blueprint) fails to send where
- * NeoForge would split it.
+ * <p><b>Versions.</b> Fabric has no per-payload version negotiation, so {@link FabricNetworkVersions} adds one: each
+ * payload's version is recorded here and compared with the client's in a configuration-phase handshake, which
+ * refuses a mismatched client at login as NeoForge does.
+ *
+ * <p><b>Size.</b> Every payload is registered with {@code registerLarge}, so Fabric splits one above vanilla's packet
+ * limit (a huge blueprint in a snapshot response) and reassembles it, as NeoForge's packet splitter does for every
+ * payload; a small payload goes out unsplit. The reassembled cap is {@link #MAX_PAYLOAD_BYTES}.
  *^/
 public final class FabricNetwork implements BCNetwork {
+
+    /^* The largest payload a receiver reassembles: NeoForge's default {@code splitPacketMaxSizeLimitMb}, 128 MB. *^/
+    static final int MAX_PAYLOAD_BYTES = 128 * 1024 * 1024;
+
+    private final FabricNetworkVersions versions = new FabricNetworkVersions();
 
     @Override
     public <T extends CustomPacketPayload> void clientbound(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
-        PayloadTypeRegistry.clientboundPlay().register(type, codec);
+        versions.record(type, version);
+        PayloadTypeRegistry.clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerReceiver(type, handler);
         }
@@ -56,15 +65,17 @@ public final class FabricNetwork implements BCNetwork {
     @Override
     public <T extends CustomPacketPayload> void serverbound(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
-        PayloadTypeRegistry.serverboundPlay().register(type, codec);
+        versions.record(type, version);
+        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
         registerServerReceiver(type, handler);
     }
 
     @Override
     public <T extends CustomPacketPayload> void bidirectional(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
-        PayloadTypeRegistry.clientboundPlay().register(type, codec);
-        PayloadTypeRegistry.serverboundPlay().register(type, codec);
+        versions.record(type, version);
+        PayloadTypeRegistry.clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
+        PayloadTypeRegistry.serverboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
         registerServerReceiver(type, handler);
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerReceiver(type, handler);

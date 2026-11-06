@@ -656,6 +656,8 @@
     "buildcraftunofficial.configuration.useRfNaming": "使用 RF 命名",
     "buildcraftunofficial.configuration.worldGen": "启用世界生成",
     "buildcraftunofficial.configuration.worldgen": "世界生成",
+    "buildcraftunofficial.network.missing": "此服务器要求你的游戏安装相同版本的 BuildCraft Redux。",
+    "buildcraftunofficial.network.version_mismatch": "你的 BuildCraft Redux 与服务器的版本不一致。请安装服务器所用的版本。不一致的项：%s",
     "chat.architect.scanTooLarge": "该区域太大，建筑工作台无法扫描（%s × %s × %s 个方块）。它最多只能保存共 %s 个方块，请标出更小的区域。",
     "chat.architect.scanTooDetailed": "该区域（%s × %s × %s 个方块）内容过多，建筑工作台无法保存。请标出更小的区域。",
     "chat.debugger.laser": "调试：高亮显示激光锥体（绿色=可达，红色=阻挡）",

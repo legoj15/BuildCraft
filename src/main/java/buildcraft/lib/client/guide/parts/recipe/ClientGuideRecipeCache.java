@@ -25,7 +25,9 @@ import buildcraft.platform.Platform;
  * server now requests NeoForge's opt-in recipe sync ({@code OnDatapackSyncEvent.sendRecipes}
  * in BCCore) and the client stores the result here when
  * {@code RecipesReceivedEvent} fires (on the 1.21.1 node, where vanilla still syncs all
- * recipes itself, {@code RecipesUpdatedEvent} feeds this store instead — see BCLibClient).
+ * recipes itself, {@code RecipesUpdatedEvent} feeds this store instead — see BCLibClient). On Fabric the
+ * server sends the serializers {@code FabricGameHooks.syncRecipeTypes} names and fabric-recipe-api's
+ * {@code ClientRecipeSynchronizedEvent} feeds this store.
  * Both events fire on every world join and again on datapack {@code /reload}, and the
  * BCLibClient handler follows each refresh with a guide reload, so panels re-bake from
  * current data and never go stale across server switches.
@@ -61,6 +63,12 @@ public class ClientGuideRecipeCache {
      * GuideManager.onRecipeDataReceived). Reset by {@link #clear()} on logout. */
     public static boolean hasSeenSyncThisConnection() {
         return seenSyncThisConnection;
+    }
+
+    /** The recipes the server actually sent on this connection, without the singleplayer fallback (which hides a
+     * missing sync in singleplayer; the Fabric client game test checks the sync itself through this). */
+    public static List<RecipeHolder<?>> syncedRecipeHolders() {
+        return synced;
     }
 
     /** Every recipe the guide may display. The synced store when present, otherwise the

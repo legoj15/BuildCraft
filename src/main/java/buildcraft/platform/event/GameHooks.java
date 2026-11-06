@@ -141,7 +141,8 @@ public interface GameHooks {
     void onDatapackSync(DatapackSync listener);
 
     /** Has the recipes of {@code types} sent to every client with the datapack contents, where vanilla no longer
-     *  sends them on its own. */
+     *  sends them on its own. Call from the common init. Fabric syncs per serializer, so it sends only the
+     *  serializers it maps for each type (the ones a guide panel shows) and throws for a type it does not map. */
     void syncRecipeTypes(List<RecipeType<?>> types);
 
     // ── Listener shapes ───────────────────────────────────────────────────────────────────────────────────────

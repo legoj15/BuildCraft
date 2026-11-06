@@ -1,6 +1,6 @@
 ---
 name: add-game-test
-description: Adding, changing, or debugging a NeoForge game test in BuildCraft (any *Tester.java under src/test plus its test_instance manifest). The three-part wiring (Java method, registration, manifest JSON), arena geometry limits, tick-latency pitfalls, player-state limits, and how to verify the test actually runs. Read this BEFORE writing the first line of a new game test.
+description: Adding, changing, or debugging a game test in BuildCraft, NeoForge or Fabric (any *Tester.java under src/test plus its test_instance manifest). The three-part wiring (Java method, registration, manifest JSON), Fabric-only and NeoForge-only tests, arena geometry limits, tick-latency pitfalls, player-state limits, and how to verify the test actually runs. Read this BEFORE writing the first line of a new game test.
 ---
 
 # Adding a game test in BuildCraft
@@ -77,11 +77,35 @@ yourself; adding to `registerAll` is every node at once.
 (`Platform.fakePlayers()`, `Platform.extensions()`, `Platform.protection()`, `TransferAccess`) and fire loader events
 through `buildcraft.lib.test.LoaderTestEvents` (whose `claim...`/`observe...` methods also stand up a claim mod or an
 observer on the loader's own event, at a `HookOrder` where the order matters), never `NeoForge.EVENT_BUS` or a
-NeoForge type in the body. A test
-that cannot run on Fabric (a documented Fabric gap, or NeoForge-only machinery) goes in a `//? if neoforge {` arm in
-`registerAll` under a `// Not on Fabric: <reason>` line; the Fabric build drops the manifests of tests it does not
-register, so nothing else is needed. A file that cannot even compile there goes on the bc.fabric exclude list with
-its reason.
+NeoForge type in the body.
+
+Three cases leave the "same test, every node" default; pick by what the body needs:
+
+- **Fabric-only** (it tests Fabric's own types: the adapters over Fabric API storages, Fabric transactions). Register
+  it unconditionally like any other test, with one manifest, and put the Fabric half of the *body* in `//? if fabric {`
+  arms inside the test class: on NeoForge nodes the method compiles to a bare `helper.succeed()`. The class lives in
+  `src/test/java/buildcraft/platform/fabric/` with only `GameTestHelper` imported outside the arm.
+  `FabricAdapterTester` (`fabric_foreign_storage_adapters`) is the pattern. Do not gate the `reg.accept` line on
+  `fabric`: only the Fabric build drops the manifests of tests it does not register, so the NeoForge nodes would load
+  a manifest whose function nothing registers there, and `GameTestManifestTester` reads the raw text, so it would not
+  notice. Say on the registration line that the body is empty on NeoForge.
+- **NeoForge-only on the server, because the body loads client classes** (guide recipe lookups, the Zone Planner
+  overlay geometry: Fabric's dedicated game-test server refuses client classes). Put the `reg.accept` in a
+  `//? if neoforge {` arm under a `// Not on Fabric: <reason>` line, AND add a `new ClientClassGameTest("<id>", ...)`
+  entry with the same id (no namespace) to `CLIENT_CLASS_GAME_TESTS` in `platform/fabric/BCFabricClientGameTest`,
+  which runs it on the singleplayer server of `:26.3-fabric:runClientGameTest` through a `DetachedGameTestHelper`.
+  `GameTestManifestTester.everyNeoForgeOnlyTestRunsInTheFabricClientGameTest` fails the unit run when the two lists
+  disagree in either direction. That helper answers only the level, relative positions, assertions and `succeed()`:
+  a body that polls (`tickUntil`, `runAfterDelay`, `succeedWhen`) or needs the arena structure cannot run there and
+  must be made synchronous or split. The client game test needs a GL context and is outside `fullTestSuite`, so run
+  it yourself after adding one.
+- **Cannot compile on Fabric at all** (it names a NeoForge type in a way no seam covers). Add the file to
+  `fabricGameTestExcludes` in `buildSrc/src/main/kotlin/bc.fabric.gradle.kts` with its reason, and gate its
+  registration as above. The guard then still demands a client-game-test entry; if none is possible, the test is a
+  Fabric gap, and that is an issue to file, not a list entry to fake.
+
+The Fabric build drops the manifests of the tests it does not register, so a `neoforge`-arm test needs no manifest
+change.
 
 ## Never assert on a fixed tick after placing blocks/entities
 

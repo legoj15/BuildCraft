@@ -62,9 +62,10 @@ import buildcraft.platform.transfer.TransferServices;
  * (an adapter wraps the {@code TransactionContext} it is handed with {@link #wrap}). On 1.21.1 there is no NeoForge
  * transaction, so {@link LegacyTransactions} stands in and the classic handlers' simulate flag maps onto it.
  *
- * <p><b>Capabilities.</b> Each {@link #registerCapabilities} call subscribes its own {@code RegisterCapabilitiesEvent}
- * listener on the mod bus of the mod being constructed, so registrations keep the order of the calls relative to
- * every other listener of that event. Storages cross as {@link NeoForgeItemStorages}, {@link NeoForgeFluidStorages}
+ * <p><b>Capabilities.</b> {@link #registerCapabilities} queues its registration in {@link CapabilityListeners}, which
+ * {@code BCNeoForgeEntrypoint} fires from the one {@code RegisterCapabilitiesEvent} listener it subscribes before
+ * BuildCraft's init runs, so the registrations run in the order of the calls. A call made after that event has fired
+ * is refused, not silently dropped. Storages cross as {@link NeoForgeItemStorages}, {@link NeoForgeFluidStorages}
  * and {@link NeoForgeEnergyStorages} adapters, which unwrap each other. Every other {@link BCCapability} (the MJ
  * tokens) is a sided NeoForge {@code BlockCapability} of the same id and type ({@link #blockCap}), its objects handed
  * out as they are; {@code BlockCapability.createSided} interns by id, so another mod creating it shares it.

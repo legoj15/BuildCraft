@@ -6,6 +6,9 @@
 
 package buildcraft.lib.tile.item;
 
+import buildcraft.platform.transfer.BCModifiableItemStorage;
+
 /** BuildCraft's advanced item handler: an {@link IBCItemHandler} plus insertion-checking via
- * {@link StackInsertionChecker}. */
-public interface IItemHandlerAdv extends IBCItemHandler, StackInsertionChecker {}
+ * {@link StackInsertionChecker}, and settable slots ({@link BCModifiableItemStorage}). On 1.21.1 the platform adapter
+ * therefore hands it out as an {@code IItemHandlerModifiable}, as this type itself was before the platform layer. */
+public interface IItemHandlerAdv extends IBCItemHandler, StackInsertionChecker, BCModifiableItemStorage {}

@@ -27,12 +27,20 @@ public interface IItemPluggable {
         InteractionHand hand);
 
     /** Whether {@code stack} can make a pluggable at all, judged from the stack alone: false means {@link #onPlace}
-     * refuses it on every pipe and face. A refusal that depends on the pipe (its flow or behaviour) cannot be
-     * expressed here. The placement-preview outline is drawn only when this is true, so an item whose
-     * {@link #onPlace} refuses some stacks overrides it to keep the outline honest. Called every frame the outline is
-     * rendered: keep it side-effect-free and cheap. Default true. */
+     * refuses it on every pipe and face. A refusal that depends on the pipe belongs in
+     * {@link #canPlace(ItemStack, IPipeHolder, Direction)}. Called every frame the outline is rendered: keep it
+     * side-effect-free and cheap. Default true. */
     default boolean canPlace(@Nonnull ItemStack stack) {
         return true;
+    }
+
+    /** Whether {@link #onPlace} would make a pluggable from {@code stack} on {@code side} of {@code holder}. The
+     * placement-preview outline is drawn only when this is true (on the client's copy of the pipe), so an item whose
+     * {@link #onPlace} refuses some pipes (by flow or behaviour) overrides this to keep the outline honest, and should
+     * have {@link #onPlace} ask it too so the two cannot drift. Called every frame the outline is rendered: keep it
+     * side-effect-free and cheap. Default {@link #canPlace(ItemStack)}. */
+    default boolean canPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side) {
+        return canPlace(stack);
     }
 
     /** Bounding box this item would occupy as a pluggable on {@code side} of a pipe — drives the

@@ -69,7 +69,7 @@ public class ItemPluggableSimple extends Item implements IItemPluggable {
     @Override
     public PipePluggable onPlace(ItemStack stack, IPipeHolder holder, Direction side, Player player,
                                   InteractionHand hand) {
-        if (placementPredicate != null && !placementPredicate.test(holder)) {
+        if (!canPlace(stack, holder, side)) {
             return null;
         }
         if (definition.creator != null) {
@@ -77,6 +77,16 @@ public class ItemPluggableSimple extends Item implements IItemPluggable {
             return definition.creator.createSimplePluggable(definition, holder, side);
         }
         return null;
+    }
+
+    @Override
+    public boolean canPlace(@Nonnull ItemStack stack) {
+        return definition.creator != null;
+    }
+
+    @Override
+    public boolean canPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side) {
+        return canPlace(stack) && (placementPredicate == null || placementPredicate.test(holder));
     }
 
     @Nonnull

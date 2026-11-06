@@ -19,7 +19,6 @@ import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.transport.IItemPluggable;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
-import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.misc.SoundUtil;
@@ -36,16 +35,17 @@ public class ItemPluggablePulsar extends Item implements IItemPluggable {
     @Override
     public PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand) {
+        if (!canPlace(stack, holder, side)) {
+            return null;
+        }
+        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
+        return new PluggablePulsar(BCSiliconPlugs.pulsar, holder, side);
+    }
+
+    /** Pulsars only go on pipes an engine could power (wooden, obsidian, stripes). */
+    @Override
+    public boolean canPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side) {
         IPipe pipe = holder.getPipe();
-        if (pipe == null) {
-            return null;
-        }
-        PipeBehaviour behaviour = pipe.getBehaviour();
-        if (behaviour instanceof IMjRedstoneReceiver) {
-            SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
-            return new PluggablePulsar(BCSiliconPlugs.pulsar, holder, side);
-        } else {
-            return null;
-        }
+        return pipe != null && pipe.getBehaviour() instanceof IMjRedstoneReceiver;
     }
 }

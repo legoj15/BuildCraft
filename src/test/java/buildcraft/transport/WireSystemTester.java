@@ -69,8 +69,9 @@ import buildcraft.lib.test.LoaderTestEvents;
  * <p>
  * A second group pins who receives wire-system state: only players whose chunk tracking view includes a chunk of
  * the system ({@link WireSystem#isPlayerWatching}), and a chunk delivered to a player queues that player for a full
- * resend only when it holds a system ({@link SavedDataWireSystems#onChunkSent}, fed by the {@code ChunkWatchEvent.Sent}
- * listener in {@code BCTransport}). Both used to go to every player of the level. Deliveries come in bursts, so the
+ * resend only when it holds a system ({@link SavedDataWireSystems#onChunkSent}, fed by the chunk-sent hook
+ * {@code Platform.gameHooks().onChunkSent} that {@code BCTransport} registers). Both used to go to every player of
+ * the level. Deliveries come in bursts, so the
  * resend itself is paced: one at once, then at most one per {@link SavedDataWireSystems#RESEND_INTERVAL_TICKS}.
  */
 public class WireSystemTester {
@@ -385,9 +386,10 @@ public class WireSystemTester {
     }
 
     /**
-     * The {@code ChunkWatchEvent.Sent} listener in {@code BCTransport} is what feeds {@code onChunkSent}: posting the
-     * real event for a wire-holding chunk queues the player. Pins the wiring (the event, the level, the player and the
-     * chunk position all reach {@code onChunkSent}) that a direct call cannot.
+     * The chunk-sent hook that {@code BCTransport} registers ({@code Platform.gameHooks().onChunkSent}; NeoForge drives
+     * it from {@code ChunkWatchEvent.Sent}, Fabric from its chunk-send mixin) is what feeds {@code onChunkSent}: posting
+     * the loader's real event for a wire-holding chunk queues the player. Pins the wiring (the event, the level, the
+     * player and the chunk position all reach {@code onChunkSent}) that a direct call cannot.
      */
     public static void testChunkSentEventQueuesPlayerForWireChunk(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -406,7 +408,7 @@ public class WireSystemTester {
                 LoaderTestEvents.chunkSent(player, chunk, level);
 
                 helper.assertTrue(wireSystems.isResendQueued(player),
-                    "ChunkWatchEvent.Sent for a wire-holding chunk must queue the player through the BCTransport listener");
+                    "a chunk sent to a player for a wire-holding chunk must queue the player through the BCTransport hook");
             } finally {
                 wireSystems.forgetResends(player);
             }

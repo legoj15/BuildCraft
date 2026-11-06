@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.api.fluids;
+package buildcraft.platform.neoforge;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -30,9 +30,9 @@ import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.test.GoldenFixtures;
 import buildcraft.platform.Platform;
-import buildcraft.platform.neoforge.NeoForgeFluids;
 
 /**
  * {@link BCFluidStack} must serialise exactly as NeoForge's {@link FluidStack} does (epic #98, S13a, written before

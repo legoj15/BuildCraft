@@ -89,22 +89,33 @@ public class LegacySavedDataTester {
             return "value " + value;
         }
     }
+    //?}
 
+    // The three level-aware helpers, one arm per loader.
+    //? if neoforge && >=26.1 {
     /** A fresh {@code type} data for {@code level}, as the level's storage would make it. */
     static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
-        //? if neoforge {
         return type.factory().create(level);
-        //?} else {
-        /*return buildcraft.platform.fabric.FabricSavedDataLevels.with(level, () -> type.constructor().get());*/
-        //?}
     }
 
     /** {@code type}'s codec as {@code level}'s storage would use it. */
     static <T extends SavedData> Codec<T> codec(SavedDataType<T> type, ServerLevel level) {
-        //? if neoforge {
         return type.codecFactory().create(level);
-        //?} else {
-        /*Codec<T> codec = type.codec();
+    }
+
+    /** A saved-data storage over {@code folder} that belongs to {@code level}, as the level's own does. */
+    static SavedDataStorage newStorage(ServerLevel level, Path folder) {
+        return new SavedDataStorage(level, folder, DataFixers.getDataFixer(), level.registryAccess());
+    }
+    //?} elif fabric {
+    /*// A fresh type data for the level, as the level's storage would make it.
+    static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
+        return buildcraft.platform.fabric.FabricSavedDataLevels.with(level, () -> type.constructor().get());
+    }
+
+    // The type's codec as the level's storage would use it.
+    static <T extends SavedData> Codec<T> codec(SavedDataType<T> type, ServerLevel level) {
+        Codec<T> codec = type.codec();
         return new Codec<T>() {
             @Override
             public <O> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<T, O>> decode(
@@ -118,20 +129,15 @@ public class LegacySavedDataTester {
                 return buildcraft.platform.fabric.FabricSavedDataLevels.with(level,
                         () -> codec.encode(input, ops, prefix));
             }
-        };*/
-        //?}
+        };
     }
 
-    /** A saved-data storage over {@code folder} that belongs to {@code level}, as the level's own does. */
+    // A saved-data storage over the folder that belongs to the level, as the level's own does.
     static SavedDataStorage newStorage(ServerLevel level, Path folder) {
-        //? if neoforge {
-        return new SavedDataStorage(level, folder, DataFixers.getDataFixer(), level.registryAccess());
-        //?} else {
-        /*SavedDataStorage storage = new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+        SavedDataStorage storage = new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
         ((buildcraft.platform.fabric.FabricSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
-        return storage;*/
-        //?}
-    }
+        return storage;
+    }*/
     //?}
 
     /** The overworld's pre-26.1 saved-data file is picked up by the real storage the first time the type is asked for. */

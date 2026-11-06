@@ -157,6 +157,13 @@ public final class FabricRegistryServices implements RegistryServices {
         return FabricCreativeModeTab.builder();
     }
 
+    @Override
+    public boolean contributeToTabLate(ResourceKey<CreativeModeTab> tab, CreativeModeTab.DisplayItemsGenerator contribution) {
+        // Gap: no late-addition hook on Fabric (nothing orders BuildCraft's items after other mods' additions); the
+        // tab's own displayItems generator carries them.
+        return false;
+    }
+
     private static final class FabricRegistrar<T> implements BCRegistrar<T> {
         private final ResourceKey<? extends Registry<T>> registryKey;
         private final String namespace;

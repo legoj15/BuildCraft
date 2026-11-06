@@ -143,7 +143,7 @@ public class FacadeItemModel implements ItemModel {
     //?} else {
     /*// 1.21.1 has no ItemModel / ItemStackRenderState. Dynamic item rendering uses the classic
     // ItemOverrides + applyTransform path: resolve() reads the facade state per-stack, then
-    // applyTransform() returns a fixed-quad item model (ClientModels.fixedQuadItemModel) of the right cache per ItemDisplayContext
+    // applyTransform() returns a fixed-quad item model (ClientPlatform.models().fixedQuadItemModel) of the right cache per ItemDisplayContext
     // (GUI: NORTH / guiCache; hand & world: EAST / cache). Behaviour matches the modern update().
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
         new net.minecraft.client.renderer.block.model.ItemOverrides() {

@@ -7,10 +7,8 @@ package buildcraft.lib.client.render.fluid;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.client.ClientPlatform;
@@ -36,7 +34,7 @@ public final class FluidSprites {
             return null;
         }
         //? if >=26.1 {
-        return model(stack).stillMaterial().sprite();
+        return buildcraft.platform.client.ClientFluids.model(stack).stillMaterial().sprite();
         //?} else {
         /*return blocksAtlas().getSprite(stillTexture(stack));*/
         //?}
@@ -50,15 +48,15 @@ public final class FluidSprites {
             return null;
         }
         //? if >=26.1 {
-        return model(stack).stillMaterial().sprite().contents().name();
+        return buildcraft.platform.client.ClientFluids.model(stack).stillMaterial().sprite().contents().name();
         //?} else {
-        /*// Same rule as the 26.1+ model(): a fluid that declares no texture, or one that never reached the atlas,
-        // falls back to water's instead of drawing the missing texture.
+        /*// Same rule as the 26.1+ ClientFluids.model(): a fluid that declares no texture, or one that never reached
+        // the atlas, falls back to water's instead of drawing the missing texture.
         Identifier texture = ClientPlatform.fluids().stillTexture(stack);
         boolean missing = texture == null || blocksAtlas().getSprite(texture).contents().name()
             .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
         return missing
-            ? ClientPlatform.fluids().stillTexture(new BCFluidStack(Fluids.WATER, 1))
+            ? ClientPlatform.fluids().stillTexture(new BCFluidStack(net.minecraft.world.level.material.Fluids.WATER, 1))
             : texture;*/
         //?}
     }
@@ -73,20 +71,10 @@ public final class FluidSprites {
         return (tint >>> 24) == 0 ? tint | 0xFF000000 : tint;
     }
 
-    //? if >=26.1 {
-    /** The fluid's baked model. The set hands back a missing-texture model (never null) for a fluid with none
-     *  registered; fall back to water's instead of drawing that. */
-    private static net.minecraft.client.renderer.block.FluidModel model(BCFluidStack stack) {
-        net.minecraft.client.renderer.block.FluidStateModelSet models =
-            Minecraft.getInstance().getModelManager().getFluidStateModelSet();
-        net.minecraft.client.renderer.block.FluidModel model = models.get(stack.getFluid().defaultFluidState());
-        boolean missing = model.stillMaterial().sprite().contents().name()
-            .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
-        return missing ? models.get(Fluids.WATER.defaultFluidState()) : model;
-    }
-    //?} else {
+    //? if <26.1 {
     /*private static net.minecraft.client.renderer.texture.TextureAtlas blocksAtlas() {
-        return (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance().getTextureManager()
+        return (net.minecraft.client.renderer.texture.TextureAtlas) net.minecraft.client.Minecraft.getInstance()
+            .getTextureManager()
             .getTexture(buildcraft.lib.client.render.BCLibRenderTypes.BLOCKS_ATLAS_ID);
     }*/
     //?}

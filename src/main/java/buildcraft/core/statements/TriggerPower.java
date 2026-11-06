@@ -23,6 +23,7 @@ import buildcraft.api.statements.ITriggerExternal;
 import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.platform.transfer.TransferAccess;
 
 import buildcraft.core.BCCoreSprites;
 import buildcraft.core.BCCoreStatements;
@@ -69,11 +70,11 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
 
     public static boolean isTriggeringTile(BlockEntity tile, Direction face) {
         if (tile instanceof IMjReadable) return true;
-        // Check NeoForge capability system — the pump/miner register MjBatteryReceiver
-        // (which implements IMjReadable) via RegisterCapabilitiesEvent
+        // Ask the loader's capability lookup (TransferAccess) — the pump/miner register MjBatteryReceiver
+        // (which implements IMjReadable) as their MJ receiver
         Level level = tile.getLevel();
         if (level != null) {
-            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_RECEIVER, level, tile.getBlockPos(), face);
+            IMjReceiver receiver = TransferAccess.find(MjAPI.CAP_RECEIVER, level, tile.getBlockPos(), face);
             if (receiver instanceof IMjReadable) return true;
         }
         return false;
@@ -82,7 +83,7 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
     private static IMjReadable resolveReadable(Object tile, EnumPipePart side) {
         if (tile instanceof IMjReadable readable) return readable;
         if (tile instanceof BlockEntity be && be.getLevel() != null) {
-            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(
+            IMjReceiver receiver = TransferAccess.find(
                 MjAPI.CAP_RECEIVER, be.getLevel(), be.getBlockPos(), side.face);
             if (receiver instanceof IMjReadable readable) return readable;
         }

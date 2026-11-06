@@ -54,8 +54,7 @@ public class FluidSpritesGuardTester {
     public void lookupAsksTheFluidForItsStackAwareTextureAndTint() {
         String code = MainSourceSet.codeOnly(file(NEOFORGE_LOOKUP).text());
         boolean clientExtensions = passesTheStack(code, "getStillTexture") && passesTheStack(code, "getTintColor");
-        boolean fluidModels = code.contains("getFluidStateModelSet(") && code.contains("stillMaterial()")
-            && passesTheStack(code, "colorAsStack");
+        boolean fluidModels = passesTheStack(code, "ClientFluids.model") && passesTheStack(code, "colorAsStack");
         Assertions.assertTrue(clientExtensions ^ fluidModels,
             "NeoForgeClientFluids must resolve through IClientFluidTypeExtensions (below 26.1) or the FluidModel set "
                 + "(26.1+), passing the stack; found neither or both live on this node");

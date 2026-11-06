@@ -21,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.fluids.BCFluidStack;
-import buildcraft.core.BCCore;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.client.sprite.NativeImagePixels;
 

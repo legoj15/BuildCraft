@@ -137,8 +137,8 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
          *  which held an entity in crude oil in place. Before 26.1.2 it fell back to the water or lava step (and ran
          *  the lava step after a {@code move} that answered true), so those lines keep NeoForge's own. The directive
          *  picks nodes, not patches: the one 26.1 jar also runs on NeoForge 26.1.0 and 26.1.1, where this override is
-         *  reached only if their {@code FluidType} dispatches this signature (the 26.1.0 beta's declares
-         *  just the {@code FluidState}-first {@code move}, so there it is never called). */
+         *  never reached (their {@code FluidType} declares just the {@code FluidState}-first {@code move}), and the
+         *  freeze does not occur there: the crude-oil game tests pass on both with this override inert (#146). */
         @Override
         public boolean move(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector,
                 double gravity) {

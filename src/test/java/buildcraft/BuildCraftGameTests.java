@@ -262,6 +262,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:transaction_nested_abort_leaves_no_stale_original", () -> buildcraft.platform.TransactionSeamTester::nestedOnlyAbortLeavesNoStaleOriginal);
         reg.accept("buildcraftunofficial:transaction_root_commit_callback_may_open_a_transaction", () -> buildcraft.platform.TransactionSeamTester::rootCommitCallbackMayOpenATransaction);
         reg.accept("buildcraftunofficial:transaction_refused_commit_leaves_transaction_open_for_close", () -> buildcraft.platform.TransactionSeamTester::refusedCommitLeavesTheTransactionOpenForClose);
+        reg.accept("buildcraftunofficial:transaction_doubly_refused_root_leaves_no_stuck_callback_queue", () -> buildcraft.platform.TransactionSeamTester::doublyRefusedRootLeavesNoStuckCallbackQueue);
         // The adapters over Fabric's own storage types (FabricFluidStorages, FabricItemStorages); a NeoForge node has no
         // such adapter, so its body is empty there.
         reg.accept("buildcraftunofficial:fabric_foreign_storage_adapters", () -> buildcraft.platform.fabric.FabricAdapterTester::foreignStorageViews);

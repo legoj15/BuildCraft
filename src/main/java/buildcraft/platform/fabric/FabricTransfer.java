@@ -72,7 +72,9 @@ import buildcraft.platform.transfer.TransferServices;
  * there may open one. A root BuildCraft opened itself ({@link #openRoot}) therefore queues its callbacks and runs them
  * once Fabric's close has returned ({@link RootCommits}). Gap: a root another mod opened gives BuildCraft no such
  * moment, so the callbacks of BuildCraft journals it commits run inside that close, and one that opens a transaction
- * there throws.
+ * there throws. The same holds for a BuildCraft root whose commit and close Fabric both refused (another mod's child
+ * was current) and that another mod later commits itself: BuildCraft's close call is over by then, and Fabric has no
+ * hook after a close BuildCraft did not make.
  *
  * <p><b>Lookups.</b> Items go through {@link ItemStorage#SIDED}; registrations become
  * {@code registerForBlockEntity} providers at once, since Fabric registers content eagerly. Fabric has no standard
@@ -389,9 +391,11 @@ public final class FabricTransfer implements TransferServices {
      * from the outermost transaction's close, where its manager still counts that transaction as open: opening a
      * transaction (or reading the current one) there throws. NeoForge runs {@code onRootCommit} after the root has
      * closed, and BuildCraft code relies on being able to open a transaction in one (the contract
-     * {@code BCTransactionTester.rootCommitCallbackRunsOutsideTheTransaction} pins). So while a root BuildCraft opened
-     * is open on the thread, its callbacks wait here and run when Fabric's close has returned, in order, a callback's
-     * own root-commit callbacks after those already waiting (as NeoForge's queue does).
+     * {@code BCTransactionTester.rootCommitCallbackRunsOutsideTheTransaction} pins). So while Fabric is closing a root
+     * BuildCraft opened (inside {@code Owned.end}'s call into it), its callbacks wait here and run when that call has
+     * returned or thrown, in order, a callback's own root-commit callbacks after those already waiting (as NeoForge's
+     * queue does). The window is the close call and never the root's whole life: a root whose commit and close were
+     * both refused, and that something else then closed, would otherwise hold every later callback on the thread (#135).
      ^/
     private static final class RootCommits {
         private static final ThreadLocal<RootCommits> THREAD = ThreadLocal.withInitial(RootCommits::new);
@@ -400,7 +404,7 @@ public final class FabricTransfer implements TransferServices {
         private boolean owned;
         private boolean running;
 
-        /^* Runs {@code callback} once the BuildCraft-owned root has closed; at once if the root is another mod's. ^/
+        /^* Runs {@code callback} once Fabric's close of a BuildCraft-owned root has returned; at once for any other close. ^/
         static void deliver(Runnable callback) {
             RootCommits state = THREAD.get();
             if (state.owned) {
@@ -410,16 +414,20 @@ public final class FabricTransfer implements TransferServices {
             }
         }
 
-        static void rootOpened() {
+        /^* Fabric is about to close (or refuse to close) a BuildCraft-owned root. ^/
+        static void closeStarted() {
             THREAD.get().owned = true;
         }
 
-        /^* The BuildCraft-owned root has closed: runs what it queued. ^/
-        static void rootClosed() {
+        /^*
+         * Fabric's call has returned or thrown: runs what it queued (nothing, if Fabric refused the call). Returns
+         * {@code failure}, the exception already on its way out, with a callback's failure added to it, or that failure.
+         ^/
+        static RuntimeException closeReturned(RuntimeException failure) {
             RootCommits state = THREAD.get();
             state.owned = false;
             if (state.running) {
-                return; // a callback's own root: the loop below picks its callbacks up
+                return failure; // a callback's own root: the loop below picks its callbacks up
             }
             state.running = true;
             RuntimeException error = null;
@@ -438,9 +446,14 @@ public final class FabricTransfer implements TransferServices {
             } finally {
                 state.running = false;
             }
-            if (error != null) {
-                throw error;
+            if (error == null) {
+                return failure;
             }
+            if (failure == null) {
+                return error;
+            }
+            failure.addSuppressed(error);
+            return failure;
         }
     }
 
@@ -460,7 +473,6 @@ public final class FabricTransfer implements TransferServices {
         }
 
         static Owned root(Transaction tx) {
-            RootCommits.rootOpened();
             return new Owned(tx, true);
         }
 
@@ -476,6 +488,11 @@ public final class FabricTransfer implements TransferServices {
 
         @Override
         public void commit() {
+            if (closed) {
+                // Fabric reuses the depth's Transaction object, so a second commit would commit whatever root or
+                // child holds this depth now; Fabric itself refuses a commit of a closed transaction the same way.
+                throw new IllegalStateException("Transaction operation cannot be applied to a closed transaction.");
+            }
             end(true);
         }
 
@@ -490,36 +507,35 @@ public final class FabricTransfer implements TransferServices {
         }
 
         private void end(boolean commit) {
-            try {
-                if (commit) {
-                    tx.commit();
-                } else {
-                    tx.close();
-                }
-            } catch (IllegalStateException rejected) {
-                // Fabric checks the call (this is the current transaction, on its thread) before it changes anything,
-                // so the transaction is still open and stays open for a close() to abort. A failure of a close
-                // callback is wrapped in a plain RuntimeException, and comes after the transaction has closed.
-                throw rejected;
-            } catch (RuntimeException failedCallback) {
-                finished(failedCallback);
-                throw failedCallback;
-            }
-            finished(null);
-        }
-
-        /^* The transaction has closed: a root runs the callbacks it queued. {@code failure} is an exception on its way out. ^/
-        private void finished(RuntimeException failure) {
-            closed = true;
             if (root) {
+                RootCommits.closeStarted();
+            }
+            RuntimeException failure = null;
+            try {
                 try {
-                    RootCommits.rootClosed();
-                } catch (RuntimeException e) {
-                    if (failure == null) {
-                        throw e;
+                    if (commit) {
+                        tx.commit();
+                    } else {
+                        tx.close();
                     }
-                    failure.addSuppressed(e);
+                    closed = true;
+                } catch (IllegalStateException rejected) {
+                    // Fabric checks the call (this is the current transaction, on its thread) before it changes
+                    // anything, so the transaction is still open and stays open for a close() to abort. A failure of a
+                    // close callback is wrapped in a plain RuntimeException, and comes after the transaction has closed.
+                    failure = rejected;
+                } catch (RuntimeException failedCallback) {
+                    closed = true;
+                    failure = failedCallback;
                 }
+            } finally {
+                // Whatever Fabric did, its call is over: the queue window ends here, refused or not (#135).
+                if (root) {
+                    failure = RootCommits.closeReturned(failure);
+                }
+            }
+            if (failure != null) {
+                throw failure;
             }
         }
     }

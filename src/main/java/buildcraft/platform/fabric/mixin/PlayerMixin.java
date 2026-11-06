@@ -8,10 +8,13 @@ package buildcraft.platform.fabric.mixin;
 //? if fabric {
 /*import javax.annotation.Nullable;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -55,12 +58,25 @@ abstract class PlayerMixin {
         return FabricGameHooks.fireBreakSpeed((Player) (Object) this, state, speed);
     }
 
+    /^* The primary step position as vanilla computed it, shared with the combination wrap below. Taken from the call
+     *  itself rather than by local ordinal: a new {@code BlockPos} local in {@code playStepSound} would shift an ordinal
+     *  onto the wrong position silently. A vanished call fails at boot; the share is per invocation and starts null, so
+     *  a reorder that read it first would only drop the primary sound's position, never use another one. *^/
+    @ModifyExpressionValue(method = "playStepSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Player;getPrimaryStepSoundBlockPos(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/BlockPos;"))
+    private BlockPos buildcraft$capturePrimaryStepPos(BlockPos primaryPos,
+            @Share("primaryStepPos") LocalRef<BlockPos> primaryStepPos) {
+        primaryStepPos.set(primaryPos);
+        return primaryPos;
+    }
+
     /^* On a carpet or snow layer: the primary block above, the muffled one below ({@code onPos}). *^/
     @WrapOperation(method = "playStepSound", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/player/Player;playCombinationStepSounds(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;)V"))
     private void buildcraft$combinationStepPositions(Player self, BlockState primary, BlockState muffled,
-            Operation<Void> original, @Local(argsOnly = true) BlockPos onPos, @Local(ordinal = 1) BlockPos primaryPos) {
-        withStepPositions(self, primaryPos, onPos, () -> original.call(self, primary, muffled));
+            Operation<Void> original, @Local(argsOnly = true) BlockPos onPos,
+            @Share("primaryStepPos") LocalRef<BlockPos> primaryStepPos) {
+        withStepPositions(self, primaryStepPos.get(), onPos, () -> original.call(self, primary, muffled));
     }
 
     /^* In water: the muffled step on {@code onPos}. *^/

@@ -116,8 +116,9 @@ public class BCCore {
                 MODID + "-common.toml");
         Platform.configHooks().onLoad(BCUnifiedConfig.SPEC, BCCore::applyConfig);
         Platform.configHooks().onReload(BCUnifiedConfig.SPEC, BCCore::applyConfig);
-        // BCCoreClient#init ran here; the entrypoint now runs it after this init. Nothing below listens to an event
-        // it listens to, so no event's listener order changed.
+        // BCCoreClient#init ran here; the entrypoint now runs it after this init. The one event both listen to is the
+        // config reload, so the colour-blind toggle now runs after applyConfig where it ran before; each hook filters
+        // on its own spec (client, common), so no single reload reaches both and the order cannot be seen.
 
         Platform.lifecycle().onCommonSetup(this::preInit);
         Platform.lifecycle().onCommonSetup(this::commonInit);
@@ -248,14 +249,11 @@ public class BCCore {
         // widened it to VegetationBlock), plus snow/vine/fire and the cane/chorus the old IPlantable check
         // covered, and the property itself.
         for (Block block : BuiltInRegistries.BLOCK) {
-            //? if >=1.21.10 {
-            if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.VegetationBlock) {
-            //?} else {
-            /*if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.BushBlock) {*/
-            //?}
-                buildcraft.api.core.BuildCraftAPI.softBlocks.add(block);
-            }
+            addIfSoft(block);
         }
+        // Fabric runs this inside BuildCraft's own initializer, before the mods initialised after it have registered
+        // their blocks: those arrive here. NeoForge runs it after every register event, so nothing does.
+        Platform.lifecycle().onLateBlock(BCCore::addIfSoft);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.SNOW);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.VINE);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.FIRE);
@@ -296,6 +294,17 @@ public class BCCore {
         BCCoreItems.preInit();
         BCCoreStatements.preInit();
         BCCoreRecipes.fmlPreInit();
+    }
+
+    /** Lists {@code block} as soft when it is a fluid or a plant (the classes {@link #preInit} gives wholesale). */
+    private static void addIfSoft(Block block) {
+        //? if >=1.21.10 {
+        if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.VegetationBlock) {
+        //?} else {
+        /*if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.BushBlock) {*/
+        //?}
+            buildcraft.api.core.BuildCraftAPI.softBlocks.add(block);
+        }
     }
 
     private void commonInit() {

@@ -25,4 +25,16 @@ public interface RegistryServices {
      * Fabric has no tab ordering: its tabs follow registration order, which BuildCraft's init already keeps.
      */
     CreativeModeTab.Builder creativeTabBuilder(ResourceKey<CreativeModeTab> after);
+
+    /**
+     * Hands {@code contribution} to the loader's own late-addition hook for the tab {@code tab}, returning true when
+     * the loader delivers it; false when it has no such hook, and the caller puts the contribution in the tab's own
+     * {@code displayItems} generator instead. Contributions the loader accepts reach the tab in call order.
+     *
+     * <p>NeoForge: a {@code BuildCreativeModeTabContentsEvent} listener on BuildCraft's mod bus at {@code LOW}
+     * priority, so BuildCraft's items still follow the additions of any normal or high priority listener, as they did
+     * before the platform layer (the tab's own generator runs before that event is posted). Fabric: false; its tabs
+     * list BuildCraft's contribution from the generator (see {@link #creativeTabBuilder(ResourceKey)}).
+     */
+    boolean contributeToTabLate(ResourceKey<CreativeModeTab> tab, CreativeModeTab.DisplayItemsGenerator contribution);
 }

@@ -18,7 +18,6 @@ import net.minecraft.world.phys.Vec3;
 
 
 import buildcraft.api.fluids.BCFluidStack;
-import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.core.BCCoreItems;
 import buildcraft.factory.block.BlockDistiller;

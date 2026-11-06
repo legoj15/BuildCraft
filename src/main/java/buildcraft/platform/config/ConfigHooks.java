@@ -12,7 +12,10 @@ package buildcraft.platform.config;
  */
 public interface ConfigHooks {
 
-    /** Runs {@code action} each time {@code spec}'s file is first loaded. */
+    /**
+     * Runs {@code action} each time {@code spec}'s file is first loaded; at once, from this call, when a loader has
+     * read the file already (Fabric reads it when the spec is registered, NeoForge in a later loading phase).
+     */
     void onLoad(Object spec, Runnable action);
 
     /** Runs {@code action} each time {@code spec}'s file is reloaded after a change on disk. */

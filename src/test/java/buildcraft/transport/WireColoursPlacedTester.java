@@ -16,7 +16,7 @@ import buildcraft.transport.BCTransportAttachments.WireColoursPlaced;
  * Pins the {@link WireColoursPlaced} player-attachment that gates the
  * {@code colorful_electrician} advancement. Three behaviours are pinned:
  * <ol>
- *   <li>{@code getData} returns a fresh instance for a new player — mask is zero
+ *   <li>The attachment's {@code get} returns a fresh instance for a new player — mask is zero
  *       and {@code isComplete()} is false.</li>
  *   <li>{@code markPlaced} returns {@code true} only on the first sight of each
  *       colour; subsequent calls with the same colour return {@code false}.</li>

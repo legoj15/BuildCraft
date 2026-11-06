@@ -16,7 +16,7 @@ import buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind;
  * Pins the {@link PluggablesPlaced} player-attachment that gates the
  * {@code all_plugged_up} advancement. Three behaviours are pinned:
  * <ol>
- *   <li>{@code getData} returns a fresh instance for a new player — mask is zero
+ *   <li>The attachment's {@code get} returns a fresh instance for a new player — mask is zero
  *       and {@code isComplete()} is false.</li>
  *   <li>{@code markPlaced} returns {@code true} only on the first sight of each
  *       kind; subsequent calls with the same kind return {@code false}.</li>

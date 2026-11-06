@@ -135,7 +135,10 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
         /** A fluid that is not water-like wades as {@link ThickFluidMotion}: since 26.1.2 NeoForge's
          *  {@code travelInFluid} moves a modded type that implements no {@code move} neither as water nor as lava,
          *  which held an entity in crude oil in place. Before 26.1.2 it fell back to the water or lava step (and ran
-         *  the lava step after a {@code move} that answered true), so those lines keep NeoForge's own. */
+         *  the lava step after a {@code move} that answered true), so those lines keep NeoForge's own. The directive
+         *  picks nodes, not patches: the one 26.1 jar also runs on NeoForge 26.1.0 and 26.1.1, where this override is
+         *  reached only if their {@code FluidType} dispatches this signature (the 26.1.0 beta's declares
+         *  just the {@code FluidState}-first {@code move}, so there it is never called). */
         @Override
         public boolean move(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector,
                 double gravity) {

@@ -19,8 +19,10 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import java.util.List;
 
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import buildcraft.api.core.BCLog;
+import buildcraft.platform.transfer.BCModifiableItemStorage;
 import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransaction;
 *///?}
@@ -38,7 +40,10 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * {@link BCItemStorage} can only simulate inside a transaction, so its view answers every insert and extract by
  * simulating and replays the real calls, in order, when the root transaction commits (none if it aborts). Two changes
  * to the same slot in one transaction are each simulated against the slot as it was; BuildCraft's callers touch a
- * slot once per transaction.
+ * slot once per transaction. A {@link BCModifiableItemStorage} (the plain BuildCraft inventories, and the empty storage
+ * the Quarry and Mining Well expose in place of {@code EmptyItemHandler}) goes out as an {@code IItemHandlerModifiable},
+ * as it always did: NeoForge's own {@code SlotItemHandler} casts to it. Its {@code getStackInSlot} is the stack the
+ * storage holds, not a copy, as BuildCraft's classic handlers returned it.
  */
 public final class NeoForgeItemStorages {
     private NeoForgeItemStorages() {}
@@ -162,6 +167,9 @@ public final class NeoForgeItemStorages {
         if (storage instanceof FromClassic view) {
             return view.handler;
         }
+        if (storage instanceof BCModifiableItemStorage modifiable) {
+            return new ToClassicModifiable(modifiable);
+        }
         return new ToClassic(storage);
     }
 
@@ -176,7 +184,13 @@ public final class NeoForgeItemStorages {
         return new FromClassic(handler);
     }
 
-    private record ToClassic(BCItemStorage storage) implements IItemHandler {
+    private static class ToClassic implements IItemHandler {
+        final BCItemStorage storage;
+
+        ToClassic(BCItemStorage storage) {
+            this.storage = storage;
+        }
+
         @Override
         public int getSlots() {
             return storage.size();
@@ -226,6 +240,42 @@ public final class NeoForgeItemStorages {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return storage.isValid(slot, stack);
+        }
+
+        // Value equality over the storage, as the record this class replaced had.
+        @Override
+        public boolean equals(Object other) {
+            return other != null && other.getClass() == getClass() && ((ToClassic) other).storage.equals(storage);
+        }
+
+        @Override
+        public int hashCode() {
+            return storage.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[" + storage + "]";
+        }
+    }
+
+    private static final class ToClassicModifiable extends ToClassic implements IItemHandlerModifiable {
+        private final BCModifiableItemStorage modifiable;
+
+        ToClassicModifiable(BCModifiableItemStorage storage) {
+            super(storage);
+            this.modifiable = storage;
+        }
+
+        // The live stack, as 1.21.1's BuildCraft handlers returned it (IItemHandler asks callers not to modify it).
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return modifiable.getStackInSlot(slot);
+        }
+
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            modifiable.setStackInSlot(slot, stack);
         }
     }
 

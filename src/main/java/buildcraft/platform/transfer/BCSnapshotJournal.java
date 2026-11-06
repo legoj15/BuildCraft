@@ -26,7 +26,11 @@ public abstract class BCSnapshotJournal<S> {
     /** Restores a state {@link #createSnapshot} returned. */
     protected abstract void revertToSnapshot(S snapshot);
 
-    /** After the root transaction committed a change: {@code originalState} is the state before the first change. */
+    /**
+     * After the root transaction committed a change: {@code originalState} is the state before the first change.
+     * It runs once the root has closed, so it may open transactions of its own. (Fabric keeps that for a root
+     * BuildCraft opened itself; a root another mod opened runs it inside the close, where opening one throws.)
+     */
     protected void onRootCommit(S originalState) {}
 
     /** Snapshots the state for {@code transaction}'s depth unless that depth already has a snapshot. */

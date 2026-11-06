@@ -1,4 +1,4 @@
-"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft
+"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft, plus a Fabric node (`26.3-fabric`, #98) that builds all of it into its own jar
 
 The project is a mix of Java 25 and Java 21 out of necessity.
 
@@ -29,6 +29,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ./gradlew :26.3:runClient -Precipe_viewer=rei   # dev runtime gets REI instead of JEI (default jei; never both)
 ./gradlew :26.3-fabric:runClient
 ./gradlew :26.3-fabric:runServer
+# Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> on the client), as the NeoForge ones do; -PbcRunDir is NeoForge-only (Loom fixes the working dir).
 
 # Unit tests / headless game tests
 ./gradlew :26.3:test
@@ -102,7 +103,7 @@ Loader-facing seams live in `buildcraft.platform` (`Platform.loader()` today: si
 - **New file** (including essentially every test) → `Copyright (c) <year written> the BuildCraftUnofficial contributors` plus the standard MPL notice, and nothing else. SpaceToad never appears on it.
 - **Mixed** (new file that absorbed real code from a ported one) → both lines, upstream's first.
 - **No header at all is fine** — upstream leaves ~21% of `common/` bare; don't invent or "fix" one. If you touch a headerless ported file and know its origin, record it in [NOTICE.md](NOTICE.md).
-- **Three licences ship here; the header — never the directory — decides which**: MPL-2.0 default ([LICENSE](LICENSE)); MIT for most of `buildcraft/api` ([LICENSE.API](LICENSE.API)); MMPL-1.0.1 ([LICENSE.MMPL](LICENSE.MMPL)) for the 38 files carried from 1.7.10/1.12.2 (incl. seven inside `buildcraft/api`). [NOTICE.md](NOTICE.md) is the map and ships in the jar. **Never "harmonise" an MMPL notice to MPL** — no relicence ever happened upstream, so no grant exists. Full reasoning: [docs/licensing.md](docs/licensing.md).
+- **Three licences ship here; the header — never the directory — decides which**: MPL-2.0 default ([LICENSE](LICENSE)); MIT for most of `buildcraft/api` ([LICENSE.API](LICENSE.API)); MMPL-1.0.1 ([LICENSE.MMPL](LICENSE.MMPL)) for the files carried from 1.7.10/1.12.2 (about a hundred, seven of them inside `buildcraft/api`). [NOTICE.md](NOTICE.md) is the map, lists them all, and ships in the jar. **Never "harmonise" an MMPL notice to MPL** — no relicence ever happened upstream, so no grant exists. Full reasoning: [docs/licensing.md](docs/licensing.md).
 - Enforced by [CopyrightHeaderTester](src/test/java/buildcraft/lib/misc/CopyrightHeaderTester.java) — an allowlist of exact known-good claims, cross-checked against NOTICE.md both ways; a new legitimate claim means editing `ALLOWED_CLAIMS` on purpose.
 
 ## Work tracking: GitHub Issues

@@ -104,8 +104,8 @@ public class OilWaterInteractionTest {
         // Neighbour is an oil source.
         helper.setBlock(neighbourPos, BCEnergyFluids.OIL_COOL.block().get());
         BlockState state = level.getBlockState(abs);
-        assertSpreadSides("source fluid, source neighbour", free, source.spreadTargets(level, abs, state));
-        assertSpreadSides("flowing fluid, source neighbour", free, flowing.spreadTargets(level, abs, state));
+        assertSpreadSides("over water, source fluid, source neighbour", free, source.spreadTargets(level, abs, state));
+        assertSpreadSides("over water, flowing fluid, source neighbour", free, flowing.spreadTargets(level, abs, state));
 
         // Neighbour is flowing oil.
         level.setBlock(neighbourAbs, flowing.fluid().getFlowing(3, false).createLegacyBlock(), 3);
@@ -116,20 +116,56 @@ public class OilWaterInteractionTest {
         // addition runs (measured identical with and without the same-fluid guard), so east is expected there.
         Set<Direction> overFlowing = EnumSet.of(Direction.WEST, Direction.NORTH, Direction.SOUTH, Direction.EAST);*/
         //?}
-        assertSpreadSides("source fluid, flowing neighbour", overFlowing, source.spreadTargets(level, abs, state));
-        assertSpreadSides("flowing fluid, flowing neighbour", overFlowing, flowing.spreadTargets(level, abs, state));
+        assertSpreadSides("over water, source fluid, flowing neighbour", overFlowing, source.spreadTargets(level, abs, state));
+        assertSpreadSides("over water, flowing fluid, flowing neighbour", overFlowing, flowing.spreadTargets(level, abs, state));
+
+        helper.succeed();
+    }
+
+    /** A light oil SOURCE resting on its own fluid keeps the forced sideways spread the old {@code BCCustomSourceFluid}
+     *  had (issue #98 restored it after the platform layer folded both forms into one rule): it tops up every open
+     *  neighbour, not only the side vanilla's slope search picks. Only the FLOWING form leaves a fluid that rests on
+     *  its own family to vanilla's choice (the "layer cake" guard of {@code OilBehaviour.adjustSpread}), so the two
+     *  forms differ here, and this pins both halves.
+     *
+     *  <p>The rig is a stone basin with one crude-oil source (y=1) under the tested source (y=2) and a one-deep pit
+     *  east of it: the pit is a hole, which vanilla's spread alone answers with just EAST, so the forced three sides
+     *  (north, south, west) are exactly what tells the source form from the flowing form. */
+    public static void testOilSourceOverOwnFluidKeepsForcedSpread(GameTestHelper helper) {
+        buildBasin(helper);
+        for (int x = 1; x <= 3; x++) {
+            for (int z = 1; z <= 3; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+            }
+        }
+        helper.setBlock(new BlockPos(3, 1, 2), Blocks.AIR);
+        helper.setBlock(CENTRE, BCEnergyFluids.OIL_COOL.block().get());
+        BlockPos oilPos = CENTRE.above();
+        helper.setBlock(oilPos, BCEnergyFluids.OIL_COOL.block().get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(oilPos);
+        BlockState state = level.getBlockState(abs);
+        FluidFlow source = (FluidFlow) BCEnergyFluids.OIL_COOL.source().get();
+        FluidFlow flowing = (FluidFlow) BCEnergyFluids.OIL_COOL.flowing().get();
+
+        assertSpreadSides("source fluid over its own fluid, pit to the east",
+                EnumSet.of(Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.WEST),
+                source.spreadTargets(level, abs, state));
+        assertSpreadSides("flowing fluid over its own fluid, pit to the east", EnumSet.of(Direction.EAST),
+                flowing.spreadTargets(level, abs, state));
 
         helper.succeed();
     }
 
     private static void assertSpreadSides(String what, Set<Direction> expected, Map<Direction, FluidState> spread) {
         if (!spread.keySet().equals(expected)) {
-            throw new IllegalStateException("Oil spread over water (" + what + ") must target exactly " + expected
+            throw new IllegalStateException("Oil spread (" + what + ") must target exactly " + expected
                     + " but targeted " + spread.keySet());
         }
         for (FluidState target : spread.values()) {
             if (target.isEmpty() || !target.getType().isSame(BCEnergyFluids.OIL_COOL.source().get())) {
-                throw new IllegalStateException("Oil spread over water (" + what + ") produced a non-oil target: " + target);
+                throw new IllegalStateException("Oil spread (" + what + ") produced a non-oil target: " + target);
             }
         }
     }

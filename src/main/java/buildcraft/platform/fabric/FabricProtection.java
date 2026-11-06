@@ -6,7 +6,9 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.List;
+/*import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import net.minecraft.core.BlockPos;
@@ -50,20 +52,26 @@ import buildcraft.platform.event.PlatformProtection;
  * about the owner ({@link Player#nameAndId}).
  *
  * <p><b>Placements.</b> Fabric API has no block-placement event, so a placement is asked of the protection providers
- * and of vanilla's {@code mayInteract} (spawn protection and the world border); a block an item use sets down is
- * recorded as NeoForge's snapshot capture records it ({@link #useItemOn}). BuildCraft's own {@code onBlockPlace}
- * listeners are told about these machine placements, never about a player's.
+ * alone, as NeoForge's placement event is all a machine's placement asks there (vanilla's spawn protection and world
+ * border gate a player's click packet, never a machine); a block an item use sets down is recorded as NeoForge's
+ * snapshot capture records it ({@link #useItemOn}). BuildCraft's own {@code onBlockPlace} listeners are told about
+ * these machine placements, never about a player's.
  *
  * <p><b>Gaps.</b> A claim mod that guards placements through its own mixins alone, not Common Protection API, is not
  * asked about a placement. Common Protection API has no item-use check: an item used in the air asks
  * whether the block the player stands in may be interacted with. Fabric has no harvest-check event:
- * {@link #canHarvest} is vanilla's tool check. Fabric callbacks carry no event object, and cannot be unregistered: see
- * {@link #isProbe} and {@link #onBreak}.
+ * {@link #canHarvest} is vanilla's tool check. Fabric callbacks cannot be unregistered: see {@link #onBreak}.
  *^/
 public final class FabricProtection implements PlatformProtection {
 
     /^* The break probe {@link #canBreak} is invoking right now (the innermost one), or null. Server thread only. *^/
     private static Probe probeInFlight;
+
+    /^* The player whose right-click {@link #rightClickBlock} is asking about right now (the innermost), or null. *^/
+    private static Player clickAskInFlight;
+
+    /^* The level a refused item use's blocks are being put back in right now, or null. Server thread only. *^/
+    private static Level restoringIn;
 
     private record Probe(Level level, BlockPos pos, Player player) {
         boolean matches(Level level, BlockPos pos, Player player) {
@@ -86,52 +94,65 @@ public final class FabricProtection implements PlatformProtection {
         return CommonProtection.canBreakBlock(level, pos, player.nameAndId(), player);
     }
 
-    /^* Each cell is asked of vanilla's mayInteract (spawn protection, world border) and of the protection providers. *^/
+    /^*
+     * Each cell is asked of the protection providers. Not of vanilla's {@code mayInteract} (spawn protection, the
+     * world border): NeoForge's placement probe never asks it, and neither does a machine's break.
+     *^/
     @Override
     public boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player) {
         if (cells.isEmpty()) {
             throw new IllegalArgumentException("a placement fills at least one cell");
         }
         for (BlockPos cell : cells) {
-            if (!player.mayInteract(level, cell) || !CommonProtection.canPlaceBlock(level, cell, player.nameAndId(), player)) {
+            if (!CommonProtection.canPlaceBlock(level, cell, player.nameAndId(), player)) {
                 return false;
             }
         }
         return true;
     }
 
-    /^* Fabric callbacks carry no event object, so only BuildCraft's own {@link BlockBreak} views can be told apart. *^/
-    @Override
-    public boolean isProbe(Object event) {
-        return event instanceof BlockBreak view && view.isProbe();
+    /^*
+     * Whether {@link #canBreak} is asking, right now, whether {@code player} may break the block at {@code pos}: the
+     * {@link PlayerBlockBreakEvents#BEFORE} callback running is that probe, not a break. For BuildCraft's own
+     * callbacks on that event, which a probe must not reach (NeoForge's probe posts its break event and no more).
+     *^/
+    public static boolean isBreakProbe(Level level, BlockPos pos, Player player) {
+        Probe probe = probeInFlight;
+        return probe != null && probe.matches(level, pos, player);
     }
 
     /^*
-     * Registers on {@link PlayerBlockBreakEvents#BEFORE}. Fabric events cannot be unregistered, so closing the
-     * registration leaves an inert callback behind instead.
+     * The {@link #onBreak} listeners, in registration order: one {@link PlayerBlockBreakEvents#BEFORE} callback (Fabric
+     * events cannot be unregistered) hands each break to them, so a closed registration leaves nothing behind.
+     *^/
+    private static final List<Consumer<BlockBreak>> BREAK_LISTENERS = new CopyOnWriteArrayList<>();
+    private static boolean breakCallbackRegistered;
+
+    /^*
+     * Registers on {@link PlayerBlockBreakEvents#BEFORE}, through the one callback BuildCraft registers there on the
+     * first call. A listener that cancels ends the break as a refusing callback does: the listeners after it are not
+     * told.
      *^/
     @Override
     public Registration onBreak(Consumer<BlockBreak> listener) {
-        Inert registration = new Inert();
-        PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
-            if (registration.closed) {
-                return true;
+        synchronized (BREAK_LISTENERS) {
+            if (!breakCallbackRegistered) {
+                breakCallbackRegistered = true;
+                PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
+                    BlockPos at = pos.immutable();
+                    for (Consumer<BlockBreak> each : BREAK_LISTENERS) {
+                        View view = new View(level, at, state, player);
+                        each.accept(view);
+                        if (view.cancelled) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
             }
-            View view = new View(level, pos.immutable(), state, player);
-            listener.accept(view);
-            return !view.cancelled;
-        });
-        return registration;
-    }
-
-    /^* A registration whose callback stays registered but does nothing once closed. *^/
-    private static final class Inert implements Registration {
-        volatile boolean closed;
-
-        @Override
-        public void close() {
-            closed = true;
         }
+        BREAK_LISTENERS.add(listener);
+        return () -> BREAK_LISTENERS.remove(listener);
     }
 
     @Override
@@ -149,16 +170,30 @@ public final class FabricProtection implements PlatformProtection {
 
     /^*
      * A callback that answered anything but PASS took the click (or refused it): the item is not used either way. A
-     * provider refusing the interaction with the clicked block refuses it too.
+     * provider refusing the interaction with the clicked block refuses it too. The ask is NeoForge's right-click
+     * event and no more: BuildCraft's {@code UseFirstItem} route (NeoForge's {@code onItemUseFirst}, which a
+     * machine's click never runs) stays out of it ({@link #isClickAsk}).
      *^/
     @Override
     public ClickVerdict rightClickBlock(Player player, InteractionHand hand, BlockHitResult hit) {
-        InteractionResult result = UseBlockCallback.EVENT.invoker().interact(player, player.level(), hand, hit);
+        Player outer = clickAskInFlight;
+        clickAskInFlight = player;
+        InteractionResult result;
+        try {
+            result = UseBlockCallback.EVENT.invoker().interact(player, player.level(), hand, hit);
+        } finally {
+            clickAskInFlight = outer;
+        }
         if (result != InteractionResult.PASS) {
             return ClickVerdict.REFUSED;
         }
         return CommonProtection.canInteractBlock(player.level(), hit.getBlockPos(), player.nameAndId(), player)
             ? ClickVerdict.DEFAULT : ClickVerdict.REFUSED;
+    }
+
+    /^* Whether {@link #rightClickBlock} is asking, right now, about a right-click by {@code player}. *^/
+    public static boolean isClickAsk(Player player) {
+        return player != null && clickAskInFlight == player;
     }
 
     // Gap: Common Protection API has no item-use check; the block the player stands in is asked (as a claim mod's
@@ -194,8 +229,11 @@ public final class FabricProtection implements PlatformProtection {
     /^*
      * NeoForge's placement capture ({@code CommonHooks.onPlaceItemIntoWorld}) for Fabric: the block changes the use
      * makes are recorded ({@code LevelMixin}), and each changed cell is asked of the protection providers as a
-     * placement. Gap: unlike NeoForge, the blocks' own placement side effects and neighbour updates have already run
-     * when a refused placement is put back.
+     * placement. A refused placement is put back as NeoForge puts it back: in reverse, with nothing dropping while it
+     * is ({@link #isRestoring}: a half that breaks when the cell beside it is put back pops nothing).
+     *
+     * <p>Gap: unlike NeoForge, the blocks' own placement side effects and neighbour updates have already run when a
+     * refused placement is put back.
      *^/
     @Override
     public InteractionResult useItemOn(UseOnContext context) {
@@ -241,13 +279,28 @@ public final class FabricProtection implements PlatformProtection {
         if (!refused) {
             return result;
         }
-        List<Captured> changed = new java.util.ArrayList<>(capture.before.values());
-        for (int i = changed.size() - 1; i >= 0; i--) {
-            changed.get(i).restore(Block.UPDATE_ALL);
+        List<Captured> changed = new ArrayList<>(capture.before.values());
+        Level outerRestore = restoringIn;
+        restoringIn = level;
+        try {
+            for (int i = changed.size() - 1; i >= 0; i--) {
+                changed.get(i).restore(Block.UPDATE_ALL);
+            }
+        } finally {
+            restoringIn = outerRestore;
         }
         stack.setCount(before.getCount());
         stack.applyComponents(before.getComponents());
         return InteractionResult.FAIL;
+    }
+
+    /^*
+     * Whether {@code level} is putting a refused item use's blocks back right now: NeoForge's
+     * {@code restoringBlockSnapshots}, which {@code BlockDropsMixin} reads where NeoForge's patched {@code Block} does,
+     * so no item or experience drops while it is.
+     *^/
+    public static boolean isRestoring(Level level) {
+        return level != null && restoringIn == level;
     }
 
     @Override
@@ -262,8 +315,8 @@ public final class FabricProtection implements PlatformProtection {
     }
 
     /^*
-     * Asked of vanilla's mayInteract (spawn protection, world border) and of the protection providers, about the
-     * placer's profile (a placer that is no player is {@link CommonProtection#UNKNOWN}, as the API has it).
+     * Asked of the protection providers, about the placer's profile (a placer that is no player is
+     * {@link CommonProtection#UNKNOWN}, as the API has it); not of vanilla's {@code mayInteract}, as {@link #canPlace}.
      *^/
     @Override
     public boolean canPlaceOver(Entity placer, CapturedBlock replaced, Direction face) {
@@ -273,7 +326,7 @@ public final class FabricProtection implements PlatformProtection {
         Player player = placer instanceof Player p ? p : null;
         NameAndId profile = player != null ? player.nameAndId() : CommonProtection.UNKNOWN;
         BlockPos pos = replaced.pos();
-        boolean allowed = placer.mayInteract(level, pos) && CommonProtection.canPlaceBlock(level, pos, profile, player);
+        boolean allowed = CommonProtection.canPlaceBlock(level, pos, profile, player);
         postPlace(new Placed(level, pos, level.getBlockState(pos.relative(face.getOpposite())), placer, !allowed));
         return allowed;
     }
@@ -373,8 +426,7 @@ public final class FabricProtection implements PlatformProtection {
 
         @Override
         public boolean isProbe() {
-            Probe probe = probeInFlight;
-            return probe != null && probe.matches(level, pos, player);
+            return isBreakProbe(level, pos, player);
         }
 
         @Override

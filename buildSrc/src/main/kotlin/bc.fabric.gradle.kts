@@ -10,8 +10,8 @@
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
 // go on the plain Java configurations rather than the mod* remapping ones.
 
+import buildcraft.gradle.AppendingLogStream
 import buildcraft.gradle.DataFabric
-import java.io.FileOutputStream
 import java.time.Duration
 
 plugins {
@@ -25,6 +25,14 @@ val fabricApiVersion = property("fabric_api_version") as String
 val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
 val jeiVersion = property("jei_version") as String
 val reiVersion = property("rei_version") as String
+// The player-facing minimums fabric.mod.json declares: their own properties, so a routine bump of the dev pins above
+// never raises what a Fabric player must install (the Fabric twins of bc.neoforge's neo_dep_range).
+val fabricLoaderDepRange = property("fabric_loader_dep_range") as String
+val fabricApiDepRange = property("fabric_api_dep_range") as String
+// The opt-in -P switches the NeoForge runs read too (bc.neoforge), resolved once here at script scope.
+val bcDebug = findProperty("bcDebug")?.toString()
+val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
+val bcTests = findProperty("bcTests")?.toString()
 
 sourceSets {
     named("main") {
@@ -36,6 +44,9 @@ sourceSets {
         resources {
             srcDir(rootProject.file("src/main/resources-fabric"))
             exclude("META-INF/neoforge.mods.toml", "META-INF/accesstransformer.cfg")
+            // The Curios/Accessories slot tags put the goggles in a slot those mods own; neither has a Fabric 26.3 build
+            // and FabricAccessorySlots never looks, so the jar does not advertise a slot BC does not read.
+            exclude("data/accessories/**", "data/curios/**")
         }
     }
     named("test") {
@@ -113,26 +124,21 @@ tasks.named<ProcessResources>("processGametestResources") {
         buildcraft.gradle.FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
     }
 }
-loom {
-    runs {
-        named("gameTest") {
-            // Dev workspace, like every BC run (BCLib.DEV-gated affordances).
-            property("buildcraft.dev", "true")
-            // No fabric-api.gametest.report-file: its XML reporter replaces vanilla's log reporter, so a failure would
-            // reach no log until the run ends. A failed required test fails the task through the exit code.
-            // Optional filter, as on NeoForge: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's test selector glob).
-            if (project.hasProperty("bcTests")) {
-                property("fabric-api.gametest.filter", project.property("bcTests").toString())
-            }
-        }
-    }
-}
 // The quiet console of bc.neoforge's gameTestServer: the server's stdout (INFO, and a progress bar line per test
 // tick, tens of MB for the whole suite) goes to build/run/gameTest/console.log instead of Gradle's output, and
 // latest.log/debug.log are untouched. `-PbcLoudGameTestLogs` keeps it on the console. Then the pass check: a run must
 // end with vanilla's "All N required tests passed" (N > 0), so an empty or aborted run cannot pass on its exit code.
 // The closures use only local Files: the configuration cache cannot serialise script-level values.
 tasks.named<JavaExec>("runGameTest") {
+    // Dev workspace, like every BC run (BCLib.DEV-gated affordances). Set on the task: Loom's RunConfigSettings
+    // property setters are deprecated.
+    systemProperty("buildcraft.dev", "true")
+    // No fabric-api.gametest.report-file: its XML reporter replaces vanilla's log reporter, so a failure would
+    // reach no log until the run ends. A failed required test fails the task through the exit code.
+    // Optional filter, as on NeoForge: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's test selector glob).
+    if (bcTests != null) {
+        systemProperty("fabric-api.gametest.filter", bcTests)
+    }
     val runDir = project.file("build/run/gameTest")
     val consoleLog = runDir.resolve("console.log")
     val serverLog = runDir.resolve("logs/latest.log")
@@ -146,7 +152,8 @@ tasks.named<JavaExec>("runGameTest") {
         }
         if (!loud) {
             runDir.mkdirs()
-            standardOutput = FileOutputStream(consoleLog)
+            consoleLog.writeText("")
+            standardOutput = AppendingLogStream(consoleLog)
         }
     }
     doLast {
@@ -168,14 +175,8 @@ tasks.named<JavaExec>("runGameTest") {
 // fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
 // It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
 // hang it on `check`).
-loom {
-    runs {
-        named("clientGameTest") {
-            property("buildcraft.dev", "true")
-        }
-    }
-}
 tasks.named<JavaExec>("runClientGameTest") {
+    systemProperty("buildcraft.dev", "true")
     val runDir = project.file("build/run/clientGameTest")
     val consoleLog = runDir.resolve("console.log")
     val clientLog = runDir.resolve("logs/latest.log")
@@ -190,7 +191,8 @@ tasks.named<JavaExec>("runClientGameTest") {
         shots.deleteRecursively()
         if (!loud) {
             runDir.mkdirs()
-            standardOutput = FileOutputStream(consoleLog)
+            consoleLog.writeText("")
+            standardOutput = AppendingLogStream(consoleLog)
         }
     }
     doLast {
@@ -200,6 +202,24 @@ tasks.named<JavaExec>("runClientGameTest") {
             throw GradleException(
                 "The Fabric client game test exited 0 without its pass line in $clientLog; its console is in $consoleLog."
             )
+        }
+    }
+}
+
+// ─── Dev runs ────────────────────────────────────────────────────────────────
+// Loom's default `:26.3-fabric:runClient` / `runServer` get the switches every BC NeoForge run has (bc.neoforge): the dev
+// workspace flag (BCLib.DEV-gated affordances: the /bcsoundtest command, debug logging), `-PbcDebug[=tier]` for
+// BCDebugging and, on the client, `-PbcQuickPlay=<saveFolderName>` to boot straight into a saved world. They sit on the
+// run tasks because Loom's RunConfigSettings setters are deprecated. `-PbcRunDir` has no twin: Loom sets the working
+// directory itself at launch (its only setter, runDir(), is deprecated).
+listOf("runClient", "runServer").forEach { name ->
+    tasks.named<JavaExec>(name) {
+        systemProperty("buildcraft.dev", "true")
+        if (bcDebug != null) {
+            systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
+        }
+        if (name == "runClient" && bcQuickPlay != null) {
+            args("--quickPlaySingleplayer", bcQuickPlay)
         }
     }
 }
@@ -216,8 +236,8 @@ tasks.named<ProcessResources>("processResources") {
     val replaceProperties = mapOf(
         "mod_version" to modVersion,
         "minecraft_version" to minecraftVersion,
-        "fabric_loader_version" to fabricLoaderVersion,
-        "fabric_api_version" to fabricApiVersion,
+        "fabric_loader_dep_range" to fabricLoaderDepRange,
+        "fabric_api_dep_range" to fabricApiDepRange,
     )
     inputs.properties(replaceProperties)
     // escapeBackslash: the template engine would otherwise turn the JSON escape backslash-n in the

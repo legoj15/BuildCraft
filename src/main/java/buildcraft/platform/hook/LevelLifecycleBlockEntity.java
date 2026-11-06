@@ -10,7 +10,10 @@ package buildcraft.platform.hook;
  * {@code onChunkUnloaded}).
  */
 public interface LevelLifecycleBlockEntity {
-    /** It joined a level: placed, or its chunk loaded. Runs from the level's next tick, as NeoForge's onLoad does. */
+    /**
+     * It joined a level: placed, or its chunk loaded. Runs at the head of the level's next block-entity tick (after
+     * that tick's scheduled block ticks), as NeoForge's onLoad does.
+     */
     void onJoinedLevel();
 
     /** The chunk holding it unloads (not when it is broken). */

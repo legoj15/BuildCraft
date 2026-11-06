@@ -33,6 +33,15 @@ val bcNode = extensions.getByType<BcNode>()
 val isPre1_21_11 = bcNode.isPre1_21_11
 val isPre1_21_10 = bcNode.isPre1_21_10
 val isPre26_3 = bcNode.isPre26_3
+// The opt-in -P switches the runs{} blocks below read, resolved once here at script scope: inside a
+// `register("...") { }` block a bare `project` binds to RunModel's deprecated getProject(), not to this script's.
+val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
+val bcDebug = findProperty("bcDebug")?.toString()
+val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
+val bcTests = findProperty("bcTests")?.toString()
+val bcLoudGameTestLogs = hasProperty("bcLoudGameTestLogs")
+val gameTestRunDir = file("run-gameTestServer")
+val quietGameTestLog4j = rootProject.file("gradle/gameTestServerLog4j2-quiet.xml").absolutePath
 
 repositories {
     mavenLocal()
@@ -114,26 +123,26 @@ neoForge {
             // Optional quick-play: boot straight into a saved world for headless in-client checks.
             // `./gradlew :26.1.2:runClient -PbcQuickPlay=<saveFolderName>`. Inert without the property
             // (moddev's --args does not forward, so it must be wired here). Revert needs nothing — gated.
-            if (project.hasProperty("bcQuickPlay")) {
+            if (bcQuickPlay != null) {
                 programArguments.add("--quickPlaySingleplayer")
-                programArguments.add(project.property("bcQuickPlay").toString())
+                programArguments.add(bcQuickPlay)
             }
             // Opt-in BCDebugging tier: `-PbcDebug` (log tier) or `-PbcDebug=all` -> -Dbuildcraft.debug=<tier>.
-            if (project.hasProperty("bcDebug")) {
-                systemProperty("buildcraft.debug", project.property("bcDebug").toString().ifBlank { "log" })
+            if (bcDebug != null) {
+                systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
             }
             // Optional game directory (node-relative), e.g. `-PbcRunDir=run-smoke`: the scripted in-client smoke
             // run (scripts/smoke/) boots from its own folder so the hand-used `run/` — its extra mods, saves and
             // options — never leaks into, or gets edited by, an automated pass.
-            if (project.hasProperty("bcRunDir")) {
-                gameDirectory = project.file(project.property("bcRunDir").toString())
+            if (bcRunDir != null) {
+                gameDirectory = bcRunDir
             }
         }
         register("server") {
             server()
             systemProperty("buildcraft.dev", "true")
-            if (project.hasProperty("bcDebug")) {
-                systemProperty("buildcraft.debug", project.property("bcDebug").toString().ifBlank { "log" })
+            if (bcDebug != null) {
+                systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
             }
         }
         register("gameTestServer") {
@@ -141,7 +150,7 @@ neoForge {
             systemProperty("neoforge.enableGameTest", "true")
             // Dev workspace, like every other BC run env (see the client run).
             systemProperty("buildcraft.dev", "true")
-            gameDirectory = project.file("run-gameTestServer")
+            gameDirectory = gameTestRunDir
             // Optional test filter, on every node: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
             // runs only the matching tests instead of the whole suite (a ResourceSelectorArgument glob —
             // `namespace:pattern`, `*`/`?` wildcards). Inert without the property: empty selection = run all.
@@ -149,12 +158,12 @@ neoForge {
             // TEST_INSTANCE registry. 1.21.1 has neither the registry nor the option (its server Main
             // rejects `--tests` outright) and its runner takes every registered TestFunction, so there the
             // same glob rides a system property and BuildCraftGameTests applies it at registration time.
-            if (project.hasProperty("bcTests")) {
+            if (bcTests != null) {
                 if (!isPre1_21_10) {
                     programArguments.add("--tests")
-                    programArguments.add(project.property("bcTests").toString())
+                    programArguments.add(bcTests)
                 } else {
-                    systemProperty("buildcraft.gameTestFilter", project.property("bcTests").toString())
+                    systemProperty("buildcraft.gameTestFilter", bcTests)
                 }
             }
             // The `fullTestSuite` tier runs this task on ALL six nodes under a tool that caps captured
@@ -166,11 +175,8 @@ neoForge {
             // args but appends systemProperties AFTER them in gameTestServerRunVmArgs.txt, and the JVM
             // resolves duplicate -D keys last-wins — so only the systemProperty form overrides MDG's
             // own -Dlog4j2.configurationFile. `-PbcLoudGameTestLogs` restores the INFO console.
-            if (!project.hasProperty("bcLoudGameTestLogs")) {
-                systemProperty(
-                    "log4j2.configurationFile",
-                    rootProject.file("gradle/gameTestServerLog4j2-quiet.xml").absolutePath
-                )
+            if (!bcLoudGameTestLogs) {
+                systemProperty("log4j2.configurationFile", quietGameTestLog4j)
             }
         }
     }
@@ -313,7 +319,7 @@ tasks.jar {
     // which are MIT rather than MPL, and the MIT terms require the notice to be "included in all copies
     // or substantial portions of the Software" — a jar with none was a distribution the licence did not
     // permit. LICENSE.API is the text those ~70 api files already point at by name. LICENSE.MMPL covers the
-    // 38 files carried over from 1.7.10/1.12.2 whose headers cite mod-buildcraft.com: MMPL has no
+    // files carried over from 1.7.10/1.12.2 whose headers cite mod-buildcraft.com: MMPL has no
     // notice-inclusion clause of its own, but a jar that names a licence it does not carry is a jar nobody
     // offline can read the terms of. NOTICE.md is the map from file to licence.
     from(rootProject.file("LICENSE")) { into("META-INF") }

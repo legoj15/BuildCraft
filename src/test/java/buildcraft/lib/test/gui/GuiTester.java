@@ -7,18 +7,13 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import buildcraft.lib.net.PacketBufferBC;
 import io.netty.buffer.Unpooled;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.builders.container.ContainerFiller;
-import buildcraft.builders.tile.TileFiller;
 import java.io.InputStreamReader;
 import java.io.InputStream;
 

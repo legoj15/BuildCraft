@@ -24,9 +24,6 @@ public interface BCLevelRenderContext {
     /** The camera's world position. */
     Vec3 cameraPos();
 
-    /** The game-time partial tick of the frame (frozen while the game is paused or frozen). */
-    float partialTick();
-
     //? if >=26.1 {
     /** The retained-mode collector the frame's custom geometry is submitted to. */
     net.minecraft.client.renderer.SubmitNodeCollector collector();

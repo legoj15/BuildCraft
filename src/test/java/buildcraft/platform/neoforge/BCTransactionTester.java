@@ -126,6 +126,58 @@ public class BCTransactionTester {
         assertTrue(cell.rootCommits.isEmpty());
     }
 
+    /** NeoForge lets any open transaction of the thread be journalled, not only the innermost; 1.21.1's own manager
+     *  threw. The outer snapshot then decides what the outer abort restores. */
+    @ParameterizedTest
+    @MethodSource("engines")
+    public void anOuterTransactionCanBeJournalledWhileANestedOneIsOpen(Engine engine) {
+        Cell cell = new Cell(engine, 1);
+        try (BCTransaction outer = engine.root().get()) {
+            try (BCTransaction inner = outer.openNested()) {
+                cell.set(5, outer);
+                inner.commit();
+            }
+            assertEquals(5, cell.value);
+        }
+        assertEquals(1, cell.value, "the outer abort restored the outer snapshot");
+        assertTrue(cell.rootCommits.isEmpty());
+    }
+
+    /** 1.21.1 had no transactions before the platform layer, so nothing could wedge a thread's classic-handler calls:
+     *  an Error out of a root-commit callback must not stop later roots from opening or reporting their commits. */
+    @Test
+    public void anErrorInARootCommitCallbackDoesNotWedgeTheLegacyManager() {
+        Engine legacy = engines().map(a -> (Engine) a.get()[0]).filter(e -> e.name().equals("legacy")).findFirst()
+            .orElseThrow();
+        Cell cell = new Cell(legacy, 1);
+        TransferServices.JournalHandle failing = LegacyTransactions.newJournal(new TransferServices.JournalCallbacks<Integer>() {
+            @Override
+            public Integer createSnapshot() {
+                return 0;
+            }
+
+            @Override
+            public void revertToSnapshot(Integer snapshot) {}
+
+            @Override
+            public void onRootCommit(Integer originalState) {
+                throw new StackOverflowError("test");
+            }
+        });
+        assertThrows(StackOverflowError.class, () -> {
+            try (BCTransaction tx = LegacyTransactions.openRoot()) {
+                failing.updateSnapshots(tx);
+                tx.commit();
+            }
+        });
+        try (BCTransaction tx = LegacyTransactions.openRoot()) {
+            assertEquals(0, tx.depth(), "a root opens again");
+            cell.set(5, tx);
+            tx.commit();
+        }
+        assertEquals(List.of(1), cell.rootCommits, "later root commits still report");
+    }
+
     @ParameterizedTest
     @MethodSource("engines")
     public void nestedCommitThenOuterAbortReverts(Engine engine) {

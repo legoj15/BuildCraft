@@ -20,6 +20,9 @@ import buildcraft.platform.config.ConfigRegistrar;
  * <p><b>Gap:</b> FCAP has no {@code LOCAL} type, only NeoForge's pre-FML-12 set. {@code LOCAL} and {@code COMMON} both
  * map to its {@code COMMON}, which is both sides, one global file and never synced: exactly {@code LOCAL}'s behaviour.
  * The one loss is that a NeoForge 26.3 {@code COMMON} (FML 12 {@code SYNCED}) spec is not synced to clients on Fabric.
+ *
+ * <p>FCAP reads such a spec's file inside the register call, not in a later loading phase as FML does, so the spec is
+ * loaded (and its loading event fired) when {@link #register} returns; {@link FabricConfigHooks#onLoad} accounts for it.
  *^/
 public final class FabricConfigRegistrar implements ConfigRegistrar {
     static final String MOD_ID = "buildcraftunofficial";

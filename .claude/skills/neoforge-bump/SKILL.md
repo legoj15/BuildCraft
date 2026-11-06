@@ -9,7 +9,9 @@ NeoForge for Minecraft is constantly updating. `neo_version` is the pin, and it 
 (`versions/<node>/gradle.properties`) — each node tracks its own line independently. The
 version-check hook reads every NeoForge node's pin directly (it does not depend on any root
 gradle.properties mirror). It and `scripts/neoforge-sources-sync.sh` skip a node whose `loader` is not
-`neoforge` (the compile-only `26.3-fabric` node has no `neo_version`).
+`neoforge` (the Fabric node `26.3-fabric` has no `neo_version`; its Fabric Loader and Fabric API dev pins are
+`fabric_loader_version` / `fabric_api_version` in `versions/26.3-fabric/gradle.properties`, and the hook flags those
+too — the shipped minimums are the separate `*_dep_range` properties there).
 
 ## Awareness — the SessionStart hook
 

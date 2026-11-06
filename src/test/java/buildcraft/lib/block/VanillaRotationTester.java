@@ -323,8 +323,8 @@ public class VanillaRotationTester {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.UP, absPos, false);
         ItemWrench_Neptune wrenchItem = (ItemWrench_Neptune) BCCoreItems.WRENCH.get();
 
-        // --- Non-crouch: onItemUseFirst must return PASS so the trapdoor's normal
-        //     useWithoutItem can toggle OPEN. ---
+        // --- Non-crouch: the wrench's use-before-block hook (NeoForge onItemUseFirst, Fabric useBeforeBlock) must
+        //     return PASS so the trapdoor's normal useWithoutItem can toggle OPEN. ---
         net.minecraft.world.entity.player.Player nonCrouch =
                 helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         nonCrouch.setShiftKeyDown(false);
@@ -344,7 +344,7 @@ public class VanillaRotationTester {
                 "non-crouch must NOT rotate the trapdoor — that would steal the open/close gesture");
         assertTrue(wrench.getDamageValue() == 0, "a click that turned nothing must not wear the wrench");
 
-        // --- Crouch: onItemUseFirst claims the interaction and rotates. ---
+        // --- Crouch: the same hook claims the interaction and rotates. ---
         net.minecraft.world.entity.player.Player crouch =
                 helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         crouch.setShiftKeyDown(true);
@@ -358,7 +358,7 @@ public class VanillaRotationTester {
         /*InteractionResult r2 = wrenchItem.useBeforeBlock(wrench, crouchCtx);*/
         //?}
         assertTrue(r2 == InteractionResult.SUCCESS,
-                "crouch wrench on trapdoor must SUCCEED via onItemUseFirst, got " + r2);
+                "crouch wrench on trapdoor must SUCCEED via onItemUseFirst / useBeforeBlock, got " + r2);
         BlockState after = helper.getBlockState(pos);
         assertTrue(after.getValue(TrapDoorBlock.FACING) == Direction.EAST,
                 "crouch wrench should rotate NORTH→EAST, got " + after.getValue(TrapDoorBlock.FACING));

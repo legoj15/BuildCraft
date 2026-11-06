@@ -6,7 +6,10 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.Map;
+/*import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -59,8 +62,17 @@ import buildcraft.platform.transfer.TransferServices;
  * is a {@link SnapshotParticipant}, so BuildCraft state joins the transactions other mods open (an adapter wraps the
  * {@link TransactionContext} it is handed with {@link #wrap}).
  *
- * <p>Fabric's {@code onFinalCommit} does not pass the original state, so the participant keeps the first snapshot
- * taken since the outer transaction opened and hands that to {@code onRootCommit}, matching NeoForge.
+ * <p>Fabric's {@code onFinalCommit} does not pass the original state, so the participant mirrors
+ * {@code SnapshotParticipant}'s own snapshot table, one entry per nesting depth, and hands the snapshot that reaches
+ * depth 0 to {@code onRootCommit}: the state before the first change of the outer transaction, as on NeoForge. A
+ * snapshot only a nested transaction took, and then aborted, leaves nothing behind.
+ *
+ * <p><b>Root-commit callbacks.</b> Fabric runs {@code onFinalCommit} while the outermost transaction is still closing,
+ * where no transaction can be opened; NeoForge runs {@code onRootCommit} after the root has closed, and a callback
+ * there may open one. A root BuildCraft opened itself ({@link #openRoot}) therefore queues its callbacks and runs them
+ * once Fabric's close has returned ({@link RootCommits}). Gap: a root another mod opened gives BuildCraft no such
+ * moment, so the callbacks of BuildCraft journals it commits run inside that close, and one that opens a transaction
+ * there throws.
  *
  * <p><b>Lookups.</b> Items go through {@link ItemStorage#SIDED}; registrations become
  * {@code registerForBlockEntity} providers at once, since Fabric registers content eagerly. Fabric has no standard
@@ -74,7 +86,7 @@ import buildcraft.platform.transfer.TransferServices;
 public final class FabricTransfer implements TransferServices {
     @Override
     public BCTransaction openRoot() {
-        return new Owned(Transaction.openOuter());
+        return Owned.root(Transaction.openOuter());
     }
 
     @Override
@@ -83,7 +95,7 @@ public final class FabricTransfer implements TransferServices {
     @SuppressWarnings("deprecation")
     public BCTransaction openInCurrent() {
         TransactionContext current = Transaction.getCurrentUnsafe();
-        return new Owned(current == null ? Transaction.openOuter() : current.openNested());
+        return current == null ? Owned.root(Transaction.openOuter()) : Owned.nested(current.openNested());
     }
 
     @Override
@@ -179,6 +191,12 @@ public final class FabricTransfer implements TransferServices {
 
             @Override
             public BCItemStorage get() {
+                if (!level.isLoaded(pos)) {
+                    // NeoForge's cache answers null for an unloaded position; Fabric's would load the chunk.
+                    handler = null;
+                    view = null;
+                    return null;
+                }
                 Storage<ItemVariant> current = cache.find(side);
                 if (current != handler) {
                     handler = current;
@@ -203,6 +221,12 @@ public final class FabricTransfer implements TransferServices {
 
             @Override
             public BCFluidStorage get() {
+                if (!level.isLoaded(pos)) {
+                    // NeoForge's cache answers null for an unloaded position; Fabric's would load the chunk.
+                    handler = null;
+                    view = null;
+                    return null;
+                }
                 Storage<FluidVariant> current = cache.find(side);
                 if (current != handler) {
                     handler = current;
@@ -254,9 +278,10 @@ public final class FabricTransfer implements TransferServices {
     }
 
     private static boolean moveAll(Storage<FluidVariant> from, Storage<FluidVariant> to) {
-        try (Transaction tx = Transaction.openOuter()) {
-            if (StorageUtil.move(from, to, v -> true, Long.MAX_VALUE, tx) > 0) {
-                tx.commit();
+        // A root of BuildCraft's own, so the root-commit callbacks of the journals it touched run after the close.
+        try (Owned root = Owned.root(Transaction.openOuter())) {
+            if (StorageUtil.move(from, to, v -> true, Long.MAX_VALUE, root.tx) > 0) {
+                root.commit();
                 return true;
             }
         }
@@ -330,11 +355,12 @@ public final class FabricTransfer implements TransferServices {
 
 
     /^* The BuildCraft view of a Fabric transaction someone else opened: it can be nested into, never committed. ^/
-
     public static BCTransactionContext wrap(TransactionContext context) {
         return new Borrowed(context);
     }
 
+    // The NeoForge twin (NeoForgeTransfer: unwrap, Borrowed, Owned) is the same shape over NeoForge's Transaction; a new
+    // kind of BCTransaction has to be taught to both.
     /^* The Fabric transaction behind a BuildCraft one. ^/
     public static TransactionContext unwrap(BCTransactionContext transaction) {
         if (transaction instanceof Owned owned) {
@@ -354,16 +380,88 @@ public final class FabricTransfer implements TransferServices {
 
         @Override
         public BCTransaction openNested() {
-            return new Owned(context.openNested());
+            return Owned.nested(context.openNested());
+        }
+    }
+
+    /^*
+     * The root-commit callbacks of one thread's BuildCraft-owned root. Fabric calls a journal's {@code onFinalCommit}
+     * from the outermost transaction's close, where its manager still counts that transaction as open: opening a
+     * transaction (or reading the current one) there throws. NeoForge runs {@code onRootCommit} after the root has
+     * closed, and BuildCraft code relies on being able to open a transaction in one (the contract
+     * {@code BCTransactionTester.rootCommitCallbackRunsOutsideTheTransaction} pins). So while a root BuildCraft opened
+     * is open on the thread, its callbacks wait here and run when Fabric's close has returned, in order, a callback's
+     * own root-commit callbacks after those already waiting (as NeoForge's queue does).
+     ^/
+    private static final class RootCommits {
+        private static final ThreadLocal<RootCommits> THREAD = ThreadLocal.withInitial(RootCommits::new);
+
+        private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
+        private boolean owned;
+        private boolean running;
+
+        /^* Runs {@code callback} once the BuildCraft-owned root has closed; at once if the root is another mod's. ^/
+        static void deliver(Runnable callback) {
+            RootCommits state = THREAD.get();
+            if (state.owned) {
+                state.pending.add(callback);
+            } else {
+                callback.run();
+            }
+        }
+
+        static void rootOpened() {
+            THREAD.get().owned = true;
+        }
+
+        /^* The BuildCraft-owned root has closed: runs what it queued. ^/
+        static void rootClosed() {
+            RootCommits state = THREAD.get();
+            state.owned = false;
+            if (state.running) {
+                return; // a callback's own root: the loop below picks its callbacks up
+            }
+            state.running = true;
+            RuntimeException error = null;
+            try {
+                for (Runnable callback = state.pending.poll(); callback != null; callback = state.pending.poll()) {
+                    try {
+                        callback.run();
+                    } catch (RuntimeException e) {
+                        if (error == null) {
+                            error = new RuntimeException("Error while closing a transaction", e);
+                        } else {
+                            error.addSuppressed(e);
+                        }
+                    }
+                }
+            } finally {
+                state.running = false;
+            }
+            if (error != null) {
+                throw error;
+            }
         }
     }
 
     private static final class Owned implements BCTransaction {
         final Transaction tx;
+        /^* Whether BuildCraft opened this as the thread's root, so its root-commit callbacks wait for the close. ^/
+        private final boolean root;
         private boolean closed;
 
-        Owned(Transaction tx) {
+        private Owned(Transaction tx, boolean root) {
             this.tx = tx;
+            this.root = root;
+        }
+
+        static Owned nested(Transaction tx) {
+            return new Owned(tx, false);
+        }
+
+        static Owned root(Transaction tx) {
+            RootCommits.rootOpened();
+            return new Owned(tx, true);
         }
 
         @Override
@@ -373,21 +471,55 @@ public final class FabricTransfer implements TransferServices {
 
         @Override
         public BCTransaction openNested() {
-            return new Owned(tx.openNested());
+            return nested(tx.openNested());
         }
 
         @Override
         public void commit() {
-            closed = true;
-            tx.commit();
+            end(true);
         }
 
         @Override
         public void close() {
-            // Fabric's close() throws on an already-closed transaction; the BC contract makes it idempotent.
+            // Fabric keeps one Transaction object per nesting depth and reuses it, so its own close() on a stale
+            // reference (after a later transaction took the depth) would abort that later one. Once this has ended,
+            // the BC contract (a close after commit is harmless) holds by never reaching Fabric again.
             if (!closed) {
-                closed = true;
-                tx.close();
+                end(false);
+            }
+        }
+
+        private void end(boolean commit) {
+            try {
+                if (commit) {
+                    tx.commit();
+                } else {
+                    tx.close();
+                }
+            } catch (IllegalStateException rejected) {
+                // Fabric checks the call (this is the current transaction, on its thread) before it changes anything,
+                // so the transaction is still open and stays open for a close() to abort. A failure of a close
+                // callback is wrapped in a plain RuntimeException, and comes after the transaction has closed.
+                throw rejected;
+            } catch (RuntimeException failedCallback) {
+                finished(failedCallback);
+                throw failedCallback;
+            }
+            finished(null);
+        }
+
+        /^* The transaction has closed: a root runs the callbacks it queued. {@code failure} is an exception on its way out. ^/
+        private void finished(RuntimeException failure) {
+            closed = true;
+            if (root) {
+                try {
+                    RootCommits.rootClosed();
+                } catch (RuntimeException e) {
+                    if (failure == null) {
+                        throw e;
+                    }
+                    failure.addSuppressed(e);
+                }
             }
         }
     }
@@ -396,18 +528,35 @@ public final class FabricTransfer implements TransferServices {
         private static final Object UNSET = new Object();
 
         private final JournalCallbacks<S> callbacks;
-        private Object original = UNSET;
+        /^*
+         * The snapshot Fabric holds for this participant at each nesting depth ({@link #UNSET} for none): the table
+         * {@code SnapshotParticipant} keeps privately, kept in step with it by {@link #updateSnapshots} and
+         * {@link #onClose}. The entry that reaches depth 0 is the state before the outer transaction's first change.
+         ^/
+        private final List<Object> held = new ArrayList<>();
+        /^* The depth {@link #updateSnapshots} is snapshotting, for {@link #createSnapshot}. ^/
+        private int snapshotDepth;
+        /^* The snapshot that reached depth 0 as the outer transaction committed, until {@link #onFinalCommit}. ^/
+        private Object rootOriginal = UNSET;
 
         Participant(JournalCallbacks<S> callbacks) {
             this.callbacks = callbacks;
         }
 
         @Override
-        protected S createSnapshot() {
-            S snapshot = callbacks.createSnapshot();
-            if (original == UNSET) {
-                original = snapshot;
+        public void updateSnapshots(TransactionContext transaction) {
+            snapshotDepth = transaction.nestingDepth();
+            while (held.size() <= snapshotDepth) {
+                held.add(UNSET);
             }
+            super.updateSnapshots(transaction);
+        }
+
+        @Override
+        protected S createSnapshot() {
+            // Fabric asks only for a depth that holds none.
+            S snapshot = callbacks.createSnapshot();
+            held.set(snapshotDepth, snapshot);
             return snapshot;
         }
 
@@ -418,18 +567,28 @@ public final class FabricTransfer implements TransferServices {
 
         @Override
         public void onClose(TransactionContext transaction, TransactionContext.Result result) {
+            int depth = transaction.nestingDepth();
+            Object snapshot = held.set(depth, UNSET);
             super.onClose(transaction, result);
-            if (transaction.nestingDepth() == 0 && result.wasAborted()) {
-                original = UNSET;
+            if (result.wasAborted()) {
+                return; // reverted to it, nothing remains
+            }
+            if (depth > 0) {
+                // Committed: the snapshot moves up unless the parent already holds an older one, as Fabric does.
+                if (held.get(depth - 1) == UNSET) {
+                    held.set(depth - 1, snapshot);
+                }
+            } else {
+                rootOriginal = snapshot; // Fabric's afterOuterClose, and so onFinalCommit, follow
             }
         }
 
         @Override
         @SuppressWarnings("unchecked")
         protected void onFinalCommit() {
-            Object state = original;
-            original = UNSET;
-            callbacks.onRootCommit((S) state);
+            S state = (S) rootOriginal;
+            rootOriginal = UNSET;
+            RootCommits.deliver(() -> callbacks.onRootCommit(state));
         }
     }
 }

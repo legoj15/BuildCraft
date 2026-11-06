@@ -178,6 +178,89 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         assertEquals(5, handler.getStack(0).getCount());
         assertEquals(3, classic.extractItem(0, 3, false).getCount());
         assertEquals(64, classic.getSlotLimit(0));
+    }
+
+    /^* 1.21.1 handed BuildCraft's plain inventories out as {@code IItemHandlerModifiable}, and NeoForge's own
+     *  {@code SlotItemHandler.set} casts to it, so a foreign container wrapping a BuildCraft machine died with a
+     *  ClassCastException once the platform adapter stopped being one. The wrapped (insert-only, extract-only,
+     *  combined) handlers were never modifiable, and stay that way. ^/
+    @Test
+    public void aPlainBuildCraftInventoryIsAnIItemHandlerModifiable() {
+        ItemHandlerSimple handler = simple(ItemStack.EMPTY, new ItemStack(Items.DIRT, 3));
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(handler);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable,
+            "a plain BuildCraft inventory must be settable through the classic handler, as it was");
+        ((net.neoforged.neoforge.items.IItemHandlerModifiable) classic).setStackInSlot(0, new ItemStack(Items.APPLE, 7));
+        assertEquals(7, handler.getStack(0).getCount(), "the set reached the BuildCraft inventory");
+        assertSame(handler, NeoForgeItemStorages.fromNeo(classic), "and it still unwraps to itself");
+
+        assertTrue(!(NeoForgeItemStorages.toNeo(new buildcraft.lib.tile.item.WrappedItemHandlerExtract(handler))
+            instanceof net.neoforged.neoforge.items.IItemHandlerModifiable), "a wrapped handler was never modifiable");
+    }
+
+    /^* The Quarry and the Mining Well exposed NeoForge's {@code EmptyItemHandler}, an {@code IItemHandlerModifiable}
+     *  whose set does nothing; they now expose {@link ItemStorageUtil#EMPTY}, which must answer a foreign slot's set
+     *  the same way instead of a ClassCastException. ^/
+    @Test
+    public void theQuarryAndMiningWellEmptyStorageTakesASlotSetAsANoOp() {
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(ItemStorageUtil.EMPTY);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable,
+            "the empty storage must be modifiable through the classic handler, as EmptyItemHandler is");
+        new net.neoforged.neoforge.items.SlotItemHandler(classic, 0, 0, 0).set(new ItemStack(Items.DIRT));
+    }
+
+    /^* 1.21.1's classic {@code getStackInSlot} on a BuildCraft inventory handed out the stack the inventory holds, not
+     *  a copy, so a foreign slot that shrinks {@code getItem()} in place (vanilla's {@code Slot} pattern) changed the
+     *  inventory. ^/
+    @Test
+    public void aClassicSlotOfABuildCraftInventoryIsTheLiveStack() {
+        ItemHandlerSimple handler = simple(new ItemStack(Items.DIRT, 3));
+        new net.neoforged.neoforge.items.SlotItemHandler(NeoForgeItemStorages.toNeo(handler), 0, 0, 0).getItem().shrink(1);
+        assertEquals(2, handler.getStack(0).getCount(), "the shrink wrote through to the inventory, as it did");
+    }
+
+    /^* The stone engine's fuel slot was an anonymous {@code IItemHandlerModifiable}: {@code setStackInSlot} replaced
+     *  the stack and marked the tile changed, and ignored any slot but 0. ^/
+    @Test
+    public void aSingleStackStorageIsAnIItemHandlerModifiableThatReportsTheSet() {
+        ItemStack[] held = { ItemStack.EMPTY };
+        int[] changed = { 0 };
+        buildcraft.lib.transfer.SingleStackStorage fuel = new buildcraft.lib.transfer.SingleStackStorage() {
+            @Override
+            protected ItemStack getStack() {
+                return held[0];
+            }
+
+            @Override
+            protected void setStack(ItemStack stack) {
+                held[0] = stack;
+            }
+
+            @Override
+            protected void onRootCommit(ItemStack originalState) {
+                changed[0]++;
+            }
+        };
+        net.neoforged.neoforge.items.IItemHandler classic = NeoForgeItemStorages.toNeo(fuel);
+        assertTrue(classic instanceof net.neoforged.neoforge.items.IItemHandlerModifiable);
+        var modifiable = (net.neoforged.neoforge.items.IItemHandlerModifiable) classic;
+        modifiable.setStackInSlot(0, new ItemStack(Items.COAL, 5));
+        assertEquals(5, held[0].getCount());
+        assertEquals(1, changed[0], "the owner is told once");
+        modifiable.setStackInSlot(1, new ItemStack(Items.COAL, 9));
+        assertEquals(5, held[0].getCount(), "a slot past the only one is ignored");
+        assertEquals(1, changed[0]);
+
+        modifiable.getStackInSlot(0).shrink(1);
+        assertEquals(4, held[0].getCount(), "getStackInSlot is the held stack, not a copy");
+
+        // Any other slot answered as an empty, refusing slot instead of throwing.
+        assertTrue(classic.getStackInSlot(1).isEmpty());
+        assertEquals(3, classic.insertItem(1, new ItemStack(Items.COAL, 3), false).getCount());
+        assertTrue(classic.extractItem(1, 1, false).isEmpty());
+        assertTrue(!classic.isItemValid(1, new ItemStack(Items.COAL)));
+        assertEquals(net.minecraft.world.item.Item.ABSOLUTE_MAX_STACK_SIZE, classic.getSlotLimit(1));
+        assertEquals(4, held[0].getCount(), "and left the fuel alone");
     }*/
     //?}
 }

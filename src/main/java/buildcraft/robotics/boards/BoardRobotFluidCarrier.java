@@ -14,6 +14,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoadFluids;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
@@ -37,7 +38,7 @@ public class BoardRobotFluidCarrier extends RedstoneBoardRobot {
 
     /** The mB the robot is currently carrying (0 when the tank is empty). */
     public int carriedFluid() {
-        return robot.getFluidHandler().getFluidInTank(0).getAmount();
+        return FluidHandlerAdvs.storage(robot.getFluidHandler()).getAmount(0);
     }
 
     @Override

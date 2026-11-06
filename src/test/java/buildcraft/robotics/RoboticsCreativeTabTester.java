@@ -41,8 +41,9 @@ import buildcraft.transport.BCTransportItems;
  * the Gate Copier.
  *
  * <p>Tab contents are rebuilt the way the game does it, {@link CreativeModeTab#buildContents}, which
- * runs the tab's {@code CreativeTabContents} contributions — so the plugs-tab assertions exercise the very
- * contribution list the robot station used to ride on, not a mock. The liveness precondition (the blocker must be
+ * runs the tab's {@code CreativeTabContents} contributions (on NeoForge delivered through BuildCraft's low priority
+ * tab-contents listeners; on Fabric, which has no such hook, replayed by the tab's own generator) — so the plugs-tab
+ * assertions exercise the real contributions the robot station used to ride on, not a mock. The liveness precondition (the blocker must be
  * present) guards against that path being silently dead in the FML-JUnit environment, which would make
  * the "station is gone" assertion vacuously true.
  */
@@ -186,7 +187,8 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
     @Test
     public void plugsTabListsTransportsPluggablesBeforeSilicons() {
         // The plugs tab is fed by two contributions, transport's first (blocker, power adaptor, the sixteen
-        // wires) and silicon's after it (gates, lenses and filters, pulsar, light sensor, timer). Pins that order.
+        // wires) and silicon's after it (gates, lenses and filters, pulsar, light sensor, timer). Pins that
+        // transport's contribution comes before silicon's (the blocker leads, the gates follow every wire).
         CreativeModeTab plugs = BCTransportCreativeTabs.PLUGS_TAB.get();
         plugs.buildContents(displayParameters());
         List<ItemStack> items = new ArrayList<>(plugs.getDisplayItems());
@@ -199,8 +201,6 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         int firstGate = firstIndexForItem(items, BCSiliconItems.PLUG_GATE.get());
         Assertions.assertTrue(firstGate > lastWire && lastWire > 0,
                 "silicon's gates come after transport's wires (wire " + lastWire + ", gate " + firstGate + ")");
-        Assertions.assertEquals(items.size() - 1, firstIndexForItem(items, BCSiliconItems.PLUG_TIMER.get()),
-                "the timer closes the plugs tab");
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

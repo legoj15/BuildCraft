@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="[2,]"
 # Single-valued by design, and it names the licence covering the overwhelming majority of the jar. The jar
-# also carries MIT (most of buildcraft.api) and MMPL-1.0.1 (38 files carried over from 1.7.10/1.12.2) — see
+# also carries MIT (most of buildcraft.api) and MMPL-1.0.1 (files carried over from 1.7.10/1.12.2) — see
 # META-INF/NOTICE.md, shipped alongside all three licence texts, for the file-to-licence map. Deliberately
 # NOT an SPDX "AND" expression: FML displays this string rather than parsing it, but that is a display-side
 # observation and a required loader field is not the place to test an assumption.
@@ -34,8 +34,8 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_bra
     # Range is per Stonecutter node (versions/<node>/gradle.properties -> neo_dep_range). Each floor is
     # the EMPIRICAL minimum that node's jar compiles + boots against (compile-bisect + a headless server
     # boot), not a guess: set too high it needlessly gates users, too low it loads then crashes on boot.
-    #   26.1.2  -> [26.1.0,26.2)    whole line — BreakBlockEvent is resolved reflectively (lib.misc.
-    #                               BreakEventCompat) + GUI getters use line-wide aliases, so nothing
+    #   26.1.2  -> [26.1.0,26.2)    whole line — BreakBlockEvent is resolved reflectively (platform.
+    #                               neoforge.NeoForgeBreakEvent) + GUI getters use line-wide aliases, so nothing
     #                               binds above the line's first build (369 game tests pass on 26.1.0.1)
     #   26.2    -> [26.2.0,26.3)    whole line — all 26.2 API landed atomically at 26.2.0.0-beta
     #   26.3    -> [26.3.0.38-beta,26.4)  getPixelARGB lands at .38 (ModConfig.Type.LOCAL at .37,

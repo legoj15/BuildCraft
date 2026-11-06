@@ -28,8 +28,9 @@ import net.minecraft.world.phys.BlockHitResult;
  * refuses the machine. Every method runs on the server thread, like every caller.
  *
  * <p><b>Probes.</b> {@link #canBreak} and {@link #canPlace} post a PROBE: an event asking about an act that never
- * happens, cancelled or not. BuildCraft's own listeners for those events must therefore not take one for a block
- * changing; {@link #isProbe} and {@link BlockBreak#isProbe} tell them apart.
+ * happens, cancelled or not (on Fabric, which has no place event, {@link #canPlace} asks the providers and posts
+ * nothing). BuildCraft's own listeners for those events must therefore not take one for a block
+ * changing; {@link BlockBreak#isProbe} and {@code GameHooks.BlockPlace#isProbe} tell them apart.
  *
  * <p>This is a contract (see the package documentation of {@code buildcraft.platform}): JDK and vanilla types only.
  */
@@ -43,20 +44,16 @@ public interface PlatformProtection {
 
     /**
      * Whether {@code player} may place a block filling {@code cells} (the first is the cell the block is placed in,
-     * any others the cells it fills too, a bed's head or a door's top): posts the placement event a player's
-     * placement would (a probe; nothing is placed) and answers whether nothing refused it. Each cell is "placed
+     * any others the cells it fills too, a bed's head or a door's top): asks what a player's placement would ask (a
+     * probe; nothing is placed) and answers whether nothing refused it. On NeoForge that is the placement event, which
+     * BuildCraft's own {@code GameHooks.onBlockPlace} listeners see as a probe; Fabric has no place event, so the
+     * protection providers alone are asked and those listeners are not told. Each cell is "placed
      * against" the block below it, as a block set down on the floor of its cell is. Because nothing has been placed,
      * the event's placed state is the cell's current one.
      *
      * @throws IllegalArgumentException for no cells
      */
     boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player);
-
-    /**
-     * True while {@code event} (a loader event object, delivered to a listener) is a permission probe posted by
-     * {@link #canBreak} or {@link #canPlace} rather than a block changing.
-     */
-    boolean isProbe(Object event);
 
     /**
      * Listens for a player's block break, probes included ({@link BlockBreak#isProbe}). The listener runs at the

@@ -120,9 +120,14 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
             return seams.contains(Seam.ITEM_INPUT) ? super.getItemInput() : null;
         }
 
+        // Its own empty storage's view, not the input's: TestStation only stubs the input, and DockingStation's
+        // default output is null, so neither super call would give the output seam a handler of its own.
+        private final buildcraft.api.core.IFluidHandlerAdv fluidOutput =
+                buildcraft.lib.transfer.FluidHandlerAdvs.of(new buildcraft.lib.fluid.BCFluidTank(0, 0));
+
         @Override
         public buildcraft.api.core.IFluidHandlerAdv getFluidOutput() {
-            return seams.contains(Seam.FLUID_OUTPUT) ? super.getFluidInput() : null;
+            return seams.contains(Seam.FLUID_OUTPUT) ? fluidOutput : null;
         }
 
         @Override

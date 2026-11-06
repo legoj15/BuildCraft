@@ -126,6 +126,8 @@ public class BuildCraftGameTests {
         // FE pipes must size a receiver's demand by a simulated insert, not buffer headroom —
         // otherwise bufferless pass-through sinks (AE2's Energy Acceptor) are never fed.
         reg.accept("buildcraftunofficial:fe_pipe_bufferless_receiver_demand", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testBufferlessReceiverReportsDemand);
+        // ... and the probe leaves no trace: its insert rolls back (and on 1.21.1 the F3 OFFERED counter skips it).
+        reg.accept("buildcraftunofficial:fe_pipe_demand_probe_rolls_back", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testDemandProbeRollsBack);
 
         // Transport Storage
         reg.accept("buildcraftunofficial:filtered_buffer_drops", () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);
@@ -162,10 +164,14 @@ public class BuildCraftGameTests {
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
         reg.accept("buildcraftunofficial:oil_spread_skips_same_fluid", () -> buildcraft.energy.OilWaterInteractionTest::testOilSpreadSkipsSameFluidNeighbour);
+        reg.accept("buildcraftunofficial:oil_source_over_own_fluid_keeps_forced_spread", () -> buildcraft.energy.OilWaterInteractionTest::testOilSourceOverOwnFluidKeepsForcedSpread);
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_mob_wades_and_sinks", () -> buildcraft.energy.FluidPhysicsTest::crudeOilLetsMobsWadeAndSink);
+        reg.accept("buildcraftunofficial:crude_oil_floats_items", () -> buildcraft.energy.FluidPhysicsTest::crudeOilFloatsItems);
+        reg.accept("buildcraftunofficial:crude_oil_does_not_float_boats", () -> buildcraft.energy.FluidPhysicsTest::crudeOilDoesNotFloatBoats);
+        reg.accept("buildcraftunofficial:crude_oil_current_pushes_items", () -> buildcraft.energy.FluidPhysicsTest::crudeOilCurrentPushesItems);
         reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
         reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
         reg.accept("buildcraftunofficial:tank_of_gas_detonates", () -> buildcraft.energy.ContainedFluidDetonationTester::testTankOfGasDetonates);
@@ -209,6 +215,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_refusals_belong_to_owner", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchRefusalsBelongToTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft", () -> buildcraft.lib.misc.MachineProtectionTester::namelessOwnerAsksAsBuildCraft);
+        reg.accept("buildcraftunofficial:loader_parity_refused_two_cell_drops_nothing", () -> buildcraft.lib.misc.LoaderProtectionParityTester::refusedTwoCellPlacementDropsNothing);
+        reg.accept("buildcraftunofficial:loader_parity_placement_ignores_world_border", () -> buildcraft.lib.misc.LoaderProtectionParityTester::machinePlacementIgnoresWorldBorder);
+        reg.accept("buildcraftunofficial:loader_parity_block_entity_joins_after_block_ticks", () -> buildcraft.lib.misc.LoaderProtectionParityTester::blockEntityJoinsAfterBlockTicks);
+        reg.accept("buildcraftunofficial:loader_parity_wrench_asks_claim_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::wrenchRotationAsksClaimFirst);
+        reg.accept("buildcraftunofficial:loader_parity_click_ask_runs_no_use_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::machineClickAskRunsNoUseFirst);
+        reg.accept("buildcraftunofficial:loader_parity_tube_probe_is_not_player_break", () -> buildcraft.lib.misc.LoaderProtectionParityTester::tubeProbeIsNotAPlayerBreak);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);
@@ -241,6 +253,14 @@ public class BuildCraftGameTests {
         // The living-entity item-storage fallback both loaders answer: an equine's chest inventory, any other living
         // entity's hands then armour, each slot taking only what the entity can equip there.
         reg.accept("buildcraftunofficial:entity_item_storage_living_fallback", () -> buildcraft.lib.test.EntityItemStorageTester::livingEntityItemStorageFallback);
+        // The transaction contract of Platform.transfer() on every loader (BCTransactionTester pins the NeoForge engines
+        // under JUnit; the Fabric node has none).
+        reg.accept("buildcraftunofficial:transaction_nested_abort_leaves_no_stale_original", () -> buildcraft.platform.TransactionSeamTester::nestedOnlyAbortLeavesNoStaleOriginal);
+        reg.accept("buildcraftunofficial:transaction_root_commit_callback_may_open_a_transaction", () -> buildcraft.platform.TransactionSeamTester::rootCommitCallbackMayOpenATransaction);
+        reg.accept("buildcraftunofficial:transaction_refused_commit_leaves_transaction_open_for_close", () -> buildcraft.platform.TransactionSeamTester::refusedCommitLeavesTheTransactionOpenForClose);
+        // The adapters over Fabric's own storage types (FabricFluidStorages, FabricItemStorages); a NeoForge node has no
+        // such adapter, so its body is empty there.
+        reg.accept("buildcraftunofficial:fabric_foreign_storage_adapters", () -> buildcraft.platform.fabric.FabricAdapterTester::foreignStorageViews);
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);
@@ -605,8 +625,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wet_blocks_scan_as_themselves", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::wetBlocksScanAsThemselves);
 
         // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
-        // The 1.21.1 branches stand on the version-neutral BCFluidTank / tile-tank surface —
-        // see the per-test `//? if >=1.21.10` gates in HeatExchangerTester.
+        // The bodies run unchanged on every node, over the version-neutral BCFluidTank surface.
         reg.accept("buildcraftunofficial:heat_exchanger_output_rejects_external_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_internal_flag_resets", () -> buildcraft.factory.HeatExchangerTester::testOutputTankInternalFlagResetsAfterCall);
@@ -637,6 +656,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:vanilla_rotation_double_chest", () -> buildcraft.lib.block.VanillaRotationTester::testDoubleChestRotatesBothHalves);
         reg.accept("buildcraftunofficial:vanilla_rotation_wrench_useon_furnace", () -> buildcraft.lib.block.VanillaRotationTester::testWrenchUseOnRotatesFurnace);
         reg.accept("buildcraftunofficial:vanilla_rotation_wrench_crouch_gate", () -> buildcraft.lib.block.VanillaRotationTester::testWrenchOnItemUseFirstCrouchGate);
+        reg.accept("buildcraftunofficial:setup_scans_find_late_registered_blocks", () -> buildcraft.lib.block.LateRegisteredBlockTester::testSetupScansFindBlocksRegisteredByLaterMods);
 
         // Flood gate wrench toggle (advancement-granting useItemOn path)
         reg.accept("buildcraftunofficial:flood_gate_wrench_toggles_side", () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);
@@ -999,9 +1019,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mj_battery_machines_hide_fe_mj_only", () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesHideFeUnderMjOnly);
 
         // Tank bookkeeping — composite tank capacity-respect and cross-slot spillover
-        // (modelled on TileBuilder.tankManager's per-slot delegate; on 1.21.1 the classic
-        // composite returns at the first matching slot, so those bodies pin the weaker
-        // cross-call properties — ordered routing/drain, conservation, SIMULATE non-mutation).
+        // (modelled on TileBuilder.tankManager's per-slot delegate; on 1.21.1 one resource-wide
+        // call stops at the first slot that moves anything, as the classic Builder did there).
         reg.accept("buildcraftunofficial:tank_single_capacity", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankCapacityRespect);
         reg.accept("buildcraftunofficial:tank_single_extract_returns_only_held", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankExtractReturnsOnlyWhatExists);
         reg.accept("buildcraftunofficial:tank_composite_insert_spillover", () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertSpillsAcrossSlots);

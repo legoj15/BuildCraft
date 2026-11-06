@@ -83,8 +83,8 @@ public final class StackKey {
             result = 31 * result + stack.getItem().hashCode();
         }
         if (fluidStack != null) {
-            result = 31 * result + fluidStack.getFluid().hashCode();
-            result = 31 * result + fluidStack.getAmount();
+            // The fluid and its components, never the amount: equals ignores it, so equal keys must hash alike.
+            result = 31 * result + BCFluidStack.hashFluidAndComponents(fluidStack);
         }
         return result;
     }

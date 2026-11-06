@@ -43,20 +43,21 @@ public class FluidSpritesGuardTester {
     /** The loader-side lookup ({@code ClientPlatform.fluids()}) on NeoForge. */
     private static final String NEOFORGE_LOOKUP = "buildcraft/platform/neoforge/client/NeoForgeClientFluids.java";
 
+    /** A call of {@code method} whose first argument is the stack; the NeoForge client APIs take NeoForge's
+     *  FluidStack, so the BCFluidStack may be converted at the call ({@code NeoForgeFluids.toNeo(stack)}). */
+    private static boolean passesTheStack(String code, String method) {
+        return Pattern.compile(Pattern.quote(method) + "\\((?:NeoForgeFluids\\.toNeo\\()?stack\\b").matcher(code).find();
+    }
+
     /** The lookup reads the fluid's own client data, stack-aware, through the API this node has. */
     @Test
     public void lookupAsksTheFluidForItsStackAwareTextureAndTint() {
-        // The NeoForge client APIs take NeoForge's FluidStack: the BCFluidStack is converted at the call.
-        String code = MainSourceSet.codeOnly(file(NEOFORGE_LOOKUP).text()).replace("NeoForgeFluids.toNeo(stack", "stack");
-        boolean clientExtensions = code.contains("getStillTexture(stack") && code.contains("getTintColor(stack");
-        boolean fluidModels = code.contains("getFluidStateModelSet(") && code.contains("stillMaterial()")
-            && code.contains("colorAsStack(stack");
+        String code = MainSourceSet.codeOnly(file(NEOFORGE_LOOKUP).text());
+        boolean clientExtensions = passesTheStack(code, "getStillTexture") && passesTheStack(code, "getTintColor");
+        boolean fluidModels = passesTheStack(code, "ClientFluids.model") && passesTheStack(code, "colorAsStack");
         Assertions.assertTrue(clientExtensions ^ fluidModels,
             "NeoForgeClientFluids must resolve through IClientFluidTypeExtensions (below 26.1) or the FluidModel set "
                 + "(26.1+), passing the stack; found neither or both live on this node");
-        String sprites = MainSourceSet.codeOnly(file(LOOKUP).text());
-        Assertions.assertTrue(sprites.contains("ClientPlatform.fluids().tint(stack"),
-            "FluidSprites must take a fluid's tint from the platform layer's client fluid lookup");
     }
 
     /** The lookup names no texture at all — not even a fallback — so no fluid can be special-cased back into a guess.

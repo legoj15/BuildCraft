@@ -9,12 +9,14 @@ import com.google.gson.GsonBuilder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import buildcraft.api.events.BCEvent;
 import buildcraft.api.events.BCEventListeners;
 import buildcraft.api.fluids.BCFluidStack;
 
 /** Posted by the reloadable-registry manager around a reload; each stage posts to its own {@link BCEventListeners}
- * {@code LISTENERS}, in the order the stages are documented below. */
-public abstract class EventBuildCraftReload {
+ * {@code LISTENERS} (and, on NeoForge, then on {@code NeoForge.EVENT_BUS}, see {@link BCEvent}), in the order the stages
+ * are documented below. */
+public abstract class EventBuildCraftReload extends BCEvent {
 
     /** The manager that is being reloaded. */
     public final IReloadableRegistryManager manager;

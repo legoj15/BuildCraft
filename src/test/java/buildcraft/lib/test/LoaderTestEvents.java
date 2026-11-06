@@ -61,6 +61,26 @@ public final class LoaderTestEvents {
     }
 
     /**
+     * A survival player's break of the block at {@code pos} reaching the point where the loader asks the block whether
+     * it goes (NeoForge's {@code onDestroyedByPlayer}, which also removes the block when it answers true; Fabric's
+     * {@code PlayerBlockBreakEvents.BEFORE}, every callback, BuildCraft's player-break guard among them): whether the
+     * break goes ahead.
+     */
+    public static boolean playerBreakGoesAhead(ServerLevel level, net.minecraft.core.BlockPos pos,
+            net.minecraft.world.entity.player.Player player) {
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        //? if neoforge && >=1.21.10 {
+        return state.getBlock().onDestroyedByPlayer(state, level, pos, player, player.getMainHandItem(), false,
+                level.getFluidState(pos));
+        //?} elif neoforge {
+        /*return state.getBlock().onDestroyedByPlayer(state, level, pos, player, false, level.getFluidState(pos));*/
+        //?} else {
+        /*return net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.BEFORE.invoker()
+                .beforeBlockBreak(level, player, pos, state, level.getBlockEntity(pos));*/
+        //?}
+    }
+
+    /**
      * A server level saved (NeoForge {@code LevelEvent.Save} for that level; Fabric has only the server-wide
      * {@code ServerLifecycleEvents.AFTER_SAVE}, which BuildCraft's save hook turns into one call per level).
      */

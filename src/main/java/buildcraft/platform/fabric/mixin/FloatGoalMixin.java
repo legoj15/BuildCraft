@@ -23,7 +23,8 @@ import buildcraft.platform.fabric.FabricFluidPhysics;
 /^*
  * NeoForge's {@code FloatGoal.canUse} for BuildCraft's fluids ({@link FabricFluidPhysics}): a mob floats only in a fluid
  * it can swim in, deeper than its jump threshold, rather than in anything the floatable tag (and so the water tag,
- * which every BuildCraft fluid is in) names.
+ * which every BuildCraft fluid is in) names. A fluid that is not BuildCraft's is still judged by that tag, as vanilla
+ * does.
  *^/
 @Mixin(FloatGoal.class)
 abstract class FloatGoalMixin {
@@ -34,7 +35,7 @@ abstract class FloatGoalMixin {
         // A goal built for another tag (a mob that floats on something else) keeps vanilla's test.
         return tag == FluidTags.ENTITY_FLOATABLE
                 ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) mob).buildcraft$fluidInteraction())
-                        .buildcraft$inSwimmableDeeperThan(depth)
+                        .buildcraft$inSwimmableDeeperThan(depth, tag)
                 : original.call(mob, depth, tag);
     }
 }

@@ -189,16 +189,11 @@ public final class NeoForgeClientHooks implements ClientHooks {
 
     //? if >=26.1 {
     private record LevelContext(PoseStack poseStack, Vec3 cameraPos,
-            net.minecraft.client.renderer.SubmitNodeCollector collector) implements BCLevelRenderContext {
+            net.minecraft.client.renderer.SubmitNodeCollector collector) implements BCLevelRenderContext {}
     //?} else {
     /*private record LevelContext(PoseStack poseStack, Vec3 cameraPos,
-            net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource) implements BCLevelRenderContext {*/
+            net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource) implements BCLevelRenderContext {}*/
     //?}
-        @Override
-        public float partialTick() {
-            return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        }
-    }
 
     /** {@link BCTooltipPreContext} over the event, read live (another listener may move or re-font the tooltip). */
     private record TooltipContext(RenderTooltipEvent.Pre event) implements BCTooltipPreContext {

@@ -13,14 +13,14 @@ import buildcraft.platform.client.ClientFluids;
 import buildcraft.platform.neoforge.NeoForgeFluids;
 
 /**
- * {@link ClientFluids} on NeoForge: on 26.1+ the fluid's baked {@code FluidModel} (its NeoForge tint source), before
- * that the fluid type's {@code IClientFluidTypeExtensions}.
+ * {@link ClientFluids} on NeoForge: on 26.1+ the fluid's baked {@code FluidModel} ({@link ClientFluids#model}, with its
+ * NeoForge tint source), before that the fluid type's {@code IClientFluidTypeExtensions}.
  */
 public final class NeoForgeClientFluids implements ClientFluids {
     @Override
     public Identifier stillTexture(BCFluidStack stack) {
         //? if >=26.1 {
-        return model(stack).stillMaterial().sprite().contents().name();
+        return ClientFluids.model(stack).stillMaterial().sprite().contents().name();
         //?} else {
         /*return net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid())
             .getStillTexture(NeoForgeFluids.toNeo(stack));*/
@@ -30,24 +30,12 @@ public final class NeoForgeClientFluids implements ClientFluids {
     @Override
     public int tint(BCFluidStack stack) {
         //? if >=26.1 {
-        net.neoforged.neoforge.client.fluid.FluidTintSource source = model(stack).fluidTintSource();
+        net.neoforged.neoforge.client.fluid.FluidTintSource source = ClientFluids.model(stack).fluidTintSource();
         return source != null ? source.colorAsStack(NeoForgeFluids.toNeo(stack)) : 0xFFFFFFFF;
         //?} else {
         /*return net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid())
             .getTintColor(NeoForgeFluids.toNeo(stack));*/
         //?}
     }
-
-    //? if >=26.1 {
-    /** The fluid's baked model, falling back to water's for a fluid with none (the set hands back a missing one). */
-    private static net.minecraft.client.renderer.block.FluidModel model(BCFluidStack stack) {
-        net.minecraft.client.renderer.block.FluidStateModelSet models =
-            net.minecraft.client.Minecraft.getInstance().getModelManager().getFluidStateModelSet();
-        net.minecraft.client.renderer.block.FluidModel model = models.get(stack.getFluid().defaultFluidState());
-        boolean missing = model.stillMaterial().sprite().contents().name()
-            .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
-        return missing ? models.get(net.minecraft.world.level.material.Fluids.WATER.defaultFluidState()) : model;
-    }
-    //?}
 }
 //?}

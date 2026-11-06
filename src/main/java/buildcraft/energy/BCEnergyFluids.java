@@ -417,7 +417,15 @@ public class BCEnergyFluids {
         public void adjustSpread(FluidFlow flow, Level level, BlockPos pos, BlockState state,
                 Map<Direction, FluidState> map) {
             FluidState belowFluid = level.getFluidState(pos.below());
-            if (dense || !belowFluid.is(FluidTags.WATER) || belowFluid.getType().isSame(flow.fluid())) {
+            if (dense || !belowFluid.is(FluidTags.WATER)) {
+                return;
+            }
+            // Only the flowing form leaves a fluid that rests on its own family to vanilla's slope choice (the "layer
+            // cake" guard). The source form always forced the spread there, as the old BCCustomSourceFluid did (every
+            // BC fluid is in minecraft:water, so a source on its own source or falling column passes the test above),
+            // and the form is the instance's, not the state's: a caller may hand the flowing form a source's state.
+            boolean sourceForm = flow.fluid().defaultFluidState().isSource();
+            if (!sourceForm && belowFluid.getType().isSame(flow.fluid())) {
                 return;
             }
             for (Direction dir : Direction.Plane.HORIZONTAL) {

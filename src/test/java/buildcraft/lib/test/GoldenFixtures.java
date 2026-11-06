@@ -41,15 +41,23 @@ import buildcraft.lib.misc.NBTUtilBC;
  * </pre>
  * (the environment variable, or the system property {@code buildcraft.golden.update=true} when the test JVM is given
  * one). Update mode writes into {@code golden/<minecraft version>/} of the source tree and passes; review the diff,
- * and fold identical per-version directories into {@code legacy}/{@code modern} by hand.
+ * and fold identical per-version directories into {@code legacy}/{@code modern} by hand. It is refused when the
+ * {@code CI} environment variable is set: a pipeline that inherited the flag would otherwise rewrite every fixture
+ * from the code under test and pass, so the goldens would guard nothing.
  */
 public final class GoldenFixtures {
     private GoldenFixtures() {}
 
     private static boolean updating() {
-        return "true".equalsIgnoreCase(System.getProperty("buildcraft.golden.update"))
+        boolean requested = "true".equalsIgnoreCase(System.getProperty("buildcraft.golden.update"))
                 || "true".equalsIgnoreCase(System.getenv("BUILDCRAFT_GOLDEN_UPDATE"))
                 || "1".equals(System.getenv("BUILDCRAFT_GOLDEN_UPDATE"));
+        String ci = System.getenv("CI");
+        if (requested && ci != null && !ci.isBlank() && !"false".equalsIgnoreCase(ci)) {
+            throw new IllegalStateException("golden update mode is requested but CI is set (CI=" + ci
+                    + "): it would rewrite the fixtures from the code under test and pass; unset one of them");
+        }
+        return requested;
     }
 
     /** The node's Minecraft version name, read reflectively because vanilla renamed the accessor in 26.x. */

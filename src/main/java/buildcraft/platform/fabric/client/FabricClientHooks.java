@@ -173,11 +173,6 @@ public final class FabricClientHooks implements ClientHooks {
         }
 
         @Override
-        public float partialTick() {
-            return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        }
-
-        @Override
         public SubmitNodeCollector collector() {
             return context.submitNodeCollector();
         }

@@ -11,14 +11,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
- * The listeners of one BuildCraft event type. BuildCraft's own events are posted here, not on a loader's event bus, so
- * the API stays loader-neutral: each event class holds its list as a {@code LISTENERS} constant, and a listener
- * subscribes with {@code SomeEvent.LISTENERS.addListener(handler)}.
+ * The listeners of one BuildCraft event type. Each event class holds its list as a {@code LISTENERS} constant, and a
+ * listener subscribes with {@code SomeEvent.LISTENERS.addListener(handler)}, on any loader.
  *
  * <p>Listeners run in the order they were added, on the posting thread. For an {@link ICancellableBCEvent}, the
  * listeners after the one that cancels it are skipped (a loader bus skips them too, unless they ask for cancelled
  * events); the poster reads {@link ICancellableBCEvent#isCanceled()} afterwards. Adding or removing a listener while
  * an event is being posted is safe and takes effect from the next post.
+ *
+ * <p>A {@link BCEvent} then goes on to the loader's own bus where it has one: on NeoForge {@link #post} posts it on
+ * {@code NeoForge.EVENT_BUS} after these listeners, with the cancel state they left, so NeoForge listeners on
+ * BuildCraft's events (an addon's {@code @SubscribeEvent}) run as they always did.
  *
  * <p>This is deliberately one typed list per event, not an event bus: there is no dispatch by type, no priority and
  * no subscriber scanning.
@@ -42,6 +45,9 @@ public final class BCEventListeners<E> {
                 break;
             }
             listener.accept(event);
+        }
+        if (event instanceof BCEvent bcEvent) {
+            BCEvent.postOnLoaderBus(bcEvent);
         }
         return event;
     }

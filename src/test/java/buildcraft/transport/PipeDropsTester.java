@@ -17,8 +17,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 
@@ -30,6 +28,7 @@ import buildcraft.core.BCCoreItems;
 import buildcraft.lib.test.DropArenaUtil;
 import buildcraft.lib.test.DropArenaUtil.Drops;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.LoaderTestEvents;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -176,27 +175,15 @@ public class PipeDropsTester {
 
             ServerLevel level = helper.getLevel();
             BlockPos absPos = helper.absolutePos(pipePos);
-            BlockState state = level.getBlockState(absPos);
 
             // Aim at the pipe's vertical center axis — the UP plug AABB spans
             // (0.25, 0.75, 0.25)–(0.75, 0.875, 0.75) which includes (0.5, ?, 0.5).
             Player player = playerLookingDownAt(helper, absPos, 0.5, 0.5, ItemStack.EMPTY);
-            FluidState fluidState = level.getFluidState(absPos);
 
-            // Click-break path: BlockPipeHolder.onDestroyedByPlayer should detect the plug hit,
-            // pop the plug item, remove the plug from the tile, and return false to cancel the
-            // pipe break.
-            // Fabric asks the same guard from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes).
-            //? if neoforge && >=1.21.10 {
-            boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                    player.getMainHandItem(), false, fluidState);
-            //?} elif fabric {
-            /*boolean removed = !((buildcraft.platform.hook.PlayerBreakGuard) state.getBlock())
-                    .keepsBlockOnPlayerBreak(state, level, absPos, player);*/
-            //?} else {
-            /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                    false, fluidState);*/
-            //?}
+            // Click-break path: BlockPipeHolder's player-break guard should detect the plug hit, pop the plug item,
+            // remove the plug from the tile, and cancel the pipe break: through the loader's own route
+            // (NeoForge's onDestroyedByPlayer, Fabric's PlayerBlockBreakEvents.BEFORE in FabricLoaderHookRoutes).
+            boolean removed = LoaderTestEvents.playerBreakGoesAhead(level, absPos, player);
 
             helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a plug");
             helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
@@ -223,22 +210,11 @@ public class PipeDropsTester {
 
             ServerLevel level = helper.getLevel();
             BlockPos absPos = helper.absolutePos(pipePos);
-            BlockState state = level.getBlockState(absPos);
 
             Player player = playerLookingDownAt(helper, absPos, 0.21875, 0.21875, ItemStack.EMPTY);
-            FluidState fluidState = level.getFluidState(absPos);
 
-            // Fabric asks the same guard from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes).
-            //? if neoforge && >=1.21.10 {
-            boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                    player.getMainHandItem(), false, fluidState);
-            //?} elif fabric {
-            /*boolean removed = !((buildcraft.platform.hook.PlayerBreakGuard) state.getBlock())
-                    .keepsBlockOnPlayerBreak(state, level, absPos, player);*/
-            //?} else {
-            /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                    false, fluidState);*/
-            //?}
+            // Through the loader's own route, as the plug test above.
+            boolean removed = LoaderTestEvents.playerBreakGoesAhead(level, absPos, player);
 
             helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a wire");
             helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);

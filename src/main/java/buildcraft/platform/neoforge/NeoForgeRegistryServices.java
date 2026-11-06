@@ -17,6 +17,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -43,6 +45,20 @@ public final class NeoForgeRegistryServices implements RegistryServices {
     @Override
     public CreativeModeTab.Builder creativeTabBuilder(ResourceKey<CreativeModeTab> after) {
         return CreativeModeTab.builder().withTabsBefore(after);
+    }
+
+    @Override
+    public boolean contributeToTabLate(ResourceKey<CreativeModeTab> tab, CreativeModeTab.DisplayItemsGenerator contribution) {
+        // LOW, the priority of BuildCraft's own tab-contents listeners before the platform layer (transport LOW,
+        // silicon LOWEST): after every normal and high priority listener. The subsystems' listeners keep their init
+        // order at one shared priority; BuildCraft's bus has no other listener for this event, so nothing else is
+        // ordered against them and one priority reproduces the old LOW/LOWEST pair.
+        NeoForgeModBus.get().addListener(EventPriority.LOW, (BuildCreativeModeTabContentsEvent event) -> {
+            if (event.getTabKey().equals(tab)) {
+                contribution.accept(event.getParameters(), event);
+            }
+        });
+        return true;
     }
 
     private static final class NeoForgeRegistrar<T> implements BCRegistrar<T> {

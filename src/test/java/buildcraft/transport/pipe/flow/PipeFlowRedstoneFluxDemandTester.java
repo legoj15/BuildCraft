@@ -5,7 +5,15 @@
  */
 package buildcraft.transport.pipe.flow;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.ItemStack;
+
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.transport.BCTransportBlocks;
+import buildcraft.transport.BCTransportItems;
+import buildcraft.transport.tile.TilePipeHolder;
 
 /** Regression guard for FE pipes feeding bufferless pass-through receivers such as AE2's
  *  Energy Acceptor.
@@ -19,7 +27,11 @@ import net.minecraft.gametest.framework.GameTestHelper;
  *
  *  <p>This pins {@link PipeFlowRedstoneFlux#queryEnergyDemand}: it must report positive demand
  *  for a zero-capacity receiver that still accepts power, and zero for one that accepts nothing.
- *  Runs in the game-test runtime because the probe opens a platform transaction. */
+ *  Runs in the game-test runtime because the probe opens a platform transaction.
+ *
+ *  <p>The probe must also leave no trace: its insert is rolled back, and on 1.21.1 the pipe's F3 "OFFERED" counter
+ *  (the power it was handed) does not count it either, since the classic receiveEnergy only counted a non-simulated
+ *  insert. The transaction nodes have always counted every insert there, so the counter is pinned on 1.21.1 only. */
 public class PipeFlowRedstoneFluxDemandTester {
 
     public static void testBufferlessReceiverReportsDemand(GameTestHelper helper) {
@@ -34,6 +46,57 @@ public class PipeFlowRedstoneFluxDemandTester {
         int none = PipeFlowRedstoneFlux.queryEnergyDemand(full, 100);
         helper.assertTrue(none == 0,
             "A receiver that accepts nothing must report zero demand; got " + none);
+
+        helper.succeed();
+    }
+
+    /** Pins that a demand probe and an aborted insert leave a section's power as it was, and on 1.21.1 that
+     *  {@code debugPowerOffered}, the figure behind the F3 overlay's "OFFERED" line, counts what a section really took
+     *  (an insert that committed), not what it said it would take when a neighbour asked how much it wanted. Rig: one
+     *  wood RF pipe (a receiver), asked for its demand like a neighbouring pipe would, then handed power for real. */
+    public static void testDemandProbeRollsBack(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        helper.setBlock(pos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_WOOD_RF.get()));
+        PipeFlowRedstoneFlux flow = (PipeFlowRedstoneFlux) tile.getPipe().getFlow();
+        flow.reconfigure();
+        PipeFlowRedstoneFlux.Section section = flow.getSection(Direction.NORTH);
+
+        int demand = PipeFlowRedstoneFlux.queryEnergyDemand(section, 50);
+        helper.assertTrue(demand == 50, "fixture: a fresh wood RF pipe must offer to take 50 FE, said " + demand);
+        //? if <1.21.10 {
+        /*helper.assertTrue(section.debugPowerOffered == 0,
+            "a demand probe is rolled back, so it must not count as power offered; the counter reads "
+                + section.debugPowerOffered);*/
+        //?}
+        helper.assertTrue(section.internalNextPower == 0,
+            "the probe's insert must be rolled back; the section holds " + section.internalNextPower);
+
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            helper.assertTrue(section.insert(30, tx) == 30, "the real insert must be accepted whole");
+            tx.commit();
+        }
+        //? if <1.21.10 {
+        /*helper.assertTrue(section.debugPowerOffered == 30,
+            "a committed insert counts once; the counter reads " + section.debugPowerOffered);*/
+        //?}
+        helper.assertTrue(section.internalNextPower == 30, "and it stays: " + section.internalNextPower);
+
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            section.insert(20, tx);
+            // aborted: the power goes back (and on 1.21.1 its count)
+        }
+        helper.assertTrue(section.internalNextPower == 30,
+            "an aborted insert's power goes back; the section holds " + section.internalNextPower);
+        //? if <1.21.10 {
+        /*helper.assertTrue(section.debugPowerOffered == 30,
+            "an aborted insert counts nothing; the counter reads " + section.debugPowerOffered);*/
+        //?}
 
         helper.succeed();
     }

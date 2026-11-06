@@ -12,7 +12,11 @@ package buildcraft.platform.config;
 public enum BCConfigType {
     /** Per-player display preferences; read only on a physical client and never synced. */
     CLIENT,
-    /** Read on both sides and synced from the server to the client. */
+    /**
+     * Read on both sides and synced from the server to the client. Only NeoForge 26.3 (FML 12's {@code SYNCED}) syncs
+     * it: before that NeoForge has no synced type this maps to, and Fabric has none either, so there it behaves as
+     * {@link #LOCAL}. Nothing registers a spec as this yet; decide the older nodes before one does.
+     */
     COMMON,
     /** Read on both sides from the global config directory and never synced (the legacy "common" behaviour). */
     LOCAL

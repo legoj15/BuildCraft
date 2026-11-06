@@ -85,7 +85,7 @@ public final class NeoForgeFluids implements FluidServices {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // callers pass the type registerFluidContent made, which is a SimpleFluidContent one
     private static DataComponentType<SimpleFluidContent> contentType(DataComponentType<?> type) {
         return (DataComponentType<SimpleFluidContent>) type;
     }

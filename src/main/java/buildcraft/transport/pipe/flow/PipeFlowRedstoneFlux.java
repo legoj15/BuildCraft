@@ -162,15 +162,21 @@ public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlow
             super(side);
         }
 
-        private final BCSnapshotJournal<Long> powerJournal = new BCSnapshotJournal<Long>() {
+        // On 1.21.1 the F3 "OFFERED" counter is journalled with the power it counts, so a rolled-back insert (every
+        // demand probe is one) counts nothing: the classic receiveEnergy counted only a non-simulated insert. The
+        // transaction nodes always counted every insert, probes and aborts included, and still do (debug only).
+        private final BCSnapshotJournal<long[]> powerJournal = new BCSnapshotJournal<long[]>() {
             @Override
-            protected Long createSnapshot() {
-                return internalNextPower;
+            protected long[] createSnapshot() {
+                return new long[] { internalNextPower, debugPowerOffered };
             }
 
             @Override
-            protected void revertToSnapshot(Long snapshot) {
-                internalNextPower = snapshot;
+            protected void revertToSnapshot(long[] snapshot) {
+                internalNextPower = snapshot[0];
+                //? if <1.21.10 {
+                /*debugPowerOffered = snapshot[1];*/
+                //?}
             }
         };
 

@@ -9,8 +9,9 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.robots.EntityRobotBase;
 
-/** Every robot event is cancellable; each subclass posts to its own {@link BCEventListeners} {@code LISTENERS}. */
-public abstract class RobotEvent implements ICancellableBCEvent {
+/** Every robot event is cancellable; each subclass posts to its own {@link BCEventListeners} {@code LISTENERS}, then
+ *  (on NeoForge) on {@code NeoForge.EVENT_BUS}, see {@link BCEvent}. */
+public abstract class RobotEvent extends BCEvent implements ICancellableBCEvent {
     public final EntityRobotBase robot;
     private boolean canceled;
 

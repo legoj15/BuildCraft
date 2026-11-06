@@ -9,7 +9,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.core.BlockPos;
 
 /** Nothing posts this yet. */
-public class PipePlacedEvent {
+public class PipePlacedEvent extends BCEvent {
     public static final BCEventListeners<PipePlacedEvent> LISTENERS = new BCEventListeners<>();
 
     public Player player;

@@ -16,6 +16,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.lib.transfer.DeferredFluidCalls;
 import buildcraft.lib.transfer.FluidHandlerAdvs;
 
 /** Unloads fluid from the robot's own tank into its station output, one bucket per pass, until the tank
@@ -25,9 +26,12 @@ import buildcraft.lib.transfer.FluidHandlerAdvs;
  *
  *  <p>The transfer is an exact, transactional move (the robot's extract and the station's insert under one
  *  {@code Transaction}, the insert asking for exactly what was extracted), and the 7.1.x rhythm of NOT
- *  resetting the wait counter between buckets is kept. The 1.21.1 branch has no transactions, so it gets
- *  the same guarantee by ordering: simulate the drain, simulate the fill, execute only when the fill
- *  accepts the whole amount — a station that refuses never costs the robot its fluid. */
+ *  resetting the wait counter between buckets is kept. A station output that can only simulate (another
+ *  mod's classic handler on 1.21.1, another mod's robot-API handler) would take its real fill only after
+ *  the robot's tank committed, so that move gets the guarantee by ordering instead, as 1.21.1 did before
+ *  the platform layer: simulate the drain, simulate the fill, execute only when the fill accepts the whole
+ *  amount, and hand back what the real fill did not take ({@link DeferredFluidCalls#fillFrom}) — a station
+ *  that refuses, or takes less than it promised, never costs the robot its fluid. */
 public class AIRobotUnloadFluids extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -82,6 +86,9 @@ public class AIRobotUnloadFluids extends AIRobot {
         int amount = Math.min(Math.min(carried.getAmount(), room), BUCKET);
         if (amount <= 0) {
             return 0;
+        }
+        if (output instanceof DeferredFluidCalls.Owner deferred) {
+            return deferred.deferredCalls().fillFrom(robotTank, carried, amount, doUnload);
         }
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int extracted = robotTank.extract(0, carried, amount, tx);

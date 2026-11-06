@@ -25,8 +25,8 @@ stonecutter {
         versions("26.3", "26.2", "26.1.2", "1.21.11", "1.21.10", "1.21.1")
         // Fabric nodes are `<mc>-fabric`: the project name (and versions/<name>/) carries the suffix, the second
         // argument is the Minecraft version stonecutter.current.version reports. The loader itself comes from that
-        // node's `loader=fabric`, never from the name. 26.3-fabric is the compile-only Phase 2 spike (#100): it
-        // builds buildcraft/platform/** alone and ships nothing (docs/platform-layer.md).
+        // node's `loader=fabric`, never from the name. 26.3-fabric builds all of BuildCraft and its own jar
+        // (#98; see buildSrc bc.fabric.gradle.kts and docs/platform-layer.md).
         version("26.3-fabric", "26.3")
         vcsVersion = "26.3"
     }

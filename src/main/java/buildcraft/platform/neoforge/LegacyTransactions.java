@@ -91,14 +91,19 @@ public final class LegacyTransactions {
                 return error;
             }
             processingRootCommitQueue = true;
-            while (!rootCommitQueue.isEmpty()) {
-                try {
-                    rootCommitQueue.remove().callOnRootCommit();
-                } catch (RuntimeException e) {
-                    error = addError(error, e);
+            try {
+                while (!rootCommitQueue.isEmpty()) {
+                    try {
+                        rootCommitQueue.remove().callOnRootCommit();
+                    } catch (RuntimeException e) {
+                        error = addError(error, e);
+                    }
                 }
+            } finally {
+                // An Error out of a callback must not leave the flag set: every later root commit on this thread
+                // would skip its callbacks. What is still queued runs at the next root commit.
+                processingRootCommitQueue = false;
             }
-            processingRootCommitQueue = false;
             return error;
         }
     }
@@ -149,15 +154,20 @@ public final class LegacyTransactions {
             manager.validateCurrent(this);
             open = false;
             RuntimeException error = null;
-            for (Journal<?> journal : journalsToClose) {
-                try {
-                    journal.onClose(this, aborted);
-                } catch (RuntimeException e) {
-                    error = addError(error, e);
+            try {
+                for (Journal<?> journal : journalsToClose) {
+                    try {
+                        journal.onClose(this, aborted);
+                    } catch (RuntimeException e) {
+                        error = addError(error, e);
+                    }
                 }
+            } finally {
+                // Even when an Error escapes a journal, this depth is closed: otherwise every later openRoot on the
+                // thread throws "a root transaction is already open".
+                journalsToClose.clear();
+                manager.currentDepth--;
             }
-            journalsToClose.clear();
-            manager.currentDepth--;
             if (manager.currentDepth == -1) {
                 error = manager.processRootCommitQueue(error);
             }
@@ -183,12 +193,15 @@ public final class LegacyTransactions {
             if (!(transaction instanceof Tx tx)) {
                 throw new IllegalArgumentException("Not a BuildCraft 1.21.1 transaction: " + transaction);
             }
-            tx.manager.validateCurrent(tx);
-            int depth = tx.depth;
+            // NeoForge's rule: any open transaction of this thread may be journalled, not only the innermost one.
+            int depth = tx.depth();
             while (snapshots.size() <= depth) {
                 snapshots.add(NO_SNAPSHOT);
             }
             if (snapshots.get(depth) == NO_SNAPSHOT) {
+                if (!tx.open) {
+                    throw new IllegalStateException("Transaction at depth " + depth + " is closed");
+                }
                 snapshots.set(depth, callbacks.createSnapshot());
                 tx.journalsToClose.add(this);
             }

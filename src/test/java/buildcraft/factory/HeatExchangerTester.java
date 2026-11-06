@@ -106,12 +106,12 @@ public class HeatExchangerTester {
     }
 
     /**
-     * Simulates one craft cycle: fill an output tank and drain an input tank inside a single
-     * transaction. When everything fits, both halves commit and the totals balance. The
-     * exchanger relies on this for fluid conservation — without the atomic transaction the
-     * old code committed each operation separately, so a simulation/execution mismatch on
-     * the fill (e.g. only 4mb fits when 5mb was promised) still drained the full 5mb from
-     * the input, leaking fluid one tick at a time.
+     * One craft step's fluid moves: fill an output tank and drain an input tank inside a single
+     * transaction; when everything fits, both halves commit and the totals balance. Production
+     * {@code craft()} is not transactional: it simulates every fill and drain with the
+     * {@code simulate} flag ({@code fillInternal(..., true)}, {@code drain(..., true)}) and
+     * executes only when all of them matched, so the flag must promise the amount and change
+     * nothing — that is pinned first, on the same tanks.
      */
     public static void testAtomicCraftCommitsBalancedFillAndDrain(GameTestHelper helper) {
         OutputTank out = new OutputTank();
@@ -119,6 +119,13 @@ public class HeatExchangerTester {
         BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
         // Pre-fill input
         in.setFluidStack(0, water.copyWithAmount(2000));
+        // The simulate flag craft() checks with: it promises the amount and mutates neither tank.
+        int simFilled = out.fillInternal(water.copyWithAmount(5), true);
+        BCFluidStack simDrained = in.drain(0, 5, true);
+        assertTrue(simFilled == 5, "simulated fill should promise 5mb, got " + simFilled);
+        assertTrue(simDrained.getAmount() == 5, "simulated drain should promise 5mb, got " + simDrained.getAmount());
+        assertTrue(out.getAmount(0) == 0, "a simulated fill must not mutate the output, got " + out.getAmount(0));
+        assertTrue(in.getAmount(0) == 2000, "a simulated drain must not mutate the input, got " + in.getAmount(0));
         // One craft step transfers 5mb
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int filled = out.insertInternal(0, water, 5, tx);
@@ -210,8 +217,8 @@ public class HeatExchangerTester {
             setup.commit();
         }
         in.setFluidStack(0, water.copyWithAmount(100));
-        // Mimic the production code: probe both halves, abort the whole transaction if
-        // either falls short of the requested amount.
+        // The transaction-rollback primitive (production craft() simulates with the flag instead):
+        // probe both halves, abort the whole transaction if either falls short of the request.
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int filled = out.insertInternal(0, water, 5, tx);
             int drained = in.extract(0, water, 5, tx);

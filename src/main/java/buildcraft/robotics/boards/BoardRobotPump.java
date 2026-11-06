@@ -24,6 +24,7 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.JobClaim;
 import buildcraft.lib.misc.BlockUtil;
@@ -74,7 +75,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
 
     /** The mB the robot is currently carrying (0 when the tank is empty). */
     public int carriedFluid() {
-        return robot.getFluidHandler().getFluidInTank(0).getAmount();
+        return FluidHandlerAdvs.storage(robot.getFluidHandler()).getAmount(0);
     }
 
     /** Refreshes {@link #fluidFilter} from the robot's LINKED (home) station — 7.1.x's

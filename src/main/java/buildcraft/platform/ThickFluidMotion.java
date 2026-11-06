@@ -21,7 +21,11 @@ import net.minecraft.world.phys.Vec3;
  * The horizontal drag runs from water's 0.8 at water's viscosity to lava's 0.5 at lava's and beyond. An entity sinks
  * by vanilla water's pull ({@code gravity / 16}) times water's density over the fluid's, so a denser fluid lets it
  * sink more slowly, never slower than vanilla's creep of 0.003 blocks a tick (smaller vertical speeds are zeroed every
- * tick). It floats only where its {@code FloatGoal} or a jump lifts it, which follow {@link FluidProperties#canSwim}.
+ * tick). It floats only where its {@code FloatGoal} or a jump lifts it, which follow {@link FluidProperties#canSwim};
+ * one exception is not this class's: vanilla 26.3's {@code LivingEntity.travelInFluid} lifts a ridden horse (the
+ * {@code can_float_while_ridden} entities) in any water-tag fluid deeper than its jump threshold, after the fluid
+ * type's {@code move}, so on NeoForge 26.3 a ridden horse in crude oil still rises. NeoForge 26.1.2 and 26.2 do not
+ * lift it, and neither does the Fabric mixin, which takes the whole of {@code travel}.
  */
 public final class ThickFluidMotion {
     /** Water's current scalar ({@code FluidType}'s default {@code motionScale}). */
@@ -59,7 +63,8 @@ public final class ThickFluidMotion {
     }
 
     /** The extra downward pull per tick in a fluid of this density: vanilla water's at water's density, less in a
-     *  denser one, lava's at most (a fluid lighter than air or than a tenth of water). */
+     *  denser one, lava's ({@code gravity / 4}) at most, which a fluid of a quarter of water's density or lighter
+     *  (and one with no density, or lighter than air) reaches. */
     public static double sinkPull(int density, double gravity) {
         double waterPull = gravity / 16.0D;
         if (density <= 0) {

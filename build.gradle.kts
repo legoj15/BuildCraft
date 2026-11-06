@@ -48,8 +48,10 @@ extensions.add(BcNode::class.java, "bcNode", BcNode(isPre1_21_11, isPre1_21_10, 
 stonecutter {
     // Loader constants: `//? if neoforge {` is live on a node whose `loader` is neoforge, `//? if fabric {` on a fabric
     // one. match() sets the key equal to `loader` true and the other false (verified against 0.9.8's
-    // ConstantContainer). Directives in common code stay about MC versions; a loader arm belongs only in a
-    // buildcraft/platform/<loader>/ file or a binder holder (docs/platform-layer.md).
+    // ConstantContainer). Directives in common main code stay about MC versions; a loader arm belongs only in a
+    // buildcraft/platform/<loader>/ file, a binder holder, or one of the documented exceptions
+    // (docs/platform-layer.md, Rules for directives). Shared test code is looser: game-test
+    // bodies carry loader arms where a loader's own route differs (docs/platform-layer.md, Phase 2c).
     constants.match(loader, "neoforge", "fabric")
     replacements {
         regex {
@@ -182,7 +184,7 @@ apply(plugin = "bc.$loader")
 // ─── Full pre-release verification ───────────────────────────────────────────
 // `fullTestSuite` is defined ONCE on the ROOT (stonecutter.gradle.kts), NOT per-node: it enumerates
 // every node from the tree and depends on each one's `nodeVerification` (registered by the convention plugin:
-// `test` + `runGameTestServer` + `buildAndCollect` on a NeoForge node; the compile, class tweaker, resources and
-// `buildAndCollect` on a Fabric one) so coverage
+// `test` + `runGameTestServer` + `buildAndCollect` on a NeoForge node; the compile, the deprecated-API guard
+// (`checkDeprecations`), class tweaker, resources, jar, `buildAndCollect` and `runGameTest` on a Fabric one) so coverage
 // can't silently narrow to a single line. Run it with `./gradlew fullTestSuite`. For a single node during
 // development, run that node's tasks directly, e.g. `:1.21.1:test :1.21.1:runGameTestServer`.

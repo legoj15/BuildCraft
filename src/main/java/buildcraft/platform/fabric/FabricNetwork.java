@@ -41,8 +41,8 @@ import buildcraft.platform.network.PacketHandler;
  * payload's version is recorded here and compared with the client's in a configuration-phase handshake, which
  * refuses a mismatched client at login as NeoForge does.
  *
- * <p><b>Size.</b> Every payload is registered with {@code registerLarge}, so Fabric splits one above vanilla's packet
- * limit (a huge blueprint in a snapshot response) and reassembles it, as NeoForge's packet splitter does for every
+ * <p><b>Size.</b> Every payload is registered with {@code registerLarge}, so Fabric splits one above its 1 MiB split
+ * threshold (under vanilla's 2 MiB frame limit; a huge blueprint in a snapshot response) and reassembles it, as NeoForge's packet splitter does for every
  * payload; a small payload goes out unsplit. The reassembled cap is {@link #MAX_PAYLOAD_BYTES} towards a client and
  * {@link #MAX_SERVERBOUND_PAYLOAD_BYTES} towards the server.
  *^/

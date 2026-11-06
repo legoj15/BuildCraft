@@ -55,7 +55,7 @@ public final class FabricNetworkVersions {
 
     /^* Payload id to version, sorted so the table goes over the wire in a stable order. *^/
     private final Map<String, String> versions = new TreeMap<>();
-    /^* Connections whose check is queued and unanswered; a reply from any other is dropped. *^/
+    /^* Connections whose check has started (the table is sent) and is unanswered; any other reply is dropped. *^/
     private final Set<ServerConfigurationPacketListenerImpl> awaiting =
             Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
@@ -91,13 +91,13 @@ public final class FabricNetworkVersions {
                     "This server needs the same version of BuildCraft Redux installed on your game."));
             return;
         }
-        awaiting.add(handler);
-        ((FabricServerConfigurationPacketListenerImpl) handler).addTask(new Task(table()));
+        ((FabricServerConfigurationPacketListenerImpl) handler)
+                .addTask(new Task(table(), () -> awaiting.add(handler)));
     }
 
     private void check(ServerConfigurationPacketListenerImpl handler, VersionTable client) {
         if (!awaiting.remove(handler)) {
-            return; // not answering a queued check: completing a task that is not current would throw
+            return; // not answering a started check: completing a task that is not current would throw
         }
         List<String> mismatches = mismatches(table().versions(), client.versions());
         if (mismatches.isEmpty()) {
@@ -132,12 +132,13 @@ public final class FabricNetworkVersions {
     }
 
     /^* The configuration task the check runs under: the login waits on it until the client's table arrives. *^/
-    private record Task(VersionTable server) implements ConfigurationTask {
+    private record Task(VersionTable server, Runnable onStart) implements ConfigurationTask {
         static final ConfigurationTask.Type TYPE =
                 new ConfigurationTask.Type(MOD_ID + ":network_versions");
 
         @Override
         public void start(Consumer<Packet<?>> sender) {
+            onStart.run();
             sender.accept(ServerConfigurationNetworking.createClientboundPacket(server));
         }
 

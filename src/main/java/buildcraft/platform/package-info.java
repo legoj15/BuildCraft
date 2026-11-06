@@ -21,8 +21,9 @@
  * implementation. The holders carry the binder's own loader directives: {@code //? if neoforge} builds the NeoForge
  * implementation, {@code //? if fabric} the Fabric one. The rest of common code names a loader constant only on a
  * patched-override arm (a member a loader's own patch gives a vanilla or BuildCraft base class, written once per
- * loader) and in the two documented loader-metadata exceptions, the recipe-viewer plugins' REI annotations and the
- * robot entity's class header; {@code docs/platform-layer.md} (Rules for directives) is the list.
+ * loader) and in a few documented exceptions (loader metadata such as the REI annotations, the NeoForge event arms of
+ * {@code BCEvent}, {@code BCFluidTank.movesNothing}); {@code docs/platform-layer.md} (Rules for directives) is the
+ * list.
  *
  * <p><b>Implementation-package rule.</b> Loader code lives in {@code buildcraft.platform.<loader>}, one package per
  * loader. Each of its files keeps its {@code package} line live and sits whole inside that loader's directive arm,

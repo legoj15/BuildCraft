@@ -11,7 +11,10 @@ import buildcraft.api.fluids.BCFluidStack;
 
 /** Client-only: how the loader draws a fluid stack (its still texture and its tint). */
 public interface ClientFluids {
-    /** The name of the still sprite the loader declares for the stack's fluid, or null if it declares none. */
+    /**
+     * The name of the still sprite the loader declares for the stack's fluid. Below 26.1 null if it declares none; on
+     * 26.1 and later water's still sprite then, the fallback {@code model} applies.
+     */
     Identifier stillTexture(BCFluidStack stack);
 
     /** The stack's ARGB tint as the loader reports it (it may carry zero alpha); opaque white for no tint. */

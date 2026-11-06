@@ -25,8 +25,9 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * would be promised again out of the handler's untouched state, and the replay would then move less than the view
  * reported. Each simulation therefore asks for what this transaction already owes of that fluid plus the new amount
  * and answers only the difference: the queued calls never add up to more than one call of their total would move.
- * A fill offered while a fill of another fluid is queued is refused, since the handler cannot be asked about both at
- * once. (A lookup hands out the view already in use for a handler, so callers share its queue; a transaction that
+ * A fill offered while a fill of another fluid is queued is refused, and so is any call while one of the other
+ * direction is queued (a queued fill can displace what a drain's simulation saw), since the handler cannot be asked
+ * about both at once. (A lookup hands out the view already in use for a handler, so callers share its queue; a transaction that
  * queued a call keeps its view in use until it closes, and a view nobody holds any more is replaced by a new one with
  * its own.)
  *
@@ -203,7 +204,7 @@ public final class DeferredFluidCalls {
         long owed = 0;
         for (Owed call : pending) {
             if (call.fill != isFill) {
-                continue;
+                return 0;
             }
             if (BCFluidStack.isSameFluidSameComponents(call.stack, resource)) {
                 owed += call.stack.getAmount();

@@ -43,8 +43,10 @@ public interface PlatformProtection {
 
     /**
      * Whether {@code player} may place a block filling {@code cells} (the first is the cell the block is placed in,
-     * any others the cells it fills too, a bed's head or a door's top): posts the placement event a player's
-     * placement would (a probe; nothing is placed) and answers whether nothing refused it. Each cell is "placed
+     * any others the cells it fills too, a bed's head or a door's top): asks what a player's placement would ask (a
+     * probe; nothing is placed) and answers whether nothing refused it. On NeoForge that is the placement event, which
+     * BuildCraft's own {@code GameHooks.onBlockPlace} listeners see as a probe; Fabric has no place event, so the
+     * protection providers alone are asked and those listeners are not told. Each cell is "placed
      * against" the block below it, as a block set down on the floor of its cell is. Because nothing has been placed,
      * the event's placed state is the cell's current one.
      *

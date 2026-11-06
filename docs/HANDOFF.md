@@ -66,7 +66,7 @@
 ## Next
 - Planned work lives in GitHub Issues (`issues.sh ready`). The Fabric items open at the time of writing: #120 (report
   the client game-test race upstream; remove `ClientGameTestThreadStartMixin` once fixed), #121 and #122 (both
-  `[unconfirmed]`), #123, #124 (dependency floors), #125 (chunk-ticket unload has a source pin only), #126 (harden the
+  `[unconfirmed]`), #123, #125 (chunk-ticket unload has a source pin only), #126 (harden the
   entity-item game test) and #130 (test the Common Protection API break, interact and damage asks). The deferred
   review-round items are filed by the orchestrator.
 - Housekeeping, tracked nowhere: stray agent worktrees under `.claude/worktrees/agent-*` can be cleaned up once their
@@ -83,9 +83,6 @@
 ## Open questions / leads (unverified)
 - Placement on Fabric is put back after the block's own side effects run, unlike NeoForge's deferred capture.
   Documented in `FabricProtection`.
-- `fabric.mod.json` dependency floors are the separate properties `fabric_loader_dep_range` and
-  `fabric_api_dep_range` in `versions/26.3-fabric/gradle.properties`. Their values still equal the pinned dev
-  versions and have not been bisected; bumping the dev pins no longer moves them.
 - The Fabric config screen (Forge Config API Port's, offered to Mod Menu) compiles but has not been opened in a client.
 - The #117 override is inert on the NeoForge 26.1.0 beta (older `move` signature); 26.1.1 is unverified.
 

@@ -86,8 +86,8 @@ Three cases leave the "same test, every node" default; pick by what the body nee
   arms inside the test class: on NeoForge nodes the method compiles to a bare `helper.succeed()`. The class lives in
   `src/test/java/buildcraft/platform/fabric/` with only `GameTestHelper` imported outside the arm.
   `FabricAdapterTester` (`fabric_foreign_storage_adapters`) is the pattern. Do not gate the `reg.accept` line on
-  `fabric`: only the Fabric build drops the manifests of tests it does not register, so the NeoForge nodes would load
-  a manifest whose function nothing registers there, and `GameTestManifestTester` reads the raw text, so it would not
+  `fabric`: only the Fabric build drops the manifests of tests it does not register, so the `>=1.21.10` NeoForge nodes
+  would load a manifest whose function nothing registers there (1.21.1 reads manifests only for registered ids), and `GameTestManifestTester` reads the raw text, so it would not
   notice. Say on the registration line that the body is empty on NeoForge.
 - **NeoForge-only on the server, because the body loads client classes** (guide recipe lookups, the Zone Planner
   overlay geometry: Fabric's dedicated game-test server refuses client classes). Put the `reg.accept` in a
@@ -104,8 +104,8 @@ Three cases leave the "same test, every node" default; pick by what the body nee
   from the same Fabric source set that compiles `BCFabricClientGameTest`, so the client-game-test entry the guard
   demands for its `//? if neoforge` registration would not compile, and without the entry the unit run fails. Make
   the body compile on Fabric (a `Platform` seam or `LoaderTestEvents`); if that is impossible, file an issue for a
-  guard allowlist before adding the test. Today the exclude list holds only `platform/neoforge/**`, the loader hooks
-  themselves.
+  guard allowlist before adding the test. Today the exclude list holds only `platform/neoforge/**` (`NeoForgeGameTestHooks`
+  and the tests of the NeoForge implementations).
 
 The Fabric build drops the manifests of the tests it does not register, so a `neoforge`-arm test needs no manifest
 change.

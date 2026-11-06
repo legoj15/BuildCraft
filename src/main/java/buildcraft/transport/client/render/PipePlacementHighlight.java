@@ -80,8 +80,9 @@ public final class PipePlacementHighlight {
                 return null;
             }
             IItemPluggable item = (IItemPluggable) pluggableStack.getItem();
-            // A stack the item would refuse (a blank facade, #129) places nothing, so promise nothing.
-            if (!item.canPlace(pluggableStack)) {
+            // A stack the item would refuse here (a blank facade, #129; a lens on a non-item pipe, a power
+            // adaptor or pulsar on an unpowered one, #139) places nothing, so promise nothing.
+            if (!item.canPlace(pluggableStack, tile, face)) {
                 return null;
             }
             return Shapes.create(item.getPlacementBoundingBox(pluggableStack, face));

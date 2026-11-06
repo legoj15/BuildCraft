@@ -85,14 +85,20 @@ public class ItemPluggableLens extends Item implements IItemPluggable {
     @Override
     public PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand) {
-        IPipe pipe = holder.getPipe();
-        if (pipe == null || !(pipe.getFlow() instanceof IFlowItems)) {
+        if (!canPlace(stack, holder, side)) {
             return null;
         }
         DyeColor colour = getColour(stack);
         boolean filter = isFilter(stack);
         SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), Blocks.GLASS.defaultBlockState());
         return new PluggableLens(BCSiliconPlugs.lens, holder, side, colour, filter);
+    }
+
+    /** Lenses only go on item pipes. */
+    @Override
+    public boolean canPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side) {
+        IPipe pipe = holder.getPipe();
+        return pipe != null && pipe.getFlow() instanceof IFlowItems;
     }
 
     @Nonnull

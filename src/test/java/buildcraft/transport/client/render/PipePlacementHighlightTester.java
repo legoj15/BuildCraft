@@ -7,8 +7,10 @@ package buildcraft.transport.client.render;
 
 import com.google.common.collect.ImmutableSet;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
@@ -25,9 +27,11 @@ import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.silicon.plug.PluggableLens;
 
+import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.plug.PluggablePowerAdaptor;
+import buildcraft.transport.tile.TilePipeHolder;
 
 /**
  * Pins the contract that drives the dynamic placement-preview outline (see
@@ -49,6 +53,13 @@ public class PipePlacementHighlightTester {
     }
 
     public static void testPowerAdaptorPreviewMatchesPlacedBox(GameTestHelper helper) {
+        // #139: the outline asks the pipe, so it must refuse where onPlace refuses (an unpowered pipe).
+        IItemPluggable adaptor = (IItemPluggable) BCTransportItems.PLUG_POWER_ADAPTOR.get();
+        ItemStack adaptorStack = new ItemStack(BCTransportItems.PLUG_POWER_ADAPTOR.get());
+        helper.assertTrue(adaptor.canPlace(adaptorStack, placePipe(helper, 1, BCTransportItems.PIPE_WOOD_ITEM.get()),
+            Direction.UP), "A power adaptor must be placeable on a wooden item pipe");
+        helper.assertTrue(!adaptor.canPlace(adaptorStack, placePipe(helper, 3, BCTransportItems.PIPE_COBBLE_ITEM.get()),
+            Direction.UP), "A power adaptor must not be placeable on a cobblestone pipe, or the outline lies");
         assertMatches(helper, "Power adaptor",
             (IItemPluggable) BCTransportItems.PLUG_POWER_ADAPTOR.get(),
             new ItemStack(BCTransportItems.PLUG_POWER_ADAPTOR.get()),
@@ -56,6 +67,13 @@ public class PipePlacementHighlightTester {
     }
 
     public static void testLensPreviewMatchesPlacedBox(GameTestHelper helper) {
+        // #139: lenses go on item pipes only, and the outline must say so.
+        IItemPluggable lens = (IItemPluggable) BCSiliconItems.PLUG_LENS.get();
+        ItemStack lensStack = new ItemStack(BCSiliconItems.PLUG_LENS.get());
+        helper.assertTrue(lens.canPlace(lensStack, placePipe(helper, 1, BCTransportItems.PIPE_COBBLE_ITEM.get()),
+            Direction.UP), "A lens must be placeable on an item pipe");
+        helper.assertTrue(!lens.canPlace(lensStack, placePipe(helper, 3, BCTransportItems.PIPE_STONE_FLUID.get()),
+            Direction.UP), "A lens must not be placeable on a fluid pipe, or the outline lies");
         assertMatches(helper, "Lens", (IItemPluggable) BCSiliconItems.PLUG_LENS.get(),
             new ItemStack(BCSiliconItems.PLUG_LENS.get()), PluggableLens::boundingBoxFor);
     }
@@ -75,6 +93,19 @@ public class PipePlacementHighlightTester {
     public static void testRobotStationPreviewMatchesPlacedBox(GameTestHelper helper) {
         assertMatches(helper, "Robot station", (IItemPluggable) BCRoboticsItems.ROBOT_STATION.get(),
             new ItemStack(BCRoboticsItems.ROBOT_STATION.get()), RobotStationPluggable::boundingBoxFor);
+    }
+
+    /** Places a pipe of {@code pipeItem} at (x, 2, 2) in the arena and returns its holder. */
+    private static TilePipeHolder placePipe(GameTestHelper helper, int x, Item pipeItem) {
+        BlockPos pos = new BlockPos(x, 2, 2);
+        helper.setBlock(pos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
+        return tile;
     }
 
     private static void assertMatches(GameTestHelper helper, String label, IItemPluggable item,

@@ -299,13 +299,15 @@ public final class FabricGameHooks implements GameHooks {
         }
     }
 
-    /^* A block change at {@code pos} is about to notify its neighbours. *^/
     /^*
      * Works out a dig speed ({@code speed}, a call of vanilla's {@code Player.getDestroySpeed}) with {@code pos} as
      * the block being dug, which {@link #fireBreakSpeed} hands the listeners: NeoForge's position-aware
-     * {@code getDestroySpeed(state, pos)}.
+     * {@code getDestroySpeed(state, pos)}. With no listener there is nobody to tell, so the position is not kept.
      *^/
     public static float digSpeedAt(@Nullable BlockPos pos, java.util.function.DoubleSupplier speed) {
+        if (BREAK_SPEED.isEmpty()) {
+            return (float) speed.getAsDouble();
+        }
         BlockPos outer = DIG_POS.get();
         DIG_POS.set(pos);
         try {
@@ -328,6 +330,7 @@ public final class FabricGameHooks implements GameHooks {
         return speed;
     }
 
+    /^* A block change at {@code pos} is about to notify its neighbours. *^/
     public static void fireNeighborNotify(Level level, BlockPos pos, BlockState state) {
         for (NeighborNotify listener : NEIGHBOR_NOTIFY) {
             listener.onNeighborNotify(level, pos, state);

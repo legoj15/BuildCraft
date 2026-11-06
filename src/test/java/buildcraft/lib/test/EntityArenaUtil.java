@@ -475,14 +475,19 @@ public final class EntityArenaUtil {
         //?}
     }
 
-    /** Fills a BuildCraft fluid handler (the robot API's simulate-flag shape). */
+    /** Fills a BuildCraft fluid handler (the robot API's simulate-flag shape): it goes into whichever tank takes it,
+     *  as {@code fill} does, so {@link #tankAmount} reads the total of every tank rather than one chosen tank. */
     public static int fillTank(IFluidHandlerAdv handler, Fluid fluid, int amount) {
         return handler.fill(new buildcraft.api.fluids.BCFluidStack(fluid, amount), false);
     }
 
-    /** @return the contents of tank 0, in mB. */
+    /** @return the contents of every tank of the handler together, in mB (a single-tank handler's one tank). */
     public static long tankAmount(IFluidHandlerAdv handler) {
-        return handler.getFluidInTank(0).getAmount();
+        long total = 0;
+        for (int tank = 0; tank < handler.getTanks(); tank++) {
+            total += handler.getFluidInTank(tank).getAmount();
+        }
+        return total;
     }
 
     /** Every loose {@link ItemEntity} within {@code radius} of {@code relPos}. Uses

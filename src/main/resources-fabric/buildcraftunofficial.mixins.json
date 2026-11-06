@@ -4,6 +4,7 @@
   "package": "buildcraft.platform.fabric.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "AbstractBoatMixin",
     "BlockBehaviourMixin",
     "BlockDropsMixin",
     "BlockExperienceMixin",
@@ -19,6 +20,7 @@
     "FloatGoalMixin",
     "FlowingFluidAccessor",
     "InventoryMixin",
+    "ItemEntityMixin",
     "LavaFluidMixin",
     "LevelMixin",
     "LivingEntityMixin",

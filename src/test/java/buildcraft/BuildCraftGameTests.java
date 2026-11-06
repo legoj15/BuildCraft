@@ -169,6 +169,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_mob_wades_and_sinks", () -> buildcraft.energy.FluidPhysicsTest::crudeOilLetsMobsWadeAndSink);
+        reg.accept("buildcraftunofficial:crude_oil_floats_items", () -> buildcraft.energy.FluidPhysicsTest::crudeOilFloatsItems);
+        reg.accept("buildcraftunofficial:crude_oil_does_not_float_boats", () -> buildcraft.energy.FluidPhysicsTest::crudeOilDoesNotFloatBoats);
+        reg.accept("buildcraftunofficial:crude_oil_current_pushes_items", () -> buildcraft.energy.FluidPhysicsTest::crudeOilCurrentPushesItems);
         reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
         reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
         reg.accept("buildcraftunofficial:tank_of_gas_detonates", () -> buildcraft.energy.ContainedFluidDetonationTester::testTankOfGasDetonates);

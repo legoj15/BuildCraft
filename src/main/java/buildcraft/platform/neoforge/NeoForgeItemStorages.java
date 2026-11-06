@@ -22,6 +22,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import buildcraft.api.core.BCLog;
+import buildcraft.lib.transfer.AdapterCache;
 import buildcraft.platform.transfer.BCModifiableItemStorage;
 import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransaction;
@@ -38,12 +39,17 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * <p><b>1.21.1.</b> A BuildCraft storage seen as an {@code IItemHandler} runs each call in a transaction of its own
  * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates. A classic handler seen as a
  * {@link BCItemStorage} can only simulate inside a transaction, so its view answers every insert and extract by
- * simulating and replays the real calls, in order, when the root transaction commits (none if it aborts). Two changes
- * to the same slot in one transaction are each simulated against the slot as it was; BuildCraft's callers touch a
- * slot once per transaction. A {@link BCModifiableItemStorage} (the plain BuildCraft inventories, and the empty storage
- * the Quarry and Mining Well expose in place of {@code EmptyItemHandler}) goes out as an {@code IItemHandlerModifiable},
- * as it always did: NeoForge's own {@code SlotItemHandler} casts to it. Its {@code getStackInSlot} is the stack the
- * storage holds, not a copy, as BuildCraft's classic handlers returned it.
+ * simulating and replays the real calls, in order, when the root transaction commits (none if it aborts). Each
+ * direction hands out one adapter per wrapped object while it is held ({@link AdapterCache}), so every lookup that
+ * answers the same handler object inside one transaction shares one queue, and a second call on a slot is simulated
+ * together with what the queue already owes it: the slot is never promised twice. A call on a slot that owes the
+ * other direction, or another item, is refused, since the handler cannot be asked about both at once. (A provider
+ * that answers each capability query with a fresh wrapper, as NeoForge's vanilla-container {@code InvWrapper} does,
+ * gives each lookup its own view and queue; the fluid arm shares that limit.) A {@link BCModifiableItemStorage} (the
+ * plain BuildCraft inventories, and the empty storage the Quarry and Mining Well expose in place of
+ * {@code EmptyItemHandler}) goes out as an {@code IItemHandlerModifiable}, as it always did: NeoForge's own
+ * {@code SlotItemHandler} casts to it. Its {@code getStackInSlot} is the stack the storage holds, not a copy, as
+ * BuildCraft's classic handlers returned it.
  */
 public final class NeoForgeItemStorages {
     private NeoForgeItemStorages() {}
@@ -159,7 +165,12 @@ public final class NeoForgeItemStorages {
         }
     }
     //?} else {
-    /*@Nullable
+    /*private static final AdapterCache<BCItemStorage, ToClassic> TO_CLASSIC = new AdapterCache<>(
+        storage -> storage instanceof BCModifiableItemStorage modifiable
+            ? new ToClassicModifiable(modifiable) : new ToClassic(storage));
+    private static final AdapterCache<IItemHandler, FromClassic> FROM_CLASSIC = new AdapterCache<>(FromClassic::new);
+
+    @Nullable
     public static IItemHandler toNeo(@Nullable BCItemStorage storage) {
         if (storage == null) {
             return null;
@@ -167,10 +178,7 @@ public final class NeoForgeItemStorages {
         if (storage instanceof FromClassic view) {
             return view.handler;
         }
-        if (storage instanceof BCModifiableItemStorage modifiable) {
-            return new ToClassicModifiable(modifiable);
-        }
-        return new ToClassic(storage);
+        return TO_CLASSIC.get(storage);
     }
 
     @Nullable
@@ -181,7 +189,7 @@ public final class NeoForgeItemStorages {
         if (handler instanceof ToClassic adapter) {
             return adapter.storage;
         }
-        return new FromClassic(handler);
+        return FROM_CLASSIC.get(handler);
     }
 
     private static class ToClassic implements IItemHandler {
@@ -280,8 +288,13 @@ public final class NeoForgeItemStorages {
     }
 
     private static final class FromClassic implements BCItemStorage {
+        /^* One real call owed to the handler at the root commit. ^/
+        private record Owed(int slot, boolean insert, ItemStack stack) {}
+
         final IItemHandler handler;
-        private final List<Runnable> pending = new ArrayList<>();
+        // An open transaction holds the journal, and through it this view, so a lookup of the same handler inside
+        // that transaction gets this queue again instead of a fresh view with nothing owed.
+        private final List<Owed> pending = new ArrayList<>();
         private final BCSnapshotJournal<Integer> journal = new BCSnapshotJournal<>() {
             @Override
             protected Integer createSnapshot() {
@@ -295,14 +308,57 @@ public final class NeoForgeItemStorages {
 
             @Override
             protected void onRootCommit(Integer originalState) {
-                List<Runnable> replay = new ArrayList<>(pending);
+                List<Owed> replay = new ArrayList<>(pending);
                 pending.clear();
-                replay.forEach(Runnable::run);
+                replay.forEach(FromClassic.this::replay);
             }
         };
 
         FromClassic(IItemHandler handler) {
             this.handler = handler;
+        }
+
+        private void replay(Owed owed) {
+            int count = owed.stack.getCount();
+            if (owed.insert) {
+                ItemStack rest = handler.insertItem(owed.slot, owed.stack.copy(), false);
+                if (!rest.isEmpty()) {
+                    BCLog.logger.warn("[platform] {} refused {} of a simulated insert into slot {}: {} lost",
+                        handler, rest.getCount(), owed.slot, rest);
+                }
+            } else {
+                ItemStack real = handler.extractItem(owed.slot, count, false);
+                if (real.getCount() != count) {
+                    BCLog.logger.warn("[platform] {} gave {} of a simulated extract of {} from slot {}",
+                        handler, real.getCount(), count, owed.slot);
+                }
+            }
+        }
+
+        /^* What the queue already owes {@code slot} in this direction, or -1 when it owes the other direction or
+         *  another item there: the handler's simulation cannot answer for both at once. ^/
+        private int owed(int slot, boolean insert, ItemStack resource) {
+            int owed = 0;
+            for (Owed call : pending) {
+                if (call.slot != slot) {
+                    continue;
+                }
+                if (call.insert != insert || !ItemStack.isSameItemSameComponents(call.stack, resource)) {
+                    return -1;
+                }
+                owed += call.stack.getCount();
+            }
+            return owed;
+        }
+
+        private void promise(int slot, boolean insert, ItemStack resource, int amount,
+            BCTransactionContext transaction) {
+            journal.updateSnapshots(transaction);
+            pending.add(new Owed(slot, insert, resource.copyWithCount(amount)));
+        }
+
+        private static int plus(int owed, int amount) {
+            return (int) Math.min((long) owed + amount, Integer.MAX_VALUE);
         }
 
         @Override
@@ -331,18 +387,15 @@ public final class NeoForgeItemStorages {
             if (resource.isEmpty() || amount <= 0) {
                 return 0;
             }
-            ItemStack left = handler.insertItem(index, resource.copyWithCount(amount), true);
-            int inserted = amount - left.getCount();
+            int owed = owed(index, true, resource);
+            if (owed < 0) {
+                return 0;
+            }
+            int asked = plus(owed, amount);
+            int taken = asked - handler.insertItem(index, resource.copyWithCount(asked), true).getCount();
+            int inserted = Math.min(amount, Math.max(0, taken - owed));
             if (inserted > 0) {
-                journal.updateSnapshots(transaction);
-                ItemStack real = resource.copyWithCount(inserted);
-                pending.add(() -> {
-                    ItemStack rest = handler.insertItem(index, real, false);
-                    if (!rest.isEmpty()) {
-                        BCLog.logger.warn("[platform] {} refused {} of a simulated insert into slot {}: {} lost",
-                            handler, rest.getCount(), index, rest);
-                    }
-                });
+                promise(index, true, resource, inserted, transaction);
             }
             return inserted;
         }
@@ -356,19 +409,18 @@ public final class NeoForgeItemStorages {
             if (current.isEmpty() || !ItemStack.isSameItemSameComponents(current, resource)) {
                 return 0;
             }
-            ItemStack simulated = handler.extractItem(index, amount, true);
+            int owed = owed(index, false, resource);
+            if (owed < 0) {
+                return 0;
+            }
+            ItemStack simulated = handler.extractItem(index, plus(owed, amount), true);
             if (simulated.isEmpty() || !ItemStack.isSameItemSameComponents(simulated, resource)) {
                 return 0;
             }
-            int extracted = simulated.getCount();
-            journal.updateSnapshots(transaction);
-            pending.add(() -> {
-                ItemStack real = handler.extractItem(index, extracted, false);
-                if (real.getCount() != extracted) {
-                    BCLog.logger.warn("[platform] {} gave {} of a simulated extract of {} from slot {}",
-                        handler, real.getCount(), extracted, index);
-                }
-            });
+            int extracted = Math.min(amount, Math.max(0, simulated.getCount() - owed));
+            if (extracted > 0) {
+                promise(index, false, resource, extracted, transaction);
+            }
             return extracted;
         }
     }

@@ -323,7 +323,7 @@ public final class LoaderTestEvents {
         };
         //?} else {
         /*net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
-                "buildcraftunofficial_gametest", "provider_claim_" + FabricPlacementClaims.IDS.incrementAndGet());
+                "buildcraftunofficial_gametest", "provider_claim_" + FabricProviderClaims.IDS.incrementAndGet());
         eu.pb4.common.protection.api.CommonProtection.register(id,
                 new FabricProviderClaims(breakRefused, interactRefused, damageRefused));
         return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
@@ -484,6 +484,8 @@ public final class LoaderTestEvents {
     private record FabricProviderClaims(java.util.function.Predicate<net.minecraft.core.BlockPos> breakRefused,
             java.util.function.Predicate<net.minecraft.core.BlockPos> interactRefused,
             java.util.function.Predicate<Entity> damageRefused) implements eu.pb4.common.protection.api.ProtectionProvider {
+        static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
+
         @Override
         public boolean isProtected(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
             return false;
@@ -510,6 +512,27 @@ public final class LoaderTestEvents {
         public boolean canDamageEntity(net.minecraft.world.level.Level level, Entity entity,
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
             return !damageRefused.test(entity);
+        }
+
+        // The API's defaults for these fall back on the break and damage answers above; this claim refuses none of
+        // them, as its NeoForge arm posts nothing for them.
+        @Override
+        public boolean canPlaceBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return true;
+        }
+
+        @Override
+        public boolean canExplodeBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.world.level.Explosion explosion, net.minecraft.server.players.NameAndId profile,
+                net.minecraft.world.entity.player.Player player) {
+            return true;
+        }
+
+        @Override
+        public boolean canInteractEntity(net.minecraft.world.level.Level level, Entity entity,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return true;
         }
     }
 

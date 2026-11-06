@@ -34,7 +34,7 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * cannot afford: the other side already committed. {@link #drainInto} and {@link #fillFrom} make such a move outside
  * any transaction in the order the classic handlers needed before the platform layer (both halves simulated, then
  * the handler's real call, then the other side's, and what that side cannot take handed back), so a handler whose
- * real call breaks its own simulation can neither create nor destroy fluid.
+ * real call breaks its own simulation cannot create fluid, and a hand-back it refuses is logged, never silent.
  */
 public final class DeferredFluidCalls {
     /** A storage view whose fluid calls are owed to a handler that can only simulate. */
@@ -127,7 +127,8 @@ public final class DeferredFluidCalls {
         }
         int filled = insertNow(into, resource, extracted, true);
         if (filled < extracted) {
-            fill.apply(resource.copyWithAmount(extracted - filled), false);
+            warnShortHandBack(handler, extracted - filled,
+                fill.apply(resource.copyWithAmount(extracted - filled), false), resource);
         }
         return filled;
     }
@@ -154,9 +155,16 @@ public final class DeferredFluidCalls {
         }
         int filled = fill.apply(resource.copyWithAmount(extracted), false);
         if (filled < extracted) {
-            insertNow(from, resource, extracted - filled, true);
+            warnShortHandBack(from, extracted - filled, insertNow(from, resource, extracted - filled, true), resource);
         }
         return filled;
+    }
+
+    /** A hand-back the giving side would not fully re-take loses the rest: say so, as a short replay does. */
+    private static void warnShortHandBack(Object to, int owed, int taken, BCFluidStack resource) {
+        if (taken != owed) {
+            BCLog.logger.warn("[transfer] {} took back {} of the {} of {} it gave", to, taken, owed, resource);
+        }
     }
 
     private void checkNothingOwed() {

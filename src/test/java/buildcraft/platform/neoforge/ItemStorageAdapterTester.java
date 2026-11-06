@@ -168,6 +168,33 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         assertEquals(30, classic.getStackInSlot(1).getCount(), "the root commit replayed the insert");
     }
 
+    /^* A classic handler's simulations cannot see what the open transaction already owes it, so each lookup of the
+     *  handler used to be a fresh view and each insert was promised against the untouched slot: two promises of the
+     *  same free space, and the replay lost one with only a log line. Every lookup is now one view, and a second
+     *  call on a slot gets only what the first left. ^/
+    @Test
+    public void aClassicSlotIsNeverPromisedTwiceInOneTransaction() {
+        net.neoforged.neoforge.items.ItemStackHandler classic = new net.neoforged.neoforge.items.ItemStackHandler(1);
+        classic.setStackInSlot(0, new ItemStack(Items.DIRT, 54));
+        BCItemStorage first = NeoForgeItemStorages.fromNeo(classic);
+        BCItemStorage second = NeoForgeItemStorages.fromNeo(classic);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(10, first.insert(0, new ItemStack(Items.DIRT), 10, tx));
+            assertEquals(0, second.insert(0, new ItemStack(Items.DIRT), 10, tx), "the 10 free were already promised");
+            assertEquals(0, first.insert(0, new ItemStack(Items.DIRT), 10, tx));
+            tx.commit();
+        }
+        assertEquals(64, classic.getStackInSlot(0).getCount());
+
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(40, first.extract(0, new ItemStack(Items.DIRT), 40, tx));
+            assertEquals(24, second.extract(0, new ItemStack(Items.DIRT), 40, tx), "64 held, 40 already promised");
+            assertEquals(0, first.insert(0, new ItemStack(Items.DIRT), 1, tx), "an extract is owed on the slot");
+            tx.commit();
+        }
+        assertTrue(classic.getStackInSlot(0).isEmpty(), "every promise replayed in full");
+    }
+
     @Test
     public void aBuildCraftStorageSeenAsAClassicHandler() {
         ItemHandlerSimple handler = simple(ItemStack.EMPTY);

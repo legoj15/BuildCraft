@@ -5,6 +5,7 @@
  */
 package buildcraft.platform.neoforge;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -27,6 +28,9 @@ import buildcraft.core.statements.TriggerFluidContainerLevel;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCTransaction;
 *///?}
 
 import buildcraft.VanillaSetupBaseTester;
@@ -84,5 +88,28 @@ public class NeoForgeAdapterIdentityTest extends VanillaSetupBaseTester {
         assertFalse(TriggerFluidContainerLevel.isBelow(NeoForgeFluidStorages.fromNeo(infinite), BCFluidStack.EMPTY,
             0.5f), "a tank whose capacity narrows to -1 is skipped, as before the platform layer");
     }
-    //?}
+    //?} else {
+    /*/^* A classic FE buffer can only simulate, and each simulation sees the buffer untouched: without the owed
+     *  headroom two receives in one transaction were both promised the same free space and the replay lost one. The
+     *  buffer moves at most 30 FE per call, so a second call is owed its own 30, not what one call of the total
+     *  would move. ^/
+    @Test
+    public void aClassicEnergyBufferIsNeverPromisedTwiceInOneTransaction() {
+        EnergyStorage classic = new EnergyStorage(100, 30, 30, 60);
+        BCEnergyStorage first = NeoForgeEnergyStorages.fromNeo(classic);
+        BCEnergyStorage second = NeoForgeEnergyStorages.fromNeo(classic);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(30, first.insert(30, tx));
+            assertEquals(10, second.insert(30, tx), "40 FE of room, 30 already promised");
+            tx.commit();
+        }
+        assertEquals(100, classic.getEnergyStored());
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(30, first.extract(70, tx));
+            assertEquals(30, second.extract(70, tx), "each call moves at most 30, and 70 is still unpromised");
+            tx.commit();
+        }
+        assertEquals(40, classic.getEnergyStored(), "every promise replayed in full");
+    }
+    *///?}
 }

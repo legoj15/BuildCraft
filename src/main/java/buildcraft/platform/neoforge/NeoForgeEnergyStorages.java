@@ -189,8 +189,11 @@ public final class NeoForgeEnergyStorages {
     }
 
     private static final class FromClassic implements BCEnergyStorage {
+        /^* One real call owed to the handler at the root commit. ^/
+        private record Owed(boolean insert, int amount) {}
+
         final IEnergyStorage handler;
-        private final List<Runnable> pending = new ArrayList<>();
+        private final List<Owed> pending = new ArrayList<>();
         private final BCSnapshotJournal<Integer> journal = new BCSnapshotJournal<>() {
             @Override
             protected Integer createSnapshot() {
@@ -204,14 +207,39 @@ public final class NeoForgeEnergyStorages {
 
             @Override
             protected void onRootCommit(Integer originalState) {
-                List<Runnable> replay = new ArrayList<>(pending);
+                List<Owed> replay = new ArrayList<>(pending);
                 pending.clear();
-                replay.forEach(Runnable::run);
+                replay.forEach(FromClassic.this::replay);
             }
         };
 
         FromClassic(IEnergyStorage handler) {
             this.handler = handler;
+        }
+
+        private void replay(Owed owed) {
+            if (owed.insert) {
+                int real = handler.receiveEnergy(owed.amount, false);
+                if (real != owed.amount) {
+                    BCLog.logger.warn("[platform] {} took {} of a simulated insert of {} FE", handler, real, owed.amount);
+                }
+            } else {
+                int real = handler.extractEnergy(owed.amount, false);
+                if (real != owed.amount) {
+                    BCLog.logger.warn("[platform] {} gave {} of a simulated extract of {} FE", handler, real, owed.amount);
+                }
+            }
+        }
+
+        /^* The FE the queue already owes the handler in one direction. ^/
+        private long owed(boolean insert) {
+            long owed = 0;
+            for (Owed call : pending) {
+                if (call.insert == insert) {
+                    owed += call.amount;
+                }
+            }
+            return owed;
         }
 
         @Override
@@ -229,15 +257,18 @@ public final class NeoForgeEnergyStorages {
             if (amount <= 0) {
                 return 0;
             }
+            // Each call is simulated alone (an FE handler caps every call at its own rate, so a second call may take as
+            // much as the first), then capped by the headroom the queue has not already promised away. Nothing owed
+            // yet, the simulation stands alone, as it did: a pass-through handler may read a capacity of 0.
             int received = handler.receiveEnergy(amount, true);
+            long owed = owed(true);
+            if (owed > 0) {
+                long room = (long) handler.getMaxEnergyStored() - handler.getEnergyStored() - owed;
+                received = (int) Math.min(received, Math.max(0, room));
+            }
             if (received > 0) {
                 journal.updateSnapshots(transaction);
-                pending.add(() -> {
-                    int real = handler.receiveEnergy(received, false);
-                    if (real != received) {
-                        BCLog.logger.warn("[platform] {} took {} of a simulated insert of {} FE", handler, real, received);
-                    }
-                });
+                pending.add(new Owed(true, received));
             }
             return received;
         }
@@ -248,14 +279,13 @@ public final class NeoForgeEnergyStorages {
                 return 0;
             }
             int extracted = handler.extractEnergy(amount, true);
+            long owed = owed(false);
+            if (owed > 0) {
+                extracted = (int) Math.min(extracted, Math.max(0, (long) handler.getEnergyStored() - owed));
+            }
             if (extracted > 0) {
                 journal.updateSnapshots(transaction);
-                pending.add(() -> {
-                    int real = handler.extractEnergy(extracted, false);
-                    if (real != extracted) {
-                        BCLog.logger.warn("[platform] {} gave {} of a simulated extract of {} FE", handler, real, extracted);
-                    }
-                });
+                pending.add(new Owed(false, extracted));
             }
             return extracted;
         }

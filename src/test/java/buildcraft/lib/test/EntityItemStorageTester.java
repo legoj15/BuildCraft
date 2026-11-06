@@ -8,6 +8,7 @@ package buildcraft.lib.test;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -25,17 +26,41 @@ import buildcraft.platform.transfer.TransferAccess;
 public final class EntityItemStorageTester {
     private EntityItemStorageTester() {}
 
-    private static int insert(BCItemStorage storage, int slot, ItemStack stack) {
+    /** Every living entity's storage index to the equipment slot it reaches. */
+    private static final EquipmentSlot[] SLOT_ORDER = {
+        EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
+        EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD,
+    };
+    /**
+     * An item each {@link #SLOT_ORDER} slot can equip: vanilla's {@code isEquippableInSlot} lets an item with no
+     * {@code equippable} component into the main hand only, so the off hand gets a shield.
+     */
+    private static final Item[] FITS = {
+        Items.STICK, Items.SHIELD,
+        Items.IRON_BOOTS, Items.IRON_LEGGINGS, Items.IRON_CHESTPLATE, Items.IRON_HELMET,
+    };
+    /** The head slot's index: last in {@link #SLOT_ORDER}. */
+    private static final int HEAD = SLOT_ORDER.length - 1;
+
+    /**
+     * Offers a fresh copy of {@code template}, so no call can see what an earlier one did to its stack: the storage
+     * may mutate what it is handed (NeoForge's raw {@code InvWrapper.insertItem} does), and the stack is both the
+     * filter and the payload.
+     */
+    private static int insert(BCItemStorage storage, int slot, ItemStack template) {
+        ItemStack offer = template.copy();
         try (BCTransaction tx = BCTransaction.openRoot()) {
-            int moved = storage.insert(slot, stack, stack.getCount(), tx);
+            int moved = storage.insert(slot, offer, offer.getCount(), tx);
             tx.commit();
             return moved;
         }
     }
 
-    private static int extract(BCItemStorage storage, int slot, ItemStack stack) {
+    /** Asks for a fresh copy of {@code template} back, for the same reason as {@link #insert}. */
+    private static int extract(BCItemStorage storage, int slot, ItemStack template) {
+        ItemStack request = template.copy();
         try (BCTransaction tx = BCTransaction.openRoot()) {
-            int moved = storage.extract(slot, stack, stack.getCount(), tx);
+            int moved = storage.extract(slot, request, request.getCount(), tx);
             tx.commit();
             return moved;
         }
@@ -90,7 +115,8 @@ public final class EntityItemStorageTester {
 
     /**
      * Every other living entity is its two hands then its four armour slots, each taking only what the entity can
-     * equip there. The equippability filter is NeoForge 21.10+ and Fabric: 1.21.1's wrappers insert into any
+     * equip there (the main hand anything not equippable elsewhere, the off hand and armour only their own
+     * equippables). The equippability filter is NeoForge 21.10+ and Fabric: 1.21.1's wrappers insert into any
      * equipment slot without one.
      */
     private static void equipmentSlots(GameTestHelper helper, Mob zombie) {
@@ -103,45 +129,45 @@ public final class EntityItemStorageTester {
 
         BCItemStorage storage = TransferAccess.findItem(zombie);
         helper.assertTrue(storage != null, "a zombie has an item storage");
-        helper.assertTrue(storage.size() == 6, "two hands then four armour slots (size " + storage.size() + ")");
+        helper.assertTrue(storage.size() == SLOT_ORDER.length,
+                "two hands then four armour slots (size " + storage.size() + ")");
 
-        ItemStack stick = new ItemStack(Items.STICK);
-        helper.assertTrue(insert(storage, 0, stick) == 1, "the first hand slot takes a stick");
-        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.STICK),
-                "the first slot is the main hand");
-        helper.assertTrue(extract(storage, 0, stick) == 1, "extraction from the hand returns its stack");
-        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty(), "the hand is empty again");
+        // The order is NeoForge's (hands, then armour in EquipmentSlot order) on every line, and the Fabric twin's:
+        // each index round-trips an item that fits there and must land in exactly that equipment slot.
+        for (int i = 0; i < SLOT_ORDER.length; i++) {
+            EquipmentSlot expected = SLOT_ORDER[i];
+            ItemStack fits = new ItemStack(FITS[i]);
+            helper.assertTrue(insert(storage, i, fits) == 1, "slot " + i + " takes " + fits.getItem());
+            helper.assertTrue(zombie.getItemBySlot(expected).is(FITS[i]), "slot " + i + " is " + expected);
+            for (EquipmentSlot other : SLOT_ORDER) {
+                helper.assertTrue(other == expected || zombie.getItemBySlot(other).isEmpty(),
+                        "slot " + i + " equipped nothing in " + other);
+            }
+            helper.assertTrue(storage.getStack(i).is(FITS[i]), "the storage reads slot " + i + " back");
+            helper.assertTrue(extract(storage, i, fits) == 1, "slot " + i + " gives its item back");
+            helper.assertTrue(zombie.getItemBySlot(expected).isEmpty(), expected + " is empty again");
+        }
 
         //? if >=1.21.10 {
+        ItemStack stick = new ItemStack(Items.STICK);
+        for (int i = 1; i < SLOT_ORDER.length; i++) {
+            helper.assertTrue(insert(storage, i, stick) == 0, "slot " + i + " (" + SLOT_ORDER[i] + ") refuses a stick");
+            helper.assertTrue(zombie.getItemBySlot(SLOT_ORDER[i]).isEmpty(), "no stick was equipped in slot " + i);
+        }
+        // An armour item fits only its own slot, not even the main hand.
         ItemStack helmet = new ItemStack(Items.IRON_HELMET);
-        for (int i = 2; i < 6; i++) {
-            helper.assertTrue(insert(storage, i, stick) == 0, "armour slot " + i + " refuses a stick");
+        for (int i = 0; i < HEAD; i++) {
+            helper.assertTrue(insert(storage, i, helmet) == 0,
+                    "slot " + i + " (" + SLOT_ORDER[i] + ") refuses a helmet");
+            helper.assertTrue(zombie.getItemBySlot(SLOT_ORDER[i]).isEmpty(), "no helmet was equipped in slot " + i);
         }
-        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "no stick was equipped");
-
-        int accepting = -1;
-        for (int i = 0; i < 6; i++) {
-            if (insert(storage, i, helmet) == 1) {
-                helper.assertTrue(accepting == -1, "only one slot takes the helmet (also slot " + i + ")");
-                accepting = i;
-                // Take it straight out again so the next slot is tried on an empty entity.
-                helper.assertTrue(extract(storage, i, helmet) == 1, "the helmet comes back out of slot " + i);
-            }
-        }
-        helper.assertTrue(accepting >= 2, "the helmet goes to an armour slot (slot " + accepting + ")");
-        helper.assertTrue(insert(storage, accepting, helmet) == 1, "the helmet goes in again");
-        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
-                "the helmet is in the head slot");
-        helper.assertTrue(storage.getStack(accepting).is(Items.IRON_HELMET), "the storage reads it back");
-        helper.assertTrue(extract(storage, accepting, helmet) == 1, "the helmet comes back out of the head slot");
-        helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "the head slot is empty again");
 
         // An armour slot holds one item however many fit its stack (NeoForge's wrapper caps it at the slot's count
         // limit; a hand has none): eight carved pumpkins offered to the head slot, one goes on.
         ItemStack pumpkins = new ItemStack(Items.CARVED_PUMPKIN, 8);
-        helper.assertTrue(insert(storage, accepting, pumpkins) == 1, "the head slot takes one of eight pumpkins");
+        helper.assertTrue(insert(storage, HEAD, pumpkins) == 1, "the head slot takes one of eight pumpkins");
         helper.assertTrue(zombie.getItemBySlot(EquipmentSlot.HEAD).getCount() == 1, "and holds one");
-        helper.assertTrue(extract(storage, accepting, pumpkins) == 1, "the pumpkin comes back out");
+        helper.assertTrue(extract(storage, HEAD, pumpkins) == 1, "the pumpkin comes back out");
         ItemStack sticks = new ItemStack(Items.STICK, 20);
         helper.assertTrue(insert(storage, 0, sticks) == 20, "a hand has no count limit, only the stack's");
         helper.assertTrue(extract(storage, 0, sticks) == 20, "the sticks come back out of the hand");

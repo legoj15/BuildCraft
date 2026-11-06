@@ -19,6 +19,7 @@ import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.lib.transfer.DeferredFluidCalls;
 import buildcraft.lib.transfer.FluidHandlerAdvs;
+import buildcraft.lib.transfer.FluidStorageUtil;
 
 /** Loads fluid from the robot's station input into the robot's own tank, one bucket per pass, until the
  *  tank is full or the station runs dry. Ported from 7.1.x {@code AIRobotLoadFluids} (7.1.x moved the
@@ -104,8 +105,9 @@ public class AIRobotLoadFluids extends AIRobot {
         if (amount <= 0) {
             return 0;
         }
-        if (input instanceof DeferredFluidCalls.Owner deferred) {
-            return deferred.deferredCalls().drainInto(robotTank, resource, amount, doLoad);
+        DeferredFluidCalls deferred = FluidStorageUtil.deferredCalls(input, false);
+        if (deferred != null) {
+            return deferred.drainInto(robotTank, resource, amount, doLoad);
         }
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = robotTank.insert(0, resource, amount, tx);

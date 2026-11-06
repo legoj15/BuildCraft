@@ -31,6 +31,7 @@ import buildcraft.api.transport.IStripesActivator;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.test.CapabilityOnlyCart;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * The stripes minecart handler never makes anything it takes apart disappear: what a cart carries and the cart itself
@@ -181,6 +182,54 @@ public class StripesHandlerMinecartDestroyTester {
             helper.succeed();
         }, "the cart's chunk never became entity-ticking", () -> {
             EntityArenaUtil.discard(carts);
+            discardItems(helper, frontRel);
+        });
+    }
+
+    /**
+     * A claim that refuses damage to the cart through its protection provider alone (Common Protection API's
+     * {@code canDamageEntity} on Fabric, with no attack callback refusing; the attack event on NeoForge) keeps the cart
+     * whole: the handler is refused, nothing goes down the pipe, and the cart and its contents stay. The control is the
+     * same handler once the claim is gone: the cart is broken.
+     */
+    public static void testProviderRefusalKeepsTheCart(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos frontRel = pipeRel.east();
+        EntityArenaUtil.forceLoadEntityArena(helper, frontRel);
+        OddChestCart[] cart = new OddChestCart[1];
+        EntityArenaUtil.tickUntil(helper, POLL_TICKS, () -> EntityArenaUtil.isEntityTicking(helper, frontRel), () -> {
+            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
+                cart[0] = spawnCart(helper, frontRel);
+                int[] asks = { 0 };
+                Recorder refused = new Recorder();
+                boolean refusedActed;
+                try (LoaderTestEvents.Observer claim = LoaderTestEvents.claimByProvider(pos -> false, pos -> false,
+                        target -> {
+                            if (target != cart[0]) {
+                                return false;
+                            }
+                            asks[0]++;
+                            return true;
+                        })) {
+                    refusedActed = StripesHandlerMinecartDestroy.INSTANCE.handle(
+                            helper.getLevel(), helper.absolutePos(pipeRel), Direction.EAST, lease.player(), refused);
+                }
+                helper.assertTrue(asks[0] >= 1, "liveness: the claim must have been asked about the cart");
+                helper.assertTrue(!refusedActed, "a refused handler must not report acting");
+                helper.assertTrue(refused.sent.isEmpty(), "nothing goes down the pipe, found " + refused.sent);
+                helper.assertTrue(!cart[0].isRemoved(), "the claimed cart stays");
+                helper.assertTrue(cart[0].getItem(0).is(Items.COBBLESTONE) && cart[0].getItem(0).getCount() == 4,
+                        "...with its contents, found " + cart[0].getItem(0));
+
+                Recorder control = new Recorder();
+                boolean controlActed = StripesHandlerMinecartDestroy.INSTANCE.handle(
+                        helper.getLevel(), helper.absolutePos(pipeRel), Direction.EAST, lease.player(), control);
+                helper.assertTrue(controlActed && cart[0].isRemoved(),
+                        "control: with the claim gone the cart is broken");
+            }
+            helper.succeed();
+        }, "the cart's chunk never became entity-ticking", () -> {
+            EntityArenaUtil.discard(cart);
             discardItems(helper, frontRel);
         });
     }

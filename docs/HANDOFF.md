@@ -66,7 +66,7 @@
 ## Next
 - Planned work lives in GitHub Issues (`issues.sh ready`). The Fabric items open at the time of writing: #120 (report
   the client game-test race upstream; remove `ClientGameTestThreadStartMixin` once fixed), #121 and #122 (both
-  `[unconfirmed]`), #123, #125 (chunk-ticket unload has a source pin only) and #126 (harden the
+  `[unconfirmed]`), #123 and #126 (harden the
   entity-item game test). The deferred
   review-round items are filed by the orchestrator.
 - Housekeeping, tracked nowhere: stray agent worktrees under `.claude/worktrees/agent-*` can be cleaned up once their

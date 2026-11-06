@@ -2089,6 +2089,11 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
         }
 
         @Override
+        public int getAmount(int index) {
+            return index == 0 ? tank.getAmount() : 0;
+        }
+
+        @Override
         public int getCapacity(int index, BCFluidStack resource) {
             return index == 0 ? TANK_CAPACITY : 0;
         }

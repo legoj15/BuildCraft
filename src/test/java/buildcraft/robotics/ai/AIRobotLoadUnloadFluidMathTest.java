@@ -248,6 +248,56 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(BUCKET - loaded, station.getAmount(), "...and exactly what the station lost");
     }
 
+    /** Another mod's station input (a robot-API handler, or on 1.21.1 a classic one) can only simulate, and here
+     *  its real drain gives less than its simulation promised. Before the platform layer 1.21.1 drained such a
+     *  station for real first and filled the robot with what came out; a robot filled in a transaction whose
+     *  station drain only replays at the commit keeps fluid the station never gave. */
+    @Test
+    public void loadConservesFluidWhenAForeignStationsRealDrainGivesLessThanItsSimulation() {
+        LyingTank tank = new LyingTank(BUCKET, 400);
+        tank.held = new BCFluidStack(Fluids.WATER, BUCKET);
+        ForeignStation station = new ForeignStation(tank);
+
+        int loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, true));
+
+        Assertions.assertEquals(BUCKET, tank.held.getAmount() + robotAmount(),
+                "a short real drain must not create fluid: station + robot is conserved");
+        Assertions.assertEquals(400, loaded, "the robot took what the station really gave");
+        Assertions.assertEquals(loaded, robotAmount());
+    }
+
+    /** The unload mirror: a foreign station output whose real fill takes less than its simulation promised.
+     *  The robot is drained first, so what the station did not take goes back aboard instead of vanishing. */
+    @Test
+    public void unloadConservesFluidWhenAForeignStationsRealFillTakesLessThanItsSimulation() {
+        LyingTank tank = new LyingTank(BUCKET, 400);
+        ForeignStation station = new ForeignStation(tank);
+        setRobotFluid(BUCKET);
+
+        int unloaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotUnloadFluids.unload(robot, station, true));
+
+        Assertions.assertEquals(BUCKET, tank.held.getAmount() + robotAmount(),
+                "a short real fill must not destroy fluid: station + robot is conserved");
+        Assertions.assertEquals(400, unloaded, "the call reports what the station really took");
+        Assertions.assertEquals(BUCKET - 400, robotAmount(), "the rest went back aboard");
+    }
+
+    @Test
+    public void aForeignStationDryRunMovesNothing() {
+        LyingTank tank = new LyingTank(BUCKET, 400);
+        tank.held = new BCFluidStack(Fluids.WATER, BUCKET);
+        ForeignStation station = new ForeignStation(tank);
+
+        int loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, false));
+
+        Assertions.assertEquals(BUCKET, loaded, "the dry run reports what the station's simulation offers");
+        Assertions.assertEquals(BUCKET, tank.held.getAmount(), "but nothing left the station");
+        Assertions.assertEquals(0, robotAmount(), "and nothing entered the robot");
+    }
+
     // ── a station that PASSES the gate policy but has no fluid handler ──────
     // A Provide/Accept Fluids gate action makes canRobotExtractFluid/canRobotAcceptFluid say yes, but a
     // station whose pipe has no wooden-fluid-pipe extraction face still hands back a null handler.
@@ -310,6 +360,103 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         @Override
         public boolean canRobotAcceptFluid(IFluidFilter filter) {
             return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationAcceptFluids.class);
+        }
+    }
+
+    // ── another mod's station handler ───────────────────────────────────────
+
+    /** A one-tank robot-API handler that is not one of BuildCraft's adapters, so BuildCraft can only simulate it.
+     *  A simulation answers honestly; a real call moves at most {@code realCap}. */
+    private static final class LyingTank implements buildcraft.api.core.IFluidHandlerAdv {
+        private final int capacity;
+        private final int realCap;
+        BCFluidStack held = BCFluidStack.EMPTY;
+
+        LyingTank(int capacity, int realCap) {
+            this.capacity = capacity;
+            this.realCap = realCap;
+        }
+
+        @Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public BCFluidStack getFluidInTank(int tank) {
+            return held.copy();
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return capacity;
+        }
+
+        @Override
+        public int fill(BCFluidStack resource, boolean simulate) {
+            if (resource.isEmpty() || (!held.isEmpty() && !BCFluidStack.isSameFluidSameComponents(held, resource))) {
+                return 0;
+            }
+            int filled = Math.min(resource.getAmount(), capacity - held.getAmount());
+            if (!simulate) {
+                filled = Math.min(filled, realCap);
+                held = resource.copyWithAmount(held.getAmount() + filled);
+            }
+            return filled;
+        }
+
+        @Override
+        public BCFluidStack drain(BCFluidStack resource, boolean simulate) {
+            if (held.isEmpty() || !BCFluidStack.isSameFluidSameComponents(held, resource)) {
+                return BCFluidStack.EMPTY;
+            }
+            return drain(resource.getAmount(), simulate);
+        }
+
+        @Override
+        public BCFluidStack drain(int maxDrain, boolean simulate) {
+            int drained = Math.min(maxDrain, held.getAmount());
+            if (!simulate) {
+                drained = Math.min(drained, realCap);
+            }
+            if (drained <= 0) {
+                return BCFluidStack.EMPTY;
+            }
+            BCFluidStack out = held.copyWithAmount(drained);
+            if (!simulate) {
+                held = drained == held.getAmount() ? BCFluidStack.EMPTY : held.copyWithAmount(held.getAmount() - drained);
+            }
+            return out;
+        }
+
+        @Override
+        public BCFluidStack drain(IFluidFilter filter, int maxDrain, boolean simulate) {
+            return held.isEmpty() || !filter.matches(held) ? BCFluidStack.EMPTY : drain(maxDrain, simulate);
+        }
+    }
+
+    /** A station whose fluid input and output are one foreign handler. */
+    private static final class ForeignStation extends DockingStation {
+        private final buildcraft.api.core.IFluidHandlerAdv handler;
+
+        ForeignStation(buildcraft.api.core.IFluidHandlerAdv handler) {
+            super();
+            this.handler = handler;
+        }
+
+        @Override
+        public Iterable<StatementSlot> getActiveActions() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public buildcraft.api.core.IFluidHandlerAdv getFluidInput() {
+            return handler;
+        }
+
+        @Override
+        public buildcraft.api.core.IFluidHandlerAdv getFluidOutput() {
+            return handler;
         }
     }
 

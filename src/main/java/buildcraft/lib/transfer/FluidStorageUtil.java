@@ -147,6 +147,20 @@ public final class FluidStorageUtil {
         public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
             return canExtract ? storage.extract(index, resource, amount, transaction) : 0;
         }
+
+        // The resource-wide calls go to the storage's own, which a storage may answer itself (a classic handler's
+        // view makes each one a single handler call).
+        @Override
+        public int insert(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return canInsert ? storage.insert(resource, amount, transaction) : 0;
+        }
+
+        @Override
+        public int extract(BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
+            return canExtract ? storage.extract(resource, amount, transaction) : 0;
+        }
     }
 
     /** Whether every index is empty. */

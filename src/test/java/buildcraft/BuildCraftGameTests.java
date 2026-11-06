@@ -605,8 +605,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wet_blocks_scan_as_themselves", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::wetBlocksScanAsThemselves);
 
         // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
-        // The 1.21.1 branches stand on the version-neutral BCFluidTank / tile-tank surface —
-        // see the per-test `//? if >=1.21.10` gates in HeatExchangerTester.
+        // The bodies run unchanged on every node, over the version-neutral BCFluidTank surface.
         reg.accept("buildcraftunofficial:heat_exchanger_output_rejects_external_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_internal_flag_resets", () -> buildcraft.factory.HeatExchangerTester::testOutputTankInternalFlagResetsAfterCall);
@@ -999,9 +998,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mj_battery_machines_hide_fe_mj_only", () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesHideFeUnderMjOnly);
 
         // Tank bookkeeping — composite tank capacity-respect and cross-slot spillover
-        // (modelled on TileBuilder.tankManager's per-slot delegate; on 1.21.1 the classic
-        // composite returns at the first matching slot, so those bodies pin the weaker
-        // cross-call properties — ordered routing/drain, conservation, SIMULATE non-mutation).
+        // (modelled on TileBuilder.tankManager's per-slot delegate; on 1.21.1 one resource-wide
+        // call stops at the first slot that moves anything, as the classic Builder did there).
         reg.accept("buildcraftunofficial:tank_single_capacity", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankCapacityRespect);
         reg.accept("buildcraftunofficial:tank_single_extract_returns_only_held", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankExtractReturnsOnlyWhatExists);
         reg.accept("buildcraftunofficial:tank_composite_insert_spillover", () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertSpillsAcrossSlots);

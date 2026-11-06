@@ -390,8 +390,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
      *  source's extraction rolled back while the pipe kept what it had taken.
      *
      *  <p>Snapshots are reused (see {@link #journal}): once warm, journalling the per-tick pipe-to-pipe push
-     *  (which commits every time) allocates no snapshot, since a root commit or an abort hands it back. The push's own transaction and side checks are
-     *  outside this class's control. */
+     *  (which commits every time) allocates no snapshot, since a root commit or an abort hands it back. A
+     *  nested commit into a parent that already holds a snapshot drops its own ({@code BCSnapshotJournal} has
+     *  no release hook), so a move with several source slots allocates one per insert after the first. The
+     *  push's own transaction and side checks are outside this class's control. */
     private final class FlowSnapshot {
         private BCFluidStack fluid = BCFluidStack.EMPTY;
         private int delay;

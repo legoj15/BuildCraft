@@ -9,6 +9,7 @@ package buildcraft.factory.tile;
 import java.util.List;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransactionContext;
@@ -69,7 +70,7 @@ public class TankColumnResourceHandler implements BCFluidStorage {
     @Override
     public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         checkIndex(index);
-        if (resource.isEmpty() || amount <= 0) {
+        if (BCFluidTank.movesNothing(resource, amount)) {
             return 0;
         }
 
@@ -116,7 +117,7 @@ public class TankColumnResourceHandler implements BCFluidStorage {
     @Override
     public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         checkIndex(index);
-        if (resource.isEmpty() || amount <= 0) {
+        if (BCFluidTank.movesNothing(resource, amount)) {
             return 0;
         }
 

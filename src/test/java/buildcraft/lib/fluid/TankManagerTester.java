@@ -5,12 +5,6 @@
  */
 package buildcraft.lib.fluid;
 
-// Version-split bodies: 1.21.10+ exercises the NeoForge Transfer API directly
-// (ResourceHandler / FluidResource / BCFluidTank / Transaction — no such API
-// pre-1.21.9); 1.21.1 stands in the classic IFluidHandler surface (BCFluidTank's fill/drain
-// plus FluidAction.SIMULATE) and pins the weaker cross-call composite properties — see the
-// per-test notes.
-
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.material.Fluids;
 
@@ -25,14 +19,13 @@ import buildcraft.platform.transfer.BCTransaction;
  * an ordered list of {@code Tank}s and routed fill/drain across them with spillover semantics.
  * Neither class exists in the modern port — the composite-tank pattern it used to provide is
  * now hand-rolled per tile (see {@code TileBuilder.tankManager}: an array of single-slot tanks
- * wrapped by a composite that delegates per slot). On 1.21.10+ the composite is a
- * {@code ResourceHandler<FluidResource>} whose slot-less {@code insert}/{@code extract} —
- * interface defaults — accumulate across slots in one call; on 1.21.1 it is a classic
- * {@code IFluidHandler} whose {@code fill}/{@code drain} return at the first matching slot, so
- * the composite tests there pin the weaker cross-call properties instead: ordered routing and
- * drain (slot 0 always fills/empties first — a LIFO reorder lands the amounts in the wrong
- * slots), conservation across calls, and {@code FluidAction.SIMULATE} non-mutation standing in
- * for transaction rollback.
+ * wrapped by a composite that delegates per slot). Every body runs on every node over
+ * {@link BCFluidTank} and {@link BCTransaction}; the composite's resource-wide
+ * {@code insert}/{@code extract} are the {@link BCFluidStorage} defaults, which differ by node:
+ * on 1.21.10+ they accumulate across slots in one call (NeoForge's {@code ResourceHandler}),
+ * on 1.21.1 they stop at the first slot that moves anything (the classic {@code IFluidHandler}
+ * the Builder had there). The spillover tests pin each node's rule, and both rules fill and
+ * drain slot 0 first, so a LIFO reorder fails on every node.
  * <p>
  * These tests pin that pattern's bookkeeping so a refactor of the composite-tank wiring on
  * any tile (Builder, Pump, Tank, FloodGate, …) can't silently regress capacity-respect or
@@ -48,6 +41,10 @@ public class TankManagerTester {
     public static void testSingleTankCapacityRespect(GameTestHelper helper) {
         BCFluidTank tank = new BCFluidTank(1, 3);
         BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
+        // The simulate flag (heat exchanger and distiller crafts check with it): promises, mutates nothing.
+        int simulated = tank.fill(0, water.copyWithAmount(5), true);
+        assertTrue(simulated == 3, "simulated fill(5) into an empty cap-3 tank should promise 3, got " + simulated);
+        assertTrue(tank.getAmount(0) == 0, "a simulated fill must not mutate the tank, got " + tank.getAmount(0));
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int first = tank.insert(0, water, 2, tx);
             assertTrue(first == 2, "first insert into cap-3 tank with 2 should fit fully, got " + first);
@@ -64,6 +61,9 @@ public class TankManagerTester {
         BCFluidTank tank = new BCFluidTank(1, 3);
         BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
         tank.setFluidStack(0, water.copyWithAmount(3));
+        BCFluidStack simulated = tank.drain(0, 2, true);
+        assertTrue(simulated.getAmount() == 2, "simulated drain(2) should promise 2, got " + simulated.getAmount());
+        assertTrue(tank.getAmount(0) == 3, "a simulated drain must not mutate the tank, got " + tank.getAmount(0));
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int drained = tank.extract(0, water, 5, tx);
             assertTrue(drained == 3, "extract(5) on a tank holding 3 should return 3, got " + drained);
@@ -74,13 +74,11 @@ public class TankManagerTester {
     }
 
     /**
-     * Composite fill spills across slots in order. Modelled on {@code TileBuilder.tankManager}:
-     * two cap-3 tanks wrapped as a 2-slot composite, offering 5 of lava → 5 accepted, laid down
-     * as 3 in slot 0 then 2 in slot 1. 1.21.1's classic composite only touches the first
-     * matching slot per call (and each call re-offers its amount from scratch), so the same
-     * layout is built cross-call — fill(5) → 3, then fill(remainder 2) → 2 — and pinned as
-     * the weaker cross-call property: total conserved, slot 0 full before slot 1 gains
-     * anything (a LIFO reorder ends with the per-slot amounts swapped and fails).
+     * Composite fill, in slot order. Modelled on {@code TileBuilder.tankManager}: two cap-3 tanks
+     * wrapped as a 2-slot composite, offering 5 of lava. On 1.21.10+ all 5 are accepted, laid down
+     * as 3 in slot 0 then 2 in slot 1. On 1.21.1 the call stops at slot 0 (3 accepted, slot 1
+     * untouched), as the Builder's classic fill did there; the remainder goes in only on a second
+     * call.
      */
     public static void testCompositeInsertSpillsAcrossSlots(GameTestHelper helper) {
         BCFluidTank t0 = new BCFluidTank(1, 3);
@@ -89,7 +87,14 @@ public class TankManagerTester {
         BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 1);
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = composite.insert(lava, 5, tx);
+            //? if >=1.21.10 {
             assertTrue(inserted == 5, "composite insert(5) across two cap-3 tanks should accept all 5, got " + inserted);
+            //?} else {
+            /*assertTrue(inserted == 3, "1.21.1: composite insert(5) should stop at slot 0's 3, got " + inserted);
+            assertTrue(t1.getAmount(0) == 0, "1.21.1: slot 1 is not tried in the same call, got " + t1.getAmount(0));
+            inserted += composite.insert(lava, 5 - inserted, tx);
+            assertTrue(inserted == 5, "1.21.1: the second call should place the remaining 2, got " + inserted);*/
+            //?}
             tx.commit();
         }
         assertTrue(t0.getAmount(0) == 3, "slot 0 should be full at 3, got " + t0.getAmount(0));
@@ -98,12 +103,10 @@ public class TankManagerTester {
     }
 
     /**
-     * Composite extract drains across slots in order until the request is satisfied. Pre-loaded
-     * as {3, 3} of lava, pulling 4 → 4 returned (full slot 0 + 1 from slot 1), leaving 2 in slot
-     * 1. 1.21.1's classic composite drains only the first non-empty slot per call, so the 4 is
-     * pulled as drain(4) → 3 then drain(remainder 1) → 1 — re-issuing the remainder is the
-     * cross-call shape of the same property. Either way a LIFO refactor (drain slot 1 first)
-     * leaves the per-slot amounts wrong and fails.
+     * Composite extract, in slot order. Pre-loaded as {3, 3} of lava, pulling 4: on 1.21.10+ 4
+     * come back in one call (full slot 0 + 1 from slot 1); on 1.21.1 the call stops at slot 0's 3
+     * (a Builder needing 4 there finds only 3), and the remainder needs a second call. Either way
+     * 2 are left in slot 1, and a LIFO refactor (drain slot 1 first) fails.
      */
     public static void testCompositeExtractDrainsAcrossSlots(GameTestHelper helper) {
         BCFluidTank t0 = new BCFluidTank(1, 3);
@@ -114,7 +117,14 @@ public class TankManagerTester {
         BCFluidStorage composite = composeTwo(t0, t1);
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int drained = composite.extract(lava, 4, tx);
+            //? if >=1.21.10 {
             assertTrue(drained == 4, "composite extract(4) across two full cap-3 tanks should return 4, got " + drained);
+            //?} else {
+            /*assertTrue(drained == 3, "1.21.1: composite extract(4) should stop at slot 0's 3, got " + drained);
+            assertTrue(t1.getAmount(0) == 3, "1.21.1: slot 1 is not tried in the same call, got " + t1.getAmount(0));
+            drained += composite.extract(lava, 4 - drained, tx);
+            assertTrue(drained == 4, "1.21.1: the second call should take the remaining 1, got " + drained);*/
+            //?}
             tx.commit();
         }
         assertTrue(t0.getAmount(0) == 0, "slot 0 should be drained empty, got " + t0.getAmount(0));
@@ -124,12 +134,10 @@ public class TankManagerTester {
 
     /**
      * Simulation must not commit. The 1.12.2 {@code TankManager.fill(stack, doFill=false)}
-     * "simulate" mode is a real transaction on 1.21.10+ — an un-committed composite insert
-     * leaves both tanks untouched (the load-bearing call sites, e.g. {@code BlueprintBuilder}
-     * on schematic placement failure, rely on this for fluid conservation under partial
-     * failure). 1.21.1 has no transactions: {@code FluidAction.SIMULATE} stands in — the
-     * composite must promise the first slot's remaining 3 of the offered 5, mutate nothing,
-     * and deliver exactly the promise on execute.
+     * "simulate" mode is an un-committed transaction on every node — an un-committed composite
+     * insert leaves both tanks untouched (the load-bearing call sites, e.g.
+     * {@code BlueprintBuilder} on schematic placement failure, rely on this for fluid
+     * conservation under partial failure).
      */
     public static void testCompositeInsertRollsBackOnAbort(GameTestHelper helper) {
         BCFluidTank t0 = new BCFluidTank(1, 3);
@@ -138,7 +146,11 @@ public class TankManagerTester {
         BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
         try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = composite.insert(water, 5, tx);
+            //? if >=1.21.10 {
             assertTrue(inserted == 5, "insert inside tx should still report 5 accepted, got " + inserted);
+            //?} else {
+            /*assertTrue(inserted == 3, "1.21.1: insert inside tx should report slot 0's 3 accepted, got " + inserted);*/
+            //?}
             // No tx.commit() — try-with-resources close aborts.
         }
         assertTrue(t0.getAmount(0) == 0, "slot 0 should be untouched after abort, got " + t0.getAmount(0));

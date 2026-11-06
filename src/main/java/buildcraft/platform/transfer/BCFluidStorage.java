@@ -34,6 +34,14 @@ public interface BCFluidStorage {
      */
     int getCapacity(int index, BCFluidStack resource);
 
+    /**
+     * {@link #getCapacity} without the cap at {@code Integer.MAX_VALUE}, for a view of another mod's handler whose
+     * capacity is a {@code long}; a BuildCraft storage's is its {@code int} capacity.
+     */
+    default long getCapacityAsLong(int index, BCFluidStack resource) {
+        return getCapacity(index, resource);
+    }
+
     /** Whether {@code resource} may ever go into {@code index} (ignoring how full it is). */
     boolean isValid(int index, BCFluidStack resource);
 
@@ -44,8 +52,11 @@ public interface BCFluidStorage {
     int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction);
 
     /**
-     * Inserts up to {@code amount} of {@code resource} across the indices, in index order (NeoForge's
-     * {@code ResourceHandler.insert(resource, amount, transaction)}).
+     * Inserts up to {@code amount} of {@code resource} across the indices, in index order. On 1.21.10+ (and Fabric)
+     * this is NeoForge's {@code ResourceHandler.insert(resource, amount, transaction)}: index after index until the
+     * amount is placed. On 1.21.1 it is what a classic {@code IFluidHandler.fill} was for BuildCraft's tanks there:
+     * the first index that takes anything takes what it can, and the later ones are not tried
+     * ({@code spansIndices}).
      *
      * @throws IllegalArgumentException for an empty resource or a negative amount.
      */
@@ -55,7 +66,7 @@ public interface BCFluidStorage {
         int size = size();
         for (int index = 0; index < size; index++) {
             inserted += insert(index, resource, amount - inserted, transaction);
-            if (inserted == amount) {
+            if (inserted == amount || (inserted > 0 && !spansIndices())) {
                 break;
             }
         }
@@ -63,8 +74,10 @@ public interface BCFluidStorage {
     }
 
     /**
-     * Extracts up to {@code amount} of {@code resource} across the indices, in index order (NeoForge's
-     * {@code ResourceHandler.extract(resource, amount, transaction)}).
+     * Extracts up to {@code amount} of {@code resource} across the indices, in index order. On 1.21.10+ (and Fabric)
+     * this is NeoForge's {@code ResourceHandler.extract(resource, amount, transaction)}; on 1.21.1 it is a classic
+     * {@code IFluidHandler.drain(FluidStack)} of BuildCraft's tanks there: the first index that gives anything
+     * ({@code spansIndices}).
      *
      * @throws IllegalArgumentException for an empty resource or a negative amount.
      */
@@ -74,11 +87,26 @@ public interface BCFluidStorage {
         int size = size();
         for (int index = 0; index < size; index++) {
             extracted += extract(index, resource, amount - extracted, transaction);
-            if (extracted == amount) {
+            if (extracted == amount || (extracted > 0 && !spansIndices())) {
                 break;
             }
         }
         return extracted;
+    }
+
+    /**
+     * Whether the resource-wide calls go on to the next index after one that moved part of the amount. NeoForge's
+     * transfer API (1.21.10+) and Fabric's do. NeoForge 1.21.1 had only the classic handlers, and BuildCraft's
+     * multi-tank ones (the Builder's four tanks, the iron engine's fuel and coolant) stopped at the first tank that
+     * moved anything, which is what every BuildCraft call through these defaults meant on that node before the
+     * platform layer.
+     */
+    private static boolean spansIndices() {
+        //? if >=1.21.10 {
+        return true;
+        //?} else {
+        /*return false;*/
+        //?}
     }
 
     /** The precondition NeoForge's {@code TransferPreconditions.checkNonEmptyNonNegative} enforces. */

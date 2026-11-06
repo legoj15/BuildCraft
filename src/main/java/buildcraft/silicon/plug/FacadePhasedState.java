@@ -16,6 +16,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.facades.IFacadePhasedState;
 import buildcraft.api.facades.IFacadeState;
 
@@ -75,7 +76,11 @@ public class FacadePhasedState implements IFacadePhasedState {
         DyeColor colour = hasColour ? buf.readEnumValue(DyeColor.class) : null;
         if (state == null) {
             // An id outside this side's state registry (drifted or corrupt): the fallback below would NPE on
-            // state.getBlock() while generation is disabled and kill the pluggable sync handler (#128).
+            // state.getBlock() while generation is disabled (#128). Nothing in-tree calls
+            // PluggableDefinition.loadFromBuffer today (facades sync as NBT, which reads an unknown block as air),
+            // so this guards the API's buffer contract for the day it is wired, not a live crash.
+            BCLog.logger.warn("[silicon.facade] Block state id " + stateId + " is not in this side's registry ("
+                + Block.BLOCK_STATE_REGISTRY.size() + " states); showing an empty facade");
             return new FacadePhasedState(FacadeStateManager.defaultState, colour);
         }
         FacadeBlockStateInfo info = FacadeStateManager.validFacadeStates.get(state);

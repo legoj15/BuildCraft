@@ -12,7 +12,9 @@ import io.netty.buffer.Unpooled;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -94,6 +96,22 @@ public class FacadeGenerationToggleTester extends VanillaSetupBaseTester {
             Assertions.assertSame(bricks, FacadePhasedState.readFromBuffer(buf).stateInfo.state,
                     "the client-sync buffer path must keep a saved facade's identity too");
             buf.release();
+
+            // Issue #128: a state id this side's registry does not know (drift, corruption) decodes to the air
+            // default with its colour, and leaves the buffer aligned for the caller's next read. It used to NPE
+            // in the disabled-mode fallback and kill the pluggable sync handler.
+            PacketBufferBC unknown = PacketBufferBC.asPacketBufferBc(Unpooled.buffer());
+            unknown.writeVarInt(Block.BLOCK_STATE_REGISTRY.size() + 100);
+            unknown.writeBoolean(true);
+            unknown.writeEnumValue(DyeColor.RED);
+            unknown.writeBoolean(true);
+            FacadePhasedState unknownRead = FacadePhasedState.readFromBuffer(unknown);
+            Assertions.assertSame(FacadeStateManager.defaultState, unknownRead.stateInfo,
+                    "an unknown state id must decode to the air default");
+            Assertions.assertSame(DyeColor.RED, unknownRead.activeColour,
+                    "the colour must survive the fallback");
+            Assertions.assertTrue(unknown.readBoolean(), "the buffer must stay aligned after the fallback");
+            unknown.release();
 
             // Mid-session flips must stay inert until re-init: the fallback follows the INIT-TIME
             // latch, never the live config. A live read here meant that un-ticking the option in the

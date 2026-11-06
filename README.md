@@ -34,8 +34,8 @@ Please check if the bug or feature request has been reported beforehand. Also, p
 ### Fabric
 A Fabric version of BuildCraft for **Minecraft 26.3** is built from the same source. It is in development and not released yet. It is the same mod, and it needs:
 
-* [Fabric Loader](https://fabricmc.net/use/) 0.20.1 or newer,
-* [Fabric API](https://modrinth.com/mod/fabric-api) 0.165.2+26.3 or newer,
+* [Fabric Loader](https://fabricmc.net/use/) 0.19.4 or newer,
+* [Fabric API](https://modrinth.com/mod/fabric-api) 0.160.6+26.3 or newer,
 * [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) 26.3.1 or newer,
 * optionally Team Reborn Energy, so BuildCraft can share power with other mods' machines,
 * optionally JEI or REI, for browsing recipes.

@@ -28,8 +28,6 @@ public class BCCoreClient {
         ClientPlatform.configScreens().registerConfigScreen();
 
         ClientPlatform.hooks().onLevelRender(buildcraft.lib.client.render.MarkerRenderer::onRenderLevelStage);
-        // The client's marker tables belong to the level they were sent for: dropped when it closes.
-        buildcraft.lib.marker.MarkerCacheEvents.registerClientHooks(ClientPlatform.hooks());
         // Engine BERs
         sinks.blockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE,
                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(BCCoreModels::getWoodEngineQuads));

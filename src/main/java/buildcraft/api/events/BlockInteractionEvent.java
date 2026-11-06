@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 
 /*@Cancelable*/
 /** Nothing posts this yet. */
-public class BlockInteractionEvent {
+public class BlockInteractionEvent extends BCEvent {
     public static final BCEventListeners<BlockInteractionEvent> LISTENERS = new BCEventListeners<>();
 
     public final Player player;

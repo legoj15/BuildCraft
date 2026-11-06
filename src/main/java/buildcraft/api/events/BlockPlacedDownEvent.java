@@ -10,7 +10,7 @@ import net.minecraft.core.BlockPos;
 
 /*@Cancelable*/
 /** Nothing posts this yet. */
-public class BlockPlacedDownEvent {
+public class BlockPlacedDownEvent extends BCEvent {
     public static final BCEventListeners<BlockPlacedDownEvent> LISTENERS = new BCEventListeners<>();
 
     public final Player player;

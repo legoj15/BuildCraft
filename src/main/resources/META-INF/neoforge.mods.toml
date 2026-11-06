@@ -34,8 +34,8 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_bra
     # Range is per Stonecutter node (versions/<node>/gradle.properties -> neo_dep_range). Each floor is
     # the EMPIRICAL minimum that node's jar compiles + boots against (compile-bisect + a headless server
     # boot), not a guess: set too high it needlessly gates users, too low it loads then crashes on boot.
-    #   26.1.2  -> [26.1.0,26.2)    whole line — BreakBlockEvent is resolved reflectively (lib.misc.
-    #                               BreakEventCompat) + GUI getters use line-wide aliases, so nothing
+    #   26.1.2  -> [26.1.0,26.2)    whole line — BreakBlockEvent is resolved reflectively (platform.
+    #                               neoforge.NeoForgeBreakEvent) + GUI getters use line-wide aliases, so nothing
     #                               binds above the line's first build (369 game tests pass on 26.1.0.1)
     #   26.2    -> [26.2.0,26.3)    whole line — all 26.2 API landed atomically at 26.2.0.0-beta
     #   26.3    -> [26.3.0.38-beta,26.4)  getPixelARGB lands at .38 (ModConfig.Type.LOCAL at .37,

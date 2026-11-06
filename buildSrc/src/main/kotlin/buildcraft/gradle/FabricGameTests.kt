@@ -7,6 +7,8 @@
 package buildcraft.gradle
 
 import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
 import org.gradle.api.GradleException
 
 // ─── The Fabric node's game-test manifests ───────────────────────────────────
@@ -19,10 +21,25 @@ import org.gradle.api.GradleException
 object FabricGameTests {
 
     private val REGISTRATION = Regex("""reg\.accept\(\s*"buildcraftunofficial:([a-z0-9_./-]+)"""")
+    private val REGISTRATION_CALL = Regex("""reg\.accept\(""")
 
-    /** The test ids [registrar] (this node's BuildCraftGameTests.java) registers outside comments. */
+    /**
+     * The test ids [registrar] (this node's BuildCraftGameTests.java) registers outside comments. Every
+     * `reg.accept(` call must name its test as a string literal: a registration through a constant, a concatenation
+     * or a helper is invisible to [REGISTRATION], so its manifest would be dropped as unregistered and the test would
+     * silently stop running on Fabric.
+     */
     fun registeredIds(registrar: File): Set<String> {
         val code = stripComments(registrar.readText())
+        val calls = REGISTRATION_CALL.findAll(code).count()
+        val literal = REGISTRATION.findAll(code).count()
+        if (calls != literal) {
+            throw GradleException(
+                "${calls - literal} of the $calls reg.accept(...) calls in $registrar do not name their test as a " +
+                    "\"buildcraftunofficial:<id>\" string literal, the only form the manifest check reads (a manifest " +
+                    "it cannot match would be dropped, and the test would silently stop running on Fabric)."
+            )
+        }
         return REGISTRATION.findAll(code).map { it.groupValues[1] }.toSet()
     }
 
@@ -88,5 +105,19 @@ object FabricGameTests {
             }
         }
         return src.length
+    }
+}
+
+/**
+ * A log sink for a JavaExec's `standardOutput` that holds no file handle between writes: Gradle never closes a
+ * caller-supplied stream, so a plain FileOutputStream would stay open until the JDK's cleaner got to it (on Windows,
+ * long enough to lock the file against a delete). Each write opens the file in append mode and closes it again; the
+ * caller truncates the file first. A run's console is tens of MB in 8 KB chunks, so the reopening costs nothing.
+ */
+class AppendingLogStream(private val file: File) : OutputStream() {
+    override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        FileOutputStream(file, true).use { it.write(b, off, len) }
     }
 }

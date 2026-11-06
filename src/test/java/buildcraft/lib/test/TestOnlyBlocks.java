@@ -13,7 +13,9 @@ import net.minecraft.world.item.DoubleHighBlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.WoodType;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.platform.registry.BCBlockHolder;
@@ -48,6 +50,13 @@ public final class TestOnlyBlocks {
     public static final Identifier JOIN_ORDER_PROBE_ID = Identifier.parse(NAMESPACE + ":join_order_probe");
 
     private static Supplier<BlockEntityType<JoinOrderProbeBlockEntity>> joinOrderProbeType;
+
+    /** A vanilla fence gate, the class BuildCraft's wrench rotation handlers are scanned for; see
+     *  {@code LateRegisteredBlockTester}. */
+    public static final Identifier SCANNED_FENCE_GATE_ID = Identifier.parse(NAMESPACE + ":scanned_fence_gate");
+
+    /** A plant, the class BuildCraft's setup lists as a soft block; see {@link ScannedPlantBlock}. */
+    public static final Identifier SCANNED_PLANT_ID = Identifier.parse(NAMESPACE + ":scanned_plant");
 
     private TestOnlyBlocks() {}
 
@@ -98,6 +107,18 @@ public final class TestOnlyBlocks {
         return joinOrderProbeType.get();
     }
 
+    /** The registered fence gate (valid once registries are populated). */
+    public static Block scannedFenceGate() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, SCANNED_FENCE_GATE_ID);
+    }
+
+    /** The registered {@link ScannedPlantBlock} (valid once registries are populated). */
+    public static Block scannedPlant() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, SCANNED_PLANT_ID);
+    }
+
     /**
      * Registers the loader-neutral test blocks (with the one item and block entity type they need) through BuildCraft's registrar, during mod construction. Only a
      * game-test run calls it (the loader hook knows which run that is): the test source set is also on the NeoForge
@@ -114,6 +135,9 @@ public final class TestOnlyBlocks {
                 blocks.registerBlock(TWO_CELL_DROP_ID.getPath(), TwoCellDropBlock::new, TestOnlyBlocks::properties);
         BCBlockHolder<JoinOrderProbeBlock> joinOrderProbe =
                 blocks.registerBlock(JOIN_ORDER_PROBE_ID.getPath(), JoinOrderProbeBlock::new, TestOnlyBlocks::properties);
+        blocks.registerBlock(SCANNED_FENCE_GATE_ID.getPath(), p -> new FenceGateBlock(WoodType.OAK, p),
+                TestOnlyBlocks::properties);
+        blocks.registerBlock(SCANNED_PLANT_ID.getPath(), ScannedPlantBlock::new, TestOnlyBlocks::properties);
         blocks.subscribe();
         BCRegistrar.Items items = BCRegistrar.createItems(NAMESPACE);
         items.registerBlockItem(twoCellDrop, DoubleHighBlockItem::new);

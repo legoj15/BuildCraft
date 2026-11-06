@@ -57,6 +57,7 @@ import buildcraft.api.blocks.CustomRotationHelper;
 import buildcraft.api.blocks.ICustomRotationHandler;
 
 import buildcraft.lib.misc.collect.OrderedEnumMap;
+import buildcraft.platform.Platform;
 
 /**
  * Registers wrench-rotation handlers for vanilla blocks via {@link CustomRotationHelper}.
@@ -140,6 +141,10 @@ public class VanillaRotationHandlers {
         CustomRotationHelper.INSTANCE.registerHandlerForAll(StandingSignBlock.class, VanillaRotationHandlers::rotate16);
         CustomRotationHelper.INSTANCE.registerHandlerForAll(CeilingHangingSignBlock.class, VanillaRotationHandlers::rotate16);
         CustomRotationHelper.INSTANCE.registerHandlerForAll(SkullBlock.class, VanillaRotationHandlers::rotate16);
+
+        // The scans above walked the blocks registered so far; on Fabric a mod initialised after BuildCraft registers
+        // its blocks later. (NeoForge runs this after every register event: nothing arrives.)
+        Platform.lifecycle().onLateBlock(CustomRotationHelper.INSTANCE::registerClassHandlersFor);
     }
 
     // region Generic rotators

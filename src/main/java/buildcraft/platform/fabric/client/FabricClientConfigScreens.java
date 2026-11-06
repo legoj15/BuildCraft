@@ -6,12 +6,21 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import buildcraft.platform.client.ClientConfigScreens;
+/*import fuzs.forgeconfigapiport.fabric.api.v5.client.ConfigScreenFactoryRegistry;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 
-/^* {@link ClientConfigScreens} on Fabric: a no-op, as there is no config backend yet and no mod-menu dependency. *^/
+import buildcraft.platform.client.ClientConfigScreens;
+
+/^*
+ * {@link ClientConfigScreens} on Fabric: the {@link ConfigurationScreen} Forge Config API Port ships (the one NeoForge
+ * generates), offered through its {@link ConfigScreenFactoryRegistry}, which is how Mod Menu finds a mod's config
+ * button. There is no screen without Mod Menu installed, as Fabric has no mod list of its own.
+ *^/
 public final class FabricClientConfigScreens implements ClientConfigScreens {
 
     @Override
-    public void registerConfigScreen() {}
+    public void registerConfigScreen() {
+        ConfigScreenFactoryRegistry.INSTANCE.register("buildcraftunofficial", ConfigurationScreen::new);
+    }
 }
 *///?}

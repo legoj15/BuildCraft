@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -47,6 +48,10 @@ public final class NeoForgeLifecycleHooks implements LifecycleHooks {
     public void onLoadCompleteOnMain(Runnable action) {
         modBus().addListener((FMLLoadCompleteEvent event) -> event.enqueueWork(action));
     }
+
+    /** Nothing arrives late: FML runs the setup actions after every register event has fired. */
+    @Override
+    public void onLateBlock(Consumer<Block> listener) {}
 
     @Override
     public void onServerAboutToStart(Consumer<MinecraftServer> listener) {

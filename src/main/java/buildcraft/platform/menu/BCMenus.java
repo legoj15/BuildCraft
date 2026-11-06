@@ -22,14 +22,18 @@ import net.minecraft.world.inventory.MenuType;
  */
 public interface BCMenus {
 
-    /** A menu type whose client half is built by {@code factory} from the opening data. */
+    /**
+     * A menu type whose client half is built by {@code factory} from the opening data. Open its menus through
+     * {@link #open}, and open only menus of types made here through it: Fabric throws when an extended menu type meets
+     * a plain provider, or a plain menu type meets the extended provider {@code open} hands it.
+     */
     <T extends AbstractContainerMenu> MenuType<T> create(BufferMenuFactory<T> factory);
 
     /**
      * Opens {@code provider}'s menu for {@code player}, sending {@code writer}'s bytes as the opening data the
      * type's {@link BufferMenuFactory} reads. The writer is the whole opening data: a loader-side data hook on the
      * provider itself (NeoForge's {@code writeClientSideData}) is not run as well, so nothing is written twice. A
-     * fake player opens nothing.
+     * fake player opens nothing. The provider's menu must be of a type {@link #create} made.
      */
     void open(ServerPlayer player, MenuProvider provider, Consumer<RegistryFriendlyByteBuf> writer);
 }

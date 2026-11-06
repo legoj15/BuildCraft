@@ -17,9 +17,9 @@ import buildcraft.platform.transfer.TransferServices;
 /**
  * The transaction contract every loader's {@link Platform#transfer()} keeps, run as game tests so the Fabric node
  * (which has no JUnit) runs it too. {@code BCTransactionTester} pins the same journal rules on the two NeoForge
- * engines; these three are the ones Fabric's transaction manager made different: what a journal calls the original
- * state after a nested probe was aborted, whether a root-commit callback may open a transaction, and what a commit that
- * is refused leaves behind.
+ * engines; these are the ones Fabric's transaction manager made different: what a journal calls the original state
+ * after a nested probe was aborted, whether a root-commit callback may open a transaction, and what a commit (or a
+ * close) that is refused leaves behind.
  */
 public final class TransactionSeamTester {
     private TransactionSeamTester() {}
@@ -157,5 +157,71 @@ public final class TransactionSeamTester {
             fresh.commit();
         }
         helper.succeed();
+    }
+
+    /**
+     * A root BuildCraft opened whose commit AND close are both refused (another mod's child is the current transaction),
+     * and which is then closed behind BuildCraft's back, leaves no root-commit queue behind: the journal callbacks of a
+     * later root another mod opens run as that root closes. Fabric's wrapper held its callbacks for "the BuildCraft
+     * root" from open to close, so after the double refusal it queued every later callback on the thread until some
+     * later BuildCraft root closed (#135).
+     */
+    public static void doublyRefusedRootLeavesNoStuckCallbackQueue(GameTestHelper helper) {
+        BCTransaction outer = BCTransaction.openRoot();
+        BCTransaction inner = outer.openNested();
+        int refusals = 0;
+        try {
+            try {
+                outer.commit();
+            } catch (IllegalStateException expected) {
+                refusals++;
+            }
+            try {
+                outer.close();
+            } catch (IllegalStateException expected) {
+                refusals++; // Fabric: the close aborts, and the abort is refused too while the child is current
+            }
+        } finally {
+            inner.close();
+            closeRootBehindTheWrapper(outer);
+        }
+        //? if fabric {
+        /*helper.assertTrue(refusals == 2, "both the commit and the close are refused while the child is current ("
+            + refusals + ")");*/
+        //?} else {
+        helper.assertTrue(refusals >= 1, "committing a transaction that has an open child is refused");
+        //?}
+
+        Cell cell = new Cell(3);
+        commitInAForeignRoot(tx -> cell.set(4, tx));
+        helper.assertTrue(cell.rootCommits.equals(List.of(3)),
+            "a later root's callback runs as that root closes, not queued behind the abandoned root: "
+                + cell.rootCommits);
+        helper.succeed();
+    }
+
+    /** Closes the thread's root the way another mod would: through the loader, never through BuildCraft's wrapper. */
+    private static void closeRootBehindTheWrapper(BCTransaction outer) {
+        //? if fabric {
+        /*((net.fabricmc.fabric.api.transfer.v1.transaction.Transaction) buildcraft.platform.fabric.FabricTransfer.unwrap(outer)).abort();*/
+        //?} else {
+        outer.close(); // NeoForge's wrapper has no root-commit queue to strand; a second close ends the root
+        //?}
+    }
+
+    /** Opens a root the way another mod would and commits what {@code changes} did in it. */
+    private static void commitInAForeignRoot(java.util.function.Consumer<BCTransactionContext> changes) {
+        //? if fabric {
+        /*try (net.fabricmc.fabric.api.transfer.v1.transaction.Transaction tx =
+                net.fabricmc.fabric.api.transfer.v1.transaction.Transaction.openOuter()) {
+            changes.accept(buildcraft.platform.fabric.FabricTransfer.wrap(tx));
+            tx.commit();
+        }*/
+        //?} else {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            changes.accept(tx);
+            tx.commit();
+        }
+        //?}
     }
 }

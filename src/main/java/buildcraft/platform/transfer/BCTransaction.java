@@ -39,7 +39,10 @@ public interface BCTransaction extends BCTransactionContext, AutoCloseable {
         return parent == null ? openRoot() : parent.openNested();
     }
 
-    /** Commits this transaction: its changes move into the parent, or become final for a root. Closes it. */
+    /**
+     * Commits this transaction: its changes move into the parent, or become final for a root. Closes it. A commit of a
+     * transaction that has already ended throws {@link IllegalStateException}, on every loader.
+     */
     void commit();
 
     /** Aborts this transaction unless it was already committed or closed. */

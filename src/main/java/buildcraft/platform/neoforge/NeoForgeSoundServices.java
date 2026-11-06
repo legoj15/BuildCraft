@@ -10,11 +10,11 @@ import java.util.function.Supplier;
 
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.common.util.DeferredSoundType;
 
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.SoundServices;
 
 /** {@link SoundServices} on NeoForge: {@link DeferredSoundType} and the fluid type's {@link SoundActions}. */
@@ -27,8 +27,10 @@ public final class NeoForgeSoundServices implements SoundServices {
     }
 
     @Override
-    public SoundEvent bucketSound(Fluid fluid, boolean fill) {
-        return fluid.getFluidType().getSound(fill ? SoundActions.BUCKET_FILL : SoundActions.BUCKET_EMPTY);
+    public SoundEvent bucketSound(BCFluidStack stack, boolean fill) {
+        // The stack overload, as BuildCraft always asked: a fluid type may sound per stack (its default is the plain one).
+        return stack.getFluid().getFluidType().getSound(NeoForgeFluids.toNeo(stack),
+            fill ? SoundActions.BUCKET_FILL : SoundActions.BUCKET_EMPTY);
     }
 }
 //?}

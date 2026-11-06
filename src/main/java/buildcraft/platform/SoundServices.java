@@ -7,9 +7,12 @@ package buildcraft.platform;
 
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.material.Fluid;
+
+import buildcraft.api.fluids.BCFluidStack;
 
 /** Sound types whose events resolve late, and the loader's per-fluid bucket sounds. */
 public interface SoundServices {
@@ -18,6 +21,11 @@ public interface SoundServices {
         Supplier<SoundEvent> stepSound, Supplier<SoundEvent> placeSound, Supplier<SoundEvent> hitSound,
         Supplier<SoundEvent> fallSound);
 
-    /** The sound the fluid makes when a bucket of it is emptied ({@code fill} false) or filled, or null for the default (no annotation: the contract package avoids javax.annotation). */
-    SoundEvent bucketSound(Fluid fluid, boolean fill);
+    /**
+     * The sound {@code stack}'s fluid makes when a bucket of it is emptied ({@code fill} false) or filled, or null for
+     * the default. It takes the stack, not just the fluid, because a loader may sound per stack (NeoForge asks the
+     * fluid type about the stack itself).
+     */
+    @Nullable
+    SoundEvent bucketSound(BCFluidStack stack, boolean fill);
 }

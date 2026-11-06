@@ -28,9 +28,11 @@ import buildcraft.platform.Platform;
  * {@code DeferredRegister}. Each {@code register} call hands back a {@link BCHolder} at once.
  *
  * <p><b>Timing.</b> On NeoForge entries are queued and registered in the loader's register event, after
- * {@link #subscribe()} attached the registrar to the mod being constructed. On Fabric each entry is registered at its
- * {@code register} call and {@link #subscribe()} does nothing. Either way, entries are registered in call order and
- * must be made during mod construction.
+ * {@link #subscribe()} attached the registrar to the mod being constructed. On Fabric each entry is queued at its
+ * {@code register} call and built when it is first asked for ({@link BCHolder#get()}), or by the entrypoint's one
+ * registration pass after BuildCraft's init, in NeoForge's registry order and in call order within a registry; a
+ * registrar subscribed after that pass has its queued entries built by {@link #subscribe()}. Either way, entries are
+ * made during mod construction, and an entry asked for early is registered early on Fabric.
  *
  * <p>{@link Blocks} and {@link Items} carry the block and item helpers: they absorb the property cliff (1.21.10+
  * defers the properties so the id can be set on them first, 1.21.1 takes them eagerly), and {@link DataComponents}
@@ -85,7 +87,8 @@ public interface BCRegistrar<T> {
     /**
      * Attaches the registrar to the loader, during mod construction. Call it once, where the registrar's
      * {@code DeferredRegister.register(modBus)} used to be: on NeoForge the order of these calls is the order the
-     * registrars of one registry register in. On Fabric entries are already registered, so it does nothing.
+     * registrars of one registry register in. On Fabric it does nothing until BuildCraft's registration pass has run;
+     * after that it builds the registrar's queued entries.
      */
     void subscribe();
 

@@ -45,6 +45,10 @@ public interface LifecycleHooks {
     /** Runs {@code listener} each time a server has stopped: its levels are saved and unloaded. */
     void onServerStopped(Consumer<MinecraftServer> listener);
 
-    /** Runs {@code listener} each time a server level saves. */
+    /**
+     * Runs {@code listener} each time a server level saves, after the save of the level has been issued. The write
+     * itself may still be pending (NeoForge on 1.21.1 posts the event before it joins the IO worker), so a listener
+     * that must know its data reached the disk reads the file back; it never assumes the bytes are there.
+     */
     void onLevelSave(Consumer<ServerLevel> listener);
 }

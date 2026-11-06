@@ -67,12 +67,12 @@ public class SoundUtil {
     }
 
     public static void playBucketEmpty(Level world, BlockPos pos, BCFluidStack fluid) {
-        SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), false);
+        SoundEvent sound = Platform.sounds().bucketSound(fluid, false);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     public static void playBucketFill(Level world, BlockPos pos, BCFluidStack fluid) {
-        SoundEvent sound = Platform.sounds().bucketSound(fluid.getFluid(), true);
+        SoundEvent sound = Platform.sounds().bucketSound(fluid, true);
         world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 }

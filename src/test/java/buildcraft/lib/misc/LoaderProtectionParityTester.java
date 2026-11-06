@@ -232,6 +232,112 @@ public class LoaderProtectionParityTester {
         helper.succeed();
     }
 
+    /** A provider-only claim (see {@link LoaderTestEvents#claimByProvider}) refusing one kind of ask at {@code at}. */
+    private static java.util.function.Predicate<BlockPos> refusingAt(BlockPos at, int[] asks) {
+        return pos -> {
+            if (!pos.equals(at)) {
+                return false;
+            }
+            asks[0]++;
+            return true;
+        };
+    }
+
+    /**
+     * A machine's break probe at a block a claim's protection provider refuses to let break (Common Protection API's
+     * {@code canBreakBlock} on Fabric, with no break callback refusing; the break event on NeoForge) is refused, and
+     * the same probe one block over, or once the claim is gone, is allowed.
+     */
+    public static void providerRefusesMachineBreak(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos claimedRel = new BlockPos(2, 2, 3);
+        helper.setBlock(claimedRel, Blocks.STONE);
+        helper.setBlock(claimedRel.east(), Blocks.STONE);
+        BlockPos claimed = helper.absolutePos(claimedRel);
+        GameProfile owner = new GameProfile(UUID.randomUUID(), "bc_provider_break_test");
+        int[] asks = { 0 };
+        try (LoaderTestEvents.Observer claim = LoaderTestEvents.claimByProvider(refusingAt(claimed, asks), pos -> false,
+                target -> false)) {
+            check(!BlockUtil.canMachineBreak(level, claimed, owner),
+                    "a machine's break of a block the provider refuses must be refused");
+            check(asks[0] >= 1, "liveness: the claim must have been asked about the break");
+            check(BlockUtil.canMachineBreak(level, claimed.east(), owner),
+                    "a machine's break beside the claimed block must be allowed");
+        }
+        check(BlockUtil.canMachineBreak(level, claimed, owner), "control: with the claim gone the break is allowed");
+        check(level.getBlockState(claimed).is(Blocks.STONE), "the probes must leave the block in place");
+        helper.succeed();
+    }
+
+    /**
+     * A machine's click on a block a claim's protection provider refuses interaction with (Common Protection API's
+     * {@code canInteractBlock} on Fabric, with no use-block callback refusing; the right-click event on NeoForge) is
+     * refused before the item is used: a hoe leaves the dirt untilled and the click is no use. With the claim gone the
+     * same click tills it.
+     */
+    public static void providerRefusesMachineClick(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos dirtRel = new BlockPos(2, 1, 3);
+        helper.setBlock(dirtRel, Blocks.DIRT);
+        BlockPos dirt = helper.absolutePos(dirtRel);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(dirt).add(0, 0.5, 0), Direction.UP, dirt, false);
+        ItemStack hoe = new ItemStack(Items.IRON_HOE);
+        int[] asks = { 0 };
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, dirt.above().south(2))) {
+            ServerPlayer player = lease.player();
+            player.setItemInHand(InteractionHand.MAIN_HAND, hoe);
+            BlockUtil.ItemUse refused;
+            try (LoaderTestEvents.Observer claim = LoaderTestEvents.claimByProvider(pos -> false,
+                    refusingAt(dirt, asks), target -> false)) {
+                refused = BlockUtil.tryUseItemOnBlock(level, player, InteractionHand.MAIN_HAND, hoe, hit);
+            }
+            check(asks[0] >= 1, "liveness: the claim must have been asked about the click");
+            check(refused == BlockUtil.ItemUse.REFUSED, "a click the provider refuses must be refused, was " + refused);
+            check(level.getBlockState(dirt).is(Blocks.DIRT), "the claimed dirt must stay untilled, is "
+                    + level.getBlockState(dirt));
+            BlockUtil.ItemUse control = BlockUtil.tryUseItemOnBlock(level, player, InteractionHand.MAIN_HAND, hoe, hit);
+            check(control == BlockUtil.ItemUse.USED && level.getBlockState(dirt).is(Blocks.FARMLAND),
+                    "control: with the claim gone the hoe tills the dirt, was " + control + " leaving "
+                            + level.getBlockState(dirt));
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A machine's item use in the air by a player standing in a block a claim's protection provider refuses
+     * interaction with (Common Protection API's {@code canInteractBlock} at the user's position on Fabric, which has
+     * no item-use check, with no use-item callback refusing; the item right-click event on NeoForge) is refused: a
+     * golden apple, which can always be eaten, is not started on. With the claim gone the same use starts eating it.
+     */
+    public static void providerRefusesMachineItemUse(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        ItemStack apple = new ItemStack(Items.GOLDEN_APPLE);
+        int[] asks = { 0 };
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, helper.absolutePos(new BlockPos(2, 2, 3)))) {
+            ServerPlayer player = lease.player();
+            player.setItemInHand(InteractionHand.MAIN_HAND, apple);
+            BlockPos standing = player.blockPosition();
+            try {
+                boolean refusedUsed;
+                try (LoaderTestEvents.Observer claim = LoaderTestEvents.claimByProvider(pos -> false,
+                        refusingAt(standing, asks), target -> false)) {
+                    refusedUsed = BlockUtil.useItemInAir(level, player, InteractionHand.MAIN_HAND, apple);
+                }
+                check(asks[0] >= 1, "liveness: the claim must have been asked about the use");
+                check(!refusedUsed && !player.isUsingItem(), "an item use the provider refuses must not start");
+                boolean controlUsed = BlockUtil.useItemInAir(level, player, InteractionHand.MAIN_HAND, apple);
+                check(controlUsed && player.isUsingItem(),
+                        "control: with the claim gone the golden apple is started on");
+            } finally {
+                player.stopUsingItem();
+            }
+        }
+        helper.succeed();
+    }
+
     /**
      * A machine's break probe at a tube a mining well owns answers as NeoForge's break event does: allowed (no claim
      * refuses it), without asking the tube's player-break guard, which is the block's own answer to a player's break

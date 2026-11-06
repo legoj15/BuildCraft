@@ -221,6 +221,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:loader_parity_wrench_asks_claim_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::wrenchRotationAsksClaimFirst);
         reg.accept("buildcraftunofficial:loader_parity_click_ask_runs_no_use_first", () -> buildcraft.lib.misc.LoaderProtectionParityTester::machineClickAskRunsNoUseFirst);
         reg.accept("buildcraftunofficial:loader_parity_tube_probe_is_not_player_break", () -> buildcraft.lib.misc.LoaderProtectionParityTester::tubeProbeIsNotAPlayerBreak);
+        reg.accept("buildcraftunofficial:loader_parity_provider_refuses_break", () -> buildcraft.lib.misc.LoaderProtectionParityTester::providerRefusesMachineBreak);
+        reg.accept("buildcraftunofficial:loader_parity_provider_refuses_click", () -> buildcraft.lib.misc.LoaderProtectionParityTester::providerRefusesMachineClick);
+        reg.accept("buildcraftunofficial:loader_parity_provider_refuses_item_use", () -> buildcraft.lib.misc.LoaderProtectionParityTester::providerRefusesMachineItemUse);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);
@@ -250,6 +253,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_minecart_stuck_slot_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testSlotThatWillNotClearKeepsTheCartAndItsItem);
         reg.accept("buildcraftunofficial:stripes_minecart_no_pick_result_destroyed_its_own_way", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCartThatNamesNoItemIsDestroyedItsOwnWay);
         reg.accept("buildcraftunofficial:stripes_minecart_capability_only_cart_emptied", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCapabilityOnlyCartIsEmptiedBeforeItIsBroken);
+        reg.accept("buildcraftunofficial:stripes_minecart_provider_refusal_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testProviderRefusalKeepsTheCart);
         // The living-entity item-storage fallback both loaders answer: an equine's chest inventory, any other living
         // entity's hands then armour, each slot taking only what the entity can equip there.
         reg.accept("buildcraftunofficial:entity_item_storage_living_fallback", () -> buildcraft.lib.test.EntityItemStorageTester::livingEntityItemStorageFallback);

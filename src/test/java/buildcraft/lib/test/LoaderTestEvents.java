@@ -273,6 +273,64 @@ public final class LoaderTestEvents {
     }
 
     /**
+     * A claim that answers the way most Fabric claim mods answer: through a Common Protection API provider alone, with
+     * no Fabric API callback refusing anything, so a refusal it causes proves the provider half of BuildCraft's Fabric
+     * asks. On NeoForge it is the events the same asks post. Each predicate refuses by answering true:
+     * {@code breakRefused} a break at a position (NeoForge's break event; provider
+     * {@code canBreakBlock}), {@code interactRefused} an interaction at a position (NeoForge
+     * {@code PlayerInteractEvent.RightClickBlock} at the clicked block and {@code RightClickItem} at the block the
+     * user stands in; provider {@code canInteractBlock}, which BuildCraft asks at those same positions),
+     * {@code damageRefused} an attack on an entity (NeoForge {@code AttackEntityEvent}; provider
+     * {@code canDamageEntity}).
+     */
+    public static Observer claimByProvider(java.util.function.Predicate<net.minecraft.core.BlockPos> breakRefused,
+            java.util.function.Predicate<net.minecraft.core.BlockPos> interactRefused,
+            java.util.function.Predicate<Entity> damageRefused) {
+        //? if neoforge {
+        net.neoforged.bus.api.IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
+        // The break event's class moves between NeoForge lines; BuildCraft's own seam registers on whichever it is.
+        buildcraft.platform.event.PlatformProtection.Registration onBreak =
+                buildcraft.platform.Platform.protection().onBreak(event -> {
+                    if (breakRefused.test(event.pos())) {
+                        event.cancel();
+                    }
+                });
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock> onClick =
+                event -> {
+                    if (interactRefused.test(event.getPos())) {
+                        event.setCanceled(true);
+                    }
+                };
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem> onUse =
+                event -> {
+                    if (interactRefused.test(event.getPos())) {
+                        event.setCanceled(true);
+                    }
+                };
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.player.AttackEntityEvent> onAttack = event -> {
+            if (damageRefused.test(event.getTarget())) {
+                event.setCanceled(true);
+            }
+        };
+        bus.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class, onClick);
+        bus.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem.class, onUse);
+        bus.addListener(net.neoforged.neoforge.event.entity.player.AttackEntityEvent.class, onAttack);
+        return () -> {
+            onBreak.close();
+            bus.unregister(onClick);
+            bus.unregister(onUse);
+            bus.unregister(onAttack);
+        };
+        //?} else {
+        /*net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
+                "buildcraftunofficial_gametest", "provider_claim_" + FabricPlacementClaims.IDS.incrementAndGet());
+        eu.pb4.common.protection.api.CommonProtection.register(id,
+                new FabricProviderClaims(breakRefused, interactRefused, damageRefused));
+        return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
+        //?}
+    }
+
+    /**
      * Calls {@code listener} with each player's right-click on a block (NeoForge {@code PlayerInteractEvent.RightClickBlock};
      * Fabric {@code UseBlockCallback}, answering PASS).
      */
@@ -419,6 +477,39 @@ public final class LoaderTestEvents {
         public boolean canPlaceBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
             return !claim.test(player, pos);
+        }
+    }
+
+    /^* One provider-only claim on Fabric: refuses breaks, block interactions and entity damage, never placements. *^/
+    private record FabricProviderClaims(java.util.function.Predicate<net.minecraft.core.BlockPos> breakRefused,
+            java.util.function.Predicate<net.minecraft.core.BlockPos> interactRefused,
+            java.util.function.Predicate<Entity> damageRefused) implements eu.pb4.common.protection.api.ProtectionProvider {
+        @Override
+        public boolean isProtected(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+            return false;
+        }
+
+        @Override
+        public boolean isAreaProtected(net.minecraft.world.level.Level level, net.minecraft.world.phys.AABB area) {
+            return false;
+        }
+
+        @Override
+        public boolean canBreakBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return !breakRefused.test(pos);
+        }
+
+        @Override
+        public boolean canInteractBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return !interactRefused.test(pos);
+        }
+
+        @Override
+        public boolean canDamageEntity(net.minecraft.world.level.Level level, Entity entity,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return !damageRefused.test(entity);
         }
     }
 

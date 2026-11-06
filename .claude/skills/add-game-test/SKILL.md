@@ -99,10 +99,13 @@ Three cases leave the "same test, every node" default; pick by what the body nee
   a body that polls (`tickUntil`, `runAfterDelay`, `succeedWhen`) or needs the arena structure cannot run there and
   must be made synchronous or split. The client game test needs a GL context and is outside `fullTestSuite`, so run
   it yourself after adding one.
-- **Cannot compile on Fabric at all** (it names a NeoForge type in a way no seam covers). Add the file to
-  `fabricGameTestExcludes` in `buildSrc/src/main/kotlin/bc.fabric.gradle.kts` with its reason, and gate its
-  registration as above. The guard then still demands a client-game-test entry; if none is possible, the test is a
-  Fabric gap, and that is an issue to file, not a list entry to fake.
+- **Cannot compile on Fabric at all** (it names a NeoForge type in a way no seam covers). There is no supported
+  way to land this today: `fabricGameTestExcludes` in `buildSrc/src/main/kotlin/bc.fabric.gradle.kts` drops the file
+  from the same Fabric source set that compiles `BCFabricClientGameTest`, so the client-game-test entry the guard
+  demands for its `//? if neoforge` registration would not compile, and without the entry the unit run fails. Make
+  the body compile on Fabric (a `Platform` seam or `LoaderTestEvents`); if that is impossible, file an issue for a
+  guard allowlist before adding the test. Today the exclude list holds only `platform/neoforge/**`, the loader hooks
+  themselves.
 
 The Fabric build drops the manifests of the tests it does not register, so a `neoforge`-arm test needs no manifest
 change.

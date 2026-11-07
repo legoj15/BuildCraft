@@ -35,7 +35,9 @@
     "ServerPlayerMixin"
   ],
   "client": [
+    "client.AbstractContainerScreenMixin",
     "client.FogRendererMixin",
+    "client.GuiGraphicsExtractorMixin",
     "client.LevelEventHandlerMixin",
     "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"

@@ -66,8 +66,8 @@ public final class SchematicSingleTooltipOverlay {
     private static Blueprint cachedSynthetic;
 
     /**
-     * Entry point — registered on {@code NeoForge.EVENT_BUS} alongside
-     * {@link BlueprintTooltipOverlay#onPreTooltip}.
+     * Entry point — registered through {@link buildcraft.platform.client.ClientHooks#onTooltipPre}
+     * alongside {@link BlueprintTooltipOverlay#onPreTooltip}.
      */
     public static void onPreTooltip(BCTooltipPreContext ctx) {
         ItemStack stack = ctx.stack();

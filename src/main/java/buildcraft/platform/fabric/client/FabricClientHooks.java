@@ -109,10 +109,10 @@ public final class FabricClientHooks implements ClientHooks {
 
     @Override
     public void onTooltipPre(Consumer<BCTooltipPreContext> listener) {
-        // Gap: Fabric API 26.3 has no "tooltip about to be drawn" event with its position and components (only
-        // ClientTooltipComponentCallback, which maps tooltip data to components). The listener is not called, so the
-        // panels BuildCraft draws below a tooltip (blueprint previews) do not show; a Fabric port of them would be a
-        // ClientTooltipComponent instead.
+        // Fabric API 26.3 has no "tooltip about to be drawn" event with its position and components (only
+        // ClientTooltipComponentCallback, which maps tooltip data to components), so BuildCraft's own client mixins
+        // fire it at the head of the tooltip draw, where NeoForge's RenderTooltipEvent.Pre fires.
+        FabricTooltipHooks.onPre(listener);
     }
 
     @Override

@@ -28,6 +28,7 @@ import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The farmer: keeps a hoe equipped (fetching one from the station when none is held), searches for
  *  {@code "dirt"} with air above it, then tills it with {@code AIRobotUseToolOnBlock}. Ported from
@@ -117,11 +118,11 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotUseToolOnBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_TOOL));
             }
         } else if (ai instanceof AIRobotUseToolOnBlock) {
             // A till that failed (a claim mod said no, or the dirt changed under the hoe) must not be tried again on
@@ -135,7 +136,7 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
             }
             releaseBlockFound();
             if (giveUp) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
             }
         }
     }

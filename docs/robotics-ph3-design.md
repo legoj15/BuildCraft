@@ -352,6 +352,13 @@ render-state nodes the renderer must also queue geometry that vanilla's outline 
 geometry cannot be outlined there): the robot's items are submitted with the state's outline colour and the
 cube is submitted once more as a model part (see "Goggles outline" in `RenderRobot`). 1.21.1's classic
 renderer needs nothing: its buffer source is already outline-aware.
+The same goggles label the robot the player looks at with what it is doing and, asleep, why (issue #151): the
+server tick derives a `RobotStatus` (`RobotActivity` + `RobotSleepReason`) from the AI chain and syncs it as two ints;
+`RobotGogglesView.isLookedAt` picks the nearest robot on a 64-block look ray once per player tick (walls ignored), and
+`RenderRobot` feeds the text through the base class's name-tag path (`shouldShowName` + `getNameTag` on the render-state
+nodes, `shouldShowName` + `renderNameTag` on 1.21.1). `AIRobotGotoSleep` has no reason-less constructor, so a new sleep
+site cannot be written without naming its reason (which is also why it is not in the AI registry: the registry demands an
+`(IRobotAccess)` constructor, and the class is never saved anyway).
 
 **RobotRenderState extends EntityRenderState**: only ADD fields. Full inherited-field shadow-hazard
 set (both gens): entityType, x, y, z, ageInTicks, boundingBoxWidth/Height, eyeHeight,

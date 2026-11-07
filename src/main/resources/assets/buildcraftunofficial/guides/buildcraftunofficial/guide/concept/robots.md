@@ -45,7 +45,7 @@ A robot with nothing to do, or nothing to do it with, parks on its home station 
 
 ## Seeing your robots
 
-Robots work out of sight, and the [Robot Goggles](../item/goggles.md) show them: worn in the head slot they outline every robot through walls, red when its battery is low to green when it is full.
+Robots work out of sight, and the [Robot Goggles](../item/goggles.md) show them: worn in the head slot they outline every robot through walls, red when its battery is low to green when it is full. Look at one and a label says what it is doing, and when it sleeps, why.
 
 ## Boards
 

@@ -1329,6 +1329,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:volume_box_loaded_removal_reaches_clients", () -> buildcraft.core.marker.volume.VolumeBoxSyncTester::removingABoxLoadedFromDiskReachesClients);
         reg.accept("buildcraftunofficial:volume_box_one_shot_taken_once", () -> buildcraft.core.marker.volume.VolumeBoxOneShotTester::markerBoxIsTakenOnceAfterTheMarkersBreak);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
+        reg.accept("buildcraftunofficial:robot_status_knight_no_sword_reports_no_tool", () -> buildcraft.robotics.entity.RobotStatusLabelTester::knightWithNoSwordReportsNoToolSleepReason);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the
         // registry's reverse indexes end up naming only what the robot still holds: freed stations leave the

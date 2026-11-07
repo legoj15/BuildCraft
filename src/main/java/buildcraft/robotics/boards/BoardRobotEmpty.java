@@ -9,6 +9,7 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /**
  * The board a robot has when it has no board: it flies back to its station and parks.
@@ -36,6 +37,6 @@ public class BoardRobotEmpty extends RedstoneBoardRobot {
 
     @Override
     public void update() {
-        startDelegateAI(new AIRobotGotoSleep(robot));
+        startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_PROGRAM));
     }
 }

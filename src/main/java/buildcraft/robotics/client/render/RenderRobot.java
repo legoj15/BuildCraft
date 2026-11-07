@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.client.render;
 
+import javax.annotation.Nullable;
+
 import org.joml.Vector3f;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -16,6 +18,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -49,6 +52,7 @@ import buildcraft.lib.client.render.LightUtil;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 
+import buildcraft.robotics.client.RobotGogglesView;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.robotics.entity.RobotChargeView;
 
@@ -232,6 +236,23 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         return RobotChargeView.chargeFraction(robot.getEnergyMj());
     }
 
+    /**
+     * The Robot Goggles status label for a robot, or null when the goggles do not label it right now: the local player
+     * has to wear them and be looking at this robot ({@link RobotGogglesView#isLookedAt}). It goes out through the
+     * name-tag path - the same floating text, culling and see-through drawing as a custom name - and takes the name
+     * tag's place for that robot, so a named robot reads "Name - Status" and never loses its name.
+     */
+    @Nullable
+    private static Component gogglesLabel(EntityRobot robot) {
+        if (!RobotGogglesView.isLookedAt(robot)) {
+            return null;
+        }
+        Component status = robot.getStatus().label();
+        return robot.hasCustomName()
+            ? Component.empty().append(robot.getDisplayName()).append(" - ").append(status)
+            : status;
+    }
+
     /** Degrees of extra spin for an actively-used held item, cycling 0..45. */
     private static float activeSpin(float ageInTicks) {
         return (ageInTicks * SPIN_DEGREES_PER_TICK) % SPIN_CYCLE_DEGREES;
@@ -360,6 +381,20 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         return new RobotRenderState();
     }
 
+    // The status label rides the base class's name tag: extractRenderState asks these two, and fills state.nameTag
+    // from them within the vanilla 64-block name-tag distance; the base submit draws it (see submit below).
+
+    @Override
+    protected boolean shouldShowName(EntityRobot robot, double distanceToCameraSq) {
+        return super.shouldShowName(robot, distanceToCameraSq) || RobotGogglesView.isLookedAt(robot);
+    }
+
+    @Override
+    protected Component getNameTag(EntityRobot robot) {
+        Component label = gogglesLabel(robot);
+        return label != null ? label : super.getNameTag(robot);
+    }
+
     @Override
     public void extractRenderState(EntityRobot robot, RobotRenderState state, float partialTick) {
         super.extractRenderState(robot, state, partialTick);
@@ -402,17 +437,10 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     @Override
     public void submit(RobotRenderState state, PoseStack poseStack, SubmitNodeCollector collector,
                        CameraRenderState cameraState) {
+        // The base submit draws state.nameTag (7.2.x robot naming, and the Goggles status label): the base
+        // extractRenderState fills it for a custom name and, through the two overrides above, for the label. An explicit
+        // name-tag draw here as well (as this method once made) drew it twice, doubling its dark backdrop.
         super.submit(state, poseStack, collector, cameraState);
-
-        // 7.2.x robot naming: a name-tagged robot shows its name. The base extractRenderState fills
-        // state.nameTag (custom names only), so this is a pure draw hook — the same call vanilla's own
-        // non-living renderers (item frame, boat, minecart) make. The submit helper grew an explicit
-        // pixel-offset parameter and renamed at 26.1 (submitNameTag → submitNameDisplay).
-        //? if >=26.1 {
-        submitNameDisplay(state, poseStack, collector, cameraState, 0);
-        //?} else {
-        /*submitNameTag(state, poseStack, collector, cameraState);*/
-        //?}
 
         // Drawn before the body yaw is applied: the destination is a world-axis offset, not a
         // body-relative one.
@@ -558,14 +586,25 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         return skin != null ? skin : TEX_BASE;
     }
 
+    // The base render draws the stock name tag whenever this says so; a robot the Goggles label is drawn for gets the
+    // label instead (in render below), not the label on top of its name.
+    @Override
+    protected boolean shouldShowName(EntityRobot robot) {
+        return !RobotGogglesView.isLookedAt(robot) && super.shouldShowName(robot);
+    }
+
     @Override
     public void render(EntityRobot robot, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight) {
         super.render(robot, entityYaw, partialTick, poseStack, bufferSource, packedLight);
 
-        // 7.2.x robot naming, classic-renderer branch — see the submit() counterpart above.
-        if (this.shouldShowName(robot)) {
-            this.renderNameTag(robot, robot.getDisplayName(), poseStack, bufferSource, packedLight, entityYaw);
+        // The base render has just drawn the stock name tag (7.2.x robot naming) when shouldShowName said so - which
+        // it does not for a robot the Goggles label stands in for (see below). The label is drawn the same way, with
+        // renderNameTag, so it has the same culling and see-through text. (An explicit stock-name draw here as well, as
+        // this method once made, drew a custom name twice.)
+        Component label = gogglesLabel(robot);
+        if (label != null) {
+            this.renderNameTag(robot, label, poseStack, bufferSource, packedLight, partialTick);
         }
 
         Identifier skin = getTextureLocation(robot);

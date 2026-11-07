@@ -27,6 +27,6 @@ A robot with nothing to do, or nothing to do it with, parks on its home station 
 Sneak and right-click a robot with a wrench to take it apart one layer at a time: first anything it wears, then the tool it holds, then the robot itself, which keeps its board and charge.
 </hint>
 <chapter name="Seeing your robots"/>
-Robots work out of sight, and the <link inline="buildcraftunofficial:item/goggles"/> show them: worn in the head slot they outline every robot through walls, red when its battery is low to green when it is full.
+Robots work out of sight, and the <link inline="buildcraftunofficial:item/goggles"/> show them: worn in the head slot they outline every robot through walls, red when its battery is low to green when it is full. Look at one and a label says what it is doing, and when it sleeps, why.
 <chapter name="Boards"/>
 Every board has a page of its own under Boards. The cheap ones (Picker, Carrier, Tank) move things between stations. The middle tier works a zone: Lumberjack, Miner, Farmer, Planter, Leaf Cutter and Shovelman with a tool from a station, Harvester and Pump with none, and the Butcher with a sword. The expensive ones fight monsters (Knight), deliver on request, drop TNT, run items like a Stripes pipe, or feed a Builder. The Empty board is the blank one, and a robot carrying it cannot be placed.

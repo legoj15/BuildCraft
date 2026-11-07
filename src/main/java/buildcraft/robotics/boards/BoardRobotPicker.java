@@ -24,6 +24,7 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** Picks up dropped items within 250 blocks and carries them to a station to unload. When nothing to fetch and
  *  nothing held it goes to sleep. The "this item is being fetched" table keys on {@code ItemEntity.getUUID()}
@@ -108,11 +109,11 @@ public class BoardRobotPicker extends RedstoneBoardRobot {
             } else if (robot.containsItems()) {
                 startDelegateAI(new AIRobotGotoStationAndUnload(robot));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
             }
         }
     }

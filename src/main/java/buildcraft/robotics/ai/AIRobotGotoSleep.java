@@ -11,6 +11,7 @@ package buildcraft.robotics.ai;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** Returns the robot to its linked station and puts it to sleep — the "parked home" behaviour every board
  *  falls back to when there is nothing to do. Releases all resource locks first (the robot is going away).
@@ -18,11 +19,25 @@ import buildcraft.api.robots.IRobotAccess;
  *  <p>Not 7.1.x, which slept wherever it was when home could not be reached: a robot that cannot get home docks at
  *  the nearest powered station it CAN reach, trying them in order of distance, and sleeps there, so a robot that
  *  wandered out of its home's reach (a goto is capped at ~96 blocks) is not left to drain its battery in mid-air.
- *  With no station in reach - or no home at all - it still sleeps where it is. */
+ *  With no station in reach - or no home at all - it still sleeps where it is.
+ *
+ *  <p>Also not 7.1.x: every sleep says why ({@link RobotSleepReason}), for the Robot Goggles label. There is
+ *  deliberately no constructor without one, so a board cannot go to sleep for no stated reason - which also means this
+ *  class has no {@code (IRobotAccess)} constructor and is not in the AI registry ({@code RobotManager} insists on that
+ *  constructor for the NBT load). It never needed to be: it is not {@link #canLoadFromNBT NBT-loadable}, so a saved
+ *  robot never carries it, and the reloaded board simply decides again and sleeps for the same reason. */
 public class AIRobotGotoSleep extends AIRobot {
 
-    public AIRobotGotoSleep(IRobotAccess iRobot) {
+    private final RobotSleepReason reason;
+
+    public AIRobotGotoSleep(IRobotAccess iRobot, RobotSleepReason reason) {
         super(iRobot);
+        this.reason = reason;
+    }
+
+    /** Why the board sent the robot to sleep. */
+    public RobotSleepReason getReason() {
+        return reason;
     }
 
     @Override

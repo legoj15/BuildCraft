@@ -32,6 +32,7 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotLoad;
 import buildcraft.robotics.ai.AIRobotSearchRandomGroundBlock;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The bomber: loads TNT at a station, flies to a random spot {@code flyingHeight} above the ground the
  *  random search found, and drops primed TNT from there. Ported from 7.1.x {@code BoardRobotBomber}
@@ -104,7 +105,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
             }
         } else if (ai instanceof AIRobotSearchRandomGroundBlock aiFind) {
             if (ai.success()) {
@@ -114,13 +115,13 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
                         aiFind.blockFound.getY() + flyingHeight,
                         aiFind.blockFound.getZ()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotGotoBlock) {
             if (ai.success()) {
                 dropBomb();
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
             }
         }
     }
@@ -141,7 +142,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
             // The drop point sits in a chunk that is not in memory (the robot hovered by a chunk border): asking
             // whether its block may be broken would load the chunk. Nothing is dropped and nothing is refused; the
             // robot sleeps, as on every other fruitless pass, and searches for ground again when it wakes.
-            startDelegateAI(new AIRobotGotoSleep(robot));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
             return;
         }
         if (!RobotProtection.canBreak(robot, level, landing)) {
@@ -151,7 +152,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
                 refusals.remember(level, aimed);
             }
             if (refusals.failed(level, landing)) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
             }
             return;
         }

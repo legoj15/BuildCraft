@@ -88,7 +88,16 @@ final class ClassicSlotLedger {
         protected void onRootCommit(Integer originalState) {
             List<Owed> replay = new ArrayList<>(pending);
             pending.clear();
-            replay.forEach(ClassicSlotLedger::replay);
+            // One ledger carries every wrapper's promises on its container: a handler that throws must not drop
+            // the rest unlogged.
+            for (Owed owed : replay) {
+                try {
+                    replay(owed);
+                } catch (RuntimeException e) {
+                    BCLog.logger.error("[platform] {} threw replaying a simulated {} of {} in slot {}: lost",
+                        owed.handler, owed.insert ? "insert" : "extract", owed.stack, owed.handlerSlot, e);
+                }
+            }
         }
     };
 
@@ -107,6 +116,8 @@ final class ClassicSlotLedger {
                 if (reached >= 0) {
                     return inContainer(inv, reached);
                 }
+                // A slot past the face's array: the wrapper itself refuses every call on it, so nothing is ever
+                // promised there and the per-wrapper ledger below is only ever read empty.
             } catch (IllegalAccessException e) {
                 // setAccessible succeeded at class init, so this cannot happen; fall through to the wrapper itself.
             }
@@ -114,6 +125,7 @@ final class ClassicSlotLedger {
         return new Slot(LEDGERS.get(handler), slot);
     }
 
+    // 1.21.1's ChestBlock answers a double chest with a new CompoundContainer over its two halves on each query.
     private static Slot inContainer(Container container, int slot) {
         while (container instanceof CompoundContainer compound) {
             int first = compound.container1.getContainerSize();

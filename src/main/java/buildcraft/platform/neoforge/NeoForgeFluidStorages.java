@@ -43,7 +43,10 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * and replays the real calls when the root transaction commits ({@code DeferredFluidCalls}, which also keeps a second
  * call in one transaction from promising the same fluid twice). Classic fills are not per tank, so the view takes
  * every insert through index 0 (the handler spreads it) and refuses the other indices; an extract at any index is a
- * fluid-matched drain of the whole handler, and each resource-wide call is one handler call.
+ * fluid-matched drain of the whole handler, and each resource-wide call is one handler call. That queue is per view:
+ * a provider answering each query with a fresh handler gives each lookup its own (the item arm keys its queue per
+ * container slot instead). No ledger is needed here, since 1.21.1 registers no vanilla block fluid handlers and its
+ * item ones are one per stack.
  */
 public final class NeoForgeFluidStorages {
     private NeoForgeFluidStorages() {}

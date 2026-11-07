@@ -1467,6 +1467,19 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
         return super.isCurrentlyGlowing() || gogglesView();
     }
 
+    /** How far, in blocks, Goggles keep a robot drawn: the type's tracking range (four chunks), past which the
+     *  client has no robot to draw anyway. */
+    private static final double GOGGLES_RENDER_BLOCKS = 64;
+
+    /** Goggles keep robots drawn out to {@link #GOGGLES_RENDER_BLOCKS}. Vanilla scales the cull distance by the
+     *  box (64 times its size), which for the 0.25 robot box is 16 blocks: the outline and the status label
+     *  vanished long before the label's 64-block look ray ran out. */
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distanceSqr) {
+        return super.shouldRenderAtSqrDistance(distanceSqr)
+                || (distanceSqr < GOGGLES_RENDER_BLOCKS * GOGGLES_RENDER_BLOCKS && gogglesView());
+    }
+
     /** The outline colour: red when the battery is empty to green when it is full while the Goggles view applies,
      *  otherwise the stock team colour. */
     @Override

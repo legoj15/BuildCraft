@@ -91,8 +91,11 @@ public class FacadeDeduplicator {
      * Removes facade states from {@link FacadeStateManager#validFacadeStates} and
      * {@link FacadeStateManager#stackFacades} that are visually identical to an
      * earlier-registered state. Only the first (by blockstate ID order) survives.
-     * It narrows only the display and crafting views: {@link FacadeStateManager#allFacadeStates}, which facade reads resolve against, is never
-     * touched, so a removed state that arrives from a server still renders as its own block (#147).
+     * Each pass starts from the undeduped baseline ({@link FacadeStateManager#allFacadeStates} and
+     * {@link FacadeStateManager#allStackFacades}), so the first run after a resource reload restores states the
+     * old textures removed (#149). It narrows only the display and crafting views:
+     * {@link FacadeStateManager#allFacadeStates}, which facade reads resolve against, is never touched, so a removed
+     * state that arrives from a server still renders as its own block (#147).
      *
      * <p><b>Thread-safety:</b> builds entirely new map snapshots off the side, then publishes
      * them via volatile reference reassignment. Readers (server tick, recipe lookup) see either
@@ -106,9 +109,10 @@ public class FacadeDeduplicator {
     //?} else {
     /*public static void deduplicateVisuallyIdentical(Map<BlockState, net.minecraft.client.resources.model.BakedModel> blockStateModels) {*/
     //?}
-        // Snapshot the current maps once at the top — we operate on copies for the entire pass.
-        SortedMap<BlockState, FacadeBlockStateInfo> currentValid = FacadeStateManager.validFacadeStates;
-        Map<ItemStackKey, List<FacadeBlockStateInfo>> currentStackFacades = FacadeStateManager.stackFacades;
+        // Start from the undeduped baseline, never the previous pass's output: a re-run after a resource reload must be
+        // able to restore a state the old textures removed (#149). Snapshot once; the pass works on copies throughout.
+        SortedMap<BlockState, FacadeBlockStateInfo> currentValid = FacadeStateManager.allFacadeStates;
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> currentStackFacades = FacadeStateManager.allStackFacades;
 
         BCLog.logger.info("[silicon.facade] Starting visual deduplication of "
             + currentValid.size() + " facade states...");
@@ -155,7 +159,7 @@ public class FacadeDeduplicator {
         BCLog.logger.info("[silicon.facade] Dedup scan complete: " + seen.size() + " unique, "
             + dupCount + " duplicates, " + nullFingerprints + " null fingerprints");
 
-        // Build the new snapshots off-side. We start from the current published maps and apply
+        // Build the new snapshots off-side. We start from the undeduped baseline and apply
         // removals/insertions to local copies; the live volatile fields stay untouched until publish.
         Comparator<? super BlockState> validComparator = currentValid.comparator();
         SortedMap<BlockState, FacadeBlockStateInfo> nextValid =

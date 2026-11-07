@@ -161,9 +161,9 @@ public class BCSilicon {
             }
             if (Platform.loader().isPhysicalClient()) {
                 // Primary dedup trigger is BCSiliconClient.GameBus.onClientLoggingIn (deterministic,
-                // off the JEI first-screen-open critical path). This call is the F3+T safety net:
-                // after a resource reload the model cache refills and the next tab rebuild re-dedups
-                // against the new textures. In steady state this is a no-op.
+                // off the JEI first-screen-open critical path). This call is a safety net for a tab
+                // rebuild with a refilled model cache; a resource reload alone does not rebuild the tab,
+                // so a post-F3+T re-dedup normally lands at the next world join. Usually a no-op.
                 buildcraft.silicon.client.BCSiliconClient.runDeferredDedup();
             }
             for (FacadeBlockStateInfo info : FacadeStateManager.validFacadeStates.values()) {

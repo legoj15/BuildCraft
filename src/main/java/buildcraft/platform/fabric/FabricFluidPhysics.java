@@ -38,7 +38,11 @@ import buildcraft.platform.FluidProperties;
  * <li>a living entity in a fluid that is not water-like (crude oil, residue) wades through it by
  * {@link buildcraft.platform.ThickFluidMotion}, the movement step the NeoForge fluid type's {@code FluidType.move}
  * takes, and a jumping one off the ground (or on the ground deeper than its jump threshold) rises by NeoForge's
- * {@code jumpInFluid} lift of {@link #FLUID_JUMP_SPEED} a tick ({@code LivingEntityMixin}).</li>
+ * {@code jumpInFluid} lift of {@link #FLUID_JUMP_SPEED} a tick, and a ridden {@code can_float_while_ridden} mount
+ * then takes vanilla 26.3's {@code floatInLiquidWhileRidden} lift, as NeoForge 26.3 runs it after the type's
+ * {@code move} ({@code LivingEntityMixin});</li>
+ * <li>a rider is thrown off a {@code dismounts_underwater} mount only with its eyes in a water-tag fluid that is not
+ * BuildCraft's (NeoForge's {@code canBeRiddenUnderFluidType}; {@code LivingEntityMixin}).</li>
  * </ul>
  * The rest of vanilla's tag queries ({@code getFluidHeight(WATER)}, {@code isEyeInFluid(WATER)} elsewhere) stay tag
  * based, as NeoForge's deprecated tag paths are. Extinguishing is the fluid's own {@code entityInside}.
@@ -70,7 +74,8 @@ public final class FabricFluidPhysics {
         boolean buildcraft$inKindOf(FluidProperties fluid);
 
         /^* Whether the entity's eyes are in a water-tag fluid that is not BuildCraft's: the only kind a boat floats on
-         *  (NeoForge's {@code canBoatInFluid}). *^/
+         *  (NeoForge's {@code canBoatInFluid}) and the only kind that throws a rider off a {@code dismounts_underwater}
+         *  mount (NeoForge's {@code canBeRiddenUnderFluidType}). *^/
         boolean buildcraft$eyeInBoatableWater();
 
         /^* Whether the entity's eyes are in a fluid it can drown in. *^/

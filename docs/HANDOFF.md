@@ -82,7 +82,6 @@
 ## Open questions / leads (unverified)
 - Placement on Fabric is put back after the block's own side effects run, unlike NeoForge's deferred capture.
   Documented in `FabricProtection`.
-- The Fabric config screen (Forge Config API Port's, offered to Mod Menu) compiles but has not been opened in a client.
 - The #117 override is inert on the NeoForge 26.1.0 beta (older `move` signature); 26.1.1 is unverified.
 
 ## Uncommitted changes

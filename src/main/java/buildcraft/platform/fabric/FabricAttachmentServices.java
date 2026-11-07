@@ -10,9 +10,11 @@ package buildcraft.platform.fabric;
 
 import com.mojang.serialization.Codec;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.TagValueInput;
@@ -22,6 +24,7 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.AttachmentServices;
 import buildcraft.platform.registry.BCAttachment;
 import buildcraft.platform.registry.BCAttachmentData;
@@ -29,9 +32,10 @@ import buildcraft.platform.registry.BCAttachmentRegistrar;
 
 /^*
  * {@link AttachmentServices} on Fabric: fabric-data-attachment-api-v1, registered at the register call. The payload is
- * persisted as the compound its own save method writes. Gap: that compound is read back without registry context
- * ({@code RegistryAccess.EMPTY}), which is enough for BuildCraft's primitive-only payloads; the saved layout differs
- * from NeoForge's (worlds do not move between loaders).
+ * persisted as the compound its own save method writes, written and read with the running server's registries (the
+ * level's): vanilla keeps the provider of the ops Fabric API hands the codec private, and attachments persist
+ * only while a server runs. With no server it falls back to no registries, which still carries primitive payloads.
+ * The saved layout differs from NeoForge's (worlds do not move between loaders).
  *^/
 public final class FabricAttachmentServices implements AttachmentServices {
     @Override
@@ -70,13 +74,19 @@ public final class FabricAttachmentServices implements AttachmentServices {
     private static <T extends BCAttachmentData> Codec<T> codec(Supplier<T> factory) {
         return CompoundTag.CODEC.xmap(tag -> {
             T value = factory.get();
-            value.deserialize(TagValueInput.create(ProblemReporter.DISCARDING, RegistryAccess.EMPTY, tag));
+            value.deserialize(TagValueInput.create(ProblemReporter.DISCARDING, registries(), tag));
             return value;
         }, value -> {
-            TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
+            TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries());
             value.serialize(output);
             return output.buildResult();
         });
+    }
+
+    /^* The running server's registries, else none: primitives round-trip, registry-backed fields default. *^/
+    private static HolderLookup.Provider registries() {
+        MinecraftServer server = Platform.loader().currentServer();
+        return server == null ? RegistryAccess.EMPTY : server.registryAccess();
     }
 }
 *///?}

@@ -138,7 +138,7 @@ abstract class NeoForgeStorageAdapter<R, V extends Resource, B extends BCStorage
         // Value equality over the storage, as the records this class replaced had.
         @Override
         public final boolean equals(Object other) {
-            return other != null && other.getClass() == getClass() && ((ToNeo<?, ?, ?>) other).storage.equals(storage);
+            return other != null && other.getClass() == getClass() && storage.equals(((ToNeo<?, ?, ?>) other).storage);
         }
 
         @Override
@@ -201,7 +201,7 @@ abstract class NeoForgeStorageAdapter<R, V extends Resource, B extends BCStorage
         // Value equality over the handler, as the records this class replaced had.
         @Override
         public final boolean equals(Object other) {
-            return other != null && other.getClass() == getClass() && ((View<?, ?, ?>) other).handler.equals(handler);
+            return other != null && other.getClass() == getClass() && handler.equals(((View<?, ?, ?>) other).handler);
         }
 
         @Override

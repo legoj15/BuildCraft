@@ -91,7 +91,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     @Nonnull
     @Override
     public ItemStack getFacadeForBlock(BlockState state) {
-        FacadeBlockStateInfo info = FacadeStateManager.validFacadeStates.get(state);
+        FacadeBlockStateInfo info = FacadeStateManager.allFacadeStates.get(state);
         if (info == null) {
             return ItemStack.EMPTY;
         } else {

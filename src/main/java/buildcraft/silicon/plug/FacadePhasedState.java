@@ -40,10 +40,7 @@ public class FacadePhasedState implements IFacadePhasedState {
         if (nbt.contains("state")) {
             try {
                 BlockState blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "state"));
-                stateInfo = FacadeStateManager.validFacadeStates.get(blockState);
-                if (stateInfo == null) {
-                    stateInfo = FacadeStateManager.createFallbackInfo(blockState);
-                }
+                stateInfo = FacadeStateManager.resolve(blockState);
             } catch (Throwable t) {
                 throw new RuntimeException("Failed badly when reading a facade state!", t);
             }
@@ -83,11 +80,7 @@ public class FacadePhasedState implements IFacadePhasedState {
                 + Block.BLOCK_STATE_REGISTRY.size() + " states); showing an empty facade");
             return new FacadePhasedState(FacadeStateManager.defaultState, colour);
         }
-        FacadeBlockStateInfo info = FacadeStateManager.validFacadeStates.get(state);
-        if (info == null) {
-            info = FacadeStateManager.createFallbackInfo(state);
-        }
-        return new FacadePhasedState(info, colour);
+        return new FacadePhasedState(FacadeStateManager.resolve(state), colour);
     }
 
     public void writeToBuffer(PacketBufferBC buf) {

@@ -61,8 +61,14 @@ public enum FacadeStateManager implements IFacadeRegistry {
     INSTANCE;
 
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
-    /** All three maps below are <b>read-only snapshots</b> published by {@link #init()} and
-     *  later atomically replaced by {@link buildcraft.silicon.client.FacadeDeduplicator}.
+    /** Every facade state the enumeration accepted, published by {@link #init()} (empty seed before it) and never narrowed by the
+     *  client's visual dedup. This is the RESOLUTION map: {@link #resolve} looks saved and synced facades up here,
+     *  so a facade a dedicated server accepted (it never dedups) keeps its block on a client that dropped the
+     *  state from its display list (#147: it used to read back as air). Read-only snapshot, like the maps below. */
+    public static volatile SortedMap<BlockState, FacadeBlockStateInfo> allFacadeStates;
+    /** The three maps below are the DISPLAY/crafting view: <b>read-only snapshots</b> published by {@link #init()}
+     *  and later atomically replaced by {@link buildcraft.silicon.client.FacadeDeduplicator}, which removes
+     *  look-alike states from the first two and fills the redirect table. Never look a facade's identity up in them; use {@link #resolve}.
      *  Readers must never mutate them — they are wrapped immutable / built via {@link Map#copyOf}.
      *  The {@code volatile} reference gives readers a consistent snapshot per field access; the
      *  three fields can briefly diverge across a swap (see FacadeDeduplicator for ordering),
@@ -105,6 +111,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
     static {
         validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+        allFacadeStates = validFacadeStates;
         stackFacades = Map.of();
         stackRedirects = Map.of();
     }
@@ -151,7 +158,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
     }
 
     private static FacadeBlockStateInfo getInfoForState(BlockState state) {
-        return validFacadeStates.get(state);
+        return allFacadeStates.get(state);
     }
 
     /** Checks if a block is valid for use as a facade.
@@ -214,6 +221,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
             // (a re-init after a populated run must clear them), mark initialized so this is
             // once-only, and stop before the scan. previewState falls back to the air default.
             validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+            allFacadeStates = validFacadeStates;
             stackFacades = Map.of();
             stackRedirects = Map.of();
             previewState = defaultState;
@@ -243,6 +251,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
             publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
         }
         validFacadeStates = Collections.unmodifiableSortedMap(nextValid);
+        allFacadeStates = validFacadeStates;
         stackFacades = Map.copyOf(publishedStackFacades);
 
         initialized = true;
@@ -348,7 +357,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
                     // Test that the BlockState round-trips through NBT and the packet buffer.
                     // We compare raw BlockStates instead of routing reads through
-                    // FacadePhasedState.read*, because those call FacadeStateManager.validFacadeStates.get(...)
+                    // FacadePhasedState.read*, because those look the state up in FacadeStateManager.allFacadeStates
                     // — which is still the empty seed map mid-scan (init() only publishes the populated
                     // map after this whole loop finishes). That made the test always fall back to
                     // defaultState (air) and throw for every valid facade.
@@ -389,14 +398,21 @@ public enum FacadeStateManager implements IFacadeRegistry {
         }
     }
 
-    /** Read-path fallback for a saved facade state that is not in {@link #validFacadeStates}.
+    /** The facade info for a saved or synced block state: its entry in {@link #allFacadeStates} (never the
+     *  deduped display map), else {@link #createFallbackInfo}. Every facade read path goes through here. */
+    static FacadeBlockStateInfo resolve(BlockState state) {
+        FacadeBlockStateInfo info = allFacadeStates.get(state);
+        return info != null ? info : createFallbackInfo(state);
+    }
+
+    /** Read-path fallback for a saved facade state that is not in {@link #allFacadeStates}.
      *  While generation is disabled the map is empty BY DESIGN rather than because the state is
      *  invalid — reconstruct an ad-hoc info so pre-existing facades keep their identity instead of
      *  collapsing to (and, on the next chunk save, being permanently persisted as) the air
      *  default. While generation is enabled the historical behavior stands: unknown states
      *  collapse to {@link #defaultState}. Keyed on the {@link #generationDisabled} latch, not the
      *  live config, so this always matches the state the maps were actually built under. */
-    static FacadeBlockStateInfo createFallbackInfo(BlockState state) {
+    private static FacadeBlockStateInfo createFallbackInfo(BlockState state) {
         if (!generationDisabled) {
             return defaultState;
         }

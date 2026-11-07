@@ -195,6 +195,66 @@ public class ItemStorageAdapterTester extends VanillaSetupBaseTester {
         assertTrue(classic.getStackInSlot(0).isEmpty(), "every promise replayed in full");
     }
 
+    /^* NeoForge answers each capability query on a vanilla container with a fresh wrapper (a double chest with a fresh
+     *  CompoundContainer too), so the lookups are never one view. What one owes is still owed to the container slot it
+     *  reaches, whichever wrapper, half or side reaches that slot next. ^/
+    @Test
+    public void freshVanillaWrappersOfOneContainerShareWhatIsOwed() {
+        net.minecraft.world.SimpleContainer left = new net.minecraft.world.SimpleContainer(1);
+        net.minecraft.world.SimpleContainer right = new net.minecraft.world.SimpleContainer(2);
+        right.setItem(1, new ItemStack(Items.DIRT, 54));
+        BCItemStorage chestA = NeoForgeItemStorages.fromNeo(new net.neoforged.neoforge.items.wrapper.InvWrapper(
+            new net.minecraft.world.CompoundContainer(left, right)));
+        BCItemStorage chestB = NeoForgeItemStorages.fromNeo(new net.neoforged.neoforge.items.wrapper.InvWrapper(
+            new net.minecraft.world.CompoundContainer(left, right)));
+        BCItemStorage half = NeoForgeItemStorages.fromNeo(new net.neoforged.neoforge.items.wrapper.InvWrapper(right));
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(6, chestA.insert(2, new ItemStack(Items.DIRT), 6, tx));
+            assertEquals(4, chestB.insert(2, new ItemStack(Items.DIRT), 10, tx), "10 free, 6 already promised");
+            assertEquals(0, half.insert(1, new ItemStack(Items.DIRT), 10, tx), "the same slot, seen from its half");
+            tx.commit();
+        }
+        assertEquals(64, right.getItem(1).getCount(), "every promise replayed in full");
+
+        SidedTestContainer furnace = new SidedTestContainer();
+        furnace.setItem(1, new ItemStack(Items.DIRT, 60));
+        BCItemStorage topA = NeoForgeItemStorages.fromNeo(
+            new net.neoforged.neoforge.items.wrapper.SidedInvWrapper(furnace, net.minecraft.core.Direction.UP));
+        BCItemStorage topB = NeoForgeItemStorages.fromNeo(
+            new net.neoforged.neoforge.items.wrapper.SidedInvWrapper(furnace, net.minecraft.core.Direction.UP));
+        BCItemStorage unsided = NeoForgeItemStorages.fromNeo(new net.neoforged.neoforge.items.wrapper.InvWrapper(furnace));
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            assertEquals(3, topA.insert(0, new ItemStack(Items.DIRT), 3, tx));
+            assertEquals(1, topB.insert(0, new ItemStack(Items.DIRT), 3, tx), "the top's slot 0 is container slot 1");
+            assertEquals(0, unsided.extract(1, new ItemStack(Items.DIRT), 1, tx), "an insert is owed on the slot");
+            tx.commit();
+        }
+        assertEquals(64, furnace.getItem(1).getCount(), "every promise replayed in full");
+    }
+
+    /^* A two-slot container whose top face reaches only slot 1, as a furnace's top reaches only its input. ^/
+    private static final class SidedTestContainer extends net.minecraft.world.SimpleContainer
+        implements net.minecraft.world.WorldlyContainer {
+        SidedTestContainer() {
+            super(2);
+        }
+
+        @Override
+        public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+            return side == net.minecraft.core.Direction.UP ? new int[] {1} : new int[] {0, 1};
+        }
+
+        @Override
+        public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @javax.annotation.Nullable net.minecraft.core.Direction side) {
+            return true;
+        }
+
+        @Override
+        public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction side) {
+            return true;
+        }
+    }
+
     @Test
     public void aBuildCraftStorageSeenAsAClassicHandler() {
         ItemHandlerSimple handler = simple(ItemStack.EMPTY);

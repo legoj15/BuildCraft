@@ -84,7 +84,8 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
 
     /^*
      * Moves up to {@code amount} (BuildCraft units) through {@code mover} and returns how much moved, in BuildCraft
-     * units. A kind whose units do not divide Fabric's evenly overrides this so that nothing is booked that did not move.
+     * units. A kind whose Fabric amounts may not be a whole number of its own units overrides this, so that nothing is
+     * booked that did not move.
      ^/
     int moveForeign(Mover mover, int amount, TransactionContext transaction) {
         return toBuildCraftAmount(mover.move(toFabricAmount(amount), transaction));

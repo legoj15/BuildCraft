@@ -11,28 +11,18 @@ import buildcraft.api.fluids.BCFluidStack;
  * An indexed fluid storage, BuildCraft's view of a set of tanks: BuildCraft's own tanks implement it, and
  * {@link TransferAccess} hands out a view of any other mod's. Its shape is NeoForge's
  * {@code ResourceHandler<FluidResource>} with {@code int} millibuckets and {@link BCFluidStack}s standing in for
- * resources: a "resource" argument names a fluid plus its components, and its amount is ignored.
+ * resources: a "resource" argument names a fluid plus its components, and its amount is ignored. The members are
+ * {@link BCStorage}'s: indices are tanks, amounts are millibuckets, an empty tank holds {@link BCFluidStack#EMPTY}, the
+ * capacity asked for an empty resource is the tank's, and a resource the tank refuses ({@code isValid}) may report 0.
  *
  * <p>Changes happen only through {@link #insert} and {@link #extract}, inside a transaction; a storage that changes
  * state journals it with a {@link BCSnapshotJournal}, so an aborted transaction leaves it as it was.
  */
 public interface BCFluidStorage extends BCStorage<BCFluidStack> {
-    /** The number of indices (tanks). */
-    int size();
-
-    /** A copy of the fluid at {@code index}, the caller's to keep; {@link BCFluidStack#EMPTY} if the tank is empty. */
-    BCFluidStack getStack(int index);
-
     /** The amount at {@code index}, in millibuckets. */
     default int getAmount(int index) {
         return getStack(index).getAmount();
     }
-
-    /**
-     * How many millibuckets of {@code resource} the index could hold in total; for an empty resource, the tank's
-     * capacity. A resource the index refuses ({@link #isValid}) may report 0.
-     */
-    int getCapacity(int index, BCFluidStack resource);
 
     /**
      * {@link #getCapacity} without the cap at {@code Integer.MAX_VALUE}, for a view of another mod's handler whose
@@ -41,15 +31,6 @@ public interface BCFluidStorage extends BCStorage<BCFluidStack> {
     default long getCapacityAsLong(int index, BCFluidStack resource) {
         return getCapacity(index, resource);
     }
-
-    /** Whether {@code resource} may ever go into {@code index} (ignoring how full it is). */
-    boolean isValid(int index, BCFluidStack resource);
-
-    /** Inserts up to {@code amount} of {@code resource} into {@code index}; returns how much went in. */
-    int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction);
-
-    /** Extracts up to {@code amount} of {@code resource} from {@code index}; returns how much came out. */
-    int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction);
 
     /**
      * Inserts up to {@code amount} of {@code resource} across the indices, in index order. On 1.21.10+ (and Fabric)

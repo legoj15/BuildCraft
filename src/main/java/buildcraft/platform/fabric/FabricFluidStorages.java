@@ -127,12 +127,12 @@ public final class FabricFluidStorages extends FabricStorageAdapter<BCFluidStack
     int moveForeign(Mover mover, int millibuckets, TransactionContext transaction) {
         long moved;
         try (Transaction probe = transaction.openNested()) {
-            moved = mover.move(FabricFluids.toDroplets(millibuckets), probe);
+            moved = mover.move(toFabricAmount(millibuckets), probe);
             if (moved % FabricFluids.DROPLETS_PER_MB == 0) {
                 if (moved > 0) {
                     probe.commit();
                 }
-                return FabricFluids.toMillibuckets(moved);
+                return toBuildCraftAmount(moved);
             }
         }
         long whole = moved - moved % FabricFluids.DROPLETS_PER_MB;
@@ -143,7 +143,7 @@ public final class FabricFluidStorages extends FabricStorageAdapter<BCFluidStack
             long again = mover.move(whole, retry);
             if (again > 0 && again % FabricFluids.DROPLETS_PER_MB == 0) {
                 retry.commit();
-                return FabricFluids.toMillibuckets(again);
+                return toBuildCraftAmount(again);
             }
         }
         return 0;

@@ -199,7 +199,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
             // Only stations that are out of reach for now (AIRobotSearchStation.unavailableTakers) could
             // take the cargo back: keep it and sleep, then try again.
-            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
         } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
                 // No station could stock this machine's delivery (none holds the item, or none the delivery

@@ -158,7 +158,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             // The sleep frees every reservation the robot holds, so the order's claims are marked unheld first, as
             // for a requester that is away, and the next cycle's preempt takes them back.
             currentRequest.releaseClaims();
-            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
         } else if (ai instanceof AIRobotDeliverRequested deliver) {
             if (deliver.requesterAway() && currentRequest.job() != null) {
                 // The requester's chunk is not loaded: no flight can reach it, but the order can still be filled once

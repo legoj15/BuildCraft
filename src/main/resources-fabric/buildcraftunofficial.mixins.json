@@ -35,6 +35,7 @@
     "ServerPlayerMixin"
   ],
   "client": [
+    "client.FogRendererMixin",
     "client.LevelEventHandlerMixin",
     "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"

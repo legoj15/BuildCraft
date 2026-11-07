@@ -205,7 +205,8 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
             Identifier stillTexture, Identifier flowingTexture, int fogColor, float fogDistance) {
         FluidRenderingRegistry.register(source.get(), flowing.get(),
                 new FluidModel.Unbaked(new Material(stillTexture), new Material(flowingTexture), null, null));
-        // Gap: Fabric API 26.3 has no fluid fog hook, so the camera-inside fog stays vanilla's.
+        // Fabric API 26.3 has no fluid fog hook: FogRendererMixin applies this through FabricFluidFog.
+        FabricFluidFog.register(source.get(), flowing.get(), fogColor, fogDistance);
     }
 }
 *///?}

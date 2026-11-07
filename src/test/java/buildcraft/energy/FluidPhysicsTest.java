@@ -197,9 +197,11 @@ public class FluidPhysicsTest {
      * with {@code floatInLiquidWhileRidden(entity_floatable)}, a lift of 0.04 a tick for a ridden
      * {@code can_float_while_ridden} mount deeper than its jump threshold in any water-tag fluid; NeoForge runs it
      * after the fluid type's {@code move}, and Fabric's {@code LivingEntityMixin} after {@code ThickFluidMotion}. A
-     * horse with its goals removed, carrying an armour stand, stands on the floor of a three-deep crude-oil pool: it
-     * must rise at least {@link #RIDDEN_RISE_MIN_DY} (unridden, crude oil sinks it, as the pig test above pins). Older
-     * lines keep the #117 sink-gently behaviour and make no claim here.
+     * horse with its goals removed, carrying an armour stand, stands on the floor of a four-deep crude-oil pool (deep
+     * enough that the rider's eyes start in the oil): it must rise at least {@link #RIDDEN_RISE_MIN_DY} and keep its
+     * rider, as NeoForge throws a rider off a {@code dismounts_underwater} mount only in water itself (on Fabric
+     * vanilla's eye-in-water test let crude oil throw it). Older lines keep the #117 sink-gently behaviour and make
+     * no claim here.
      */
     public static void crudeOilFloatsRiddenHorse(GameTestHelper helper) {
         //? if >=26.3 {
@@ -210,7 +212,14 @@ public class FluidPhysicsTest {
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + RIDDEN_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, RIDDEN_WORK_TICKS, () -> {
                     if (horse[0] == null) {
-                        buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
+                        Block oil = BCEnergyFluids.OIL_COOL.block().get();
+                        buildPool(helper, oil);
+                        // A fourth layer, held in by the pool's y=4 wall, so the rider's eyes (about y 4.2) start in oil.
+                        for (int x = 1; x <= 4; x++) {
+                            for (int z = 2; z <= 4; z++) {
+                                helper.setBlock(new BlockPos(x, 4, z), oil);
+                            }
+                        }
                         horse[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.HORSE, 3.0F, 1.0F, 3.5F);
                         horse[0].removeAllGoals(goal -> true);
                         rider[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.ARMOR_STAND, 3.0F, 1.0F, 3.5F);
@@ -220,6 +229,10 @@ public class FluidPhysicsTest {
                         }
                         startY[0] = horse[0].getY();
                         return false;
+                    }
+                    if (!horse[0].isVehicle()) {
+                        throw helper.assertionException(net.minecraft.network.chat.Component.literal(
+                                "the rider was thrown off the horse in crude oil"));
                     }
                     return horse[0].getY() - startY[0] >= RIDDEN_RISE_MIN_DY;
                 }, () -> horse[0] == null ? "the horse was never spawned"

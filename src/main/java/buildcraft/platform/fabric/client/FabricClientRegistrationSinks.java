@@ -145,7 +145,7 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     public void editItemModels(ItemModelEditor editor) {
         // A per-item after-bake modifier, registered afresh on every model load; itemId() is the item model's key.
         ModelLoadingPlugin.register(context -> context.modifyItemModelAfterBake().register(
-                (model, itemContext) -> editor.edit(itemContext.itemId(), model)));
+                (model, itemContext) -> model == null ? null : editor.edit(itemContext.itemId(), model)));
     }
 
     @Override

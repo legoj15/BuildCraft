@@ -102,7 +102,7 @@ public class FacadeDeduplicator {
      * the pre-dedup or post-dedup snapshot — never a partially-mutated map — so this is safe to
      * run on the render thread while the server thread is iterating these maps.
      *
-     * @param blockStateModels the baked blockstate-to-model map from the BakingResult
+     * @param blockStateModels every block state's baked model (the live ModelManager read on 1.21.10+, a BlockState-keyed view of the bake's model map on 1.21.1)
      */
     //? if >=1.21.10 {
     public static void deduplicateVisuallyIdentical(Map<BlockState, BlockStateModel> blockStateModels) {

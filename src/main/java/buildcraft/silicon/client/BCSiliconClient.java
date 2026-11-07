@@ -100,14 +100,14 @@ public class BCSiliconClient {
     }
 
     /**
-     * The live block-state models: every state with a model of its own (the missing model is left out, as states
-     * without a model are absent from the bake's own map), read through the {@code ModelManager}.
+     * The live block-state models for every state, read through the {@code ModelManager}. A state with no model of its
+     * own maps to the missing model, as in the bake's own map once vanilla's dispatch has filled it (the input the
+     * dedup always had on NeoForge).
      */
     //? if >=26.1 {
     private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
             net.minecraft.client.renderer.block.dispatch.BlockStateModel> liveBlockStateModels() {
         var models = net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockStateModelSet();
-        var missing = models.missingModel();
         var byState = new java.util.HashMap<net.minecraft.world.level.block.state.BlockState,
                 net.minecraft.client.renderer.block.dispatch.BlockStateModel>();
     //?} else {
@@ -115,7 +115,6 @@ public class BCSiliconClient {
             net.minecraft.client.renderer.block.model.BlockStateModel> liveBlockStateModels() {
         var manager = net.minecraft.client.Minecraft.getInstance().getModelManager();
         var models = manager.getBlockModelShaper();
-        var missing = manager.getMissingBlockStateModel();
         var byState = new java.util.HashMap<net.minecraft.world.level.block.state.BlockState,
                 net.minecraft.client.renderer.block.model.BlockStateModel>();*/
     //?}
@@ -126,7 +125,7 @@ public class BCSiliconClient {
                 //?} else {
                 /*var model = models.getBlockModel(state);*/
                 //?}
-                if (model != null && model != missing) {
+                if (model != null) {
                     byState.put(state, model);
                 }
             }
@@ -195,13 +194,14 @@ public class BCSiliconClient {
     }
 
     /**
-     * Runs visual facade deduplication using the cached blockstate models from the
-     * last bake. Idempotent — clears the cache reference so subsequent calls no-op.
+     * Runs visual facade deduplication against the block-state models of the last bake (on 1.21.10 and later the
+     * live {@code ModelManager} read, gated by the pending flag; on 1.21.1 the cached map). Idempotent — clears
+     * the flag (or the cache reference) so subsequent calls no-op.
      *
      * <p>Triggered primarily from {@link #onClientLoggingIn} (deterministic, once per world
      * join, on render thread, after both model bake and {@link FacadeStateManager#init()}).
      * The {@code addCreativeTabItems → FACADE_TAB_KEY} call site still invokes this as a
-     * safety net. After an F3+T re-bake the cache is non-null again, but a resource reload
+     * safety net. After an F3+T re-bake the dedup is pending again, but a resource reload
      * alone does not rebuild the creative tab (vanilla's ItemDisplayParameters check sees no
      * change), so in practice the re-dedup against the new textures happens at the next
      * world join. In the steady state this is a no-op.
@@ -237,8 +237,8 @@ public class BCSiliconClient {
          * </ul>
          *
          * <p>{@link FacadeDeduplicator#applyRedirectAuthority()} is called unconditionally <em>after</em>
-         * {@code runDeferredDedup()} because the dedup pass only re-runs when a re-bake refilled the model
-         * cache — after the first pass {@code runDeferredDedup()} is a no-op. The redirect-authority
+         * {@code runDeferredDedup()} because the dedup pass only re-runs after a model re-bake — after the first pass
+         * {@code runDeferredDedup()} is a no-op. The redirect-authority
          * decision (is this client's JVM running the server?), by contrast, can change every join: a
          * player can leave a single-player world (redirects valid) and join a dedicated server (redirects
          * must be withheld) without any model re-bake. Re-evaluating here keeps

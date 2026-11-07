@@ -13,7 +13,6 @@ import net.minecraft.world.item.ItemStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 //?} else {
 /*import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
@@ -21,15 +20,16 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import buildcraft.lib.transfer.AdapterCache;
 import buildcraft.platform.transfer.BCModifiableItemStorage;
 import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.BCTransactionContext;
 *///?}
 
 import buildcraft.platform.transfer.BCItemStorage;
-import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
  * The two-way adapter between {@link BCItemStorage} and NeoForge's item handler type: {@code ResourceHandler<ItemResource>}
- * on 1.21.10+, the classic {@code IItemHandler} on 1.21.1. Each direction unwraps the other's adapter, so a BuildCraft
- * storage that went out as a capability and came back through a lookup is the same object again.
+ * on 1.21.10+ (the item kind of {@link NeoForgeStorageAdapter}), the classic {@code IItemHandler} on 1.21.1. Each
+ * direction unwraps the other's adapter, so a BuildCraft storage that went out as a capability and came back through a
+ * lookup is the same object again.
  *
  * <p><b>1.21.1.</b> A BuildCraft storage seen as an {@code IItemHandler} runs each call in a transaction of its own
  * ({@link LegacyTransactions#openInCurrent}), committed unless the call simulates. A classic handler seen as a
@@ -49,113 +49,65 @@ public final class NeoForgeItemStorages {
     private NeoForgeItemStorages() {}
 
     //? if >=1.21.10 {
+    private static final Kind KIND = new Kind();
+
     /** The NeoForge handler for a BuildCraft storage (null stays null). */
     @Nullable
     public static ResourceHandler<ItemResource> toNeo(@Nullable BCItemStorage storage) {
-        if (storage == null) {
-            return null;
-        }
-        if (storage instanceof FromNeo view) {
-            return view.handler;
-        }
-        return new ToNeo(storage);
+        return KIND.toNeoHandler(storage);
     }
 
     /** The BuildCraft view of a NeoForge handler (null stays null). */
     @Nullable
     public static BCItemStorage fromNeo(@Nullable ResourceHandler<ItemResource> handler) {
-        if (handler == null) {
-            return null;
-        }
-        if (handler instanceof ToNeo adapter) {
-            return adapter.storage;
-        }
-        return new FromNeo(handler);
+        return KIND.fromNeoHandler(handler);
     }
 
-    static ItemStack stackOf(ItemResource resource) {
-        return resource.isEmpty() ? ItemStack.EMPTY : resource.toStack();
-    }
-
-    static ItemResource resourceOf(ItemStack stack) {
-        return stack.isEmpty() ? ItemResource.EMPTY : ItemResource.of(stack);
-    }
-
-    private record ToNeo(BCItemStorage storage) implements ResourceHandler<ItemResource> {
+    /**
+     * The item kind of {@link NeoForgeStorageAdapter}. Amounts are counts on both sides, and every query gets a fresh
+     * adapter (they compare equal over what they wrap).
+     */
+    private static final class Kind extends NeoForgeStorageAdapter<ItemStack, ItemResource, BCItemStorage> {
         @Override
-        public int size() {
-            return storage.size();
+        boolean isEmpty(ItemStack resource) {
+            return resource.isEmpty();
         }
 
         @Override
-        public ItemResource getResource(int index) {
-            return resourceOf(storage.getStack(index));
+        ItemResource blank() {
+            return ItemResource.EMPTY;
         }
 
         @Override
-        public long getAmountAsLong(int index) {
-            return storage.getStack(index).getCount();
+        ItemResource variantOf(ItemStack resource) {
+            return ItemResource.of(resource);
         }
 
         @Override
-        public long getCapacityAsLong(int index, ItemResource resource) {
-            return storage.getCapacity(index, stackOf(resource));
-        }
-
-        @Override
-        public boolean isValid(int index, ItemResource resource) {
-            return storage.isValid(index, stackOf(resource));
-        }
-
-        @Override
-        public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            // No precondition check: BuildCraft storages answer 0 to an empty or negative offer, as they did as handlers.
-            return storage.insert(index, stackOf(resource), amount, NeoForgeTransfer.wrap(transaction));
-        }
-
-        @Override
-        public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return storage.extract(index, stackOf(resource), amount, NeoForgeTransfer.wrap(transaction));
-        }
-    }
-
-    private record FromNeo(ResourceHandler<ItemResource> handler) implements BCItemStorage {
-        @Override
-        public int size() {
-            return handler.size();
-        }
-
-        @Override
-        public ItemStack getStack(int index) {
-            ItemResource resource = handler.getResource(index);
-            int amount = handler.getAmountAsInt(index);
+        ItemStack stackOf(ItemResource resource, int amount) {
             return resource.isEmpty() || amount <= 0 ? ItemStack.EMPTY : resource.toStack(amount);
         }
 
         @Override
-        public int getCapacity(int index, ItemStack resource) {
-            return handler.getCapacityAsInt(index, resourceOf(resource));
+        long amountAt(BCItemStorage storage, int index) {
+            return storage.getStack(index).getCount();
         }
 
         @Override
-        public boolean isValid(int index, ItemStack resource) {
-            return !resource.isEmpty() && handler.isValid(index, ItemResource.of(resource));
+        ResourceHandler<ItemResource> outgoing(BCItemStorage storage) {
+            return new ToNeo<>(this, storage);
         }
 
         @Override
-        public int insert(int index, ItemStack resource, int amount, BCTransactionContext transaction) {
-            if (resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            return handler.insert(index, ItemResource.of(resource), amount, NeoForgeTransfer.unwrap(transaction));
+        BCItemStorage incoming(ResourceHandler<ItemResource> handler) {
+            return new FromNeo(handler);
         }
+    }
 
-        @Override
-        public int extract(int index, ItemStack resource, int amount, BCTransactionContext transaction) {
-            if (resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            return handler.extract(index, ItemResource.of(resource), amount, NeoForgeTransfer.unwrap(transaction));
+    private static final class FromNeo extends NeoForgeStorageAdapter.View<ItemStack, ItemResource, BCItemStorage>
+        implements BCItemStorage {
+        FromNeo(ResourceHandler<ItemResource> handler) {
+            super(KIND, handler);
         }
     }
     //?} else {

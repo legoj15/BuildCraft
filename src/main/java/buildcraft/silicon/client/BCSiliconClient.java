@@ -175,9 +175,10 @@ public class BCSiliconClient {
      * <p>Triggered primarily from {@link #onClientLoggingIn} (deterministic, once per world
      * join, on render thread, after both model bake and {@link FacadeStateManager#init()}).
      * The {@code addCreativeTabItems → FACADE_TAB_KEY} call site still invokes this as a
-     * safety net for the rare F3+T (resource reload) case — after a re-bake the cache is
-     * non-null again, and the next time the tab is rebuilt this re-runs dedup against the
-     * new textures. In the steady state this is a no-op.
+     * safety net. After an F3+T re-bake the cache is non-null again, but a resource reload
+     * alone does not rebuild the creative tab (vanilla's ItemDisplayParameters check sees no
+     * change), so in practice the re-dedup against the new textures happens at the next
+     * world join. In the steady state this is a no-op.
      */
     public static void runDeferredDedup() {
         if (FacadeStateManager.isFacadeGenerationDisabled()) {

@@ -66,6 +66,10 @@ public enum FacadeStateManager implements IFacadeRegistry {
      *  so a facade a dedicated server accepted (it never dedups) keeps its block on a client that dropped the
      *  state from its display list (#147: it used to read back as air). Read-only snapshot, like the maps below. */
     public static volatile SortedMap<BlockState, FacadeBlockStateInfo> allFacadeStates;
+    /** The undeduped twin of {@link #stackFacades}, published by {@link #init()} alongside {@link #allFacadeStates} and
+     *  never narrowed. It is the baseline every visual-dedup pass starts from, so a re-run after a resource reload can
+     *  restore a state an earlier pass removed (#149). Not a crafting view: recipes read {@link #stackFacades}. */
+    public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> allStackFacades;
     /** The three maps below are the DISPLAY/crafting view: <b>read-only snapshots</b> published by {@link #init()}
      *  and later atomically replaced by {@link buildcraft.silicon.client.FacadeDeduplicator}, which removes
      *  look-alike states from the first two and fills the redirect table. Never look a facade's identity up in them; use {@link #resolve}.
@@ -114,6 +118,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
         validFacadeStates = empty;
         allFacadeStates = empty;
         stackFacades = Map.of();
+        allStackFacades = Map.of();
         stackRedirects = Map.of();
     }
 
@@ -225,6 +230,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
             validFacadeStates = empty;
             allFacadeStates = empty;
             stackFacades = Map.of();
+            allStackFacades = Map.of();
             stackRedirects = Map.of();
             previewState = defaultState;
             initialized = true;
@@ -252,12 +258,14 @@ public enum FacadeStateManager implements IFacadeRegistry {
         for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackFacades.entrySet()) {
             publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
         }
-        // One local for both fields: the dedup writes validFacadeStates without this monitor, so re-reading it here
-        // could alias allFacadeStates to a narrowed map.
+        // One local per pair: the dedup writes the display fields without this monitor, so re-reading them here
+        // could alias a baseline to a narrowed map.
         SortedMap<BlockState, FacadeBlockStateInfo> published = Collections.unmodifiableSortedMap(nextValid);
         validFacadeStates = published;
         allFacadeStates = published;
-        stackFacades = Map.copyOf(publishedStackFacades);
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStacks = Map.copyOf(publishedStackFacades);
+        stackFacades = publishedStacks;
+        allStackFacades = publishedStacks;
 
         initialized = true;
         BCLog.logger.info("[silicon.facade] Total valid facade states: " + published.size());

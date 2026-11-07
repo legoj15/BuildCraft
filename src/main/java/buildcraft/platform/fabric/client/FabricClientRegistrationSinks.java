@@ -195,8 +195,9 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
 
     @Override
     public void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles) {
-        // Gap: Fabric API 26.3 has no per-block hit/break particle hook (NeoForge's IClientBlockExtensions); it would
-        // take a mixin on ParticleEngine. The block keeps vanilla's particles.
+        // Fabric API 26.3 has no per-block hit/break particle hook (NeoForge's IClientBlockExtensions); on 26.x those
+        // particles are spawned by ClientLevel, where ClientLevelMixin asks FabricBlockParticles first.
+        FabricBlockParticles.register(block.get(), particles);
     }
 
     @Override

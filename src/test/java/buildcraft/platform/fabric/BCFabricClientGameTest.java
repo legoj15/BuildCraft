@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -45,8 +46,11 @@ import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -64,6 +68,7 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.api.fluids.BCFluidStack;
@@ -77,6 +82,7 @@ import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.SnapshotResponsePayload;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache;
+import buildcraft.platform.fabric.gametest.mixin.ParticleEngineAccessor;
 import buildcraft.transport.recipe.DyedPipeRecipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
@@ -142,6 +148,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             checkRecipeSync(ctx, problems);
             checkDynamicItemModels(ctx, problems);
             checkPipeColours(ctx, server, problems);
+            checkBlockParticles(ctx, server, problems);
 
             // The world shots, HUD hidden (F1): the whole rig, then each part close up.
             setHudHidden(ctx, true);
@@ -209,6 +216,62 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 + String.join("\n  ", problems), phaseError);
         }
         LOGGER.info(PASS_MARKER);
+    }
+
+    /^* A rig pipe, and a free spot (inside the cleared area, out of every world shot's view) for a Mining Well tube. *^/
+    private static final BlockPos PARTICLE_PIPE = new BlockPos(-7, Y, 0);
+    private static final BlockPos PARTICLE_TUBE = new BlockPos(-11, Y, 16);
+
+    /^*
+     * A block's own hit and break particles (#153): Fabric reaches them through {@code ClientLevelMixin}. A pipe spawns
+     * its own break and hit particles instead of vanilla's {@link TerrainParticle}s, and the Mining Well tube, whose
+     * override handles its break by spawning nothing, spawns none. Without the hook both show vanilla's terrain ones.
+     *^/
+    private static void checkBlockParticles(ClientGameTestContext ctx, TestServerContext server,
+            List<String> problems) {
+        server.runCommand("setblock " + PARTICLE_TUBE.getX() + " " + Y + " " + PARTICLE_TUBE.getZ() + " " + NS + ":tube");
+        ctx.waitTicks(10);
+        List<String> found = ctx.computeOnClient(mc -> {
+            List<String> out = new ArrayList<>();
+            ClientLevel level = mc.level;
+            Queue<Particle> queued = ((ParticleEngineAccessor) mc.particleEngine).buildcraft$particlesToAdd();
+            for (BlockPos at : new BlockPos[] {PARTICLE_PIPE, PARTICLE_TUBE}) {
+                BlockState state = level.getBlockState(at);
+                boolean pipe = at.equals(PARTICLE_PIPE);
+                if (!pipe && !BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString().equals(NS + ":tube")) {
+                    out.add("particles: the client sees " + state + " at the tube spot, not the tube");
+                    continue;
+                }
+                mc.particleEngine.clearParticles();
+                level.addDestroyBlockEffect(at, state);
+                out.addAll(particleProblems("break", state, pipe, queued));
+                if (pipe) {
+                    // Only a pipe: the tube renders INVISIBLE, which vanilla's hit effects skip anyway.
+                    mc.particleEngine.clearParticles();
+                    level.addBreakingBlockEffects(at, Direction.UP, false);
+                    out.addAll(particleProblems("hit", state, true, queued));
+                }
+            }
+            mc.particleEngine.clearParticles();
+            return out;
+        });
+        problems.addAll(found);
+        server.runCommand("setblock " + PARTICLE_TUBE.getX() + " " + Y + " " + PARTICLE_TUBE.getZ() + " minecraft:air");
+    }
+
+    private static List<String> particleProblems(String effect, BlockState state, boolean pipe,
+            Queue<Particle> queued) {
+        String block = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        long terrain = queued.stream().filter(p -> p instanceof TerrainParticle).count();
+        if (pipe && (queued.isEmpty() || terrain > 0)) {
+            return List.of("particles: a " + block + " " + effect + " spawned " + queued.size() + " particle(s), "
+                + terrain + " of them vanilla terrain ones; want only the pipe's own");
+        }
+        if (!pipe && !queued.isEmpty()) {
+            return List.of("particles: a " + block + " " + effect + " spawned " + queued.size()
+                + " particle(s); its override spawns none");
+        }
+        return List.of();
     }
 
     /^*

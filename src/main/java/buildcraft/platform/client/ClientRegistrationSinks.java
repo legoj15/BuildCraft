@@ -182,8 +182,8 @@ public interface ClientRegistrationSinks {
     void headAccessoryRenderer(Supplier<? extends net.minecraft.world.item.Item> item);
 
     /**
-     * Replaces the block's hit and break particles (NeoForge: the block's {@code IClientBlockExtensions}). Fabric API
-     * 26.3 has no per-block hook for these, so there the block keeps vanilla's particles.
+     * Replaces the block's hit and break particles (NeoForge: the block's {@code IClientBlockExtensions}; Fabric: a
+     * client mixin on {@code ClientLevel}, as Fabric API 26.3 has no per-block hook for these).
      */
     void blockParticles(Supplier<? extends Block> block, BlockParticleOverride particles);
 

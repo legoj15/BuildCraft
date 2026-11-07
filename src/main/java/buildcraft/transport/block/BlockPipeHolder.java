@@ -1041,7 +1041,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return null;
     }
 
-    // Sprint particles — pipes use INVISIBLE render shape so vanilla won't create particles.
+    // Sprint particles — vanilla would use the holder's invisible particle sprite.
     // We delegate to PipeHolderClientExtensions which resolves the correct pipe-specific texture.
     // NeoForge's particle hooks; Fabric reaches spawnRunningEffects and spawnLandingEffects through its Entity and
     // LivingEntity mixins.
@@ -1072,7 +1072,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return false;
     }
 
-    // Landing particles — vanilla spawns wooden pipe particles because the block has no explicit texture.
+    // Landing particles — vanilla would use the holder's invisible particle sprite.
     // We delegate to a custom packet to spawn the correct pipe-specific texture on clients.
     @Override
     public boolean spawnLandingEffects(net.minecraft.server.level.ServerLevel level, BlockPos pos, LivingEntity entity,

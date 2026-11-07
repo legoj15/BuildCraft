@@ -61,10 +61,13 @@ public class FacadeDedupResolutionTester extends VanillaSetupBaseTester {
                     "a facade synced as NBT must keep its block after the client deduped it from the display list");
 
             PacketBufferBC buf = PacketBufferBC.asPacketBufferBc(Unpooled.buffer());
-            info.createPhased(null).writeToBuffer(buf);
-            Assertions.assertSame(doubleSlab, FacadePhasedState.readFromBuffer(buf).stateInfo.state,
-                    "the buffer path must resolve a deduped state too");
-            buf.release();
+            try {
+                info.createPhased(null).writeToBuffer(buf);
+                Assertions.assertSame(doubleSlab, FacadePhasedState.readFromBuffer(buf).stateInfo.state,
+                        "the buffer path must resolve a deduped state too");
+            } finally {
+                buf.release();
+            }
 
             BlockState torch = Blocks.TORCH.defaultBlockState();
             Assertions.assertSame(FacadeStateManager.defaultState,

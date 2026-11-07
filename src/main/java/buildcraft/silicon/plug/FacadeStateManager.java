@@ -61,14 +61,14 @@ public enum FacadeStateManager implements IFacadeRegistry {
     INSTANCE;
 
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
-    /** Every facade state the enumeration accepted, published only by {@link #init()} and never narrowed by the
+    /** Every facade state the enumeration accepted, published by {@link #init()} (empty seed before it) and never narrowed by the
      *  client's visual dedup. This is the RESOLUTION map: {@link #resolve} looks saved and synced facades up here,
      *  so a facade a dedicated server accepted (it never dedups) keeps its block on a client that dropped the
      *  state from its display list (#147: it used to read back as air). Read-only snapshot, like the maps below. */
     public static volatile SortedMap<BlockState, FacadeBlockStateInfo> allFacadeStates;
     /** The three maps below are the DISPLAY/crafting view: <b>read-only snapshots</b> published by {@link #init()}
      *  and later atomically replaced by {@link buildcraft.silicon.client.FacadeDeduplicator}, which removes
-     *  look-alike states from them. Never look a facade's identity up in them; use {@link #resolve}.
+     *  look-alike states from the first two and fills the redirect table. Never look a facade's identity up in them; use {@link #resolve}.
      *  Readers must never mutate them — they are wrapped immutable / built via {@link Map#copyOf}.
      *  The {@code volatile} reference gives readers a consistent snapshot per field access; the
      *  three fields can briefly diverge across a swap (see FacadeDeduplicator for ordering),
@@ -158,7 +158,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
     }
 
     private static FacadeBlockStateInfo getInfoForState(BlockState state) {
-        return validFacadeStates.get(state);
+        return allFacadeStates.get(state);
     }
 
     /** Checks if a block is valid for use as a facade.
@@ -357,7 +357,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
                     // Test that the BlockState round-trips through NBT and the packet buffer.
                     // We compare raw BlockStates instead of routing reads through
-                    // FacadePhasedState.read*, because those call FacadeStateManager.validFacadeStates.get(...)
+                    // FacadePhasedState.read*, because those look the state up in FacadeStateManager.allFacadeStates
                     // — which is still the empty seed map mid-scan (init() only publishes the populated
                     // map after this whole loop finishes). That made the test always fall back to
                     // defaultState (air) and throw for every valid facade.

@@ -91,6 +91,8 @@ public class FacadeDeduplicator {
      * Removes facade states from {@link FacadeStateManager#validFacadeStates} and
      * {@link FacadeStateManager#stackFacades} that are visually identical to an
      * earlier-registered state. Only the first (by blockstate ID order) survives.
+     * Display-only: {@link FacadeStateManager#allFacadeStates}, which facade reads resolve against, is never
+     * touched, so a removed state that arrives from a server still renders as its own block (#147).
      *
      * <p><b>Thread-safety:</b> builds entirely new map snapshots off the side, then publishes
      * them via volatile reference reassignment. Readers (server tick, recipe lookup) see either

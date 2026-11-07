@@ -56,8 +56,10 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.CrumblingOverlayRenderer;
 import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.transport.client.PipeRegistryClient;
+import buildcraft.transport.client.model.PipeBlockModelQuads;
 import buildcraft.transport.client.model.PipeModelCacheAll;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -157,7 +159,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         // Static pipe body geometry is rendered by the chunk mesh via the loader's pipe block model (NeoForge's
         // NeoForgePipeBlockStateModel, Fabric's FabricPipeBlockModel), both fed by PipeBlockModelQuads.
-        // The BER only handles dynamic content.
+        // The BER handles dynamic content, plus the mining crack over the static geometry (renderCrackGeometry).
 
         // --- Render wires ---
         //? if >=26.2 {
@@ -181,7 +183,34 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         renderContents(pipe, 0, 0, 0, renderState.partialTick, poseStack, collector);
         ItemRenderUtil.endItemBatch();
 
+        float partialTick = renderState.partialTick;
+        CrumblingOverlayRenderer.submit(collector, poseStack, renderState.breakProgress,
+            (pose, consumer) -> renderCrackGeometry(pipe, partialTick, pose, consumer));
+
         poseStack.popPose();
+    }
+
+    /** Emits the pipe's shape for the mining crack: the block model's quads, which only the block entity can supply
+     *  (the level's destroy pass draws the model without it, so finds no geometry), and the pluggables drawn per
+     *  frame. Only positions and normals matter; the crack consumer supplies colour and texture coordinates. */
+    private static void renderCrackGeometry(TilePipeHolder pipe, float partialTicks, PoseStack.Pose pose,
+                                            VertexConsumer consumer) {
+        if (PipeBlockModelQuads.INSTANCE.hasGeometry(pipe)) {
+            MutableQuad scratch = new MutableQuad();
+            for (var quad : PipeBlockModelQuads.INSTANCE.cutoutQuads(pipe)) {
+                scratch.fromBakedItem(quad);
+                scratch.setCalculatedNormal();
+                scratch.render(pose, consumer);
+            }
+        }
+        for (Direction facing : Direction.values()) {
+            PipePluggable plug = pipe.getPluggable(facing);
+            if (plug != null) {
+                PoseStack plugPose = new PoseStack();
+                plugPose.last().set(pose);
+                renderPluggable(plug, 0, 0, 0, partialTicks, consumer, plugPose);
+            }
+        }
     }
 
 

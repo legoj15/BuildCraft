@@ -82,7 +82,9 @@ fabricApi {
         enableGameTests = true
         // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check.
         enableClientGameTests = true
-        eula = false
+        // Accepted (user, 2026-11-06): the client game test's multiplayer phase starts a dedicated server, which
+        // will not run without it.
+        eula = true
         clearRunDirectory = false
     }
 }

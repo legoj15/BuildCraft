@@ -205,9 +205,14 @@ public class FacadeItemModel implements ItemModel {
         if (quads.isEmpty()) {
             return this;
         }
+        // The item's particle is the facade block's own (what the item shows), not the first quad's: a translucent-only
+        // facade's cutout pass holds just the plug connector, whose sprite is the pipe plug's.
+        net.minecraft.client.renderer.texture.TextureAtlasSprite particle = net.minecraft.client.Minecraft.getInstance()
+                .getModelManager().getBlockModelShaper().getBlockModel(resolvedState)
+                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
         // A translucent facade takes the sheet vanilla 1.21.1 gives a translucent block item (cull + sorted).
         return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
-                quads, quads.get(0).getSprite(), false, baked.translucent()
+                quads, particle, false, baked.translucent()
                         ? net.minecraft.client.renderer.Sheets.translucentCullBlockSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }

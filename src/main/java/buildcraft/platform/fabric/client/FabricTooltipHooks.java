@@ -26,8 +26,10 @@ import buildcraft.platform.client.BCTooltipPreContext;
  * <p>Vanilla's tooltip draw carries no item stack (NeoForge patches one through), so the stack takes a side channel:
  * the item tooltip requests ({@link GuiGraphicsExtractor#setTooltipForNextFrame(Font, ItemStack, int, int)} and a
  * container screen's hovered slot) name it with {@link #describing}, the deferred draw queued during that request is
- * tagged with it ({@link #tagDeferred}), and that draw hands it to the listeners. Any other tooltip reaches them with
- * an empty stack, as on NeoForge. Render thread only.
+ * tagged with it ({@link #tagDeferred}), and that draw hands it to the listeners once: {@link #firePre} consumes it, so
+ * a tooltip drawn directly inside the tagged one (a bundle tooltip's selected-item name) reaches them with an empty
+ * stack, as on NeoForge, where only the deferred draw carries the stack. Any other tooltip reaches them with an empty
+ * stack too. Render thread only.
  *^/
 public final class FabricTooltipHooks {
 
@@ -35,7 +37,7 @@ public final class FabricTooltipHooks {
 
     /^* The stack the tooltip being requested right now describes, or empty. *^/
     private static ItemStack requestStack = ItemStack.EMPTY;
-    /^* The stack the tooltip being drawn right now describes, or empty. *^/
+    /^* The stack the tagged deferred draw in progress describes, until the first tooltip fires its pre hook, or empty. *^/
     private static ItemStack drawStack = ItemStack.EMPTY;
 
     private FabricTooltipHooks() {}
@@ -75,10 +77,13 @@ public final class FabricTooltipHooks {
     /^* A tooltip is about to be drawn; {@code x}/{@code y} are the positioner's inputs. *^/
     public static void firePre(GuiGraphicsExtractor graphics, Font font, List<ClientTooltipComponent> components,
             int x, int y, ClientTooltipPositioner positioner) {
+        // Consumed whether or not anyone listens: a tooltip nested inside this draw is not the tagged request's.
+        ItemStack stack = drawStack;
+        drawStack = ItemStack.EMPTY;
         if (PRE.isEmpty()) {
             return;
         }
-        BCTooltipPreContext context = new Context(drawStack, graphics, x, y, graphics.guiWidth(), graphics.guiHeight(),
+        BCTooltipPreContext context = new Context(stack, graphics, x, y, graphics.guiWidth(), graphics.guiHeight(),
                 font, components, positioner);
         for (Consumer<BCTooltipPreContext> listener : PRE) {
             listener.accept(context);

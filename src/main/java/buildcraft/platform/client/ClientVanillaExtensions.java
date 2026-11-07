@@ -5,7 +5,9 @@
  */
 package buildcraft.platform.client;
 
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -22,11 +24,14 @@ public interface ClientVanillaExtensions {
      */
     boolean shouldRenderFace(BlockGetter level, BlockPos pos, BlockState state, Direction face);
 
-    /**
+    //? if <1.21.10 {
+    /*/^**
      * The pixel at ({@code x}, {@code y}) of one cell ({@code frameIndex}, the sprite-sheet cell, not the animation
-     * order) of {@code sprite}'s original image, as the image stores it: ARGB from 1.21.10, ABGR on 1.21.1.
-     */
-    int spritePixel(TextureAtlasSprite sprite, int frameIndex, int x, int y);
+     * order) of {@code sprite}'s original image, as the image stores it (ABGR). 1.21.1 only: its one caller is the
+     * fragile shard's {@code ItemColor}, and later lines have nothing to read a sprite pixel for.
+     *^/
+    int spritePixel(TextureAtlasSprite sprite, int frameIndex, int x, int y);*/
+    //?}
 
     //? if >=26.1 {
     /** Queues a picture-in-picture element on this frame's GUI render state (NeoForge patches a public method in). */

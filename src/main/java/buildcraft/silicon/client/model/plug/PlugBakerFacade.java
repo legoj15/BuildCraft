@@ -67,7 +67,8 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     private static final int ROT_CCW90 = 3;
     private static final int[] ROTATIONS = { ROT_NONE, ROT_CW90, ROT_CW180, ROT_CCW90 };
 
-    private static final RandomSource RANDOM = RandomSource.create();
+    /** Seeds the random each block-model sample draws its weighted variants from. */
+    private static final long VARIANT_SEED = 42L;
 
     /** The pluggable layer name of the translucent pass (the cutout pass is {@code "cutout"}). */
     public static final String LAYER_TRANSLUCENT = "translucent";
@@ -123,7 +124,12 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                                                   //?}
                                                   Direction side, boolean translucent,
                                                   Vec3 pos0, Vec3 pos1, Vec3 pos2, Vec3 pos3) {
-        return BlockModelQuadExtractor.getLayerQuadsFromModel(state, model, side, RANDOM, translucent).stream()
+        // A fresh random per sample, always the same seed: the cutout and translucent passes sample the same model
+        // face with the same draws, so a weighted-variant block (grass) cannot show one variant on the cutout pass and
+        // another on the translucent one, and no random is shared between the threads that bake (chunk meshing, the
+        // item caches).
+        RandomSource random = RandomSource.create(VARIANT_SEED);
+        return BlockModelQuadExtractor.getLayerQuadsFromModel(state, model, side, random, translucent).stream()
             .map(quad -> {
                 MutableQuad mutableQuad = new MutableQuad().fromBakedItem(quad);
                 boolean positive = side.getAxisDirection() == Direction.AxisDirection.POSITIVE;

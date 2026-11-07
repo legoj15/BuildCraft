@@ -40,12 +40,10 @@ public class BCCoreClient {
             buildcraft.core.client.MarkerLengthIndicator.onClientTick();
             buildcraft.core.client.MarkerDistanceTracker.onClientTick();
         });
-        // Register the fluid shard tint source for fragile fluid containers
-        //? if >=1.21.10 {
-        sinks.itemTintSource(net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
-                buildcraft.core.client.FluidShardTintSource.MAP_CODEC);
-        //?} else {
-        /*// 1.21.1 has no data-driven ItemTintSource — register the equivalent ItemColor on the item.
+        // The fragile fluid shard's fluid layer: >=1.21.10 its fluid_container model tints itself (NeoForge's
+        // FluidContentsTint, Fabric's FabricFluidContainerModel.FluidTint); only 1.21.1 tints through a classic ItemColor.
+        //? if <1.21.10 {
+        /*// 1.21.1 has no data-driven ItemTintSource, so register FluidShardTintSource as a classic ItemColor on the item.
         sinks.itemColor(buildcraft.core.client.FluidShardTintSource.INSTANCE,
                 () -> new net.minecraft.world.level.ItemLike[] {buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()});*/
         //?}

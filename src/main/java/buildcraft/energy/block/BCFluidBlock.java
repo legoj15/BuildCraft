@@ -168,8 +168,7 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
         if (!searing) {
             return;
         }
-        // Null-guarded: fluid registration runs in a static initializer that can precede config load.
-        if (BCEnergyConfig.searingFluidSteam == null || !BCEnergyConfig.searingFluidSteam.get()) {
+        if (!BCEnergyConfig.searingSteamEnabled()) {
             return;
         }
         // Only vent off an exposed surface, so steam rises into open air, not into a covering block.

@@ -51,11 +51,11 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
     /^* The BuildCraft stack of {@code variant} holding a Fabric {@code amount} (empty if nothing is left of it). ^/
     abstract R stackOf(V variant, long amount);
 
-    /^* A Fabric amount in BuildCraft units, rounded down and clamped to a non-negative {@code int}. ^/
-    abstract int toBuildCraft(long amount);
+    /^* A Fabric amount in BuildCraft units, rounded down and clamped to {@code int}. ^/
+    abstract int toBuildCraftAmount(long amount);
 
     /^* A BuildCraft amount in Fabric units, exactly. ^/
-    abstract long toFabric(int amount);
+    abstract long toFabricAmount(int amount);
 
     /^* The amount at {@code index}, in BuildCraft units. ^/
     abstract int amountAt(B storage, int index);
@@ -87,7 +87,7 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
      * units. A kind whose units do not divide Fabric's evenly overrides this so that nothing is booked that did not move.
      ^/
     int moveForeign(Mover mover, int amount, TransactionContext transaction) {
-        return toBuildCraft(mover.move(toFabric(amount), transaction));
+        return toBuildCraftAmount(mover.move(toFabricAmount(amount), transaction));
     }
 
     // ---- The adapter ----
@@ -149,22 +149,22 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
         @Override
         public long insert(V resource, long maxAmount, TransactionContext transaction) {
             StoragePreconditions.notBlankNotNegative(resource, maxAmount);
-            int amount = kind.toBuildCraft(maxAmount);
+            int amount = kind.toBuildCraftAmount(maxAmount);
             if (amount <= 0) {
                 return 0;
             }
-            return kind.toFabric(kind.insertAcross(storage, kind.resourceOf(resource), amount,
+            return kind.toFabricAmount(kind.insertAcross(storage, kind.resourceOf(resource), amount,
                 FabricTransfer.wrap(transaction)));
         }
 
         @Override
         public long extract(V resource, long maxAmount, TransactionContext transaction) {
             StoragePreconditions.notBlankNotNegative(resource, maxAmount);
-            int amount = kind.toBuildCraft(maxAmount);
+            int amount = kind.toBuildCraftAmount(maxAmount);
             if (amount <= 0) {
                 return 0;
             }
-            return kind.toFabric(kind.extractAcross(storage, kind.resourceOf(resource), amount,
+            return kind.toFabricAmount(kind.extractAcross(storage, kind.resourceOf(resource), amount,
                 FabricTransfer.wrap(transaction)));
         }
 
@@ -183,16 +183,16 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
         @Override
         public long insert(V resource, long maxAmount, TransactionContext transaction) {
             StoragePreconditions.notBlankNotNegative(resource, maxAmount);
-            int amount = kind.toBuildCraft(maxAmount);
-            return amount <= 0 ? 0 : kind.toFabric(
+            int amount = kind.toBuildCraftAmount(maxAmount);
+            return amount <= 0 ? 0 : kind.toFabricAmount(
                 storage.insert(index, kind.resourceOf(resource), amount, FabricTransfer.wrap(transaction)));
         }
 
         @Override
         public long extract(V resource, long maxAmount, TransactionContext transaction) {
             StoragePreconditions.notBlankNotNegative(resource, maxAmount);
-            int amount = kind.toBuildCraft(maxAmount);
-            return amount <= 0 ? 0 : kind.toFabric(
+            int amount = kind.toBuildCraftAmount(maxAmount);
+            return amount <= 0 ? 0 : kind.toFabricAmount(
                 storage.extract(index, kind.resourceOf(resource), amount, FabricTransfer.wrap(transaction)));
         }
 
@@ -209,12 +209,12 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
 
         @Override
         public long getAmount() {
-            return kind.toFabric(kind.amountAt(storage, index));
+            return kind.toFabricAmount(kind.amountAt(storage, index));
         }
 
         @Override
         public long getCapacity() {
-            return kind.toFabric(storage.getCapacity(index, kind.capacityProbe(storage, index)));
+            return kind.toFabricAmount(storage.getCapacity(index, kind.capacityProbe(storage, index)));
         }
     }
 
@@ -282,7 +282,7 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
 
         @Override
         public final int getCapacity(int index, R resource) {
-            return adapter.boundCapacity(adapter.toBuildCraft(slotted.getSlot(index).getCapacity()), resource);
+            return adapter.boundCapacity(adapter.toBuildCraftAmount(slotted.getSlot(index).getCapacity()), resource);
         }
 
         @Override
@@ -324,7 +324,7 @@ abstract class FabricStorageAdapter<R, V extends TransferVariant<?>, B extends B
             // The shown view's own capacity: a level gate divides getStack by this, so both read the same view. With
             // no view at all (an insertion-only storage) there is nothing to measure, so a gate reads no space.
             StorageView<V> view = shown();
-            return view == null ? 0 : adapter.boundCapacity(adapter.toBuildCraft(view.getCapacity()), resource);
+            return view == null ? 0 : adapter.boundCapacity(adapter.toBuildCraftAmount(view.getCapacity()), resource);
         }
 
         @Override

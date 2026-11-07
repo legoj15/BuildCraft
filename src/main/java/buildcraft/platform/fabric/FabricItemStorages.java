@@ -61,17 +61,17 @@ public final class FabricItemStorages extends FabricStorageAdapter<ItemStack, It
 
     @Override
     ItemStack stackOf(ItemVariant variant, long amount) {
-        int count = toBuildCraft(amount);
+        int count = toBuildCraftAmount(amount);
         return variant.isBlank() || count <= 0 ? ItemStack.EMPTY : variant.toStack(count);
     }
 
     @Override
-    int toBuildCraft(long amount) {
+    int toBuildCraftAmount(long amount) {
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0, amount));
     }
 
     @Override
-    long toFabric(int amount) {
+    long toFabricAmount(int amount) {
         return amount;
     }
 

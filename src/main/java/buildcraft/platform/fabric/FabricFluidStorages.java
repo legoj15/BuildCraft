@@ -71,12 +71,12 @@ public final class FabricFluidStorages extends FabricStorageAdapter<BCFluidStack
     }
 
     @Override
-    int toBuildCraft(long amount) {
+    int toBuildCraftAmount(long amount) {
         return FabricFluids.toMillibuckets(amount);
     }
 
     @Override
-    long toFabric(int amount) {
+    long toFabricAmount(int amount) {
         return FabricFluids.toDroplets(amount);
     }
 

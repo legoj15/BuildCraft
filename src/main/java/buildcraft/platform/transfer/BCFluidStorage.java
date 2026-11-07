@@ -16,7 +16,7 @@ import buildcraft.api.fluids.BCFluidStack;
  * <p>Changes happen only through {@link #insert} and {@link #extract}, inside a transaction; a storage that changes
  * state journals it with a {@link BCSnapshotJournal}, so an aborted transaction leaves it as it was.
  */
-public interface BCFluidStorage {
+public interface BCFluidStorage extends BCStorage<BCFluidStack> {
     /** The number of indices (tanks). */
     int size();
 

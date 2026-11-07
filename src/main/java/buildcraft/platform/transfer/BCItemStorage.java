@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
  * <p>Changes happen only through {@link #insert} and {@link #extract}, inside a transaction; a storage that changes
  * state journals it with a {@link BCSnapshotJournal}, so an aborted transaction leaves it as it was.
  */
-public interface BCItemStorage {
+public interface BCItemStorage extends BCStorage<ItemStack> {
     /** The number of indices (slots). */
     int size();
 

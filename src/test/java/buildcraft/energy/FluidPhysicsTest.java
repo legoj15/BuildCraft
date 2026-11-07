@@ -187,6 +187,51 @@ public class FluidPhysicsTest {
         }
     }
 
+    /** How far the ridden horse must rise from the pool floor before the test passes. */
+    private static final double RIDDEN_RISE_MIN_DY = 0.5;
+    /** The poll's budget once the cell ticks: the lift nets about 0.15 blocks a tick once its speed settles. */
+    private static final int RIDDEN_WORK_TICKS = 100;
+
+    /**
+     * Issue #142: a ridden horse in crude oil floats on both 26.3 loaders. Vanilla 26.3's {@code travelInFluid} ends
+     * with {@code floatInLiquidWhileRidden(entity_floatable)}, a lift of 0.04 a tick for a ridden
+     * {@code can_float_while_ridden} mount deeper than its jump threshold in any water-tag fluid; NeoForge runs it
+     * after the fluid type's {@code move}, and Fabric's {@code LivingEntityMixin} after {@code ThickFluidMotion}. A
+     * horse with its goals removed, carrying an armour stand, stands on the floor of a three-deep crude-oil pool: it
+     * must rise at least {@link #RIDDEN_RISE_MIN_DY} (unridden, crude oil sinks it, as the pig test above pins). Older
+     * lines keep the #117 sink-gently behaviour and make no claim here.
+     */
+    public static void crudeOilFloatsRiddenHorse(GameTestHelper helper) {
+        //? if >=26.3 {
+        EntityArenaUtil.forceLoadCell(helper);
+        Mob[] horse = { null };
+        Entity[] rider = { null };
+        double[] startY = new double[1];
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + RIDDEN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, RIDDEN_WORK_TICKS, () -> {
+                    if (horse[0] == null) {
+                        buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
+                        horse[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.HORSE, 3.0F, 1.0F, 3.5F);
+                        horse[0].removeAllGoals(goal -> true);
+                        rider[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.ARMOR_STAND, 3.0F, 1.0F, 3.5F);
+                        if (!rider[0].startRiding(horse[0], true, false)) {
+                            throw helper.assertionException(net.minecraft.network.chat.Component.literal(
+                                    "the armour stand could not mount the horse"));
+                        }
+                        startY[0] = horse[0].getY();
+                        return false;
+                    }
+                    return horse[0].getY() - startY[0] >= RIDDEN_RISE_MIN_DY;
+                }, () -> horse[0] == null ? "the horse was never spawned"
+                        : "the ridden horse rose dy=" + (horse[0].getY() - startY[0]) + " (needs >="
+                        + RIDDEN_RISE_MIN_DY + "); ridden: " + horse[0].isVehicle()),
+                helper::succeed, "a ridden horse in crude oil never floated",
+                () -> EntityArenaUtil.discard(rider[0], horse[0]));
+        //?} else {
+        /*helper.succeed();
+        *///?}
+    }
+
     /** The poll's budget once the cell ticks: the two tests below answer on the first poll that finds it ticking. */
     private static final int POOL_WORK_TICKS = 20;
 

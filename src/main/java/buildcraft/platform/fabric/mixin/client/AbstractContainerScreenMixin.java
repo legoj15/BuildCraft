@@ -22,6 +22,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 
 import buildcraft.platform.fabric.client.FabricTooltipHooks;
@@ -42,7 +43,7 @@ abstract class AbstractContainerScreenMixin {
     private void buildcraft$describeSlotTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
             Optional<TooltipComponent> image, int x, int y, Identifier style, boolean extraSpace,
             Operation<Void> original) {
-        FabricTooltipHooks.describing(hoveredSlot.getItem(),
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style, extraSpace));
     }
 }

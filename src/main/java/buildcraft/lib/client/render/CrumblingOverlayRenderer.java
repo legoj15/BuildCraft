@@ -65,6 +65,7 @@ public final class CrumblingOverlayRenderer {
         //?} else {
         /*List<RenderType> destroyTypes = ModelBakery.DESTROY_TYPES;
         *///?}
+        if (progress >= destroyTypes.size()) return;
         collector.submitCustomGeometry(poseStack, destroyTypes.get(progress),
                 (pose, consumer) -> geometry.render(pose, new SheetedDecalTextureGenerator(consumer, cameraPose, 1.0F)));
         //?} else {

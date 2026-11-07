@@ -56,6 +56,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
@@ -138,6 +140,8 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 problems.add("the client's redstone engine faces " + clientEngine + ", not east");
             }
             checkRecipeSync(ctx, problems);
+            checkDynamicItemModels(ctx, problems);
+            checkPipeColours(ctx, server, problems);
 
             // The world shots, HUD hidden (F1): the whole rig, then each part close up.
             setHudHidden(ctx, true);
@@ -149,6 +153,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             worldShot(ctx, spConn, server, "4.5 " + Y + " 2.5 180 30", "bc-tank-oil", problems);
             worldShot(ctx, spConn, server, "8.5 " + Y + " 3.5 180 30", "bc-machines", problems);
             worldShot(ctx, spConn, server, "18.5 " + Y + " 3.5 180 30", "bc-builders", problems);
+            worldShot(ctx, spConn, server, "-6 " + Y + " -1 180 30", "bc-lens-and-paint", problems);
             setHudHidden(ctx, false);
 
             // The held items, first person and hotbar, looking at the floor so the item stands out.
@@ -602,6 +607,171 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         }) {
             server.runCommand(cmd);
         }
+        placeColourPipes(server);
+    }
+
+    /^* The colour checks' pipes, between the rig's two rows: a red lens on top of the first, the second painted red. *^/
+    private static final BlockPos LENS_PIPE = new BlockPos(-7, Y, -3);
+    private static final BlockPos PAINTED_PIPE = new BlockPos(-5, Y, -3);
+
+    private static void placeColourPipes(TestServerContext server) {
+        pipe(server, LENS_PIPE, "stone_item");
+        pipe(server, PAINTED_PIPE, "stone_item");
+        server.runOnServer(s -> {
+            var level = s.overworld();
+            if (level.getBlockEntity(LENS_PIPE) instanceof TilePipeHolder holder) {
+                holder.replacePluggable(Direction.UP, new buildcraft.silicon.plug.PluggableLens(
+                    buildcraft.silicon.BCSiliconPlugs.lens, holder, Direction.UP, DyeColor.RED, false));
+            }
+            if (level.getBlockEntity(PAINTED_PIPE) instanceof TilePipeHolder holder && holder.getPipe() != null) {
+                holder.getPipe().setColour(DyeColor.RED);
+            }
+        });
+    }
+
+    /^*
+     * The item models BuildCraft swaps in at bake time (#152): the facade, gate, lens and painted-pipe stacks must
+     * resolve to its dynamic models, not the JSON fallback (the brick facade, the gate placeholder, an invisible lens,
+     * an unpainted pipe). Then the red lens item's glass must reach the item draw red (#154): on Fabric its colour
+     * rides only on the vertex colours, which the layer's mesh carries.
+     *^/
+    private static void checkDynamicItemModels(ClientGameTestContext ctx, List<String> problems) {
+        List<String> found = ctx.computeOnClient(mc -> {
+            List<String> bad = new ArrayList<>();
+            ItemStack facade = new ItemStack(buildcraft.silicon.BCSiliconItems.PLUG_FACADE.get());
+            ItemStack gate = new ItemStack(buildcraft.silicon.BCSiliconItems.PLUG_GATE.get());
+            ItemStack redLens = buildcraft.silicon.BCSiliconItems.PLUG_LENS.get().getStack(DyeColor.RED, false);
+            ItemStack paintedPipe = new ItemStack(BuiltInRegistries.ITEM.getValue(
+                Identifier.fromNamespaceAndPath(NS, "pipe_wood_item")));
+            paintedPipe.set(buildcraft.transport.BCTransportItems.PIPE_COLOUR.get(), DyeColor.RED);
+            expectItemModel(mc, facade, buildcraft.silicon.client.model.FacadeItemModel.class, bad);
+            expectItemModel(mc, gate, buildcraft.silicon.client.model.GateItemModel.class, bad);
+            expectItemModel(mc, redLens, buildcraft.silicon.client.model.LensItemModel.class, bad);
+            expectItemModel(mc, paintedPipe, buildcraft.transport.client.model.PipeItemModel.class, bad);
+
+            int red = DyeColor.RED.getTextureDiffuseColor() & 0xFFFFFF;
+            List<int[]> colours = itemMeshColours(mc, redLens, bad);
+            if (colours.stream().noneMatch(c -> allRgb(c, red))) {
+                bad.add("the red lens item draws no red glass: its layers' mesh quads carry colours "
+                    + describe(colours));
+            }
+            return bad;
+        });
+        problems.addAll(found);
+    }
+
+    private static void expectItemModel(Minecraft mc, ItemStack stack, Class<?> want, List<String> bad) {
+        Identifier modelId = stack.get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
+        net.minecraft.client.renderer.item.ItemModel model =
+            modelId == null ? null : mc.getModelManager().getItemModel(modelId);
+        if (!want.isInstance(model)) {
+            bad.add(stack.getItem() + " resolves to " + (model == null ? "no item model" : model.getClass().getName())
+                + ", not BuildCraft's " + want.getSimpleName());
+        }
+    }
+
+    /^*
+     * The per-vertex colours of every quad in the Fabric meshes of {@code stack}'s item layers (GUI context): where
+     * Fabric draws an item quad with its own colour. The layers are vanilla's private fields, read reflectively.
+     *^/
+    private static List<int[]> itemMeshColours(Minecraft mc, ItemStack stack, List<String> bad) {
+        List<int[]> colours = new ArrayList<>();
+        net.minecraft.client.renderer.item.ItemStackRenderState state =
+            new net.minecraft.client.renderer.item.ItemStackRenderState();
+        mc.getItemModelResolver().updateForTopItem(state, stack, net.minecraft.world.item.ItemDisplayContext.GUI,
+            mc.level, null, 0);
+        try {
+            var layersField = net.minecraft.client.renderer.item.ItemStackRenderState.class.getDeclaredField("layers");
+            var countField = net.minecraft.client.renderer.item.ItemStackRenderState.class
+                .getDeclaredField("activeLayerCount");
+            layersField.setAccessible(true);
+            countField.setAccessible(true);
+            Object[] layers = (Object[]) layersField.get(state);
+            int count = countField.getInt(state);
+            for (int i = 0; i < count; i++) {
+                var mesh = ((net.fabricmc.fabric.impl.client.renderer.LayerRenderStateExtension) layers[i])
+                    .fabric_getMutableMesh();
+                if (mesh != null) {
+                    mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
+                }
+            }
+        } catch (ReflectiveOperationException e) {
+            bad.add("cannot read the item render state's layers: " + e);
+        }
+        return colours;
+    }
+
+    /^* One quad as a pipe's block model emits it into the chunk mesh: its layer and its four ARGB colours. *^/
+    private record EmittedQuad(net.minecraft.client.renderer.chunk.ChunkSectionLayer layer, int[] colours) {}
+
+    /^*
+     * The vertex colours a pipe's block model emits into the chunk mesh (#154): BuildCraft bakes its directional
+     * shading, a painted pipe's glaze alpha and the lens glass colour into them, and on Fabric they reach the mesh only
+     * if the model puts them on the emitter. Reads the quads the live block model emits for the colour pipes.
+     *^/
+    private static void checkPipeColours(ClientGameTestContext ctx, TestServerContext server, List<String> problems) {
+        try {
+            ctx.waitFor(mc -> mc.level != null
+                && mc.level.getBlockEntity(LENS_PIPE) instanceof TilePipeHolder lens
+                && lens.getPluggable(Direction.UP) instanceof buildcraft.silicon.plug.PluggableLens
+                && mc.level.getBlockEntity(PAINTED_PIPE) instanceof TilePipeHolder painted
+                && painted.getPipe() != null && painted.getPipe().getColour() == DyeColor.RED, 200);
+        } catch (AssertionError timedOut) {
+            problems.add("the client never saw the red lens and the red-painted pipe");
+            return;
+        }
+        List<String> found = ctx.computeOnClient(mc -> {
+            List<String> bad = new ArrayList<>();
+            var translucent = net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT;
+            List<EmittedQuad> lens = emittedQuads(mc, LENS_PIPE);
+            int red = DyeColor.RED.getTextureDiffuseColor() & 0xFFFFFF;
+            if (lens.stream().noneMatch(q -> q.layer() == translucent && allRgb(q.colours(), red))) {
+                bad.add("the red lens's glass is not emitted red: translucent quad colours "
+                    + describe(lens.stream().filter(q -> q.layer() == translucent).map(EmittedQuad::colours).toList()));
+            }
+            if (lens.stream().noneMatch(q -> q.layer() != translucent && !allRgb(q.colours(), 0xFFFFFF))) {
+                bad.add("the lens pipe's opaque quads are all white: no directional shading reached the mesh ("
+                    + lens.size() + " quads)");
+            }
+            List<EmittedQuad> painted = emittedQuads(mc, PAINTED_PIPE);
+            if (painted.stream().noneMatch(q -> q.layer() == translucent && (q.colours()[0] >>> 24) == 76)) {
+                bad.add("the red-painted pipe's glaze is not emitted at alpha 76: translucent quad colours "
+                    + describe(painted.stream().filter(q -> q.layer() == translucent).map(EmittedQuad::colours)
+                        .toList()));
+            }
+            return bad;
+        });
+        problems.addAll(found);
+    }
+
+    private static List<EmittedQuad> emittedQuads(Minecraft mc, BlockPos pos) {
+        net.minecraft.world.level.block.state.BlockState state = mc.level.getBlockState(pos);
+        var model = mc.getModelManager().getBlockStateModelSet().get(state);
+        List<EmittedQuad> out = new ArrayList<>();
+        var capture = net.fabricmc.fabric.api.client.renderer.v1.Renderer.get().quadEmitter(
+            q -> out.add(new EmittedQuad(q.chunkLayer(), new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
+        model.emitQuads(capture, mc.level, pos, state, net.minecraft.util.RandomSource.create(0), face -> false);
+        return out;
+    }
+
+    private static boolean allRgb(int[] argb, int rgb) {
+        for (int c : argb) {
+            if ((c & 0xFFFFFF) != rgb) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /^* The distinct colours, as hex, for a failure message. *^/
+    private static String describe(List<int[]> colours) {
+        Set<String> distinct = new java.util.TreeSet<>();
+        for (int[] quad : colours) {
+            for (int c : quad) {
+                distinct.add(Integer.toHexString(c));
+            }
+        }
+        return colours.isEmpty() ? "(no quads)" : distinct.toString();
     }
 
     private static void pipe(TestServerContext server, int x, int z, String def) {

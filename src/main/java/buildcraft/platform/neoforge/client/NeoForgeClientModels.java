@@ -35,6 +35,13 @@ public final class NeoForgeClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission, true);
     }
+
+    @Override
+    public void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
+            java.util.List<BakedQuad> quads) {
+        // The quads carry their BakedColors, which NeoForge's item draw multiplies in.
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));
+    }
     //?}
 
     @Override

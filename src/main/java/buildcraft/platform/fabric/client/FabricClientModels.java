@@ -6,22 +6,30 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import java.util.concurrent.ConcurrentMap;
+/*import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
 
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.geometry.ItemQuads;
+
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
 
 import buildcraft.platform.client.ClientModels;
 
 /^*
  * {@link ClientModels} on Fabric: vanilla's quads, which carry no loader additions, so the per-vertex colours BC bakes
- * into its quads live in a side table keyed by quad identity (see {@link #VERTEX_COLOURS}).
+ * into its quads live in a side table keyed by quad identity (see {@link #VERTEX_COLOURS}), and BC's own draws put them
+ * back on through a Fabric {@link QuadEmitter} ({@link #applyVertexColours}): the pipe block model and {@link #setItemQuads}.
  ^/
 public final class FabricClientModels implements ClientModels {
     /^*
      * Per-vertex colours (0xAARRGGBB x4) of the quads {@link #withVertexColours} was given, for the draws that rebuild
-     * vertices themselves (the snapshot preview) and can multiply them in. Vanilla 26.3's {@code BakedQuad} has no
+     * vertices themselves (the snapshot preview) or emit them through a {@code QuadEmitter} (the pipe block model, item
+     * layers) and so can multiply them in. Vanilla 26.3's {@code BakedQuad} has no
      * colour slot and Fabric API's only colour setter is the mesh {@code QuadEmitter}, which a {@code BakedQuad}
      * cannot carry, so the colours ride beside the quad instead. Weak identity keys (a record's {@code equals} is by
      * value, so equal quads would share one entry): an entry lives exactly as long as the quad does, so a model
@@ -55,6 +63,38 @@ public final class FabricClientModels implements ClientModels {
     public int vertexColour(BakedQuad quad, int vertex) {
         int[] colours = VERTEX_COLOURS.get(quad);
         return colours == null ? -1 : colours[vertex];
+    }
+
+    @Override
+    public void setItemQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
+        List<BakedQuad> plain = new ArrayList<>(quads.size());
+        QuadEmitter emitter = null;
+        for (BakedQuad quad : quads) {
+            if (!VERTEX_COLOURS.containsKey(quad)) {
+                plain.add(quad);
+                continue;
+            }
+            if (emitter == null) {
+                // Fabric API's mesh on the layer, drawn in the same item submit as the layer's quads.
+                emitter = layer.emitter();
+            }
+            emitter.fromBakedQuad(quad);
+            applyVertexColours(emitter, quad);
+            emitter.emit();
+        }
+        layer.setQuads(ItemQuads.split(plain));
+    }
+
+    /^*
+     * Gives the quad {@code emitter} holds (just filled by {@code fromBakedQuad(quad)}, which leaves the colour white)
+     * the per-vertex colours {@link #withVertexColours} gave {@code quad}, if any. ARGB on both sides, so the colours go
+     * across unchanged.
+     ^/
+    public static void applyVertexColours(QuadEmitter emitter, BakedQuad quad) {
+        int[] colours = VERTEX_COLOURS.get(quad);
+        if (colours != null) {
+            emitter.color(colours[0], colours[1], colours[2], colours[3]);
+        }
     }
 }
 *///?}

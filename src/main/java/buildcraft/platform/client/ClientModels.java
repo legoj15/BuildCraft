@@ -20,8 +20,9 @@ public interface ClientModels {
     /**
      * {@code quad} carrying one colour per vertex (0xAARRGGBB, multiplied into the vertex colour when drawn). NeoForge
      * adds per-vertex colours to vanilla's {@code BakedQuad}; Fabric API 26.3 does not, so there the quad is returned
-     * as is and its colours are kept beside it, readable through {@link #vertexColour} only (a draw that goes through
-     * the quad alone, such as the chunk mesh, still shows BC's quads untinted white where they relied on vertex colour).
+     * as is and its colours are kept beside it, readable through {@link #vertexColour}. A draw that hands the bare quad
+     * to vanilla shows it untinted on Fabric, so BC's own draws re-apply the colours there: its pipe block model (the
+     * chunk mesh) and {@link #setItemQuads} (item models).
      */
     BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3);
 
@@ -46,6 +47,16 @@ public interface ClientModels {
             net.minecraft.client.renderer.rendertype.RenderType glintSheet,
             net.minecraft.client.renderer.rendertype.RenderType glintSpecialSheet, int tintIndex,
             net.minecraft.core.Direction shadeOverride, int lightEmission);
+
+    /**
+     * Gives an item model's layer {@code quads}, each drawn with the per-vertex colours {@link #withVertexColours} gave
+     * it (on this line a layer takes one {@code ItemQuads}, split into its solid and translucent submits). NeoForge:
+     * the quads themselves carry the colours, so this is {@code layer.setQuads(ItemQuads.split(quads))}. Fabric: the
+     * uncoloured quads go that way and the coloured ones through the layer's mesh emitter
+     * ({@code FabricLayerRenderState#emitter}), the one item path in Fabric API that takes a colour per vertex.
+     */
+    void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
+            java.util.List<BakedQuad> quads);
     //?}
 
     //? if <1.21.10 {

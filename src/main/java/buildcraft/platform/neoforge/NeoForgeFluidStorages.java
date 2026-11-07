@@ -52,6 +52,7 @@ public final class NeoForgeFluidStorages {
     private NeoForgeFluidStorages() {}
 
     //? if >=1.21.10 {
+    private static final Kind KIND = new Kind();
     private static final AdapterCache<BCFluidStorage, ToNeo> TO_NEO = new AdapterCache<>(ToNeo::new);
     private static final AdapterCache<ResourceHandler<FluidResource>, FromNeo> FROM_NEO =
         new AdapterCache<>(FromNeo::new);
@@ -59,74 +60,71 @@ public final class NeoForgeFluidStorages {
     /** The NeoForge handler for a BuildCraft storage (null stays null). */
     @Nullable
     public static ResourceHandler<FluidResource> toNeo(@Nullable BCFluidStorage storage) {
-        if (storage == null) {
-            return null;
-        }
-        if (storage instanceof FromNeo view) {
-            return view.handler;
-        }
-        return TO_NEO.get(storage);
+        return KIND.toNeoHandler(storage);
     }
 
     /** The BuildCraft view of a NeoForge handler (null stays null). */
     @Nullable
     public static BCFluidStorage fromNeo(@Nullable ResourceHandler<FluidResource> handler) {
-        if (handler == null) {
-            return null;
-        }
-        if (handler instanceof ToNeo adapter) {
-            return adapter.storage;
-        }
-        return FROM_NEO.get(handler);
+        return KIND.fromNeoHandler(handler);
     }
 
     /** The BuildCraft stack of {@code amount} of a resource (empty for an empty resource or amount). */
     public static BCFluidStack stackOf(FluidResource resource, int amount) {
-        return resource.isEmpty() || amount <= 0 ? BCFluidStack.EMPTY : NeoForgeFluids.fromNeo(resource.toStack(amount));
+        return KIND.stackOf(resource, amount);
     }
 
     /** The resource a BuildCraft stack names, its amount dropped. */
     public static FluidResource resourceOf(BCFluidStack stack) {
-        return stack.isEmpty() ? FluidResource.EMPTY : FluidResource.of(NeoForgeFluids.toNeo(stack));
+        return KIND.resourceOf(stack);
     }
 
-    private record ToNeo(BCFluidStorage storage) implements ResourceHandler<FluidResource> {
+    /**
+     * The fluid kind of {@link NeoForgeStorageAdapter}. Each direction hands out one adapter per wrapped object (see the
+     * class Javadoc), and both add the resource-wide calls, which the item kind leaves to NeoForge's defaults.
+     */
+    private static final class Kind extends NeoForgeStorageAdapter<BCFluidStack, FluidResource, BCFluidStorage> {
         @Override
-        public int size() {
-            return storage.size();
+        boolean isEmpty(BCFluidStack resource) {
+            return resource.isEmpty();
         }
 
         @Override
-        public FluidResource getResource(int index) {
-            return resourceOf(storage.getStack(index));
+        FluidResource blank() {
+            return FluidResource.EMPTY;
         }
 
         @Override
-        public long getAmountAsLong(int index) {
+        FluidResource variantOf(BCFluidStack resource) {
+            return FluidResource.of(NeoForgeFluids.toNeo(resource));
+        }
+
+        @Override
+        BCFluidStack stackOf(FluidResource resource, int amount) {
+            return resource.isEmpty() || amount <= 0 ? BCFluidStack.EMPTY
+                : NeoForgeFluids.fromNeo(resource.toStack(amount));
+        }
+
+        @Override
+        long amountAt(BCFluidStorage storage, int index) {
             return storage.getAmount(index);
         }
 
         @Override
-        public long getCapacityAsLong(int index, FluidResource resource) {
-            return storage.getCapacity(index, stackOf(resource, 1));
+        ResourceHandler<FluidResource> outgoing(BCFluidStorage storage) {
+            return TO_NEO.get(storage);
         }
 
         @Override
-        public boolean isValid(int index, FluidResource resource) {
-            return storage.isValid(index, stackOf(resource, 1));
+        BCFluidStorage incoming(ResourceHandler<FluidResource> handler) {
+            return FROM_NEO.get(handler);
         }
+    }
 
-        @Override
-        public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-            // No precondition check here: each BuildCraft storage answers an empty or negative offer itself, as it did
-            // before the platform layer. The tanks and the Tank's column throw (BCFluidTank.movesNothing); a face that
-            // refuses this direction outright, or a pipe section, answers 0.
-            return storage.insert(index, stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
-        }
-
-        @Override
-        public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
-            return storage.extract(index, stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
+    private static final class ToNeo
+        extends NeoForgeStorageAdapter.ToNeo<BCFluidStack, FluidResource, BCFluidStorage> {
+        ToNeo(BCFluidStorage storage) {
+            super(KIND, storage);
         }
 
         // The resource-wide calls go to the storage's own, so a storage that answers them itself keeps its answer.
@@ -139,22 +137,12 @@ public final class NeoForgeFluidStorages {
         public int extract(FluidResource resource, int amount, TransactionContext transaction) {
             return storage.extract(stackOf(resource, 1), amount, NeoForgeTransfer.wrap(transaction));
         }
-
-        @Override
-        public String toString() {
-            return "NeoForge view of " + storage;
-        }
     }
 
-    private record FromNeo(ResourceHandler<FluidResource> handler) implements BCFluidStorage {
-        @Override
-        public int size() {
-            return handler.size();
-        }
-
-        @Override
-        public BCFluidStack getStack(int index) {
-            return stackOf(handler.getResource(index), handler.getAmountAsInt(index));
+    private static final class FromNeo extends NeoForgeStorageAdapter.View<BCFluidStack, FluidResource, BCFluidStorage>
+        implements BCFluidStorage {
+        FromNeo(ResourceHandler<FluidResource> handler) {
+            super(KIND, handler);
         }
 
         @Override
@@ -163,34 +151,8 @@ public final class NeoForgeFluidStorages {
         }
 
         @Override
-        public int getCapacity(int index, BCFluidStack resource) {
-            return handler.getCapacityAsInt(index, resourceOf(resource));
-        }
-
-        @Override
         public long getCapacityAsLong(int index, BCFluidStack resource) {
             return handler.getCapacityAsLong(index, resourceOf(resource));
-        }
-
-        @Override
-        public boolean isValid(int index, BCFluidStack resource) {
-            return !resource.isEmpty() && handler.isValid(index, resourceOf(resource));
-        }
-
-        @Override
-        public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            return handler.insert(index, resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
-        }
-
-        @Override
-        public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
-            if (resource.isEmpty() || amount <= 0) {
-                return 0;
-            }
-            return handler.extract(index, resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
         }
 
         // The resource-wide calls are the handler's own (what BuildCraft called before the platform layer), so a
@@ -205,11 +167,6 @@ public final class NeoForgeFluidStorages {
         public int extract(BCFluidStack resource, int amount, BCTransactionContext transaction) {
             BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
             return handler.extract(resourceOf(resource), amount, NeoForgeTransfer.unwrap(transaction));
-        }
-
-        @Override
-        public String toString() {
-            return "BuildCraft view of " + handler;
         }
     }
     //?} else {

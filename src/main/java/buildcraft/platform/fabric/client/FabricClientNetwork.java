@@ -6,9 +6,12 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+/*import java.util.function.Supplier;
+
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Player;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
 import buildcraft.platform.network.PacketContext;
@@ -26,6 +29,16 @@ public final class FabricClientNetwork {
             PacketHandler<T> handler) {
         ClientPlayNetworking.registerGlobalReceiver(type,
                 (payload, ctx) -> handler.handle(payload, new ClientContext(ctx)));
+    }
+
+    /^*
+     * Answers the server's configuration-phase version handshake ({@code FabricNetworkVersions}) with this client's
+     * own table; the server compares the two and decides.
+     *^/
+    public static <T extends CustomPacketPayload> void registerVersionReply(CustomPacketPayload.Type<T> type,
+            Supplier<T> ownTable) {
+        ClientConfigurationNetworking.registerGlobalReceiver(type,
+                (serverTable, ctx) -> ctx.responseSender().sendPacket(ownTable.get()));
     }
 
     /^* Sends a payload to the server the client is connected to. *^/

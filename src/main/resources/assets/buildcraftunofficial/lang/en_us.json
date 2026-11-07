@@ -820,6 +820,8 @@
     "buildcraftunofficial.configuration.excludedDimensions": "Excluded Dimensions",
     "buildcraftunofficial.configuration.dimensionListMode": "Dimension List Mode",
     "buildcraftunofficial.configuration.netherSpringBiomes": "Nether Spring Biomes",
+    "buildcraftunofficial.network.missing": "This server needs the same version of BuildCraft Redux installed on your game.",
+    "buildcraftunofficial.network.version_mismatch": "Your BuildCraft Redux does not match the server's. Install the server's version. Differing: %s",
     "block.buildcraftunofficial.engine_rf": "FE Engine",
     "block.buildcraftunofficial.engine_rf.rf": "RF Engine",
     "block.buildcraftunofficial.mj_dynamo": "MJ Dynamo",

@@ -30,9 +30,10 @@ public interface PipeModelQuads {
      */
     Object geometryKey(PipeRenderData data);
 
-    /** The cutout-layer quads (the pipe body and its pluggables). */
+    /** The cutout-layer quads (the pipe body and its pluggables' opaque and cut-out quads). */
     List<BakedQuad> cutoutQuads(PipeRenderData data);
 
-    /** The translucent-layer quads (a painted pipe's colour overlay). */
+    /** The translucent-layer quads (a painted pipe's colour overlay, and translucent pluggable quads such as lens
+     *  glass or a stained-glass facade). */
     List<BakedQuad> translucentQuads(PipeRenderData data);
 }

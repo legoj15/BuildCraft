@@ -169,6 +169,9 @@ public class PluggableFacade extends PipePluggable implements IFacade {
         return BCSiliconItems.PLUG_FACADE.get().createItemStack(states);
     }
 
+    /** A key on both passes: the baker (PlugBakerFacade) keeps only the quads the block's model draws in each one,
+     *  so an opaque facade bakes nothing on the translucent pass and a stained-glass one nothing on the cutout pass
+     *  but its plug connector. The cutout key always names the facade, which keeps it in the chunk's geometry key. */
     @Override
     public PluggableModelKey getModelRenderKey(Object layer) {
         FacadePhasedState state = states.phasedStates[activeState];

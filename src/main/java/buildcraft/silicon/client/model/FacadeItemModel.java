@@ -56,26 +56,46 @@ public class FacadeItemModel implements ItemModel {
 /*public class FacadeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
 //?}
 
+    /** The item's quads, both passes of the in-world baker (the cutout pass first, the translucent second), and
+     *  whether any translucent quad is among them (the pre-26.1 lines pick the item sheet by it; 26.x reads each
+     *  quad's own item sheet). */
+    private record FacadeQuads(List<BakedQuad> quads, boolean translucent) {}
+
+    /** Both cache loaders take the cutout-pass key and also bake its translucent twin. */
+    private static KeyPlugFacade translucentTwin(KeyPlugFacade key) {
+        return new KeyPlugFacade(PlugBakerFacade.LAYER_TRANSLUCENT, key.side, key.state, key.isHollow);
+    }
+
     // Cache for hand/3rd-person rendering (EAST facing, includes plug connector)
-    private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> cache = CacheBuilder.newBuilder()
+    private static final LoadingCache<KeyPlugFacade, FacadeQuads> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
-        .build(CacheLoader.from(key -> PlugBakerFacade.INSTANCE.bake(key)));
+        .build(CacheLoader.from(key -> {
+            List<BakedQuad> translucent = PlugBakerFacade.INSTANCE.bake(translucentTwin(key));
+            List<BakedQuad> quads = new ArrayList<>(PlugBakerFacade.INSTANCE.bake(key));
+            quads.addAll(translucent);
+            return new FacadeQuads(quads, !translucent.isEmpty());
+        }));
 
     // Cache for GUI/inventory rendering (NORTH facing, centered in slot)
-    private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> guiCache = CacheBuilder.newBuilder()
+    private static final LoadingCache<KeyPlugFacade, FacadeQuads> guiCache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
             List<BakedQuad> quads = new ArrayList<>();
+            boolean anyTranslucent = false;
             float offsetZ = (16 - buildcraft.silicon.plug.PluggableFacade.SIZE) / 2f / 16f;
-            for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
-                quad.setShade(false);
-                quad.vertex_0.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                quad.vertex_1.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                quad.vertex_2.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                quad.vertex_3.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                quads.add(quad.toBakedItem());
+            for (KeyPlugFacade pass : List.of(key, translucentTwin(key))) {
+                boolean translucent = PlugBakerFacade.isTranslucent(pass);
+                for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(pass)) {
+                    quad.setShade(false);
+                    quad.vertex_0.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                    quad.vertex_1.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                    quad.vertex_2.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                    quad.vertex_3.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                    quads.add(translucent ? quad.toBakedTranslucent() : quad.toBakedItem());
+                    anyTranslucent |= translucent;
+                }
             }
-            return quads;
+            return new FacadeQuads(quads, anyTranslucent);
         }));
 
     //? if <1.21.10 {
@@ -110,15 +130,16 @@ public class FacadeItemModel implements ItemModel {
         FacadeInstance inst = ItemPluggableFacade.getStates(stack);
         FacadePhasedState state = inst.getCurrentStateForStack();
 
-        List<BakedQuad> quads;
+        FacadeQuads baked;
         KeyPlugFacade key;
         if (displayContext == ItemDisplayContext.GUI) {
             key = new KeyPlugFacade("cutout", Direction.NORTH, state.stateInfo.state, inst.isHollow());
-            quads = guiCache.getUnchecked(key);
+            baked = guiCache.getUnchecked(key);
         } else {
             key = new KeyPlugFacade("cutout", Direction.EAST, state.stateInfo.state, inst.isHollow());
-            quads = cache.getUnchecked(key);
+            baked = cache.getUnchecked(key);
         }
+        List<BakedQuad> quads = baked.quads();
 
         if (quads.isEmpty()) {
             return;
@@ -134,10 +155,15 @@ public class FacadeItemModel implements ItemModel {
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
-        //? if <26.1 {
-        /*// 1.21.11: the item layer needs an explicit render type (26.1 infers it from the quad's
-        // MaterialInfo). Block-textured cutout → cutoutBlockSheet, matching vanilla BlockModelWrapper.
-        layer.setRenderType(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());*/
+        // 1.21.10/11: the item layer needs one explicit render type (26.1 infers it per quad from its
+        // MaterialInfo). Matching vanilla BlockModelWrapper: the cutout block sheet, or the translucent block-item
+        // sheet when the facade's block draws translucent (1.21.10 calls it translucentItemSheet).
+        //? if >=1.21.11 && <26.1 {
+        /*layer.setRenderType(baked.translucent() ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
+                : net.minecraft.client.renderer.Sheets.cutoutBlockSheet());*/
+        //?} elif <1.21.11 {
+        /*layer.setRenderType(baked.translucent() ? net.minecraft.client.renderer.Sheets.translucentItemSheet()
+                : net.minecraft.client.renderer.Sheets.cutoutBlockSheet());*/
         //?}
     }
     //?} else {
@@ -169,17 +195,21 @@ public class FacadeItemModel implements ItemModel {
         if (resolvedState == null) {
             return this;
         }
-        List<BakedQuad> quads;
+        FacadeQuads baked;
         if (displayContext == ItemDisplayContext.GUI) {
-            quads = guiCache.getUnchecked(new KeyPlugFacade("cutout", Direction.NORTH, resolvedState, resolvedHollow));
+            baked = guiCache.getUnchecked(new KeyPlugFacade("cutout", Direction.NORTH, resolvedState, resolvedHollow));
         } else {
-            quads = cache.getUnchecked(new KeyPlugFacade("cutout", Direction.EAST, resolvedState, resolvedHollow));
+            baked = cache.getUnchecked(new KeyPlugFacade("cutout", Direction.EAST, resolvedState, resolvedHollow));
         }
+        List<BakedQuad> quads = baked.quads();
         if (quads.isEmpty()) {
             return this;
         }
+        // A translucent facade takes the sheet vanilla 1.21.1 gives a translucent block item (cull + sorted).
         return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
-                quads, quads.get(0).getSprite(), false, net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+                quads, quads.get(0).getSprite(), false, baked.translucent()
+                        ? net.minecraft.client.renderer.Sheets.translucentCullBlockSheet()
+                        : net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 
     @Override

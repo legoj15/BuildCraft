@@ -37,7 +37,7 @@ public class KeyPlugFacade extends PluggableModelKey {
         if (obj.getClass() != getClass()) return false;
         KeyPlugFacade other = (KeyPlugFacade) obj;
         return other.isHollow == isHollow
-                && other.layer == layer
+                && Objects.equals(other.layer, layer)
                 && other.state == state
                 && other.side == side;
     }

@@ -246,8 +246,8 @@ public class MutableQuad {
             face, matInfo
         ));
         //?} elif >=1.21.11 {
-        /*// 1.21.11 BakedQuad has no per-quad layer; translucent routing is a TODO for 1.21.11 visual
-        // parity (needs a TRANSLUCENT block RenderType). Produces the same quad as toBakedBlock().
+        /*// 1.21.11 BakedQuad has no per-quad layer: the caller routes it by the part/pass it hands the quad
+        // out on (NeoForgePipeBlockStateModel's TRANSLUCENT part). Produces the same quad as toBakedBlock().
         return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),

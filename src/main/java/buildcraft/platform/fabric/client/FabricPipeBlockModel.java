@@ -27,8 +27,9 @@ import buildcraft.platform.render.PipeRenderData;
 /^*
  * The block model {@code ClientRegistrationSinks#pipeBlockModel} swaps in on Fabric: emits the {@link PipeModelQuads}
  * of the block entity's {@link PipeRenderData} (read through {@code FabricBlockGetter#getBlockEntityRenderData}, which
- * returns what its {@code RenderDataBlockEntity#getRenderData} handed over) into the chunk mesh, unculled, the body on
- * the cutout layer and a painted pipe's overlay on the translucent one; the wrapped model where there is none.
+ * returns what its {@code RenderDataBlockEntity#getRenderData} handed over) into the chunk mesh, unculled, each list on
+ * its own layer (the body and opaque pluggables cutout; a painted pipe's overlay, lens glass and translucent facades
+ * translucent); the wrapped model where there is none.
  *
  * <p>Gap: vanilla's {@code BakedQuad} carries no per-vertex colour on Fabric (see
  * {@code ClientModels#withVertexColours}), so vertex-coloured BC quads draw untinted here.

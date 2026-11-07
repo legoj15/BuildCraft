@@ -36,6 +36,7 @@
   ],
   "client": [
     "client.AbstractContainerScreenMixin",
+    "client.ClientLevelMixin",
     "client.FogRendererMixin",
     "client.GuiGraphicsExtractorMixin",
     "client.LevelEventHandlerMixin",

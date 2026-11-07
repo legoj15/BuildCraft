@@ -233,6 +233,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             for (BlockPos at : new BlockPos[] {PARTICLE_PIPE, PARTICLE_TUBE}) {
                 BlockState state = level.getBlockState(at);
                 boolean pipe = at.equals(PARTICLE_PIPE);
+                if (!pipe && !BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString().equals(NS + ":tube")) {
+                    out.add("particles: the client sees " + state + " at the tube spot, not the tube");
+                    continue;
+                }
                 mc.particleEngine.clearParticles();
                 level.addDestroyBlockEffect(at, state);
                 out.addAll(particleProblems("break", state, pipe, queued));

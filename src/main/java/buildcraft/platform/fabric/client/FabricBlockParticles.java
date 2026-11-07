@@ -22,8 +22,9 @@ import buildcraft.platform.client.ClientRegistrationSinks.BlockParticleOverride;
  * The per-block hit and break particles registered through {@code ClientRegistrationSinks#blockParticles}. Fabric API
  * 26.3 has no hook for these, so {@code ClientLevelMixin} asks here where NeoForge's patched {@code ClientLevel} asks
  * the block's {@code IClientBlockExtensions}: at the start of {@code addDestroyBlockEffect} (not for air) and in place
- * of {@code addBreakingParticles} inside {@code addBreakingBlockEffects} (after the hit sound, and only for a block
- * that renders). As on NeoForge, an override returning true replaces vanilla's particles.
+ * of {@code addBreakingParticles} inside {@code addBreakingBlockEffects} (after the hit sound; vanilla reaches that call
+ * only when the block's render shape is not INVISIBLE, and that call spawns vanilla's terrain
+ * particles). As on NeoForge, an override returning true replaces vanilla's particles.
  *^/
 public final class FabricBlockParticles {
 

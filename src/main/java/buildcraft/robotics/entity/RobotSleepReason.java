@@ -30,6 +30,9 @@ public enum RobotSleepReason {
     NOWHERE_TO_UNLOAD,
     /** A protection mod refused the work, over and over. */
     PROTECTED,
+    /** Several attempts in a row failed for any cause (a protection refusal, a block that changed under the robot,
+     *  one it cannot break): the boards whose give-up counts every failure cannot say which. */
+    WORK_FAILING,
     /** The work is there but cannot be reached for now; the board looks again after the sleep. */
     RETRYING,
     /** The machine the cargo was for has no room for it. */

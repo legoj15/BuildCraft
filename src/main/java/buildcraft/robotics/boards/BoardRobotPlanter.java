@@ -116,7 +116,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
             }
             releaseBlockFound();
             if (giveUp) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {

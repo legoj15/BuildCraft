@@ -597,6 +597,7 @@
     "buildcraft.robot.sleep_reason.nothing_to_load": "休眠：没有可装载的物品",
     "buildcraft.robot.sleep_reason.nowhere_to_unload": "休眠：无处卸载",
     "buildcraft.robot.sleep_reason.protected": "休眠：被保护阻止",
+    "buildcraft.robot.sleep_reason.work_failing": "休眠：工作屡次失败",
     "buildcraft.robot.sleep_reason.retrying": "休眠：稍后重试",
     "buildcraft.robot.sleep_reason.target_full": "休眠：目标已满",
     "buildcraft.robot.sleep_reason.awaiting_requester": "休眠：等待请求方",

@@ -69,7 +69,7 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotHarvest && finishAttempt(ai)) {
-            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
         }
         super.delegateAIEnded(ai);
     }

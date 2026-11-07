@@ -70,7 +70,7 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
             // A break that failed on a block that is still there is remembered (the search skips it from now on), and
             // a run of them sends the board to sleep - see finishAttempt.
             if (finishAttempt(ai)) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
             }
         }
         super.delegateAIEnded(ai);

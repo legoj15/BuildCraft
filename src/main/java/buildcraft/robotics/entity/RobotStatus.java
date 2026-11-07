@@ -131,6 +131,11 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
             }
         }
 
+        // A board with nothing under it is between two passes (the Builder waits out a launch delay this way).
+        if (top.getDelegateAI() == null && activityOf(top) == null) {
+            return IDLE;
+        }
+
         // The outermost job wins; searches and flights only fill in when no job names the whole stretch, and the
         // innermost of those is the truest (the flight, not the search that started it).
         RobotActivity leg = null;

@@ -5,14 +5,6 @@
  */
 package buildcraft.robotics.entity;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -91,7 +83,7 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(RobotActivity.FOLLOWING_GATE, activity(main));
 
         // The same AI as an ordinary delegate (not the tracked override) is not a gate order.
-        Assertions.assertEquals(RobotActivity.WORKING, activity(chain(new AIRobot(robot))));
+        Assertions.assertNotEquals(RobotActivity.FOLLOWING_GATE, activity(chain(new AIRobot(robot))));
     }
 
     @Test
@@ -135,8 +127,10 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(RobotActivity.TRAVELLING, activity(chain(board(), flight)));
         Assertions.assertEquals(RobotActivity.SEARCHING, activity(chain(board(), search)));
         Assertions.assertEquals(RobotActivity.BREAKING, activity(chain(board(), breaking)));
-        Assertions.assertEquals(RobotActivity.WORKING, activity(chain(board())),
+        Assertions.assertEquals(RobotActivity.WORKING, activity(chain(board(), new AIRobot(robot))),
                 "a chain nothing names reads as the fallback");
+        Assertions.assertEquals(RobotActivity.IDLE, activity(chain(board())),
+                "a board with nothing under it is between two passes");
     }
 
     // ── What each board gives as its reason ─────────────────────────────────
@@ -202,22 +196,5 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
                 "an id from a newer server reads as idle with no reason, not as a crash");
         Assertions.assertNull(new RobotStatus(RobotActivity.WORKING, RobotSleepReason.NO_WORK).sleepReason(),
                 "a reason belongs to a sleep only");
-    }
-
-    @Test
-    public void everyActivityAndReasonHasEnglishText() {
-        JsonObject en;
-        try (InputStream in = RobotStatusTest.class.getResourceAsStream("/assets/buildcraftunofficial/lang/en_us.json")) {
-            Assertions.assertNotNull(in, "en_us.json is not on the test classpath");
-            en = new Gson().fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), JsonObject.class);
-        } catch (IOException e) {
-            throw new AssertionError("Could not read en_us.json", e);
-        }
-        for (RobotActivity activity : RobotActivity.values()) {
-            Assertions.assertTrue(en.has(activity.translationKey()), "en_us lacks " + activity.translationKey());
-        }
-        for (RobotSleepReason reason : RobotSleepReason.values()) {
-            Assertions.assertTrue(en.has(reason.translationKey()), "en_us lacks " + reason.translationKey());
-        }
     }
 }

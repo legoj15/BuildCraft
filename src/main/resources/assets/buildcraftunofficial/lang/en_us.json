@@ -339,6 +339,7 @@
     "buildcraft.robot.sleep_reason.nothing_to_load": "Sleeping: nothing to load",
     "buildcraft.robot.sleep_reason.nowhere_to_unload": "Sleeping: nowhere to unload",
     "buildcraft.robot.sleep_reason.protected": "Sleeping: blocked by protection",
+    "buildcraft.robot.sleep_reason.work_failing": "Sleeping: work keeps failing",
     "buildcraft.robot.sleep_reason.retrying": "Sleeping: retrying soon",
     "buildcraft.robot.sleep_reason.target_full": "Sleeping: target full",
     "buildcraft.robot.sleep_reason.awaiting_requester": "Sleeping: waiting for requester",

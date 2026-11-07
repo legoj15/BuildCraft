@@ -23,6 +23,7 @@ val minecraftVersion = property("minecraft_version") as String
 val fabricLoaderVersion = property("fabric_loader_version") as String
 val fabricApiVersion = property("fabric_api_version") as String
 val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
+val modMenuVersion = property("mod_menu_version") as String
 val jeiVersion = property("jei_version") as String
 val reiVersion = property("rei_version") as String
 // The player-facing minimums fabric.mod.json declares: their own properties, so a routine bump of the dev pins above
@@ -277,6 +278,11 @@ repositories {
         forRepository { maven("https://maven.nucleoid.xyz/") }
         filter { includeGroup("eu.pb4") }
     }
+    // TerraformersMC's maven, for Mod Menu alone.
+    exclusiveContent {
+        forRepository { maven("https://maven.terraformersmc.com/releases/") }
+        filter { includeGroup("com.terraformersmc") }
+    }
 }
 
 dependencies {
@@ -309,6 +315,10 @@ dependencies {
     // file), as Fabric mods conventionally ship it; the loader keeps the newest copy when several mods bundle it.
     implementation("eu.pb4:common-protection-api:2.0.0") { isTransitive = false }
     include("eu.pb4:common-protection-api:2.0.0")
+    // Mod Menu in the dev client only (Loom's localRuntime: never compiled against, published or shipped), so
+    // runClient has the mod list whose config button opens the screen FabricClientConfigScreens registers. Its POM's
+    // runtime deps are Fabric Loader and Fabric API modules this node already has; Placeholder API rides inside it.
+    "localRuntime"("com.terraformersmc:modmenu:$modMenuVersion") { isTransitive = false }
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

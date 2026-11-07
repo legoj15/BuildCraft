@@ -24,8 +24,9 @@ import net.minecraft.world.phys.Vec3;
  * tick). It floats only where its {@code FloatGoal} or a jump lifts it, which follow {@link FluidProperties#canSwim};
  * one exception is not this class's: vanilla 26.3's {@code LivingEntity.travelInFluid} lifts a ridden horse (the
  * {@code can_float_while_ridden} entities) in any water-tag fluid deeper than its jump threshold, after the fluid
- * type's {@code move}, so on NeoForge 26.3 a ridden horse in crude oil still rises. NeoForge 26.1.2 and 26.2 do not
- * lift it, and neither does the Fabric mixin, which takes the whole of {@code travel}.
+ * type's {@code move}, so on 26.3 a ridden horse in crude oil rises: NeoForge through vanilla, Fabric because
+ * {@code LivingEntityMixin} runs the same lift after this step (#142, parity per MC line). NeoForge 26.1.2 and 26.2
+ * do not lift it, and keep the sink-gently behaviour of #117.
  */
 public final class ThickFluidMotion {
     /** Water's current scalar ({@code FluidType}'s default {@code motionScale}). */

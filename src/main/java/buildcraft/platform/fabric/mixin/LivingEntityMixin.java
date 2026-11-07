@@ -50,7 +50,9 @@ import buildcraft.platform.hook.PositionalSoundBlock;
  * {@code EntityMixin}, {@code EntityEquipmentMixin} and {@code InventoryMixin}, NeoForge's capture sites), shows them to
  * the listeners, then puts them in the level. And NeoForge's {@code onLivingBreathe} test for BuildCraft's fluids
  * and {@code travel} ({@link FabricFluidPhysics}): the entity drowns with its eyes in a fluid it can drown in, and
- * wades through one that is not water-like by {@link ThickFluidMotion}, as the NeoForge fluid type's {@code move}.
+ * wades through one that is not water-like by {@link ThickFluidMotion}, as the NeoForge fluid type's {@code move},
+ * then takes vanilla's ridden-mount lift; a rider is thrown off a mount only with its eyes in a water-tag fluid that
+ * is not BuildCraft's.
  *^/
 @Mixin(LivingEntity.class)
 abstract class LivingEntityMixin {
@@ -60,6 +62,9 @@ abstract class LivingEntityMixin {
 
     @Shadow
     protected abstract double getEffectiveGravity();
+
+    @Shadow
+    private void floatInLiquidWhileRidden(TagKey<Fluid> fluidTag) {}
 
     /^* The BuildCraft fluid that is not water-like this entity travels in this tick (NeoForge's {@code travel} takes
      *  {@code travelInFluid} for it, which hands it to the type's {@code move}), or null. *^/
@@ -97,6 +102,9 @@ abstract class LivingEntityMixin {
             self.setDeltaMovement(self.getDeltaMovement().add(0.0, FabricFluidPhysics.FLUID_JUMP_SPEED, 0.0));
         }
         ThickFluidMotion.travel(self, thick, input, getEffectiveGravity());
+        // Vanilla's travelInFluid ends with this lift for a ridden can_float_while_ridden mount in any water-tag
+        // fluid, after the type's move on NeoForge 26.3, so a ridden horse floats in crude oil there too (#142).
+        floatInLiquidWhileRidden(FluidTags.ENTITY_FLOATABLE);
         ci.cancel();
     }
 
@@ -120,6 +128,18 @@ abstract class LivingEntityMixin {
                 ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
                         .buildcraft$eyeInDrowningFluid()
                 : original.call(self, tag);
+    }
+
+    /^* NeoForge's {@code canBeRiddenUnderFluidType}: a rider is thrown off a {@code dismounts_underwater} mount only
+     *  with its eyes in a water-tag fluid that is not BuildCraft's, never in a BuildCraft fluid (vanilla asks inside
+     *  its eye-in-water branch, which the tag-based test lets crude oil reach). Another mod's water-tag fluid has no
+     *  fluid type on Fabric and counts as water here, as it does for boats. *^/
+    @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;dismountsUnderwater()Z"))
+    private boolean buildcraft$dismountsInWaterOnly(Entity vehicle, Operation<Boolean> original) {
+        return original.call(vehicle)
+                && ((FabricFluidPhysics.Interaction) ((EntityAccessor) (Object) this).buildcraft$fluidInteraction())
+                        .buildcraft$eyeInBoatableWater();
     }
 
     @WrapOperation(method = "checkFallDamage", at = @At(value = "INVOKE",

@@ -15,7 +15,6 @@ import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 import buildcraft.lib.client.model.ModelHolderStatic;
 import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
-import buildcraft.transport.BCTransport;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportMenuTypes;
@@ -91,11 +90,9 @@ public class BCTransportClient {
 
         sinks.blockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER, RenderPipeHolder::new);
 
-        // The pipe colour tint source, so item model JSON can reference it.
-        //? if >=1.21.10 {
-        sinks.itemTintSource(Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
-                PipeColourTintSource.MAP_CODEC);
-        //?} else {
+        // Painted pipe items: >=1.21.10 PipeItemModel paints them itself (no item JSON has a tint source for it);
+        // only 1.21.1 tints through a classic ItemColor.
+        //? if <1.21.10 {
         /*// 1.21.1 has no data-driven ItemTintSource, so register PipeColourTintSource as a classic ItemColor
         // for every pipe item. PipeItemModel's 1.21.1 painted overlay emits its mask quads at tintIndex 0,
         // which this handler tints with the (semi-transparent) PIPE_COLOUR; the dyed-sprite fluid-pipe

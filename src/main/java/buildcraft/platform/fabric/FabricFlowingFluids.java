@@ -18,8 +18,10 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.InsideBlockEffectType;
@@ -53,7 +55,7 @@ import buildcraft.platform.registry.BCRegistrar;
  * {@link BCFluidRegistrar} on Fabric: a vanilla {@link FlowingFluid} pair written to match NeoForge's
  * {@code BaseFlowingFluid} (same flow parameters, block drops, bucket and pickup sound, water's replace rule), with the
  * {@link FluidBehaviour} hooked into {@code tick}, {@code getSpread} and {@code canBeReplacedWith} as on NeoForge, and
- * a {@link FluidVariantAttributeHandler} carrying the temperature, viscosity, gas flag and bucket sounds.
+ * a {@link FluidVariantAttributeHandler} carrying the name, temperature, viscosity, gas flag and bucket sounds.
  *
  * <p>Fabric has no fluid type, so the entity physics NeoForge reads from it (the water-like flag, drowning, the
  * current's push and {@code motionScale}, the fall-distance damping) come from the declared properties through
@@ -83,7 +85,9 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
                 () -> new Source(properties, behaviour, sourceRef, flowingRef, block, bucket));
         flowing[0] = fluids.register(name + "_flowing",
                 () -> new Flowing(properties, behaviour, sourceRef, flowingRef, block, bucket));
-        FluidVariantAttributeHandler attributes = new Attributes(properties);
+        // Named by the key NeoForge's FluidType uses (the heat-tier lang strings), not Fabric's block-name default.
+        FluidVariantAttributeHandler attributes = new Attributes(properties,
+                Util.makeDescriptionId("fluid_type", source[0].id()));
         for (BCHolder<Fluid, FlowingFluid> fluid : new BCHolder[] {source[0], flowing[0]}) {
             DECLARED.put(fluid.get(), properties);
             FluidVariantAttributes.register(fluid.get(), attributes);
@@ -107,8 +111,18 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
         // Entries are registered at their register call.
     }
 
-    /^* The fluid-variant attributes of one BuildCraft fluid, from its declared properties. ^/
-    private record Attributes(FluidProperties properties) implements FluidVariantAttributeHandler {
+    /^*
+     * The fluid-variant attributes of one BuildCraft fluid, from its declared properties and the translation key of its
+     * name ({@code fluid_type.<namespace>.<name>}, shared by the source and flowing forms).
+     ^/
+    private record Attributes(FluidProperties properties, String descriptionId)
+            implements FluidVariantAttributeHandler {
+        @Override
+        public Component getName(FluidVariant variant) {
+            // Fabric's default is the fluid's legacy block name, which every heat tier shares ("Oil").
+            return Component.translatable(descriptionId);
+        }
+
         @Override
         public Optional<SoundEvent> getFillSound(FluidVariant variant) {
             return Optional.ofNullable(properties.bucketFill());

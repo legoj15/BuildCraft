@@ -289,6 +289,13 @@ public class MutableVertex {
         return colouri(rgba, rgba >> 8, rgba >> 16, rgba >>> 24);
     }
 
+    /** Sets the colour from an ARGB int (0xAARRGGBB, as vanilla's {@code ARGB} and the loaders' baked colours pack
+     * it). Note {@link #colouri(int)} reads the other order (R in the low byte, as in the baked vertex array), so the
+     * two are not interchangeable. */
+    public MutableVertex colouriArgb(int argb) {
+        return colouri(argb >> 16, argb >> 8, argb, argb >>> 24);
+    }
+
     public MutableVertex colouri(int r, int g, int b, int a) {
         colour_r = (short) (r & 0xFF);
         colour_g = (short) (g & 0xFF);

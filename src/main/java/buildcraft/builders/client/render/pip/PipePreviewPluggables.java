@@ -200,13 +200,20 @@ public final class PipePreviewPluggables {
 
     /** Emit one baked quad through the {@link MutableQuad} path the pipe BODY already uses — which is
      *  version-agnostic and proven on every node, unlike the raw BakedQuad sinks. (26.1's
-     *  {@code putBakedQuad} multiplies in the quad's own baked colours, which rendered the pluggables
-     *  invisible in the offscreen preview; pre-26.1 {@code putBulkData} is a different signature again.)
-     *  A fresh MutableQuad's vertices default to opaque white and {@code fromBakedItem} copies
-     *  position/UV/sprite but not colour, so the pluggable's texture shows as-is; full-bright light
-     *  matches the rest of the preview. Same call shape as {@code PlugBakerFacade}. */
+     *  {@code putBakedQuad} rendered the pluggables invisible in the offscreen preview; pre-26.1
+     *  {@code putBulkData} is a different signature again.)
+     *  {@code fromBakedItem} copies position/UV/sprite but not colour, so {@code fromBakedColours} then
+     *  puts back what the quad's own sink would have multiplied in: the lens/filter glass tint (and the
+     *  clear lens's water blue) and the diffuse shade BC bakes into plug quads. Without it every
+     *  pluggable drew opaque white. Full-bright light matches the rest of the preview.
+     *  <p>
+     *  Vertex normals stay at {@code MutableQuad}'s default (straight up) on purpose: the face shading is
+     *  already in the vertex colour, and an up normal saturates the preview's shader diffuse to 1.0 on
+     *  every face, so it is not applied twice (the same trick as {@code PlugRobotStationRenderer}).
+     *  Restoring the face normals would also need the quad's direction, which {@code MutableQuad.rotate}
+     *  leaves stale on every rotated plug. */
     private static void emit(VertexConsumer vc, PoseStack.Pose pose, BakedQuad quad, int light) {
-        new MutableQuad().fromBakedItem(quad).lighti(light).render(pose, vc);
+        new MutableQuad().fromBakedItem(quad).fromBakedColours(quad).lighti(light).render(pose, vc);
     }
 
     /**

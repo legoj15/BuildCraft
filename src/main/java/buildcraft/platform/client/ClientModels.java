@@ -20,9 +20,18 @@ public interface ClientModels {
     /**
      * {@code quad} carrying one colour per vertex (0xAARRGGBB, multiplied into the vertex colour when drawn). NeoForge
      * adds per-vertex colours to vanilla's {@code BakedQuad}; Fabric API 26.3 does not, so there the quad is returned
-     * uncoloured (BC's quads then draw untinted white where they relied on vertex colour).
+     * as is and its colours are kept beside it, readable through {@link #vertexColour} only (a draw that goes through
+     * the quad alone, such as the chunk mesh, still shows BC's quads untinted white where they relied on vertex colour).
      */
     BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3);
+
+    /**
+     * The colour (0xAARRGGBB) {@code quad} carries for {@code vertex} (0-3) as {@link #withVertexColours} gave it, or
+     * opaque white (-1) where it carries none. This is the colour a draw that goes through the quad's own sink
+     * (NeoForge's {@code putBakedQuad}) multiplies into the vertex colour; a draw that rebuilds vertices itself (the
+     * snapshot preview's {@code MutableQuad} path) reads it here to do the same.
+     */
+    int vertexColour(BakedQuad quad, int vertex);
     //?}
 
     //? if >=26.3 {

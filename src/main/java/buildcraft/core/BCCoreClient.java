@@ -40,12 +40,10 @@ public class BCCoreClient {
             buildcraft.core.client.MarkerLengthIndicator.onClientTick();
             buildcraft.core.client.MarkerDistanceTracker.onClientTick();
         });
-        // Register the fluid shard tint source for fragile fluid containers
-        //? if >=1.21.10 {
-        sinks.itemTintSource(net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
-                buildcraft.core.client.FluidShardTintSource.MAP_CODEC);
-        //?} else {
-        /*// 1.21.1 has no data-driven ItemTintSource — register the equivalent ItemColor on the item.
+        // The fragile fluid shard's fluid layer: >=1.21.10 its fluid_container model tints itself (NeoForge's
+        // FluidContentsTint, Fabric's FabricFluidContainerModel.FluidTint); only 1.21.1 tints through a classic ItemColor.
+        //? if <1.21.10 {
+        /*// 1.21.1 has no data-driven ItemTintSource, so register FluidShardTintSource as a classic ItemColor on the item.
         sinks.itemColor(buildcraft.core.client.FluidShardTintSource.INSTANCE,
                 () -> new net.minecraft.world.level.ItemLike[] {buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()});*/
         //?}
@@ -86,29 +84,18 @@ public class BCCoreClient {
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
         ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 
-        // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
+        // Pipe crack particles for a player brushing a pipe, at that player's own target (not the local crosshair,
+        // which would put another player's brushing on whatever the local player is looking at)
         ClientPlatform.hooks().onClientItemUseTick(
             (entity, item, remaining) -> {
-                if (item.is(net.minecraft.world.item.Items.BRUSH)) {
+                if (entity instanceof net.minecraft.world.entity.player.Player brusher
+                        && item.is(net.minecraft.world.item.Items.BRUSH)) {
                     int maxDuration = item.getUseDuration(entity);
                     int used = maxDuration - remaining;
                     // BrushItem spawns dust every 10 ticks
                     if (used > 0 && (used % 10) == 0) {
-                        net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
-                        if (hit instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
-                            net.minecraft.core.BlockPos pos = blockHit.getBlockPos();
-                            net.minecraft.world.level.block.state.BlockState state = entity.level().getBlockState(pos);
-                            if (state.getBlock() instanceof buildcraft.transport.block.BlockPipeHolder) {
-                                buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addHitEffects(
-                                    //? if <26.3 {
-                                    /*state, entity.level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
-                                    *///?} else {
-                                    state, entity.level(), pos, blockHit.getDirection(),
-                                    net.minecraft.client.Minecraft.getInstance().particleEngine
-                                    //?}
-                                );
-                            }
-                        }
+                        buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addBrushEffects(
+                            brusher, net.minecraft.client.Minecraft.getInstance().particleEngine);
                     }
                 }
             }

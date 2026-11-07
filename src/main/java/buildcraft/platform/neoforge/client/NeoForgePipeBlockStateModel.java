@@ -45,10 +45,10 @@ import buildcraft.platform.render.PipeRenderData;
  * in collectParts(), enabling position-dependent pipe geometry to be rendered
  * in the chunk mesh with proper face culling, AO, and directional shading.
  *
- * <p>Cutout pipe body quads carry {@code ChunkSectionLayer.CUTOUT} in their
- * {@code BakedQuad.MaterialInfo}, while translucent colour overlay quads carry
- * {@code ChunkSectionLayer.TRANSLUCENT}. The chunk compiler routes each quad
- * to its correct buffer based on this per-quad layer field.
+ * <p>Cutout quads (pipe body, opaque pluggables) carry {@code ChunkSectionLayer.CUTOUT} in their
+ * {@code BakedQuad.MaterialInfo}, while translucent quads (painted-pipe colour overlay, lens glass,
+ * translucent facades) carry {@code ChunkSectionLayer.TRANSLUCENT}. On 26.x the chunk compiler routes each
+ * quad by this per-quad layer; on 1.21.10/11 each list becomes a part of its own layer.
  *
  * <p>The block entity's {@link PipeRenderData} is reached via ModelData, which is
  * populated by the block entity's getModelData() and refreshed whenever
@@ -93,9 +93,9 @@ final class NeoForgePipeBlockStateModel implements DynamicBlockStateModel {
             addQuadsAsPart(parts, cutoutQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT);
         }
 
-        // Translucent pass — colour overlay for painted pipes. On 26.1 the quad's MaterialInfo
-        // layer routes it to the alpha-blended buffer; 1.21.11 BakedQuads carry no layer (see the
-        // MutableQuad.toBakedTranslucent TODO), so this currently shares the cutout buffer there.
+        // Translucent pass — painted-pipe colour overlay and translucent pluggables (lens glass, stained-glass
+        // facades). On 26.1 the quad's MaterialInfo layer routes it to the alpha-blended buffer; 1.21.10/11
+        // BakedQuads carry no layer, so the part's TRANSLUCENT render type does it there.
         List<BakedQuad> translucentQuads = quads.translucentQuads(data);
         if (!translucentQuads.isEmpty()) {
             addQuadsAsPart(parts, translucentQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT);
@@ -162,8 +162,8 @@ final class NeoForgePipeBlockStateModel implements DynamicBlockStateModel {
 //?} else {
 /*// 1.21.1 has no DynamicBlockStateModel / collectParts — the dynamic block model is a classic
 // IDynamicBakedModel whose getQuads() returns the same shared quad lists the
-// modern collectParts() wraps into BlockModelParts. Behaviour matches the 1.21.10/11 nodes
-// (translucent overlay shares the cutout buffer; no per-quad chunk layer on these lines).
+// modern collectParts() wraps into BlockModelParts. Behaviour matches the 1.21.10/11 nodes: no per-quad
+// chunk layer on these lines, so each list is handed out on its own render-type pass.
 final class NeoForgePipeBlockStateModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
     private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
     private final PipeModelQuads quads;
@@ -186,8 +186,9 @@ final class NeoForgePipeBlockStateModel implements net.neoforged.neoforge.client
             return vanillaDelegate.getQuads(state, side, random, extraData, renderType);
         }
         java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> out = new java.util.ArrayList<>();
-        // Split by chunk layer: the pipe body rides the cutout pass, the painted-pipe colour overlay
-        // rides the translucent pass so its 30%-tint mask alpha-blends instead of rendering opaque.
+        // Split by chunk layer: the pipe body rides the cutout pass, the painted-pipe colour overlay and
+        // translucent pluggables (lens glass, stained-glass facades) ride the translucent pass so they
+        // alpha-blend instead of rendering opaque.
         // (renderType is null for non-chunk callers — emit everything in that case.)
         if (renderType == null || renderType == net.minecraft.client.renderer.rendertype.RenderTypes.cutout()) {
             out.addAll(quads.cutoutQuads(data));

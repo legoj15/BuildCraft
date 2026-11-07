@@ -67,7 +67,16 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     private static final int ROT_CCW90 = 3;
     private static final int[] ROTATIONS = { ROT_NONE, ROT_CW90, ROT_CW180, ROT_CCW90 };
 
-    private static final RandomSource RANDOM = RandomSource.create();
+    /** Seeds the random each block-model sample draws its weighted variants from. */
+    private static final long VARIANT_SEED = 42L;
+
+    /** The pluggable layer name of the translucent pass (the cutout pass is {@code "cutout"}). */
+    public static final String LAYER_TRANSLUCENT = "translucent";
+
+    /** True for a key of the translucent pass: the facade's translucent quads, where the cutout pass takes the rest. */
+    public static boolean isTranslucent(KeyPlugFacade key) {
+        return LAYER_TRANSLUCENT.equals(key.layer);
+    }
 
     private int getVertexIndex(List<Vec3> positions,
                                Direction.Axis axis,
@@ -113,9 +122,14 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                                                   //?} else {
                                                   /*net.minecraft.client.resources.model.BakedModel model,*/
                                                   //?}
-                                                  Direction side,
+                                                  Direction side, boolean translucent,
                                                   Vec3 pos0, Vec3 pos1, Vec3 pos2, Vec3 pos3) {
-        return BlockModelQuadExtractor.getQuadsFromModel(state, model, side, RANDOM).stream()
+        // A fresh random per sample, always the same seed: the cutout and translucent passes sample the same model
+        // face with the same draws, so a weighted-variant block (grass) cannot show one variant on the cutout pass and
+        // another on the translucent one, and no random is shared between the threads that bake (chunk meshing, the
+        // item caches).
+        RandomSource random = RandomSource.create(VARIANT_SEED);
+        return BlockModelQuadExtractor.getLayerQuadsFromModel(state, model, side, random, translucent).stream()
             .map(quad -> {
                 MutableQuad mutableQuad = new MutableQuad().fromBakedItem(quad);
                 boolean positive = side.getAxisDirection() == Direction.AxisDirection.POSITIVE;
@@ -223,11 +237,11 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                                  //?} else {
                                  /*net.minecraft.client.resources.model.BakedModel model,*/
                                  //?}
-                                 Direction side,
+                                 Direction side, boolean translucent,
                                  int rotation,
                                  Vec3 pos0, Vec3 pos1, Vec3 pos2, Vec3 pos3) {
         quads.addAll(getTransformedQuads(
-            state, model, side,
+            state, model, side, translucent,
             rotate(pos0, rotation),
             rotate(pos1, rotation),
             rotate(pos2, rotation),
@@ -235,6 +249,9 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         ));
     }
 
+    /** The facade's own block-model quads for {@code key}'s pass: the quads the block's model draws translucent on
+     *  the translucent key, every other quad on the cutout key (1.12.2 split by the block's layer; the model's own
+     *  layer is the modern equivalent and also splits a block whose model mixes both). */
     public List<MutableQuad> bakeForKey(KeyPlugFacade key) {
         // The air default state (a bare facade stack, issue #127) has no block model: vanilla would hand
         // back the missing model and the facade would draw as a magenta panel. There is nothing to show.
@@ -248,19 +265,20 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         //?} else {
         /*net.minecraft.client.resources.model.BakedModel model = Minecraft.getInstance().getModelManager().getBlockModelShaper().getBlockModel(key.state);*/
         //?}
+        boolean tl = isTranslucent(key);
         List<MutableQuad> quads = new ArrayList<>();
         int pS = PluggableFacade.SIZE;
         int nS = 16 - pS;
         if (!key.isHollow) {
             quads.addAll(getTransformedQuads(
-                key.state, model, key.side,
+                key.state, model, key.side, tl,
                 new Vec3(0 / 16D, 16 / 16D, 0 / 16D),
                 new Vec3(16 / 16D, 16 / 16D, 0 / 16D),
                 new Vec3(16 / 16D, 0 / 16D, 0 / 16D),
                 new Vec3(0 / 16D, 0 / 16D, 0 / 16D)
             ));
             quads.addAll(getTransformedQuads(
-                key.state, model, key.side.getOpposite(),
+                key.state, model, key.side.getOpposite(), tl,
                 new Vec3(pS / 16D, nS / 16D, nS / 16D),
                 new Vec3(nS / 16D, nS / 16D, nS / 16D),
                 new Vec3(nS / 16D, pS / 16D, nS / 16D),
@@ -270,7 +288,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         for (int rotation : ROTATIONS) {
             if (key.isHollow) {
                 addRotatedQuads(
-                        quads, key.state, model, key.side, rotation,
+                        quads, key.state, model, key.side, tl, rotation,
                         new Vec3(0 / 16D, rotation % 2 == 0 ? 4 / 16D : 0 / 16D, 0 / 16D),
                         new Vec3(4 / 16D, rotation % 2 == 0 ? 4 / 16D : 0 / 16D, 0 / 16D),
                         new Vec3(4 / 16D, rotation % 2 == 0 ? 16 / 16D : 12 / 16D, 0 / 16D),
@@ -278,7 +296,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                 );
             }
             addRotatedQuads(
-                quads, key.state, model, key.side.getOpposite(), rotation,
+                quads, key.state, model, key.side.getOpposite(), tl, rotation,
                 new Vec3(0 / 16D, 16 / 16D, 16 / 16D),
                 new Vec3(pS / 16D, nS / 16D, nS / 16D),
                 new Vec3(pS / 16D, pS / 16D, nS / 16D),
@@ -286,7 +304,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
             );
             if (key.isHollow) {
                 addRotatedQuads(
-                    quads, key.state, model, key.side.getOpposite(), rotation,
+                    quads, key.state, model, key.side.getOpposite(), tl, rotation,
                     new Vec3(pS / 16D, rotation % 2 == 0 ? nS / 16D : 12 / 16D, nS / 16D),
                     new Vec3(4 / 16D, rotation % 2 == 0 ? nS / 16D : 12 / 16D, nS / 16D),
                     new Vec3(4 / 16D, rotation % 2 == 0 ? 4 / 16D : pS / 16D, nS / 16D),
@@ -302,7 +320,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                         key.side.getAxis() == Direction.Axis.X && facing.getAxis() == Direction.Axis.Y ||
                         key.side.getAxis() == Direction.Axis.Y && facing.getAxis() == Direction.Axis.Z) {
                         quads.addAll(getTransformedQuads(
-                            key.state, model, facing,
+                            key.state, model, facing, tl,
                             new Vec3(positive ? 16 / 16D : pS / 16D, 4 / 16D, 12.003 / 16D),
                             new Vec3(positive ? 16 / 16D : pS / 16D, 12 / 16D, 12.003 / 16D),
                             new Vec3(positive ? nS / 16D : 0 / 16D, 12 / 16D, 12.003 / 16D),
@@ -310,7 +328,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                         ));
                     } else {
                         quads.addAll(getTransformedQuads(
-                            key.state, model, facing,
+                            key.state, model, facing, tl,
                             new Vec3(4 / 16D, positive ? 16 / 16D : pS / 16D, 12.003 / 16D),
                             new Vec3(4 / 16D, positive ? nS / 16D : 0 / 16D, 12.003 / 16D),
                             new Vec3(12 / 16D, positive ? nS / 16D : 0 / 16D, 12.003 / 16D),
@@ -337,15 +355,17 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         if (key.state.isAir()) {
             return List.of();
         }
+        boolean translucent = isTranslucent(key);
         List<MutableQuad> mutableQuads = bakeForKey(key);
         List<BakedQuad> baked = new ArrayList<>();
         for (MutableQuad quad : mutableQuads) {
-            baked.add(quad.toBakedItem());
+            // 26.x routes each quad by its own chunk layer; the older lines by the pass this list is drawn in.
+            baked.add(translucent ? quad.toBakedTranslucent() : quad.toBakedBlock());
         }
         // For solid, full-block facades, add the blocker plug connector
-        // (the small box that bridges the facade to the pipe center).
+        // (the small box that bridges the facade to the pipe center), once, on the cutout pass.
         // In 1.12.2 this was TransportCompat.bakeBlocker(key.side).
-        if (!key.isHollow) {
+        if (!key.isHollow && !translucent) {
             baked.addAll(createPlugQuads(key.side));
         }
         return baked;

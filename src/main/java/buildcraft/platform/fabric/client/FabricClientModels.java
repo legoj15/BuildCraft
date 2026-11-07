@@ -6,12 +6,30 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import net.minecraft.client.resources.model.geometry.BakedQuad;
+/*import java.util.concurrent.ConcurrentMap;
+
+import com.google.common.collect.MapMaker;
+
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 import buildcraft.platform.client.ClientModels;
 
-/^* {@link ClientModels} on Fabric: vanilla's quads, which carry no loader additions. ^/
+/^*
+ * {@link ClientModels} on Fabric: vanilla's quads, which carry no loader additions, so the per-vertex colours BC bakes
+ * into its quads live in a side table keyed by quad identity (see {@link #VERTEX_COLOURS}).
+ ^/
 public final class FabricClientModels implements ClientModels {
+    /^*
+     * Per-vertex colours (0xAARRGGBB x4) of the quads {@link #withVertexColours} was given, for the draws that rebuild
+     * vertices themselves (the snapshot preview) and can multiply them in. Vanilla 26.3's {@code BakedQuad} has no
+     * colour slot and Fabric API's only colour setter is the mesh {@code QuadEmitter}, which a {@code BakedQuad}
+     * cannot carry, so the colours ride beside the quad instead. Weak identity keys (a record's {@code equals} is by
+     * value, so equal quads would share one entry): an entry lives exactly as long as the quad does, so a model
+     * reload that drops the baked lists drops the colours with them. Concurrent: chunk sections compile on several
+     * threads at once.
+     ^/
+    private static final ConcurrentMap<BakedQuad, int[]> VERTEX_COLOURS = new MapMaker().weakKeys().makeMap();
+
     @Override
     public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
             net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
@@ -26,9 +44,17 @@ public final class FabricClientModels implements ClientModels {
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
-        // Gap: vanilla 26.3's BakedQuad has no per-vertex colour and Fabric API adds none to it (only its mesh
-        // QuadEmitter#color does, which a BakedQuad cannot carry), so the quad stays uncoloured.
+        // The quad itself stays vanilla's. An all-white quad is the default, so it is not worth an entry.
+        if (argb0 != -1 || argb1 != -1 || argb2 != -1 || argb3 != -1) {
+            VERTEX_COLOURS.put(quad, new int[] {argb0, argb1, argb2, argb3});
+        }
         return quad;
+    }
+
+    @Override
+    public int vertexColour(BakedQuad quad, int vertex) {
+        int[] colours = VERTEX_COLOURS.get(quad);
+        return colours == null ? -1 : colours[vertex];
     }
 }
 *///?}

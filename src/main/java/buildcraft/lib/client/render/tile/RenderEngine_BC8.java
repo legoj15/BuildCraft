@@ -81,8 +81,8 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
     //?} else {
     /*// 1.21.1: classic direct BlockEntityRenderer.render — the engine (tile) + partialTicks are passed,
-    // so no camera-pos reconstruction is needed. The passed buffers/packedLight/packedOverlay go unused
-    // (the shared body sources its own buffer/light from the level, as the modern submit path does).
+    // so no camera-pos reconstruction is needed. The passed packedLight/packedOverlay go unused
+    // (the shared body sources its light from the level, as the modern submit path does).
     // Profiler.get() → Minecraft.getInstance().getProfiler() on this pre-render-state line.
     @Override
     public void render(TileEngineBase_BC8 engine, float partialTicks, PoseStack poseStack,
@@ -110,19 +110,16 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         //? if >=1.21.10 {
         collector.submitCustomGeometry(poseStack, buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet(),
                 (pose, consumer) -> renderQuads(quads, light, pose, consumer));
+        // The engine block model has no geometry, so the level's destroy pass draws nothing: draw the crack here.
+        buildcraft.lib.client.render.CrumblingOverlayRenderer.submit(collector, poseStack, state.breakProgress,
+                (pose, consumer) -> renderQuads(quads, light, pose, consumer));
         //?} else {
-        /*MultiBufferSource.BufferSource bufferSource =
-                Minecraft.getInstance().renderBuffers().bufferSource();
-        renderQuads(quads, light, poseStack.last(), bufferSource.getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet()));
+        /*// Draw into the passed buffers, not the global buffer source: while the engine is being mined the level
+        // renderer hands in a wrapper that also writes the crack for render types that affect crumbling.
+        renderQuads(quads, light, poseStack.last(), buffers.getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet()));
 
-        // Intentionally not calling bufferSource.endBatch() here — the previous
-        // implementation issued a *full* flush per engine per frame (no render-type
-        // argument means MultiBufferSource.BufferSource walks every registered
-        // RenderType and drains its builder), forcing extra draw calls and
-        // GPU-sync overhead per visible engine. The BlockEntityRenderDispatcher
-        // already calls endBatch on the shared buffer source after all BE
-        // renders complete, so the quads we just wrote get drained at the
-        // correct time without any per-engine intervention.*/
+        // No endBatch here: the level renderer flushes the cutout sheet after all block entities have drawn, and a
+        // full flush per engine per frame cost extra draw calls for every visible engine.*/
         //?}
         poseStack.popPose();
         } finally {

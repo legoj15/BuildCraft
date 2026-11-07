@@ -76,7 +76,7 @@
   - Fluids move in whole millibuckets.
   - Spawn data arrives one packet after the spawn.
   - Creative tabs follow registration order, with no late-addition hook.
-  - No blueprint and schematic tooltip panels, no block-break particles on the tube, no fluid fog in oil.
+  - No block-break particles on the tube.
   - Minor event narrowings, all documented.
 
 ## Open questions / leads (unverified)

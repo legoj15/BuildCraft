@@ -246,8 +246,8 @@ public class MutableQuad {
             face, matInfo
         ));
         //?} elif >=1.21.11 {
-        /*// 1.21.11 BakedQuad has no per-quad layer; translucent routing is a TODO for 1.21.11 visual
-        // parity (needs a TRANSLUCENT block RenderType). Produces the same quad as toBakedBlock().
+        /*// 1.21.11 BakedQuad has no per-quad layer: the caller routes it by the part/pass it hands the quad
+        // out on (NeoForgePipeBlockStateModel's TRANSLUCENT part). Produces the same quad as toBakedBlock().
         return withVertexColours(new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
@@ -387,6 +387,36 @@ public class MutableQuad {
     /** Alias for {@link #fromBakedBlock(BakedQuad)}. */
     public MutableQuad fromBakedItem(BakedQuad quad) {
         return fromBakedBlock(quad);
+    }
+
+    /** Copies the per-vertex colours baked into {@code quad} (by {@link #toBakedBlock()} and
+     * {@link #toBakedTranslucent()}) onto this quad's vertices. {@link #fromBakedBlock} reads geometry, UVs and the
+     * material but no colour, so a quad it filled is opaque white until this runs; call this after it for a draw that
+     * rebuilds vertices itself and would otherwise lose the tint (and the diffuse shading BC bakes into colour) that
+     * the quad's own sink multiplies in. Where the quad carries no colour this leaves white. */
+    public MutableQuad fromBakedColours(BakedQuad quad) {
+        //? if >=1.21.11 {
+        buildcraft.platform.client.ClientModels models = buildcraft.platform.client.ClientPlatform.models();
+        vertex_0.colouriArgb(models.vertexColour(quad, 0));
+        vertex_1.colouriArgb(models.vertexColour(quad, 1));
+        vertex_2.colouriArgb(models.vertexColour(quad, 2));
+        vertex_3.colouriArgb(models.vertexColour(quad, 3));
+        //?} elif >=1.21.10 {
+        /*// 1.21.10 keeps the colour in the BLOCK vertex int[] itself (int 3 of each vertex's eight).
+        int[] vd = quad.vertices();
+        vertex_0.colouri(vd[3]);
+        vertex_1.colouri(vd[11]);
+        vertex_2.colouri(vd[19]);
+        vertex_3.colouri(vd[27]);*/
+        //?} else {
+        /*// 1.21.1: the same int[] BLOCK vertex form, behind the bean-style getter.
+        int[] vd = quad.getVertices();
+        vertex_0.colouri(vd[3]);
+        vertex_1.colouri(vd[11]);
+        vertex_2.colouri(vd[19]);
+        vertex_3.colouri(vd[27]);*/
+        //?}
+        return this;
     }
 
     public void render(VertexConsumer bb) {

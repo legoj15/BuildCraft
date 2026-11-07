@@ -6,7 +6,9 @@
 package buildcraft.platform.neoforge.client;
 
 //? if neoforge {
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -27,15 +29,12 @@ public final class NeoForgeClientVanillaExtensions implements ClientVanillaExten
         //?}
     }
 
-    @Override
+    //? if <1.21.10 {
+    /*@Override
     public int spritePixel(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
-        // Through 26.2 the accessor is still named getPixelRGBA, though from 1.21.10 it already returns ARGB.
-        //? if >=26.3 {
-        return sprite.getPixelARGB(frameIndex, x, y);
-        //?} else {
-        /*return sprite.getPixelRGBA(frameIndex, x, y);*/
-        //?}
-    }
+        return sprite.getPixelRGBA(frameIndex, x, y);
+    }*/
+    //?}
 
     //? if >=26.1 {
     @Override

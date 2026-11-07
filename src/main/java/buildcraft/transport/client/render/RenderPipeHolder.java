@@ -56,8 +56,10 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.CrumblingOverlayRenderer;
 import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.transport.client.PipeRegistryClient;
+import buildcraft.transport.client.model.PipeBlockModelQuads;
 import buildcraft.transport.client.model.PipeModelCacheAll;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -157,7 +159,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         // Static pipe body geometry is rendered by the chunk mesh via the loader's pipe block model (NeoForge's
         // NeoForgePipeBlockStateModel, Fabric's FabricPipeBlockModel), both fed by PipeBlockModelQuads.
-        // The BER only handles dynamic content.
+        // The BER handles dynamic content, plus the mining crack over the static geometry (renderCrackGeometry).
 
         // --- Render wires ---
         //? if >=26.2 {
@@ -181,7 +183,39 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         renderContents(pipe, 0, 0, 0, renderState.partialTick, poseStack, collector);
         ItemRenderUtil.endItemBatch();
 
+        float partialTick = renderState.partialTick;
+        CrumblingOverlayRenderer.submit(collector, poseStack, renderState.breakProgress,
+            (pose, consumer) -> renderCrackGeometry(pipe, partialTick, pose, consumer));
+
         poseStack.popPose();
+    }
+
+    /** Emits the pipe's shape for the mining crack: the block model's quads (cutout and translucent: a painted pipe's
+     *  colour overlay and a translucent facade or lens bake only into the translucent list), which only the block
+     *  entity can supply (the level's destroy pass draws the model without it, so finds no geometry), and the
+     *  pluggables drawn per frame. Only positions and normals matter; the crack consumer supplies colour and texture
+     *  coordinates. */
+    private static void renderCrackGeometry(TilePipeHolder pipe, float partialTicks, PoseStack.Pose pose,
+                                            VertexConsumer consumer) {
+        if (PipeBlockModelQuads.INSTANCE.hasGeometry(pipe)) {
+            MutableQuad scratch = new MutableQuad();
+            for (var quads : List.of(PipeBlockModelQuads.INSTANCE.cutoutQuads(pipe),
+                    PipeBlockModelQuads.INSTANCE.translucentQuads(pipe))) {
+                for (var quad : quads) {
+                    scratch.fromBakedItem(quad);
+                    scratch.setCalculatedNormal();
+                    scratch.render(pose, consumer);
+                }
+            }
+        }
+        for (Direction facing : Direction.values()) {
+            PipePluggable plug = pipe.getPluggable(facing);
+            if (plug != null) {
+                PoseStack plugPose = new PoseStack();
+                plugPose.last().set(pose);
+                renderPluggable(plug, 0, 0, 0, partialTicks, consumer, plugPose);
+            }
+        }
     }
 
 
@@ -314,7 +348,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         PipeWireRenderer.renderWires(pipe, poseStack.last(), light);
         renderItems(pipe, poseStack, bufferSource, light, partialTick);
         ItemRenderUtil.beginItemBatch(poseStack, bufferSource, light);
-        renderContents(pipe, 0, 0, 0, partialTick, poseStack);
+        renderContents(pipe, 0, 0, 0, partialTick, poseStack, bufferSource);
         ItemRenderUtil.endItemBatch();
         poseStack.popPose();
     }
@@ -423,7 +457,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
     //?} else {
     /*private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, PoseStack poseStack) {*/
+        float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource) {*/
     //?}
         Pipe p = pipe.getPipe();
         if (p == null) {
@@ -461,10 +495,18 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
                     }
                 }
             });
-        //?} else {
-        /*VertexConsumer plugBuffer = Minecraft.getInstance().renderBuffers().bufferSource()
+        //?} elif >=1.21.10 {
+        /*// The crack for these lines comes from CrumblingOverlayRenderer (see submit()), so the global source is fine.
+        VertexConsumer plugBuffer = Minecraft.getInstance().renderBuffers().bufferSource()
                 .getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet());
-        for (Direction facing : Direction.values()) {
+        *///?} else {
+        /*// 1.21.1: the dynamic plug geometry goes into the buffer source the block entity renderer is handed, not the
+        // global one. While the block is being mined the level wraps the handed source, so whatever is drawn through
+        // it for a crumbling-affecting render type also draws the crack; outside mining it is the same buffer.
+        VertexConsumer plugBuffer = bufferSource.getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet());
+        *///?}
+        //? if <26.2 {
+        /*for (Direction facing : Direction.values()) {
             PipePluggable plug = pipe.getPluggable(facing);
             if (plug != null) {
                 renderPluggable(plug, x, y, z, partialTicks, plugBuffer, poseStack);

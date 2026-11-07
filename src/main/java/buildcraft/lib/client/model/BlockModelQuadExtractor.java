@@ -63,14 +63,49 @@ public final class BlockModelQuadExtractor {
      * contribute (the shape the facade system bakes/compares); on 1.21.1 the real {@code state} is
      * forwarded into {@code BakedModel.getQuads} (see the class note).
      */
-    // The context-free collectParts / getQuads are deprecated in favour of NeoForge's level-aware overloads, but a
-    // model is sampled here in the abstract (facade dedup, blueprint previews) — there is no level or position, and
-    // 26.x ships no empty BlockAndTintGetter to stand in (the level-aware default just delegates back here anyway).
-    @SuppressWarnings("deprecation")
     //? if >=1.21.10 {
     public static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side, RandomSource random) {
     //?} else {
     /*public static List<BakedQuad> getQuadsFromModel(BlockState state, BakedModel model, Direction side, RandomSource random) {*/
+    //?}
+        return extract(state, model, side, random, null);
+    }
+
+    /**
+     * {@link #getQuadsFromModel} narrowed to one chunk-layer group of the model: its translucent quads
+     * ({@code translucent}), or every other quad (solid and cutout). The two groups partition the full set, so a
+     * caller asking for both gets each quad once. The layer is the one the block's own model draws in, read where
+     * each line keeps it:
+     * <ul>
+     *   <li><b>&gt;=26.1</b> — per quad, {@code BakedQuad.MaterialInfo.layer()} (vanilla derives it from the
+     *       material's {@code force_translucent} flag or the sprite's own alpha).</li>
+     *   <li><b>&gt;=1.21.10</b> — per part, NeoForge's {@code BlockModelPart.getRenderType(state)} (the part's own
+     *       render type, else the block's registered chunk layer).</li>
+     *   <li><b>&lt;1.21.10</b> — per render type of {@code BakedModel.getRenderTypes}, whose quads come from the
+     *       render-type-aware {@code getQuads} (a model with one render type answers with all its quads).</li>
+     * </ul>
+     */
+    //? if >=1.21.10 {
+    public static List<BakedQuad> getLayerQuadsFromModel(BlockState state, BlockStateModel model, Direction side,
+                                                         RandomSource random, boolean translucent) {
+    //?} else {
+    /*public static List<BakedQuad> getLayerQuadsFromModel(BlockState state, BakedModel model, Direction side,
+                                                         RandomSource random, boolean translucent) {*/
+    //?}
+        return extract(state, model, side, random, translucent);
+    }
+
+    // The context-free collectParts / getQuads are deprecated in favour of NeoForge's level-aware overloads, but a
+    // model is sampled here in the abstract (facade dedup, blueprint previews) — there is no level or position, and
+    // 26.x ships no empty BlockAndTintGetter to stand in (the level-aware default just delegates back here anyway).
+    /** {@code translucent} null takes every quad; otherwise only that layer group (see {@link #getLayerQuadsFromModel}). */
+    @SuppressWarnings("deprecation")
+    //? if >=1.21.10 {
+    private static List<BakedQuad> extract(BlockState state, BlockStateModel model, Direction side, RandomSource random,
+                                           Boolean translucent) {
+    //?} else {
+    /*private static List<BakedQuad> extract(BlockState state, BakedModel model, Direction side, RandomSource random,
+                                           Boolean translucent) {*/
     //?}
         //? if >=26.1 {
         List<BlockStateModelPart> parts = new ArrayList<>();
@@ -79,7 +114,17 @@ public final class BlockModelQuadExtractor {
         for (BlockStateModelPart part : parts) {
             if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
                 QuadCollection qc = smw.quads();
-                result.addAll(qc.getQuads(side));
+                if (translucent == null) {
+                    result.addAll(qc.getQuads(side));
+                    continue;
+                }
+                for (BakedQuad quad : qc.getQuads(side)) {
+                    boolean quadTranslucent = quad.materialInfo().layer()
+                        == net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT;
+                    if (quadTranslucent == translucent) {
+                        result.add(quad);
+                    }
+                }
             }
         }
         return result;
@@ -89,6 +134,10 @@ public final class BlockModelQuadExtractor {
         List<BakedQuad> result = new ArrayList<>();
         for (BlockModelPart part : parts) {
             if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+                if (translucent != null && (part.getRenderType(state)
+                        == net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT) != translucent) {
+                    continue;
+                }
                 QuadCollection qc = smw.quads();
                 result.addAll(qc.getQuads(side));
             }
@@ -99,7 +148,17 @@ public final class BlockModelQuadExtractor {
         // ignores it, but MULTIPART models evaluate their selectors against it and third-party
         // IDynamicBakedModels may dereference it without a null-check (issue #24 — invisible mushroom-block
         // facades + Modular Machinery Reborn NPE log-spam once per face per hatch at every world join).
-        return model.getQuads(state, side, random);*/
+        if (translucent == null) {
+            return model.getQuads(state, side, random);
+        }
+        List<BakedQuad> result = new ArrayList<>();
+        net.neoforged.neoforge.model.data.ModelData data = net.neoforged.neoforge.model.data.ModelData.EMPTY;
+        for (net.minecraft.client.renderer.rendertype.RenderType renderType : model.getRenderTypes(state, random, data)) {
+            if ((renderType == net.minecraft.client.renderer.rendertype.RenderTypes.translucent()) == translucent) {
+                result.addAll(model.getQuads(state, side, random, data, renderType));
+            }
+        }
+        return result;*/
         //?}
     }
 

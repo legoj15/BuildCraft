@@ -8,9 +8,11 @@ package buildcraft.lib.client.sprite;
 
 import com.mojang.blaze3d.platform.NativeImage;
 
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+*///?}
 
-/** Version-neutral ARGB pixel access for {@link NativeImage} and {@link TextureAtlasSprite}.
+/** Version-neutral ARGB pixel access for {@link NativeImage} (and, on 1.21.1, {@code TextureAtlasSprite}).
  *
  * <p>On 1.21.10+ {@code NativeImage.getPixel(x,y)} / {@code setPixel(x,y,argb)} already work in <b>ARGB</b>
  * (they swizzle to/from the native ABGR storage internally). On 1.21.1 the only accessors are
@@ -20,21 +22,16 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 public final class NativeImagePixels {
     private NativeImagePixels() {}
 
-    /** @return the pixel at (x,y) of one frame of {@code sprite} as 0xAARRGGBB.
-     *
-     * <p>NeoForge's sprite accessor is misleadingly named on the way: through 26.2 it is still called
-     * {@code getPixelRGBA}, yet from 1.21.10 on it forwards to {@code NativeImage.getPixel} and so already
-     * returns ARGB (26.3 finally renames it {@code getPixelARGB}); only 1.21.1 hands back the raw ABGR int.
-     * {@code frameIndex} is the cell index into the sprite sheet (row-major, {@code index % cellsPerRow}), not a
-     * position in the animation's frame order, so {@code 0} is always the top-left cell. */
+    //? if <1.21.10 {
+    /*/^** 1.21.1 only (its one caller is the fragile shard's {@code ItemColor}; later lines tint the shard in its model).
+     * @return the pixel at (x,y) of one frame of {@code sprite} as 0xAARRGGBB: the platform's sprite accessor hands
+     * back the raw ABGR int there. {@code frameIndex} is the cell index into the sprite sheet (row-major,
+     * {@code index % cellsPerRow}), not a position in the animation's frame order, so {@code 0} is always the
+     * top-left cell. *^/
     public static int getSpriteArgb(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
-        int pixel = buildcraft.platform.client.ClientPlatform.extensions().spritePixel(sprite, frameIndex, x, y);
-        //? if >=1.21.10 {
-        return pixel;
-        //?} else {
-        /*return swizzle(pixel);*/
-        //?}
-    }
+        return swizzle(buildcraft.platform.client.ClientPlatform.extensions().spritePixel(sprite, frameIndex, x, y));
+    }*/
+    //?}
 
     /** @return the pixel at (x,y) as 0xAARRGGBB. */
     public static int getArgb(NativeImage img, int x, int y) {

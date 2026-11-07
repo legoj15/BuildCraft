@@ -13,6 +13,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -70,6 +72,45 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
     }
 
     /**
+     * The block-atlas particle sprite of a block state's model, the one vanilla's own break and sprint particles use
+     * (a facade shows the mimicked block's, not the pipe holder's). Null when the model has none; the caller screens out
+     * the missing-texture sprite.
+     *
+     * <p>Each line spells the lookup its own way: the context-free forms ({@code BlockStateModel#particleMaterial()},
+     * {@code particleIcon()}, {@code getParticleIcon()}) are deprecated in favour of the context-aware ones, which are
+     * NeoForge-only on the 1.21.x lines, where the Fabric node does not exist. From 26.1 the shared
+     * {@code BlockStateModelSet} form takes no context and exists on both loaders.
+     */
+    private static @Nullable TextureAtlasSprite blockParticleSprite(BlockState state) {
+        var models = Minecraft.getInstance().getModelManager();
+        //? if >=26.1 {
+        return models.getBlockStateModelSet().getParticleMaterial(state).sprite();
+        //?} elif >=1.21.10 {
+        /*return models.getBlockModelShaper().getParticleIcon(state,
+                net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);*/
+        //?} else {
+        /*return models.getBlockModelShaper().getBlockModel(state)
+                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);*/
+        //?}
+    }
+
+    /** The first baked quad's sprite: 26.1 moved it into the quad's material info, 1.21.10 made the quad a record. */
+    private static TextureAtlasSprite quadSprite(BakedQuad quad) {
+        //? if >=26.1 {
+        return quad.materialInfo().sprite();
+        //?} elif >=1.21.10 {
+        /*return quad.sprite();*/
+        //?} else {
+        /*return quad.getSprite();*/
+        //?}
+    }
+
+    /** Null for a null or missing-texture sprite, so the callers fall through to the pipe's own sprite. */
+    private static @Nullable TextureAtlasSprite usableSprite(@Nullable TextureAtlasSprite sprite) {
+        return sprite == null || sprite == SpriteUtil.missingSprite() ? null : sprite;
+    }
+
+    /**
      * Resolves the particle sprite for a pluggable using 1.21.11's ItemStackRenderState.
      * This correctly handles all item types by resolving through the item model system.
      * For facades, it bypasses the item model and extracts the mimicked block's sprite directly.
@@ -80,37 +121,7 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
             if (states != null && states.length > 0) {
                 BlockState state = states[0].getState().getBlockState();
                 if (state != null) {
-                    Minecraft mc = Minecraft.getInstance();
-                    //? if >=26.1 {
-                    var model = mc.getModelManager().getBlockStateModelSet().get(state);
-                    //?} else {
-                    /*var model = mc.getModelManager().getBlockModelShaper().getBlockModel(state);*/
-                    //?}
-                    if (model != null) {
-                        for (java.lang.reflect.Method m : model.getClass().getMethods()) {
-                            String name = m.getName().toLowerCase();
-                            if ((name.contains("particle") || name.contains("icon") || name.contains("sprite")) 
-                                    && m.getParameterCount() == 0 
-                                    && m.getReturnType() == TextureAtlasSprite.class) {
-                                try {
-                                    m.setAccessible(true);
-                                    TextureAtlasSprite sprite = (TextureAtlasSprite) m.invoke(model);
-                                    if (sprite != null) return sprite;
-                                } catch (Exception e) {}
-                            }
-                        }
-                        
-                        // Fallback: try taking 3 arguments (BlockAndTintGetter, BlockPos, BlockState) like NeoForge extensions
-                        for (java.lang.reflect.Method m : model.getClass().getMethods()) {
-                            if (m.getParameterCount() == 3 && m.getReturnType() == TextureAtlasSprite.class) {
-                                try {
-                                    m.setAccessible(true);
-                                    TextureAtlasSprite sprite = (TextureAtlasSprite) m.invoke(model, mc.level, BlockPos.ZERO, state);
-                                    if (sprite != null) return sprite;
-                                } catch (Exception e) {}
-                            }
-                        }
-                    }
+                    return usableSprite(blockParticleSprite(state));
                 }
             }
             return null;
@@ -125,13 +136,9 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
             if (keyT != null) quads = buildcraft.transport.client.model.PipeModelCachePluggable.cacheTranslucentSingle.bake(keyT);
         }
         if (quads != null && !quads.isEmpty()) {
-            BakedQuad quad = quads.get(0);
-            for (java.lang.reflect.Method m : quad.getClass().getMethods()) {
-                if (m.getReturnType() == net.minecraft.client.renderer.texture.TextureAtlasSprite.class && m.getParameterCount() == 0) {
-                    try {
-                        return (net.minecraft.client.renderer.texture.TextureAtlasSprite) m.invoke(quad);
-                    } catch (Exception e) {}
-                }
+            TextureAtlasSprite sprite = usableSprite(quadSprite(quads.get(0)));
+            if (sprite != null) {
+                return sprite;
             }
         }
 
@@ -234,6 +241,26 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
         return spawnHitParticle(level, pos, face, info, manager);
     }
     //?}
+
+    /**
+     * Spawns the crack particle for a player brushing a pipe, on the pipe that player's own view ray hits (not the
+     * local crosshair, which is another block entirely when someone else is the brusher). The ray is vanilla
+     * {@code BrushItem}'s: block collision shapes, so the pipe holder's crosshair-dependent outline cannot skew it.
+     * Nothing is spawned when the ray hits no block or a block that is not a pipe holder.
+     */
+    public void addBrushEffects(Player brusher, ParticleEngine manager) {
+        HitResult hit = ProjectileUtil.getHitResultOnViewVector(brusher, e -> !e.isSpectator() && e.isPickable(),
+                brusher.blockInteractionRange());
+        if (hit.getType() != HitResult.Type.BLOCK || !(hit instanceof BlockHitResult blockHit)) {
+            return;
+        }
+        Level level = brusher.level();
+        BlockPos pos = blockHit.getBlockPos();
+        if (!(level.getBlockState(pos).getBlock() instanceof BlockPipeHolder)) {
+            return;
+        }
+        spawnHitParticle(level, pos, blockHit.getDirection(), getHitSpriteInfo(level, pos, blockHit), manager);
+    }
 
     /** Spawns the single crack particle on {@code face}; false (vanilla particles) when there is no sprite to use. */
     private static boolean spawnHitParticle(Level level, BlockPos pos, Direction face, @Nullable HitSpriteInfo info,

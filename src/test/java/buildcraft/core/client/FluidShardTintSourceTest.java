@@ -6,7 +6,8 @@
 
 package buildcraft.core.client;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+//? if <1.21.10 {
+/*import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,35 +17,26 @@ import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.resources.Identifier;
-//? if <1.21.10 {
-/*import net.minecraft.server.packs.resources.ResourceMetadata;
-*///?}
+import net.minecraft.server.packs.resources.ResourceMetadata;
 
 import buildcraft.lib.client.sprite.NativeImagePixels;
 
-/** The shard tint is the average colour of the fluid's sprite. The sprite accessor hands back ARGB on 1.21.10+ and
- *  raw ABGR on 1.21.1, so a decode that ignores which node it is on swaps red and blue (lava went blue). These
- *  tests drive a real sprite built from a {@link NativeImage}, so they pin the accessor and the decode together. */
+/^* 1.21.1-only, like {@link FluidShardTintSource}. The shard tint is the average colour of the fluid's sprite, and
+ *  1.21.1's sprite accessor hands back raw ABGR, so a decode that ignores the channel order swaps red and blue (lava
+ *  went blue). These tests drive a real sprite built from a {@link NativeImage}, so they pin the accessor and the
+ *  decode together. *^/
 public class FluidShardTintSourceTest {
 
     private static final int RED = 0xFFFF0000;
     private static final int BLUE = 0xFF0000FF;
 
-    /** A bare sprite over {@code image}: just enough atlas geometry to construct it, no GPU involved. */
+    /^* A bare sprite over {@code image}: just enough atlas geometry to construct it, no GPU involved. *^/
     private static final class TestSprite extends TextureAtlasSprite {
         TestSprite(NativeImage image) {
             super(Identifier.fromNamespaceAndPath("buildcraft", "test_atlas"),
                 new SpriteContents(Identifier.fromNamespaceAndPath("buildcraft", "test_sprite"),
-                    new FrameSize(image.getWidth(), image.getHeight()), image
-                    //? if <1.21.10 {
-                    /*, ResourceMetadata.EMPTY
-                    *///?}
-                ),
-                image.getWidth(), image.getHeight(), 0, 0
-                //? if >=1.21.11 {
-                , 0
-                //?}
-            );
+                    new FrameSize(image.getWidth(), image.getHeight()), image, ResourceMetadata.EMPTY),
+                image.getWidth(), image.getHeight(), 0, 0);
         }
     }
 
@@ -58,7 +50,7 @@ public class FluidShardTintSourceTest {
         return new TestSprite(image);
     }
 
-    /** The tint a shard would take from a sprite that is {@code argb} everywhere. */
+    /^* The tint a shard would take from a sprite that is {@code argb} everywhere. *^/
     private static int tintOfSolidSprite(int argb) {
         TestSprite sprite = solidSprite(argb);
         try {
@@ -85,4 +77,5 @@ public class FluidShardTintSourceTest {
             (x, y) -> x == 0 && y == 0 ? 0xFF00FF00 : 0x00FF0000));
         assertEquals(0xFFFFFFFF, FluidShardTintSource.averageArgb(2, 2, (x, y) -> 0x00FF0000));
     }
-}
+}*/
+//?}

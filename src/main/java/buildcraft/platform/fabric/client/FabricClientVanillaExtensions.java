@@ -9,8 +9,6 @@ package buildcraft.platform.fabric.client;
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
-import net.minecraft.client.renderer.texture.SpriteContents;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -28,17 +26,6 @@ public final class FabricClientVanillaExtensions implements ClientVanillaExtensi
     @Override
     public boolean shouldRenderFace(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
         return Block.shouldRenderFace(state, level.getBlockState(pos.relative(face)), face);
-    }
-
-    @Override
-    public int spritePixel(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
-        // What NeoForge's getPixelARGB reads: the cell's offset in the sheet, then the original image's ARGB pixel.
-        SpriteContents contents = sprite.contents();
-        if (contents.animatedTexture != null) {
-            x += contents.animatedTexture.getFrameX(frameIndex) * contents.width();
-            y += contents.animatedTexture.getFrameY(frameIndex) * contents.height();
-        }
-        return contents.originalImage.getPixel(x, y);
     }
 
     @Override

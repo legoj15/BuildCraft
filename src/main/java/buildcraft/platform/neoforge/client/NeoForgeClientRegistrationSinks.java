@@ -195,10 +195,11 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
 
     //? if >=1.21.10 {
     @Override
-    public void editBakedModels(
-            Consumer<net.minecraft.client.resources.model.ModelBakery.BakingResult> editor) {
+    public void editItemModels(ItemModelEditor editor) {
+        // NeoForge hands the whole (mutable) baked set over; an editor sees each baked item model once, by its key.
         NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class,
-                event -> editor.accept(event.getBakingResult()));
+                event -> event.getBakingResult().itemStackModels().replaceAll(
+                        (id, baked) -> baked == null ? null : editor.edit(id, baked)));
     }
     //?} else {
     /*@Override
@@ -216,7 +217,7 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
 
     @Override
     public void pipeBlockModel(Supplier<? extends Block> block, PipeModelQuads quads) {
-        // Added straight to the bus at the call, like editBakedModels, so it keeps its place among the bake editors.
+        // Added straight to the bus at the call, like the item-model editors, so it keeps its place among the bake editors.
         NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class, event -> {
             //? if >=1.21.10 {
             var blockModels = event.getBakingResult().blockStateModels();

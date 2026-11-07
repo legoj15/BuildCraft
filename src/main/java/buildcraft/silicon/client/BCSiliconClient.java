@@ -33,15 +33,17 @@ import buildcraft.platform.client.ClientRegistrationSinks;
 public class BCSiliconClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft");
 
-    /** Cached blockstate model map from the last bake, used for deferred facade dedup. */
+    //? if >=1.21.10 {
+    /**
+     * Set each time the models bake, cleared once the deferred facade dedup has run against them: the dedup reads the
+     * block-state models from the live {@code ModelManager} (no loader offers a whole-set bake hook on every line).
+     */
+    private static volatile boolean dedupPending;
+    //?} else {
+    /*/^* Cached blockstate model map from the last bake, used for deferred facade dedup. ^/
     private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
-            //? if >=26.1 {
-            net.minecraft.client.renderer.block.dispatch.BlockStateModel> cachedBlockStateModels;
-            //?} elif >=1.21.10 {
-            /*net.minecraft.client.renderer.block.model.BlockStateModel> cachedBlockStateModels;*/
-            //?} else {
-            /*net.minecraft.client.resources.model.BakedModel> cachedBlockStateModels;*/
-            //?}
+            net.minecraft.client.resources.model.BakedModel> cachedBlockStateModels;*/
+    //?}
 
     private static void registerScreens(ClientRegistrationSinks sinks) {
         sinks.menuScreen(BCSiliconMenuTypes.ASSEMBLY_TABLE, GuiAssemblyTable::new);
@@ -74,42 +76,71 @@ public class BCSiliconClient {
         }
     }
 
+    //? if >=1.21.10 {
     /**
+     * Swaps the facade, gate and lens items' JSON models for the dynamic ones (the item-model editor of
+     * {@code ClientRegistrationSinks}: every baked item model passes through here, each time the models bake).
+     */
+    public static ItemModel editItemModel(Identifier id, ItemModel baked) {
+        if (id.equals(BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get()))) {
+            return new FacadeItemModel();
+        }
+        if (id.equals(BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_GATE.get()))) {
+            return new buildcraft.silicon.client.model.GateItemModel();
+        }
+        if (id.equals(BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_LENS.get()))) {
+            return new buildcraft.silicon.client.model.LensItemModel();
+        }
+        return baked;
+    }
+
+    /** The models baked again: the next world join dedups the facades against them. */
+    private static void onModelsBakedForDedup() {
+        dedupPending = true;
+    }
+
+    /**
+     * The live block-state models: every state with a model of its own (the missing model is left out, as states
+     * without a model are absent from the bake's own map), read through the {@code ModelManager}.
+     */
+    //? if >=26.1 {
+    private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
+            net.minecraft.client.renderer.block.dispatch.BlockStateModel> liveBlockStateModels() {
+        var models = net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockStateModelSet();
+        var missing = models.missingModel();
+        var byState = new java.util.HashMap<net.minecraft.world.level.block.state.BlockState,
+                net.minecraft.client.renderer.block.dispatch.BlockStateModel>();
+    //?} else {
+    /*private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
+            net.minecraft.client.renderer.block.model.BlockStateModel> liveBlockStateModels() {
+        var manager = net.minecraft.client.Minecraft.getInstance().getModelManager();
+        var models = manager.getBlockModelShaper();
+        var missing = manager.getMissingBlockStateModel();
+        var byState = new java.util.HashMap<net.minecraft.world.level.block.state.BlockState,
+                net.minecraft.client.renderer.block.model.BlockStateModel>();*/
+    //?}
+        for (net.minecraft.world.level.block.Block block : BuiltInRegistries.BLOCK) {
+            for (net.minecraft.world.level.block.state.BlockState state : block.getStateDefinition().getPossibleStates()) {
+                //? if >=26.1 {
+                var model = models.get(state);
+                //?} else {
+                /*var model = models.getBlockModel(state);*/
+                //?}
+                if (model != null && model != missing) {
+                    byState.put(state, model);
+                }
+            }
+        }
+        return byState;
+    }
+    //?} else {
+    /*/^*
      * Swap the vanilla facade, gate and lens item models for the dynamic ones, and cache the blockstate models for
      * the deferred facade deduplication. Runs right after {@link #onModifyBakingResult} on each bake.
-     */
-    //? if >=1.21.10 {
-    public static void onEditBakedModels(net.minecraft.client.resources.model.ModelBakery.BakingResult bakingResult) {
-    //?} else {
-    /*public static void onEditBakedModels(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
-            net.minecraft.client.resources.model.BakedModel> bakedModels) {*/
-    //?}
-        //? if >=1.21.10 {
-        // Swap vanilla item model with dynamic facade model
-        var itemModels = bakingResult.itemStackModels();
-        Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
-        // MC 26.1: FacadeItemModel no longer needs the vanilla wrapper
-        // (BlockStateModelWrapper fields completely changed)
-        ItemModel vanillaModel = itemModels.get(facadeId);
-        if (vanillaModel != null) {
-            itemModels.put(facadeId, new FacadeItemModel());
-        }
-
-        // Swap vanilla gate item model with 3D programmatic model
-        Identifier gateId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_GATE.get());
-        ItemModel vanillaGateModel = itemModels.get(gateId);
-        if (vanillaGateModel != null) {
-            itemModels.put(gateId, new buildcraft.silicon.client.model.GateItemModel());
-        }
-
-        // Swap vanilla lens item model with dynamic programmatic model
-        Identifier lensId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_LENS.get());
-        ItemModel vanillaLensModel = itemModels.get(lensId);
-        if (vanillaLensModel != null) {
-            itemModels.put(lensId, new buildcraft.silicon.client.model.LensItemModel());
-        }
-        //?} else {
-        /*// 1.21.1: all baked models live in one Map<ModelResourceLocation, BakedModel>. Swap each
+     ^/
+    public static void onEditBakedModels(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel> bakedModels) {
+        // 1.21.1: all baked models live in one Map<ModelResourceLocation, BakedModel>. Swap each
         // plug item's "inventory" model with its dynamic BakedModel (Facade/Gate/LensItemModel).
         java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models = bakedModels;
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
@@ -126,31 +157,26 @@ public class BCSiliconClient {
         net.minecraft.client.resources.model.ModelResourceLocation lensMrl = net.minecraft.client.resources.model.ModelResourceLocation.inventory(lensId);
         if (models.get(lensMrl) != null) {
             models.put(lensMrl, new buildcraft.silicon.client.model.LensItemModel());
-        }*/
-        //?}
+        }
 
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet
         // during the initial resource reload. Dedup runs later via runDeferredDedup().
-        //? if >=1.21.10 {
-        cachedBlockStateModels = bakingResult.blockStateModels();
-        //?} else {
-        /*// 1.21.1 has no blockStateModels() accessor — build a BlockState->BakedModel view of the
+        // 1.21.1 has no blockStateModels() accessor — build a BlockState->BakedModel view of the
         // unified model map (keyed via BlockModelShaper.stateToModelLocation) for FacadeDeduplicator.
-        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> allModels = bakedModels;
         java.util.Map<net.minecraft.world.level.block.state.BlockState, net.minecraft.client.resources.model.BakedModel> byState = new java.util.HashMap<>();
         for (net.minecraft.world.level.block.Block block : BuiltInRegistries.BLOCK) {
             for (net.minecraft.world.level.block.state.BlockState state : block.getStateDefinition().getPossibleStates()) {
                 net.minecraft.client.resources.model.BakedModel m =
-                    allModels.get(net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state));
+                    models.get(net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state));
                 if (m != null) {
                     byState.put(state, m);
                 }
             }
         }
-        cachedBlockStateModels = byState;*/
-        //?}
-    }
+        cachedBlockStateModels = byState;
+    }*/
+    //?}
 
     /**
      * Drop the plug caches that hold sprite UVs once the reload has swapped in the new atlases.
@@ -184,10 +210,17 @@ public class BCSiliconClient {
         if (FacadeStateManager.isFacadeGenerationDisabled()) {
             return;
         }
-        if (cachedBlockStateModels != null) {
+        //? if >=1.21.10 {
+        if (dedupPending) {
+            dedupPending = false;
+            FacadeDeduplicator.deduplicateVisuallyIdentical(liveBlockStateModels());
+        }
+        //?} else {
+        /*if (cachedBlockStateModels != null) {
             FacadeDeduplicator.deduplicateVisuallyIdentical(cachedBlockStateModels);
             cachedBlockStateModels = null; // release reference
-        }
+        }*/
+        //?}
     }
 
     /** The silicon client's game hooks. */
@@ -232,7 +265,13 @@ public class BCSiliconClient {
 
     public static void initClient() {
         ClientPlatform.sinks().onModelsBaking(BCSiliconClient::onModifyBakingResult);
-        ClientPlatform.sinks().editBakedModels(BCSiliconClient::onEditBakedModels);
+        //? if >=1.21.10 {
+        ClientPlatform.sinks().editItemModels(BCSiliconClient::editItemModel);
+        ClientPlatform.sinks().onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT,
+                BCSiliconClient::onModelsBakedForDedup);
+        //?} else {
+        /*ClientPlatform.sinks().editBakedModels(BCSiliconClient::onEditBakedModels);*/
+        //?}
         ClientPlatform.sinks().onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT,
                 BCSiliconClient::onBakingCompleted);
         registerScreens(ClientPlatform.sinks());

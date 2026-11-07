@@ -187,12 +187,21 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             runClientClassGameTests(server, problems);
         }
 
-        runDedicatedServerChecks(ctx, problems);
-
-        problems.addAll(logProblems());
+        // Scanned before and after the multiplayer phase, which boots a second server in this JVM: the first scan
+        // covers everything up to it, so a log the phase rolls or re-opens cannot hide those lines; the second covers
+        // what was written after (the test server logs into the same file).
+        LogMark scanned = scanLog(LogMark.START, problems);
+        Throwable phaseError = null;
+        try {
+            runDedicatedServerChecks(ctx, problems);
+        } catch (Throwable t) {
+            phaseError = t;
+            problems.add("multiplayer: the phase threw " + t + " (attached as the cause)");
+        }
+        scanLog(scanned, problems);
         if (!problems.isEmpty()) {
             throw new AssertionError("BuildCraft client game test found " + problems.size() + " problem(s):\n  "
-                + String.join("\n  ", problems));
+                + String.join("\n  ", problems), phaseError);
         }
         LOGGER.info(PASS_MARKER);
     }
@@ -400,7 +409,11 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             Blueprint blueprint = noisyBlueprint(level);
             blueprint.computeKey();
             GlobalSavedDataSnapshots.get(level).addSnapshot(blueprint);
-            ServerPlayer player = s.getPlayerList().getPlayers().get(0);
+            List<ServerPlayer> players = s.getPlayerList().getPlayers();
+            if (players.isEmpty()) {
+                return null;
+            }
+            ServerPlayer player = players.get(0);
             player.getInventory().setItem(20, BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(
                 new Snapshot.Header(blueprint.key, player.getUUID(), new Date(0), "client-game-test")));
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
@@ -411,6 +424,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 buf.release();
             }
         });
+        if (sent == null) {
+            problems.add("multiplayer: nobody was on the test server to ask for the blueprint");
+            return;
+        }
         if (sent.bytes() <= VANILLA_FRAME_LIMIT) {
             problems.add("multiplayer: the test blueprint encodes to " + sent.bytes()
                 + " bytes, small enough to cross unsplit");
@@ -719,27 +736,45 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         }
     }
 
-    /^* BuildCraft ERROR lines, and BuildCraft lines about a missing or failed model, texture or load. *^/
-    private static List<String> logProblems() {
+    /^* How far a scan read: the line count, and the file's first line, which tells a rolled or re-opened log apart. *^/
+    private record LogMark(int lines, String first) {
+        static final LogMark START = new LogMark(0, null);
+    }
+
+    /^*
+     * Adds BuildCraft ERROR lines, and BuildCraft lines about a missing or failed model, texture or load, written after
+     * {@code mark}; returns how far it read. A log that no longer starts with the marked first line, or is shorter than
+     * the mark, was rolled or re-opened in between: that is reported, and the whole current file is scanned.
+     *^/
+    private static LogMark scanLog(LogMark mark, List<String> problems) {
         Path log = FabricLoader.getInstance().getGameDir().resolve("logs/latest.log");
-        List<String> found = new ArrayList<>();
         List<String> lines;
+        int complete;
         try {
-            lines = Files.readAllLines(log, StandardCharsets.UTF_8);
+            String text = Files.readString(log, StandardCharsets.UTF_8);
+            lines = text.lines().toList();
+            // A last line still being written is scanned now and again next time, so its tail is not skipped.
+            complete = text.isEmpty() || text.endsWith("\n") ? lines.size() : lines.size() - 1;
         } catch (IOException e) {
-            found.add("cannot read " + log + ": " + e);
-            return found;
+            problems.add("cannot read " + log + ": " + e);
+            return mark;
         }
-        for (String line : lines) {
+        int from = mark.lines();
+        if (from > 0 && (lines.size() < from || !lines.get(0).equals(mark.first()))) {
+            problems.add("log: latest.log was rolled or re-opened during the multiplayer phase (" + from
+                + " lines before, " + lines.size() + " now); lines written in between may be unscanned");
+            from = 0;
+        }
+        for (String line : lines.subList(from, lines.size())) {
             String lower = line.toLowerCase(java.util.Locale.ROOT);
             if (!lower.contains("buildcraft")) {
                 continue;
             }
             if (line.contains("/ERROR]") || BC_PROBLEM.matcher(line).find()) {
-                found.add("log: " + line);
+                problems.add("log: " + line);
             }
         }
-        return found;
+        return new LogMark(complete, lines.isEmpty() ? null : lines.get(0));
     }
 }
 *///?}

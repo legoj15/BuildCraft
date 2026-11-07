@@ -43,6 +43,11 @@ public final class NeoForgeClientModels implements ClientModels {
                 quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.direction(),
                 quad.materialInfo(), quad.bakedNormals(), BakedColors.of(argb0, argb1, argb2, argb3));
     }
+
+    @Override
+    public int vertexColour(BakedQuad quad, int vertex) {
+        return quad.bakedColors().color(vertex);
+    }
     //?} elif >=1.21.11 {
     /*@Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
@@ -50,6 +55,11 @@ public final class NeoForgeClientModels implements ClientModels {
                 quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.tintIndex(),
                 quad.direction(), quad.sprite(), quad.shade(), quad.lightEmission(), quad.bakedNormals(),
                 BakedColors.of(argb0, argb1, argb2, argb3), quad.hasAmbientOcclusion());
+    }
+
+    @Override
+    public int vertexColour(BakedQuad quad, int vertex) {
+        return quad.bakedColors().color(vertex);
     }*/
     //?}
 

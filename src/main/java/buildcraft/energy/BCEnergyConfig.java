@@ -278,14 +278,13 @@ public class BCEnergyConfig {
         oilIsSticky = builder
                 .comment("If true, oil source blocks slow down entities standing or moving through them")
                 .define("oilIsSticky", false);
+    }
 
+    public static void buildDisplay(ModConfigSpec.Builder builder) {
         searingFluidSteam = builder
                 .comment("Whether or not Searing fluids emit visual steam",
                          "particles when placed in the world. Cosmetic only.")
                 .define("searingFluidSteam", true);
-    }
-
-    public static void buildDisplay(ModConfigSpec.Builder builder) {
         useRfNaming = builder
                 .comment(
                         "If true, use the classic 'Redstone Flux' (RF) names instead of 'Forge Energy' (FE).",
@@ -308,6 +307,8 @@ public class BCEnergyConfig {
     // Both flags are read from places that can run before the COMMON spec has loaded or on a client JVM that never
     // loads the server's copy (fire asks the block for its flammability on either side), where get() would throw.
     // Not loaded yet answers with the default, true, so the feature is on until the file says otherwise.
+    // searingSteamEnabled() shares readFlag but is a CLIENT-spec toggle: null only on a dedicated server, which
+    // never draws the steam.
 
     /** Whether placed oils and fuels burn ({@code canBurn}); read live, never cached. */
     public static boolean canBurnEnabled() {
@@ -330,6 +331,12 @@ public class BCEnergyConfig {
         } catch (IllegalStateException notLoadedYet) {
             return ContainedDetonation.OFF;
         }
+    }
+
+    /** The CLIENT-spec {@code searingFluidSteam} toggle; on (its default) before the spec has loaded. Null on a
+     *  dedicated server, which never draws the steam anyway. Read live. */
+    public static boolean searingSteamEnabled() {
+        return readFlag(searingFluidSteam);
     }
 
     private static boolean readFlag(ModConfigSpec.BooleanValue flag) {

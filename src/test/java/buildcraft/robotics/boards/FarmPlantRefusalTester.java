@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -31,9 +33,11 @@ import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
 import buildcraft.robotics.ZonePinnedRobot;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /**
  * The farmer and the planter do not go back to a block a protection mod refused them. A claim mod that cancels the
@@ -97,6 +101,12 @@ public class FarmPlantRefusalTester {
 
         boolean asleep() {
             return board.getActiveAI() instanceof AIRobotSleep;
+        }
+
+        /** The reason the board gave for its sleep (what Robot Goggles show), or null when it is not going to sleep. */
+        @Nullable
+        RobotSleepReason sleepReason() {
+            return board.getDelegateAI() instanceof AIRobotGotoSleep sleep ? sleep.getReason() : null;
         }
 
         @Override
@@ -233,6 +243,8 @@ public class FarmPlantRefusalTester {
                             + claim.toolAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
+                        "...saying its work keeps failing, got " + f.sleepReason());
             } finally {
                 clearRow(helper, xs);
             }
@@ -434,6 +446,8 @@ public class FarmPlantRefusalTester {
                             + claim.placeAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
+                        "...saying its work keeps failing, got " + f.sleepReason());
                 helper.assertTrue(f.robot.getHeldItem().is(Items.WHEAT_SEEDS) && f.robot.getHeldItem().getCount() == 5,
                         "...with its seeds still in hand, got " + f.robot.getHeldItem());
             } finally {

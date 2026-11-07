@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.network.chat.Component;
 
+import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.robots.AIRobot;
 
 import buildcraft.robotics.ai.AIRobotAttack;
@@ -132,7 +133,7 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
         }
 
         // A board with nothing under it is between two passes (the Builder waits out a launch delay this way).
-        if (top.getDelegateAI() == null && activityOf(top) == null) {
+        if (top instanceof RedstoneBoardRobot && top.getDelegateAI() == null) {
             return IDLE;
         }
 

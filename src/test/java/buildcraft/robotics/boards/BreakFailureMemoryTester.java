@@ -32,6 +32,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotHarvest;
 import buildcraft.robotics.boards.FarmPlantRefusalTester.Fixture;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /**
  * The break boards remember a break that simply failed, the way the farmer remembers a till that did. A block the
@@ -264,6 +265,8 @@ public class BreakFailureMemoryTester {
                             + board.attemptsAt(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
+                        "...saying its work keeps failing, got " + f.sleepReason());
             } finally {
                 clearRow(helper, xs);
             }

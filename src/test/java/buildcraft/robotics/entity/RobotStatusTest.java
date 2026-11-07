@@ -48,7 +48,10 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
 
     /** Stands in for a board: an AI that names no activity of its own. */
     private AIRobot board() {
-        return new AIRobot(robot);
+        return new BoardRobotEmpty(robot) {
+            @Override
+            public void update() {}
+        };
     }
 
     private static RobotActivity activity(AIRobotMain main) {
@@ -83,7 +86,7 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(RobotActivity.FOLLOWING_GATE, activity(main));
 
         // The same AI as an ordinary delegate (not the tracked override) is not a gate order.
-        Assertions.assertNotEquals(RobotActivity.FOLLOWING_GATE, activity(chain(new AIRobot(robot))));
+        Assertions.assertEquals(RobotActivity.WORKING, activity(chain(new AIRobot(robot))));
     }
 
     @Test

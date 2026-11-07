@@ -17,7 +17,7 @@ import java.util.Locale;
  * instead of the plain "Sleeping" text when the robot knows it.
  */
 public enum RobotActivity {
-    /** No AI at all, or between two cycles of one. */
+    /** No AI at all, between two cycles of one, or a board between two passes (nothing under it). */
     IDLE,
     /** Fallback for a chain no case below names. */
     WORKING,

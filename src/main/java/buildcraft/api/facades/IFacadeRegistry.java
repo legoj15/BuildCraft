@@ -8,6 +8,7 @@ import net.minecraft.world.item.DyeColor;
 
 public interface IFacadeRegistry {
 
+    /** Every block state that can be a facade, including look-alikes a client hides from its own lists. */
     Collection<? extends IFacadeState> getValidFacades();
 
     IFacadePhasedState createPhasedState(IFacadeState state, @Nullable DyeColor activeColor);

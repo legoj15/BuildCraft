@@ -110,8 +110,9 @@ public enum FacadeStateManager implements IFacadeRegistry {
     private static final Map<BlockState, ItemStack> customBlocks = new HashMap<>();
 
     static {
-        validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
-        allFacadeStates = validFacadeStates;
+        SortedMap<BlockState, FacadeBlockStateInfo> empty = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+        validFacadeStates = empty;
+        allFacadeStates = empty;
         stackFacades = Map.of();
         stackRedirects = Map.of();
     }
@@ -220,8 +221,9 @@ public enum FacadeStateManager implements IFacadeRegistry {
             // Issue #29: no enumeration scan, no derivation. Republish the EMPTY seed snapshots
             // (a re-init after a populated run must clear them), mark initialized so this is
             // once-only, and stop before the scan. previewState falls back to the air default.
-            validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
-            allFacadeStates = validFacadeStates;
+            SortedMap<BlockState, FacadeBlockStateInfo> empty = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+            validFacadeStates = empty;
+            allFacadeStates = empty;
             stackFacades = Map.of();
             stackRedirects = Map.of();
             previewState = defaultState;
@@ -250,12 +252,15 @@ public enum FacadeStateManager implements IFacadeRegistry {
         for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackFacades.entrySet()) {
             publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
         }
-        validFacadeStates = Collections.unmodifiableSortedMap(nextValid);
-        allFacadeStates = validFacadeStates;
+        // One local for both fields: the dedup writes validFacadeStates without this monitor, so re-reading it here
+        // could alias allFacadeStates to a narrowed map.
+        SortedMap<BlockState, FacadeBlockStateInfo> published = Collections.unmodifiableSortedMap(nextValid);
+        validFacadeStates = published;
+        allFacadeStates = published;
         stackFacades = Map.copyOf(publishedStackFacades);
 
         initialized = true;
-        BCLog.logger.info("[silicon.facade] Total valid facade states: " + validFacadeStates.size());
+        BCLog.logger.info("[silicon.facade] Total valid facade states: " + published.size());
     }
 
     private static void scanBlock(Block block,
@@ -399,7 +404,8 @@ public enum FacadeStateManager implements IFacadeRegistry {
     }
 
     /** The facade info for a saved or synced block state: its entry in {@link #allFacadeStates} (never the
-     *  deduped display map), else {@link #createFallbackInfo}. Every facade read path goes through here. */
+     *  deduped display map), else {@link #createFallbackInfo}. Every read path that must name a state goes through here;
+     *  lookups that must report absence ({@link #getInfoForBlock}, {@code getFacadeForBlock}) read the map directly. */
     static FacadeBlockStateInfo resolve(BlockState state) {
         FacadeBlockStateInfo info = allFacadeStates.get(state);
         return info != null ? info : createFallbackInfo(state);
@@ -425,7 +431,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
     @Override
     public Collection<? extends IFacadeState> getValidFacades() {
-        return validFacadeStates.values();
+        return allFacadeStates.values();
     }
 
     @Override

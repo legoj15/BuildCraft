@@ -86,29 +86,18 @@ public class BCCoreClient {
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
         ClientPlatform.hooks().onItemTooltip(buildcraft.core.list.ListTooltipHandler.INSTANCE::itemTooltip);
 
-        // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
+        // Pipe crack particles for a player brushing a pipe, at that player's own target (not the local crosshair,
+        // which would put another player's brushing on whatever the local player is looking at)
         ClientPlatform.hooks().onClientItemUseTick(
             (entity, item, remaining) -> {
-                if (item.is(net.minecraft.world.item.Items.BRUSH)) {
+                if (entity instanceof net.minecraft.world.entity.player.Player brusher
+                        && item.is(net.minecraft.world.item.Items.BRUSH)) {
                     int maxDuration = item.getUseDuration(entity);
                     int used = maxDuration - remaining;
                     // BrushItem spawns dust every 10 ticks
                     if (used > 0 && (used % 10) == 0) {
-                        net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
-                        if (hit instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
-                            net.minecraft.core.BlockPos pos = blockHit.getBlockPos();
-                            net.minecraft.world.level.block.state.BlockState state = entity.level().getBlockState(pos);
-                            if (state.getBlock() instanceof buildcraft.transport.block.BlockPipeHolder) {
-                                buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addHitEffects(
-                                    //? if <26.3 {
-                                    /*state, entity.level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
-                                    *///?} else {
-                                    state, entity.level(), pos, blockHit.getDirection(),
-                                    net.minecraft.client.Minecraft.getInstance().particleEngine
-                                    //?}
-                                );
-                            }
-                        }
+                        buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addBrushEffects(
+                            brusher, net.minecraft.client.Minecraft.getInstance().particleEngine);
                     }
                 }
             }

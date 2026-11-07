@@ -13,6 +13,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -234,6 +236,26 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
         return spawnHitParticle(level, pos, face, info, manager);
     }
     //?}
+
+    /**
+     * Spawns the crack particle for a player brushing a pipe, on the pipe that player's own view ray hits (not the
+     * local crosshair, which is another block entirely when someone else is the brusher). The ray is vanilla
+     * {@code BrushItem}'s: block collision shapes, so the pipe holder's crosshair-dependent outline cannot skew it.
+     * Nothing is spawned when the ray hits no block or a block that is not a pipe holder.
+     */
+    public void addBrushEffects(Player brusher, ParticleEngine manager) {
+        HitResult hit = ProjectileUtil.getHitResultOnViewVector(brusher, e -> !e.isSpectator() && e.isPickable(),
+                brusher.blockInteractionRange());
+        if (hit.getType() != HitResult.Type.BLOCK || !(hit instanceof BlockHitResult blockHit)) {
+            return;
+        }
+        Level level = brusher.level();
+        BlockPos pos = blockHit.getBlockPos();
+        if (!(level.getBlockState(pos).getBlock() instanceof BlockPipeHolder)) {
+            return;
+        }
+        spawnHitParticle(level, pos, blockHit.getDirection(), getHitSpriteInfo(level, pos, blockHit), manager);
+    }
 
     /** Spawns the single crack particle on {@code face}; false (vanilla particles) when there is no sprite to use. */
     private static boolean spawnHitParticle(Level level, BlockPos pos, Direction face, @Nullable HitSpriteInfo info,

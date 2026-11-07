@@ -9,7 +9,6 @@ package buildcraft.platform.fabric.client;
 /*import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
@@ -45,7 +44,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import net.minecraft.client.renderer.block.FluidModel;
-import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.world.level.material.Fluid;
 
@@ -144,9 +142,10 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     }
 
     @Override
-    public void editBakedModels(Consumer<ModelBakery.BakingResult> editor) {
-        // Gap: Fabric API 26.3 offers per-model after-bake modifiers only (ModelModifier.AfterBakeBlock/AfterBakeItem),
-        // never the whole baked set, so a whole-set editor cannot run; the editor's model swaps are absent on Fabric.
+    public void editItemModels(ItemModelEditor editor) {
+        // A per-item after-bake modifier, registered afresh on every model load; itemId() is the item model's key.
+        ModelLoadingPlugin.register(context -> context.modifyItemModelAfterBake().register(
+                (model, itemContext) -> model == null ? null : editor.edit(itemContext.itemId(), model)));
     }
 
     @Override

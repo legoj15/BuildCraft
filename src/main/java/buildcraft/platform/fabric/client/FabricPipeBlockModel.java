@@ -31,8 +31,9 @@ import buildcraft.platform.render.PipeRenderData;
  * its own layer (the body and opaque pluggables cutout; a painted pipe's overlay, lens glass and translucent facades
  * translucent); the wrapped model where there is none.
  *
- * <p>Gap: vanilla's {@code BakedQuad} carries no per-vertex colour on Fabric (see
- * {@code ClientModels#withVertexColours}), so vertex-coloured BC quads draw untinted here.
+ * <p>Vanilla's {@code BakedQuad} carries no per-vertex colour on Fabric (see {@code ClientModels#withVertexColours}), so
+ * each quad's colours (BC's directional shading, a painted overlay's alpha, lens glass) are put back on the emitter from
+ * {@link FabricClientModels}' side table.
  *^/
 final class FabricPipeBlockModel extends WrapperBlockStateModel {
     private final PipeModelQuads quads;
@@ -64,6 +65,7 @@ final class FabricPipeBlockModel extends WrapperBlockStateModel {
             // No cull face: pipe geometry is sub-block sized, like NeoForge's addUnculledFace.
             emitter.fromBakedQuad(quad);
             emitter.chunkLayer(layer);
+            FabricClientModels.applyVertexColours(emitter, quad);
             emitter.emit();
         }
     }

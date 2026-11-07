@@ -39,7 +39,7 @@ import net.minecraft.world.level.material.Fluids;
  * {@code updateShape}. Blockstate JSONs need no change as long as their variant keys don't list every
  * property — a {@code ""} key or a partial key like {@code "facing=up"} matches both waterlogged values.
  * A block with a hand-built model swap keyed by one exact state must swap every state (see
- * {@code BCTransportClient#onModifyBakingResult}).
+ * {@code ClientRegistrationSinks#pipeBlockModel}).
  */
 public final class BCWaterlogging {
 

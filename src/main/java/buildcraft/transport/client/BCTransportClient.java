@@ -64,7 +64,11 @@ public class BCTransportClient {
         // The pipe_holder block model (every blockstate, waterlogged true/false, so a flooded pipe doesn't keep the
         // un-swapped placeholder model), then the pipe item models.
         ClientPlatform.sinks().pipeBlockModel(BCTransportBlocks.PIPE_HOLDER, PipeBlockModelQuads.INSTANCE);
-        ClientPlatform.sinks().editBakedModels(BCTransportClient::onModifyBakingResult);
+        //? if >=1.21.10 {
+        ClientPlatform.sinks().editItemModels(BCTransportClient::editItemModel);
+        //?} else {
+        /*ClientPlatform.sinks().editBakedModels(BCTransportClient::onModifyBakingResult);*/
+        //?}
         init();
         registerClientContent(ClientPlatform.sinks());
         // Set the API registry so other modules (e.g. silicon) can register bakers, and register the flow
@@ -130,33 +134,31 @@ public class BCTransportClient {
         PipeModelCacheAll.clearModels();
     }
 
-    /**
-     * Wrap each pipe item's vanilla model with PipeItemModel for dynamic colour overlays. (The pipe_holder block model
-     * is swapped by {@code ClientRegistrationSinks.pipeBlockModel}, registered just before this.)
-     */
     //? if >=1.21.10 {
-    public static void onModifyBakingResult(net.minecraft.client.resources.model.ModelBakery.BakingResult bakingResult) {
-    //?} else {
-    /*public static void onModifyBakingResult(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
-            net.minecraft.client.resources.model.BakedModel> bakedModels) {*/
-    //?}
-        //? if >=1.21.10 {
-        // Item model swap — wrap each pipe item with PipeItemModel
-        var itemModels = bakingResult.itemStackModels();
-        for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
-            Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
-            if (pipeItem != null) {
-                Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
-                ItemModel vanillaItemModel = itemModels.get(itemId);
-                // MC 26.1: PipeItemModel no longer reflects into BlockStateModelWrapper;
-                // accepts any ItemModel as delegate for base pipe rendering
-                if (vanillaItemModel != null) {
-                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def));
-                }
+    /**
+     * Wraps each pipe item's JSON model in a {@link PipeItemModel}, which paints it (the item-model editor of
+     * {@code ClientRegistrationSinks}: every baked item model passes through here). The pipe_holder block model is
+     * swapped by {@code ClientRegistrationSinks.pipeBlockModel}, registered just before this.
+     */
+    public static ItemModel editItemModel(Identifier id, ItemModel baked) {
+        Item item = BuiltInRegistries.ITEM.getValue(id);
+        if (item instanceof buildcraft.api.transport.pipe.IItemPipe pipeItem) {
+            PipeDefinition def = pipeItem.getDefinition();
+            // Only the item the registry maps the definition to (what the old whole-set loop over the pipes wrapped).
+            if (def != null && PipeApi.pipeRegistry.getItemForPipe(def) == pipeItem) {
+                return new PipeItemModel(baked, def);
             }
         }
-        //?} else {
-        /*// 1.21.1: all baked models (block + item) live in one Map<ModelResourceLocation, BakedModel>.
+        return baked;
+    }
+    //?} else {
+    /*/^*
+     * Wrap each pipe item's vanilla model with PipeItemModel for dynamic colour overlays. (The pipe_holder block model
+     * is swapped by {@code ClientRegistrationSinks.pipeBlockModel}, registered just before this.)
+     ^/
+    public static void onModifyBakingResult(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel> bakedModels) {
+        // 1.21.1: all baked models (block + item) live in one Map<ModelResourceLocation, BakedModel>.
         java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
             bakedModels;
         // Item model swap — each pipe item's "inventory" ModelResourceLocation.
@@ -171,9 +173,9 @@ public class BCTransportClient {
                     models.put(itemMrl, new PipeItemModel(vanillaItemModel, def));
                 }
             }
-        }*/
-        //?}
-    }
+        }
+    }*/
+    //?}
 
     /** Called during mod init to register pipe flow renderers and pluggable bakers. */
     public static void registerFlowRenderers() {

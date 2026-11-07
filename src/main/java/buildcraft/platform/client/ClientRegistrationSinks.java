@@ -106,18 +106,31 @@ public interface ClientRegistrationSinks {
 
     /**
      * Runs {@code listener} each time the models bake (at startup and on every resource reload), before the baked
-     * models go live (NeoForge: {@code ModelEvent.ModifyBakingResult}; Fabric: the start of each model load). Listeners
-     * run in registration order, interleaved with the {@link #editBakedModels} editors.
+     * models go live (NeoForge: {@code ModelEvent.ModifyBakingResult}; Fabric: the start of each model load). On
+     * NeoForge listeners run in registration order, interleaved with the item-model editors (the whole-map editors on
+     * 1.21.1); on Fabric every listener runs before any item model bakes.
      */
     void onModelsBaking(Runnable listener);
 
     //? if >=1.21.10 {
     /**
-     * Edits the baked models each time they bake, before they go live (NeoForge: {@code ModelEvent.ModifyBakingResult}).
-     * Fabric API has per-model after-bake modifiers only, no whole-set edit, so there the editor does not run.
+     * Edits each baked item model, one at a time, each time the models bake and before they go live: the editor is
+     * handed every item model with the id it is filed under (the item model id, an item's registry id by default) and
+     * returns the model to use, {@code baked} itself to keep it (NeoForge: {@code itemStackModels().replaceAll} in
+     * {@code ModelEvent.ModifyBakingResult}; Fabric: a {@code ModelModifier.AfterBakeItem} modifier, whose
+     * {@code itemId()} is the same key). There is no whole-set edit, as Fabric API has none: a hook that needs the
+     * block-state models reads them from the live {@code ModelManager} once {@link #onModelsBaked} has run.
      */
-    void editBakedModels(java.util.function.Consumer<net.minecraft.client.resources.model.ModelBakery.BakingResult> editor);
-    //?} else {
+    void editItemModels(ItemModelEditor editor);
+
+    /** Swaps a baked item model for another; see {@link #editItemModels}. */
+    @FunctionalInterface
+    interface ItemModelEditor {
+        net.minecraft.client.renderer.item.ItemModel edit(Identifier id, net.minecraft.client.renderer.item.ItemModel baked);
+    }
+    //?}
+
+    //? if <1.21.10 {
     /*/^* Edits the baked models (block and item, one map on this line) each time they bake, before they go live. *^/
     void editBakedModels(java.util.function.Consumer<java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
             net.minecraft.client.resources.model.BakedModel>> editor);*/

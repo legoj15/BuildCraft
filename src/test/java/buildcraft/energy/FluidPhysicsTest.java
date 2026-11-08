@@ -24,6 +24,8 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.platform.FluidProperties;
+import buildcraft.platform.Platform;
 
 public class FluidPhysicsTest {
 
@@ -356,51 +358,179 @@ public class FluidPhysicsTest {
         return item.getDeltaMovement();
     }
 
+    /** Where a boat starts in the pool: its bottom a little under the surface of the top layer (the surface is at
+     *  3.89, and a boat that rides it settles near 3.5), so it neither starts submerged nor needs to rise. */
+    private static final float BOAT_X = 2.5F;
+    private static final float BOAT_Y = 3.5F;
+    private static final float BOAT_Z = 3.5F;
+    /** Ticks a boat is watched in a fluid before its height is read: a boat that cannot float has hit the pool floor
+     *  (two and a half blocks down) in about ten. */
+    private static final int BOAT_SETTLE_TICKS = 30;
+    /** The poll's budget once the cell ticks: four fluids of {@link #BOAT_SETTLE_TICKS} each. */
+    private static final int BOAT_FLOAT_WORK_TICKS = 200;
+    /** The lowest a floating boat may be, in blocks above the arena floor: it rides the top layer near 3.5, and one
+     *  that sank rests on the pool floor at 1. */
+    private static final double BOAT_FLOAT_MIN_Y = 2.5;
+
     /**
-     * A boat does not float on crude oil. NeoForge asks each fluid type whether a boat can float on it
-     * ({@code canBoatInFluid}: off by default, and BuildCraft's fluid types leave it off); vanilla asks the water
-     * tag, which every BuildCraft fluid is in, so on Fabric a boat sailed on oil. A boat in the middle of a sealed
-     * crude pool is ticked once and must not count as under water; the same pool of water is the control.
+     * A boat floats on crude oil and on the fuels, as it does on water, and on no gas. NeoForge asks each fluid type
+     * whether a boat can float on it ({@code canBoatInFluid}, off by default, so BuildCraft's fluid types turn it on
+     * for the liquids); vanilla asks the water tag, which every BuildCraft fluid is in, so on Fabric
+     * {@code AbstractBoatMixin} lets a boat float on exactly the fluids that declare it. A boat is dropped on the
+     * surface of a sealed pool and watched in each fluid in turn: water, crude oil and light fuel hold it up, fuel gas
+     * lets it fall to the pool floor. It is ticked by the level, never by hand, since a loader's boat hook lives in the
+     * level's entity tick. The pool of water is the control (a pool where nothing floats would fail it). Every fluid
+     * is read once the boat has been in it for {@link #BOAT_SETTLE_TICKS} of its own ticks, never on a fixed test
+     * tick, and a boat that sank is at the pool floor. Before the pools, every energy fluid (both forms, every heat)
+     * must declare boating exactly when it is not a gas.
      */
-    public static void crudeOilDoesNotFloatBoats(GameTestHelper helper) {
+    public static void crudeOilFloatsBoats(GameTestHelper helper) {
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            for (Fluid form : new Fluid[] { entry.source().get(), entry.flowing().get() }) {
+                FluidProperties declared = Platform.fluids().declared(form);
+                if (declared == null || declared.supportsBoating() == entry.gaseous()) {
+                    helper.fail(entry.name() + " (" + form + "): a boat floats on every energy fluid but a gas, yet"
+                            + " gaseous=" + entry.gaseous() + " and declared boating="
+                            + (declared == null ? "none declared" : declared.supportsBoating()));
+                }
+            }
+        }
         EntityArenaUtil.forceLoadCell(helper);
+        Block[] pools = { Blocks.WATER, BCEnergyFluids.OIL_COOL.block().get(), cool("fuel_light").block().get(),
+                cool("fuel_gaseous").block().get() };
+        String[] names = { "water", "crude oil", "light fuel", "fuel gas" };
+        boolean[] floats = { true, true, true, false };
         Entity[] boat = { null };
-        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + POOL_WORK_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, POOL_WORK_TICKS, () -> {
-                    buildPool(helper, Blocks.WATER);
-                    //? if >=26.2 {
-                    boat[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.OAK_BOAT, POOL_MIDDLE.getX(),
-                            POOL_MIDDLE.getY(), POOL_MIDDLE.getZ());
-                    //?} elif >=1.21.10 {
-                    /*boat[0] = helper.spawn(EntityType.OAK_BOAT, POOL_MIDDLE.getX(), POOL_MIDDLE.getY(),
-                            POOL_MIDDLE.getZ());
-                    *///?} else {
-                    /*boat[0] = helper.spawn(EntityType.BOAT, POOL_MIDDLE.getX(), POOL_MIDDLE.getY(),
-                            POOL_MIDDLE.getZ());
-                    *///?}
-                    boat[0].tick();
-                    if (!boatUnderWater(boat[0])) {
-                        helper.fail("control: a boat in a pool of water must count as under water");
+        int[] phase = { -1 };
+        int[] since = { 0 };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BOAT_FLOAT_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BOAT_FLOAT_WORK_TICKS, () -> {
+                    if (boat[0] != null && boat[0].tickCount - since[0] < BOAT_SETTLE_TICKS) {
+                        return false;
                     }
-                    buildPool(helper, BCEnergyFluids.OIL_COOL.block().get());
-                    boat[0].tick();
-                    if (boatUnderWater(boat[0])) {
-                        helper.fail("a boat in a pool of crude oil must not count as under water: oil is not a fluid"
-                                + " boats float on");
+                    if (boat[0] != null) {
+                        double y = boat[0].getY() - helper.absolutePos(BlockPos.ZERO).getY();
+                        if ((y >= BOAT_FLOAT_MIN_Y) != floats[phase[0]]) {
+                            helper.fail("a boat on " + names[phase[0]] + (floats[phase[0]] ? " must float" : " must sink")
+                                    + ", but " + BOAT_SETTLE_TICKS + " ticks after it was dropped on the surface it is"
+                                    + " at y=" + y + " (the pool floor is 1, a boat riding the surface about 3.5)");
+                        }
+                        if (phase[0] == pools.length - 1) {
+                            return true;
+                        }
                     }
-                    return true;
-                }), helper::succeed, "a boat in crude oil was never checked", () -> EntityArenaUtil.discard(boat[0]));
+                    phase[0]++;
+                    buildPool(helper, pools[phase[0]]);
+                    boat[0] = placeBoat(helper, boat[0]);
+                    since[0] = boat[0].tickCount;
+                    return false;
+                }), helper::succeed, "a boat on crude oil was never checked", () -> EntityArenaUtil.discard(boat[0]));
     }
 
-    private static boolean boatUnderWater(Entity boat) {
-        //? if >=1.21.11 {
-        return ((net.minecraft.world.entity.vehicle.boat.AbstractBoat) boat).isUnderWater();
-        //?} elif >=1.21.10 {
-        /*return ((net.minecraft.world.entity.vehicle.AbstractBoat) boat).isUnderWater();
-        *///?} else {
-        /*return ((net.minecraft.world.entity.vehicle.Boat) boat).isUnderWater();
-        *///?}
+    /** The cool tier of the energy fluid {@code baseName}: {@code fuel_light} is a liquid fuel that is water-like,
+     *  unlike crude oil, and {@code fuel_gaseous} is a gas. */
+    private static BCEnergyFluids.FluidEntry cool(String baseName) {
+        return BCEnergyFluids.ALL.stream()
+                .filter(entry -> entry.baseName().equals(baseName) && entry.heat() == 0)
+                .findFirst().orElseThrow();
     }
+
+    /** The boat at its starting point in the pool at rest: a new one, or {@code boat} put back. */
+    private static Entity placeBoat(GameTestHelper helper, Entity boat) {
+        if (boat == null) {
+            //? if >=26.2 {
+            return helper.spawn(net.minecraft.world.entity.EntityTypes.OAK_BOAT, BOAT_X, BOAT_Y, BOAT_Z);
+            //?} elif >=1.21.10 {
+            /*return helper.spawn(EntityType.OAK_BOAT, BOAT_X, BOAT_Y, BOAT_Z);
+            *///?} else {
+            /*return helper.spawn(EntityType.BOAT, BOAT_X, BOAT_Y, BOAT_Z);
+            *///?}
+        }
+        BlockPos at = helper.absolutePos(BlockPos.ZERO);
+        boat.setPos(at.getX() + BOAT_X, at.getY() + BOAT_Y, at.getZ() + BOAT_Z);
+        boat.setDeltaMovement(Vec3.ZERO);
+        return boat;
+    }
+
+    /** The push given to a boat along +x: about 0.8 blocks of travel on water in {@link #BOAT_SLIDE_TICKS}. */
+    private static final double BOAT_PUSH = 0.1;
+    /** How long each fluid's slide is timed, in the boat's own ticks. */
+    private static final int BOAT_SLIDE_TICKS = 20;
+    /** The poll's budget once the cell ticks: three fluids of {@link #BOAT_SLIDE_TICKS} each. */
+    private static final int BOAT_SLIDE_WORK_TICKS = 100;
+
+    /**
+     * With {@code oilIsSticky} on, a boat on the energy fluids is slowed to half its top speed; with it off it sails
+     * as on water. Nothing paddles an unridden boat, so the boat is given the same push along +x on water, on crude
+     * oil with the option off and on crude oil with it on, and coasts for {@link #BOAT_SLIDE_TICKS} of its own ticks
+     * each time: water carries it about 0.8 blocks, and the stickier fluid's extra drag (the loader's boat hook, a
+     * tick-end listener on NeoForge and a mixin on Fabric) cuts that to about 0.45. The option is read live by the
+     * fluid and put back, whatever the test does, in the cleanup.
+     */
+    public static void stickyOilSlowsBoats(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
+        boolean originalSticky = BCEnergyConfig.oilIsSticky.get();
+        Block[] pools = { Blocks.WATER, BCEnergyFluids.OIL_COOL.block().get(), BCEnergyFluids.OIL_COOL.block().get() };
+        String[] names = { "water", "crude oil with oilIsSticky off", "crude oil with oilIsSticky on" };
+        Entity[] boat = { null };
+        int[] phase = { -1 };
+        int[] since = { 0 };
+        double[] startX = { 0.0 };
+        double[] slid = new double[pools.length];
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BOAT_SLIDE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BOAT_SLIDE_WORK_TICKS, () -> {
+                    if (boat[0] != null && boat[0].tickCount - since[0] < BOAT_SLIDE_TICKS) {
+                        return false;
+                    }
+                    if (boat[0] != null) {
+                        slid[phase[0]] = boat[0].getX() - startX[0];
+                        if (phase[0] == pools.length - 1) {
+                            checkSlides(helper, slid, boat[0].getY() - helper.absolutePos(BlockPos.ZERO).getY());
+                            return true;
+                        }
+                    }
+                    phase[0]++;
+                    BCEnergyConfig.oilIsSticky.set(phase[0] == pools.length - 1);
+                    buildPool(helper, pools[phase[0]]);
+                    boat[0] = placeBoat(helper, boat[0]);
+                    boat[0].setDeltaMovement(BOAT_PUSH, 0.0, 0.0);
+                    startX[0] = boat[0].getX();
+                    since[0] = boat[0].tickCount;
+                    return false;
+                }, () -> boat[0] == null ? "the boat was never placed"
+                        : "the boat was still sliding on " + names[phase[0]]),
+                helper::succeed, "a boat's slide on crude oil was never timed", () -> {
+                    BCEnergyConfig.oilIsSticky.set(originalSticky);
+                    EntityArenaUtil.discard(boat[0]);
+                });
+    }
+
+    /** The three slides of {@link #stickyOilSlowsBoats}: water, oil with the option off, oil with it on. */
+    private static void checkSlides(GameTestHelper helper, double[] slid, double boatY) {
+        String all = "water " + slid[0] + ", crude oil " + slid[1] + ", sticky crude oil " + slid[2]
+                + " (the boat ended at y=" + boatY + ")";
+        if (slid[0] < BOAT_SLIDE_MIN_ON_WATER) {
+            helper.fail("control: the push must carry a boat on water at least " + BOAT_SLIDE_MIN_ON_WATER + ": " + all);
+        }
+        if (slid[1] < slid[0] * BOAT_UNSLOWED_MIN || slid[1] > slid[0] * BOAT_UNSLOWED_MAX) {
+            helper.fail("with oilIsSticky off a boat on crude oil must slide as far as on water (" + BOAT_UNSLOWED_MIN
+                    + " to " + BOAT_UNSLOWED_MAX + " of it): " + all);
+        }
+        if (slid[2] < slid[0] * BOAT_SLOWED_MIN || slid[2] > slid[0] * BOAT_SLOWED_MAX) {
+            helper.fail("with oilIsSticky on a boat on crude oil must slide " + BOAT_SLOWED_MIN + " to "
+                    + BOAT_SLOWED_MAX + " of its slide on water: " + all);
+        }
+    }
+
+    /** The least a boat must slide on water for the push to count (about 0.8 expected). */
+    private static final double BOAT_SLIDE_MIN_ON_WATER = 0.5;
+    /** How much of its slide on water a boat on un-sticky oil keeps (1 expected) and a boat on sticky oil keeps
+     *  (about 0.56 expected: half the top speed, over a window too short for the full halving). Both windows are
+     *  two-sided, so a drag much stronger than the halving fails as well as none. */
+    private static final double BOAT_UNSLOWED_MIN = 0.9;
+    private static final double BOAT_UNSLOWED_MAX = 1.1;
+    private static final double BOAT_SLOWED_MIN = 0.45;
+    private static final double BOAT_SLOWED_MAX = 0.67;
 
     /**
      * Pins crude oil's deliberate non-water-like configuration (the {@code waterLike} flag in

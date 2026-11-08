@@ -6,6 +6,8 @@
 package buildcraft.platform.neoforge;
 
 //? if neoforge {
+import javax.annotation.Nullable;
+
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
@@ -17,6 +19,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.FluidProperties;
 import buildcraft.platform.FluidServices;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCHolder;
@@ -47,6 +50,12 @@ public final class NeoForgeFluids implements FluidServices {
     @Override
     public int viscosity(Fluid fluid) {
         return fluid.getFluidType().getViscosity();
+    }
+
+    @Override
+    @Nullable
+    public FluidProperties declared(Fluid fluid) {
+        return fluid.getFluidType() instanceof NeoForgeFlowingFluids.Type type ? type.properties() : null;
     }
 
     @Override

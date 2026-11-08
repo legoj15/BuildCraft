@@ -29,6 +29,8 @@ public final class BCNeoForgeEntrypoint {
         // BuildCraft's only RegisterCapabilitiesEvent listener on this bus, which runs the common init's listeners in
         // the order it adds them (each subsystem used to add its own here, in that same order).
         modEventBus.addListener(RegisterCapabilitiesEvent.class, CapabilityListeners::fire);
+        // The boat drag has no loader-neutral hook (Fabric takes it from a boat mixin), so it is registered here.
+        NeoForgeBoatFluids.register();
 
         BCCore.init();
         if (Platform.loader().isPhysicalClient()) {

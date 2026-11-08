@@ -276,7 +276,8 @@ public class BCEnergyConfig {
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         oilIsSticky = builder
-                .comment("If true, oil source blocks slow down entities standing or moving through them")
+                .comment("If true, oil source blocks slow down entities standing or moving through them,",
+                         "and boats sail at half speed on oil and fuel")
                 .define("oilIsSticky", false);
     }
 

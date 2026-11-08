@@ -17,8 +17,8 @@ import net.minecraft.sounds.SoundEvent;
  * {@code BaseFlowingFluid} flow parameters; Fabric: the fluid pair plus its {@code FluidVariantAttributeHandler}).
  *
  * <p>Units follow NeoForge's {@code FluidType}: density in kg/m³ (water 1000; zero or less is lighter than air),
- * viscosity in its arbitrary unit (water 1000, lava 6000), temperature in kelvin (water 300). {@link #motionScale} is
- * read on every use, so it may follow a config value.
+ * viscosity in its arbitrary unit (water 1000, lava 6000), temperature in kelvin (water 300). {@link #motionScale} and
+ * {@link #boatSpeed} are read on every use, so they may follow a config value.
  *
  * @param density             density; {@link #lighterThanAir()} when zero or negative
  * @param viscosity           viscosity (water 1000)
@@ -29,7 +29,11 @@ import net.minecraft.sounds.SoundEvent;
  * @param canExtinguish       whether it puts out burning entities
  * @param canConvertToSource  whether two sources make a third (water's infinite-source rule)
  * @param waterLike           whether entities in it count as in water (1.21.10+ on NeoForge; ignored on 1.21.1)
+ * @param supportsBoating     whether a boat floats on it (NeoForge: {@code canBoatInFluid}; Fabric: whether its boat
+ *                            mixin lets vanilla's water-tag boat tests count the fluid)
  * @param motionScale         the scalar applied to the flow vector carrying an entity along a current (water 0.014)
+ * @param boatSpeed           the factor on a boat's top speed on it (water 1; see {@link BoatFluidMotion}), for a fluid
+ *                            that {@link #supportsBoating}
  * @param bucketFill          the sound a bucket makes picking it up, or null for none
  * @param bucketEmpty         the sound a bucket makes pouring it out, or null for none
  * @param slopeFindDistance   how far the flowing form looks for a slope (water 4)
@@ -38,7 +42,8 @@ import net.minecraft.sounds.SoundEvent;
  */
 public record FluidProperties(int density, int viscosity, int temperature, boolean canSwim, boolean canDrown,
         boolean canPushEntity, boolean canExtinguish, boolean canConvertToSource, boolean waterLike,
-        DoubleSupplier motionScale, @Nullable SoundEvent bucketFill, @Nullable SoundEvent bucketEmpty,
+        boolean supportsBoating, DoubleSupplier motionScale, DoubleSupplier boatSpeed,
+        @Nullable SoundEvent bucketFill, @Nullable SoundEvent bucketEmpty,
         int slopeFindDistance, int levelDecreasePerBlock, int tickRate) {
 
     /** Whether the fluid rises rather than falls (NeoForge: {@code FluidType#isLighterThanAir}, density at most 0). */
@@ -63,7 +68,9 @@ public record FluidProperties(int density, int viscosity, int temperature, boole
         private boolean canExtinguish = false;
         private boolean canConvertToSource = false;
         private boolean waterLike = false;
+        private boolean supportsBoating = false;
         private DoubleSupplier motionScale = () -> 0.014D;
+        private DoubleSupplier boatSpeed = () -> 1.0D;
         private SoundEvent bucketFill;
         private SoundEvent bucketEmpty;
         private int slopeFindDistance = 4;
@@ -117,8 +124,18 @@ public record FluidProperties(int density, int viscosity, int temperature, boole
             return this;
         }
 
+        public Builder supportsBoating(boolean supportsBoating) {
+            this.supportsBoating = supportsBoating;
+            return this;
+        }
+
         public Builder motionScale(DoubleSupplier motionScale) {
             this.motionScale = motionScale;
+            return this;
+        }
+
+        public Builder boatSpeed(DoubleSupplier boatSpeed) {
+            this.boatSpeed = boatSpeed;
             return this;
         }
 
@@ -145,8 +162,8 @@ public record FluidProperties(int density, int viscosity, int temperature, boole
 
         public FluidProperties build() {
             return new FluidProperties(density, viscosity, temperature, canSwim, canDrown, canPushEntity,
-                    canExtinguish, canConvertToSource, waterLike, motionScale, bucketFill, bucketEmpty,
-                    slopeFindDistance, levelDecreasePerBlock, tickRate);
+                    canExtinguish, canConvertToSource, waterLike, supportsBoating, motionScale, boatSpeed,
+                    bucketFill, bucketEmpty, slopeFindDistance, levelDecreasePerBlock, tickRate);
         }
     }
 }

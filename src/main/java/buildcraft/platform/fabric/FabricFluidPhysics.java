@@ -28,8 +28,9 @@ import buildcraft.platform.FluidProperties;
  * deeper than its jump threshold (any other fluid is judged by the goal's own floatable tag, as vanilla does);</li>
  * <li>a dropped item bobs in any BuildCraft fluid deeper than a tenth of a block, water-like or not (NeoForge's
  * {@code FluidType.setItemMovement} in {@code ItemEntity.tick}; {@code ItemEntityMixin});</li>
- * <li>a boat floats on none of them, as NeoForge's {@code canBoatInFluid} is off for BuildCraft's fluid types
- * ({@code AbstractBoatMixin});</li>
+ * <li>a boat floats on a BuildCraft fluid only where {@link FluidProperties#supportsBoating} is set, as NeoForge's
+ * {@code canBoatInFluid} answers from the fluid type (every liquid, no gas; {@code AbstractBoatMixin}), and sails on a
+ * sticky one at its {@link FluidProperties#boatSpeed} through {@link buildcraft.platform.BoatFluidMotion};</li>
  * <li>it drowns with its eyes in a fluid whose {@link FluidProperties#canDrown} is set ({@code onLivingBreathe});</li>
  * <li>a current pushes it only where {@link FluidProperties#canPushEntity} is set, scaled by that fluid's own
  * {@link FluidProperties#motionScale} rather than water's 0.014 (NeoForge's per-type current accumulators);</li>
@@ -73,10 +74,14 @@ public final class FabricFluidPhysics {
         /^* Whether the entity is in {@code fluid}'s kind (either form), NeoForge's {@code isInFluidType}. *^/
         boolean buildcraft$inKindOf(FluidProperties fluid);
 
-        /^* Whether the entity's eyes are in a water-tag fluid that is not BuildCraft's: the only kind a boat floats on
-         *  (NeoForge's {@code canBoatInFluid}) and the only kind that throws a rider off a {@code dismounts_underwater}
-         *  mount (NeoForge's {@code canBeRiddenUnderFluidType}). *^/
+        /^* Whether the entity's eyes are in a fluid a boat floats on (NeoForge's {@code canBoatInFluid}): a water-tag
+         *  fluid that is not BuildCraft's, or a BuildCraft fluid that {@link FluidProperties#supportsBoating}. *^/
         boolean buildcraft$eyeInBoatableWater();
+
+        /^* Whether the entity's eyes are in a water-tag fluid that is not BuildCraft's: the only kind that throws a rider
+         *  off a {@code dismounts_underwater} mount (NeoForge's {@code canBeRiddenUnderFluidType}, true for every fluid
+         *  type but water, whether or not boats float on it). *^/
+        boolean buildcraft$eyeInForeignWater();
 
         /^* Whether the entity's eyes are in a fluid it can drown in. *^/
         boolean buildcraft$eyeInDrowningFluid();
@@ -101,6 +106,12 @@ public final class FabricFluidPhysics {
     public static boolean canSwimIn(Holder<Fluid> fluid, TagKey<Fluid> floatable) {
         FluidProperties declared = FabricFlowingFluids.declared(fluid.value());
         return declared != null ? declared.canSwim() : fluid.is(floatable);
+    }
+
+    /^* Whether a boat floats on a water-tag fluid: any fluid but a BuildCraft one that declares no boating (a gas). *^/
+    public static boolean boatsFloatOn(Fluid fluid) {
+        FluidProperties declared = FabricFlowingFluids.declared(fluid);
+        return declared == null || declared.supportsBoating();
     }
 
     /^* Whether an entity can drown with its eyes in a tracked fluid: its declared flag, else the water tag. *^/

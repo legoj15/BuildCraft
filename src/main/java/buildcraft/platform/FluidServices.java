@@ -5,6 +5,8 @@
  */
 package buildcraft.platform;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
@@ -37,6 +39,10 @@ public interface FluidServices {
 
     /** The fluid's viscosity in NeoForge's unit (water 1000, lava 6000). */
     int viscosity(Fluid fluid);
+
+    /** The properties a BuildCraft fluid (either form) was registered with, or null for any other fluid. */
+    @Nullable
+    FluidProperties declared(Fluid fluid);
 
     /** Whether the fluid rises rather than falls (a gas). */
     boolean isLighterThanAir(Fluid fluid);

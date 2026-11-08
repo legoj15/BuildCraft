@@ -260,7 +260,10 @@ public class BCEnergyFluids {
                         .canPushEntity(true)
                         .canDrown(true)
                         .waterLike(waterLike)
+                        // A gas rises, so it cannot hold a boat up; every liquid does, whatever its heat.
+                        .supportsBoating(!gaseous)
                         .motionScale(BCEnergyFluids::motionScale)
+                        .boatSpeed(BCEnergyFluids::boatSpeed)
                         .bucketSounds(SoundEvents.BUCKET_FILL, SoundEvents.BUCKET_EMPTY)
                         .slopeFindDistance(flow[0])
                         .levelDecreasePerBlock(flow[1])
@@ -353,6 +356,18 @@ public class BCEnergyFluids {
             return 0.007D; // sticky: sluggish, ~half of water's current
         }
         return 0.012D; // dense oil: a slightly weaker current than water (0.014)
+    }
+
+    /**
+     * The factor on a boat's top speed on any energy fluid (water 1): the sticky option halves it, as it halves the
+     * current ({@link #motionScale}). Read on every use, so the config may change it at runtime; the common
+     * {@code BoatFluidMotion} turns it into a drag on both loaders.
+     */
+    private static double boatSpeed() {
+        if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+            return 0.5D; // sticky: a boat sails at half the speed it does on water
+        }
+        return 1.0D;
     }
 
     // ─── Fluid behaviour ──────────────────────────────────────────────

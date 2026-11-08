@@ -1,4 +1,4 @@
-"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft, plus a Fabric node (`26.3-fabric`, #98) that builds all of it into its own jar
+"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft, plus a Fabric twin of every supported line (`<line>-fabric`, #98, #170), each building all of it into its own jar
 
 The project is a mix of Java 25 and Java 21 out of necessity.
 

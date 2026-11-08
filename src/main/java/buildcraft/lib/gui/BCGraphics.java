@@ -310,6 +310,7 @@ public final class BCGraphics {
             net.minecraft.util.FastColor.ARGB32.alpha(argb) / 255.0F);
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blitSprite(sprite, x, y, width, height);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         raw.setColor(1.0F, 1.0F, 1.0F, 1.0F);*/
         //?}
     }

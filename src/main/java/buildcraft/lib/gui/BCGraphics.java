@@ -231,12 +231,18 @@ public final class BCGraphics {
     // TextureAtlasSprite is drawn via blit(x, y, blitOffset, w, h, sprite[, r, g, b, a]). The region
     // blit overloads order args (x, y, width, height, u, v, regionW, regionH, texW, texH) — width/height
     // come BEFORE u/v on 1.21.1 (reverse of modern); the plain (no-region) overload keeps u/v first.
+    // The untinted sprite blits do not blend on 1.21.1 either (only the tinted overload does): statement, gate and
+    // engine-ledger icons would draw their clear pixels solid.
     public void blitSprite(TextureAtlasSprite sprite, int x, int y, int width, int height) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(x, y, 0, width, height, sprite);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blitSprite(Identifier texture, int x, int y, int width, int height) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blitSprite(texture, x, y, width, height);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blitSprite(TextureAtlasSprite sprite, int x, int y, int width, int height, int color) {

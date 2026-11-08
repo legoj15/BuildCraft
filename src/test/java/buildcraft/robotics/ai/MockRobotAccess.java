@@ -331,9 +331,17 @@ public class MockRobotAccess implements IRobotAccess {
 
     // -- zones --
 
+    private IZone zoneToWork;
+
+    /** The zone a work search is held to; none (the whole level) unless a test sets one. Public because the board
+     *  tests in {@code buildcraft.robotics.boards} drive the boards that read it. */
+    public void setZoneToWork(IZone zone) {
+        zoneToWork = zone;
+    }
+
     @Override
     public IZone getZoneToWork() {
-        return null;
+        return zoneToWork;
     }
 
     private IZone zoneToLoadUnload;

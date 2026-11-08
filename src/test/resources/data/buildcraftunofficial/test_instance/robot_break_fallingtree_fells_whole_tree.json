@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_break_fallingtree_fells_whole_tree",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1210,
+    "setup_ticks": 0,
+    "required": true
+}

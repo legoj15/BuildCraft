@@ -104,7 +104,9 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
      *  and worked it unreserved. */
     @Override
     public void preempt(AIRobot ai) {
-        blockFound.preempt(this, ai);
+        if (blockFound.preempt(this, ai)) {
+            flightFailed = true; // a reloaded flight lost its block to another robot: found, then lost
+        }
     }
 
     /** Reserves the found block (the search's {@code takeResource()}) and takes it as this AI's job; the caller
@@ -147,7 +149,7 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
                     terminate();
                 }
             } else {
-                flightFailed = searchAI.success();
+                flightFailed = searchAI.success(); // true only when the search found one and the claim was lost
                 terminate();
             }
         } else if (ai instanceof AIRobotGotoBlock gotoAI) {

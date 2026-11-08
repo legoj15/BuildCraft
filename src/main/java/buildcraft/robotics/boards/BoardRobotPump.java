@@ -60,8 +60,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
      *  "no station, no filter" — pump anything. */
     private IFluidFilter fluidFilter;
 
-    /** Blocks a protection mod refused the pump AI ({@link #pickupRefusals} holds the refused pickups), skipped by the search
-     *  while they stay unchanged. Keyed on the two players the AI asks for (see {@code RobotProtection}): the
+    /** Blocks a protection mod refused the pump AI ({@link #pickupRefusals} holds the refused pickups), skipped by
+     *  the search while they stay unchanged. Keyed on the two players the AI asks for (see {@code RobotProtection}): the
      *  identity the robot acts as and its home station's owner. A refusal says nothing about any other pair.
      *  Policy {@link RefusalMemory#DRAIN}. Transient: a reloaded board asks once more. */
     private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
@@ -167,7 +167,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPumpBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached() ? RobotSleepReason.RETRYING
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING
                         : skippedPickup ? RobotSleepReason.WORK_FAILING
                         : skippedRefused ? RobotSleepReason.PROTECTED : RobotSleepReason.NO_WORK));
             }

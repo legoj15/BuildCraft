@@ -218,8 +218,8 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             }
         } else if (ai instanceof AIRobotRecharge) {
             if (!ai.success()) {
-                // No free power station: AIRobotRecharge reports the failure and ends at once, which would
-                // leave this board idle and start the same doomed search again on the very next cycle,
+                // No usable power station (none at all, or one busy or out of reach): AIRobotRecharge reports the
+                // failure and ends at once, which would leave this board idle and start the same doomed search again on the very next cycle,
                 // forever. Go home and sleep like every other failure path — AIRobotMain's own recharge
                 // preempt (below SAFETY_POWER) keeps retrying on its 120-tick cooldown meanwhile.
                 startDelegateAI(new AIRobotGotoSleep(robot,

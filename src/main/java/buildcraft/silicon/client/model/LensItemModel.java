@@ -49,9 +49,10 @@ import buildcraft.silicon.item.ItemPluggableLens;
  * BIGGER set; the lens never did.
  *
  * <p>PlugBakerLens emits geometry in WEST-facing orientation (thin axis on X), the way 1.12.2 baked the lens item,
- * and every context but the inventory draws that, with the context's transform on the item layer (on the pose on
- * 1.21.1). The inventory icon is its own quad set: the lens turned NORTH (face on) and scaled 1.8 about the cell
- * centre, with no display transform.
+ * and every context but the inventory and the hands draws that, with the context's transform on the item layer (on the
+ * pose on 1.21.1). The inventory icon is its own quad set: the lens turned NORTH (face on) and scaled 1.8 about the
+ * cell centre, with no display transform. So is each hand: the lens turned NORTH with the hand's pose baked in
+ * ({@link PlugItemTransforms#bakeHandPose}).
  */
 //? if >=1.21.10 {
 public class LensItemModel implements ItemModel {
@@ -67,8 +68,8 @@ public class LensItemModel implements ItemModel {
     /** The inventory icon's size, baked into its quads. */
     private static final float GUI_SCALE = 1.8f;
 
-    /** {@code gui}: the inventory icon's quads; otherwise the WEST-facing ones every other context transforms. */
-    private record CacheKey(LensKey lensKey, boolean gui) {}
+    /** {@code quadSet}: {@link PlugItemTransforms#quadSet} of the display context. */
+    private record CacheKey(LensKey lensKey, ItemDisplayContext quadSet) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
@@ -78,14 +79,14 @@ public class LensItemModel implements ItemModel {
 
             // Bake cutout quads (frame) — set white vertex colors so texture shows unmodified
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), true)) {
-                transformForItem(mq, key.gui(), true);
+                transformForItem(mq, key.quadSet(), true);
                 quads.add(mq.toBakedItem());
             }
 
             // Bake translucent quads (coloured glass overlay) — use toBakedTranslucent so the
             // quad is routed to the correct render layer and vertex colours are preserved via BakedColors
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), false)) {
-                transformForItem(mq, key.gui(), false);
+                transformForItem(mq, key.quadSet(), false);
                 quads.add(mq.toBakedTranslucent());
             }
 
@@ -94,20 +95,24 @@ public class LensItemModel implements ItemModel {
 
     /**
      * Readies a WEST-facing PlugBakerLens quad for the item: for the inventory icon, turns it NORTH and scales it about
-     * the cell centre; then realigns normal and face with the geometry and resets vertex colours for cutout (frame)
-     * quads.
+     * the cell centre; for a hand, turns it NORTH and bakes the hand's pose in; then realigns normal and face with the
+     * geometry and resets vertex colours for cutout (frame) quads.
      *
      * @param resetColors true for cutout quads (white vertex colors so texture is unmodified),
      *                    false for translucent quads (preserve vertex colors set by tinting)
      */
-    private static void transformForItem(MutableQuad mq, boolean gui, boolean resetColors) {
+    private static void transformForItem(MutableQuad mq, ItemDisplayContext quadSet, boolean resetColors) {
         mq.setShade(false);
-        if (gui) {
+        if (quadSet != ItemDisplayContext.NONE) {
             // Rotate from WEST -> NORTH so the lens face points at the camera
             mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
-            mq.translatef(-0.5f, -0.5f, -0.5f);
-            mq.scalef(GUI_SCALE);
-            mq.translatef(0.5f, 0.5f, 0.5f);
+            if (quadSet == ItemDisplayContext.GUI) {
+                mq.translatef(-0.5f, -0.5f, -0.5f);
+                mq.scalef(GUI_SCALE);
+                mq.translatef(0.5f, 0.5f, 0.5f);
+            } else {
+                PlugItemTransforms.bakeHandPose(mq, quadSet);
+            }
         }
         mq.setCalculatedNormal();
         // NeoForge lights an item quad by its face and Fabric by the geometry, so a face that disagrees with the
@@ -152,7 +157,7 @@ public class LensItemModel implements ItemModel {
                        @Nullable ItemOwner owner, int seed) {
         DyeColor colour = ItemPluggableLens.getColour(stack);
         boolean isFilter = ItemPluggableLens.isFilter(stack);
-        CacheKey key = new CacheKey(new LensKey(colour, isFilter), displayContext == ItemDisplayContext.GUI);
+        CacheKey key = new CacheKey(new LensKey(colour, isFilter), PlugItemTransforms.quadSet(displayContext));
 
         List<BakedQuad> quads = cache.getUnchecked(key);
         if (quads.isEmpty()) {
@@ -199,10 +204,10 @@ public class LensItemModel implements ItemModel {
     }
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the lens
-    // colour + filter flag per-stack, applyTransform() picks the inventory or the WEST-facing quad set (the same cache
-    // the modern update() uses), puts the context's transform on the pose and wraps the quads in a fixed-quad item model
-    // (ClientModels.fixedQuadItemModel) on the translucent item sheet (opaque frame stays opaque at alpha 255; coloured
-    // glass blends).
+    // colour + filter flag per-stack, applyTransform() picks the context's quad set (the same cache the modern update()
+    // uses), puts the context's transform on the pose (none for the inventory and the hands, whose quads carry theirs)
+    // and wraps the quads in a fixed-quad item model (ClientModels.fixedQuadItemModel) on the translucent item sheet
+    // (opaque frame stays opaque at alpha 255; coloured glass blends).
     // The modern setAnimated() bookkeeping is unnecessary here: 1.21.1's classic ItemRenderer GUI
     // path re-renders each frame, so the clear-lens water overlay animates without an explicit flag.
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
@@ -230,7 +235,7 @@ public class LensItemModel implements ItemModel {
             return this;
         }
         List<BakedQuad> quads = cache.getUnchecked(
-                new CacheKey(resolvedLens, displayContext == ItemDisplayContext.GUI));
+                new CacheKey(resolvedLens, PlugItemTransforms.quadSet(displayContext)));
         if (quads.isEmpty()) {
             return this;
         }
@@ -254,7 +259,7 @@ public class LensItemModel implements ItemModel {
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return TRANSFORMS.groundOnly;
+        return TRANSFORMS.reportedTransforms;
     }
 
     @Override

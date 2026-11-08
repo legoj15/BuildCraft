@@ -23,18 +23,22 @@ import net.minecraft.client.resources.model.cuboid.ItemTransform;
 //?}
 import net.minecraft.world.item.ItemDisplayContext;
 
+import buildcraft.lib.client.model.MutableQuad;
+
 /**
- * How the gate and lens items sit in a hand, on the ground, on a head, in an item frame and on a shelf: 1.12.2's
+ * How the gate and lens items sit on the ground, on a head, in an item frame and on a shelf: 1.12.2's
  * {@code ModelItemSimple.TRANSFORM_PLUG_AS_ITEM} (the lens, and 1.12.2's other pluggable items) and
  * {@code TRANSFORM_PLUG_AS_ITEM_BIGGER} (the gate: every scale times 1.8), on quads baked the way 1.12.2 baked them,
  * WEST-facing (the plate against the cell's WEST side, its face looking down -X). The engine applies the rotations in
- * X, Y, Z order and mirrors the left-hand entries, exactly as 1.12.2's did, so the numbers are 1.12.2's verbatim
- * (issue #179) except in two places:
+ * X, Y, Z order, exactly as 1.12.2's did, so the numbers are 1.12.2's verbatim (issue #179) except where noted:
  * <ul>
  * <li>The inventory icon has none. It keeps the face-on NORTH quads its model bakes for the GUI alone, which is what
  * 1.12.2's GUI entry ({@code (0, 90, 0)}) showed, at the size the icon has always had.</li>
  * <li>The item frame turns the plug a quarter ({@code (0, -90, 0)}, where 1.12.2 had none), so its face, not its 2/16
  * edge, meets the viewer. 1.12.2's frame entry left the WEST plate edge-on.</li>
+ * <li>The four hand contexts have none either: they keep the poses the port has always drawn ({@link #bakeHandPose}),
+ * baked into face-on NORTH quads of their own. 1.12.2's hand entries on the WEST plate leave it edge-on to the camera
+ * in third person and push it off the bottom of the screen in first person.</li>
  * </ul>
  * A shelf (newer than 1.12.2) takes 1.12.2's GUI entry: it shows an item's SOUTH side, as the inventory does.
  *
@@ -46,20 +50,15 @@ final class PlugItemTransforms {
     /** 1.12.2's gate: {@link #PLUG_AS_ITEM} with every scale times 1.8. */
     static final PlugItemTransforms PLUG_AS_ITEM_BIGGER = new PlugItemTransforms(1.8f);
 
-    private final ItemTransform thirdPersonLeft, thirdPersonRight, firstPersonLeft, firstPersonRight, head, ground,
-        inFrame, onShelf;
+    private final ItemTransform head, ground, inFrame, onShelf;
 
     private PlugItemTransforms(float by) {
-        thirdPersonLeft = of(75, 45, 0, 0, 2.5f, 0, 0.375f * by);
-        thirdPersonRight = of(75, 225, 0, 0, 2.5f, 0, 0.375f * by);
-        firstPersonLeft = of(0, 225, 0, 0, 0, -4, 0.4f * by);
-        firstPersonRight = of(0, 45, 0, 0, 0, -4, 0.4f * by);
         head = of(0, 0, 0, 0, 0, 0, 1f * by);
         ground = of(0, 0, 0, 0, 3, 0, 0.5f * by);
         inFrame = of(0, -90, 0, 0, 0, 0, 0.85f * by);
         onShelf = of(0, 90, 0, 0, 0, 0, 1f * by);
         //? if <1.21.10 {
-        /*groundOnly = groundOnly(ground);*/
+        /*reportedTransforms = groundEntryOnly(ground);*/
         //?}
     }
 
@@ -69,13 +68,48 @@ final class PlugItemTransforms {
             new Vector3f(transX16 / 16f, transY16 / 16f, transZ16 / 16f), new Vector3f(scale, scale, scale));
     }
 
-    /** {@code context}'s transform, or null for the inventory (its own quads) and for contexts with none. */
+    /**
+     * Which quad set {@code context} draws: {@link ItemDisplayContext#GUI} for the inventory icon, the context itself
+     * for a hand (its pose baked in, {@link #bakeHandPose}), and {@link ItemDisplayContext#NONE} for the WEST-facing
+     * quads every other context transforms.
+     */
+    static ItemDisplayContext quadSet(ItemDisplayContext context) {
+        return switch (context) {
+            case GUI, FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND ->
+                context;
+            default -> ItemDisplayContext.NONE;
+        };
+    }
+
+    /**
+     * Bakes a hand context's pose into a NORTH-facing (face-on) plug quad, as the gate and lens items always have:
+     * about the cell centre, rotate X then Y, scale, then translate (1/16 units). The left-hand poses are their own
+     * numbers, not mirrors. Gate and lens share them. The caller then realigns the quad's normal and face with its
+     * geometry ({@link MutableQuad#setCalculatedNormal}, {@link MutableQuad#setFaceFromCalculatedNormal}): the
+     * free-angle turns leave the face behind, and the 1.21.11+ and 26.x item draws light a quad by its face (#176).
+     */
+    static void bakeHandPose(MutableQuad mq, ItemDisplayContext hand) {
+        float rotX, rotY, ty, tz, scale;
+        switch (hand) {
+            case FIRST_PERSON_RIGHT_HAND -> { rotX = 0; rotY = 45; ty = 0; tz = -4; scale = 0.72f; }
+            case FIRST_PERSON_LEFT_HAND -> { rotX = 0; rotY = 225; ty = 0; tz = -4; scale = 0.72f; }
+            case THIRD_PERSON_RIGHT_HAND -> { rotX = 75; rotY = 225; ty = 2.5f; tz = 0; scale = 0.675f; }
+            case THIRD_PERSON_LEFT_HAND -> { rotX = 75; rotY = 45; ty = 2.5f; tz = 0; scale = 0.675f; }
+            default -> throw new IllegalArgumentException("not a hand context: " + hand);
+        }
+        mq.translatef(-0.5f, -0.5f, -0.5f);
+        if (rotX != 0f) {
+            mq.rotateX((float) Math.toRadians(rotX));
+        }
+        mq.rotateY((float) Math.toRadians(rotY));
+        mq.scalef(scale);
+        mq.translatef(0.5f, 0.5f, 0.5f);
+        mq.translatef(0, ty / 16f, tz / 16f);
+    }
+
+    /** {@code context}'s transform, or null for the inventory and the hands (their own quads) and contexts with none. */
     @Nullable ItemTransform forContext(ItemDisplayContext context) {
         return switch (context) {
-            case THIRD_PERSON_LEFT_HAND -> thirdPersonLeft;
-            case THIRD_PERSON_RIGHT_HAND -> thirdPersonRight;
-            case FIRST_PERSON_LEFT_HAND -> firstPersonLeft;
-            case FIRST_PERSON_RIGHT_HAND -> firstPersonRight;
             case HEAD -> head;
             case GROUND -> ground;
             case FIXED -> inFrame;
@@ -109,14 +143,14 @@ final class PlugItemTransforms {
 
     // What the item model reports as its transforms. Vanilla's ItemEntityRenderer reads the ground entry off the model it
     // resolved (it lifts a dropped item by 0.25 * the ground scale, and spaces a stack by it). Nothing else is listed:
-    // apply() has already put the real transform on the pose, and the model applyTransform answers reports none, so no
-    // transform is applied twice.
+    // apply() has already put the real transform on the pose (a hand's is in its quads, so apply() adds none), and the
+    // model applyTransform answers reports none, so no transform is applied twice.
     @SuppressWarnings("deprecation") // NeoForge deprecates this constructor for its modded-transforms one; vanilla (Fabric) does not
-    private static ItemTransforms groundOnly(ItemTransform ground) {
+    private static ItemTransforms groundEntryOnly(ItemTransform ground) {
         ItemTransform none = ItemTransform.NO_TRANSFORM;
         return new ItemTransforms(none, none, none, none, none, none, ground, none);
     }
 
-    final ItemTransforms groundOnly;*/
+    final ItemTransforms reportedTransforms;*/
     //?}
 }

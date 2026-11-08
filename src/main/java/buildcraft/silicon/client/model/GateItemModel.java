@@ -44,10 +44,11 @@ import buildcraft.silicon.client.model.plug.PlugGateBaker;
  * TRANSFORM_PLUG_AS_ITEM_BIGGER (see {@link PlugItemTransforms}, and
  * common/buildcraft/lib/client/model/ModelItemSimple.java on the 8.0.x-1.12.2 branch).
  *
- * <p>Two quad sets per variant. The inventory icon is PlugGateBaker's NORTH-facing gate scaled 1.8 about the cell
- * centre, face on and with no display transform. Everywhere else the gate is turned to face WEST, as 1.12.2 baked it,
- * and the context's transform goes on the item layer (on the pose on 1.21.1), so the engine applies it the way 1.12.2's
- * did.
+ * <p>Quad sets per variant ({@link PlugItemTransforms#quadSet}). The inventory icon is PlugGateBaker's NORTH-facing
+ * gate scaled 1.8 about the cell centre, face on and with no display transform. Each hand bakes its pose into the
+ * NORTH-facing gate ({@link PlugItemTransforms#bakeHandPose}), also with no display transform. Everywhere else the gate
+ * is turned to face WEST, as 1.12.2 baked it, and the context's transform goes on the item layer (on the pose on
+ * 1.21.1), so the engine applies it the way 1.12.2's did.
  */
 //? if >=1.21.10 {
 public class GateItemModel implements ItemModel {
@@ -60,8 +61,8 @@ public class GateItemModel implements ItemModel {
     /** The inventory icon's size, baked into its quads (1.12.2's GUI scale for the gate). */
     private static final float GUI_SCALE = 1.8f;
 
-    /** {@code gui}: the inventory icon's quads; otherwise the WEST-facing ones every other context transforms. */
-    private record CacheKey(GateVariant variant, boolean gui) {}
+    /** {@code quadSet}: {@link PlugItemTransforms#quadSet} of the display context. */
+    private record CacheKey(GateVariant variant, ItemDisplayContext quadSet) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
@@ -69,14 +70,20 @@ public class GateItemModel implements ItemModel {
             List<BakedQuad> quads = new ArrayList<>();
             for (MutableQuad mq : PlugGateBaker.INSTANCE.bakeForItem(key.variant())) {
                 mq.setShade(false);
-                if (key.gui()) {
+                ItemDisplayContext set = key.quadSet();
+                if (set == ItemDisplayContext.GUI) {
                     mq.translatef(-0.5f, -0.5f, -0.5f);
                     mq.scalef(GUI_SCALE);
                     mq.translatef(0.5f, 0.5f, 0.5f);
-                } else {
+                    mq.setCalculatedNormal();
+                } else if (set == ItemDisplayContext.NONE) {
                     mq.rotate(Direction.NORTH, Direction.WEST, 0.5f, 0.5f, 0.5f);
+                    mq.setCalculatedNormal();
+                } else {
+                    PlugItemTransforms.bakeHandPose(mq, set);
+                    mq.setCalculatedNormal();
+                    mq.setFaceFromCalculatedNormal();
                 }
-                mq.setCalculatedNormal();
                 quads.add(mq.toBakedItem());
             }
             return quads;
@@ -111,7 +118,7 @@ public class GateItemModel implements ItemModel {
             return;
         }
 
-        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(variant, displayContext == ItemDisplayContext.GUI));
+        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(variant, PlugItemTransforms.quadSet(displayContext)));
         if (quads.isEmpty()) {
             return;
         }
@@ -138,9 +145,9 @@ public class GateItemModel implements ItemModel {
     }
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the gate
-    // variant per-stack, applyTransform() picks the inventory or the WEST-facing quad set (the same cache the modern
-    // update() uses), puts the context's transform on the pose and wraps the quads in a fixed-quad item model
-    // (ClientModels.fixedQuadItemModel).
+    // variant per-stack, applyTransform() picks the context's quad set (the same cache the modern update() uses), puts
+    // the context's transform on the pose (none for the inventory and the hands, whose quads carry theirs) and wraps the
+    // quads in a fixed-quad item model (ClientModels.fixedQuadItemModel).
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
         new net.minecraft.client.renderer.block.model.ItemOverrides() {
             @Override
@@ -164,7 +171,7 @@ public class GateItemModel implements ItemModel {
             return this;
         }
         List<BakedQuad> quads = cache.getUnchecked(
-                new CacheKey(resolvedVariant, displayContext == ItemDisplayContext.GUI));
+                new CacheKey(resolvedVariant, PlugItemTransforms.quadSet(displayContext)));
         if (quads.isEmpty()) {
             return this;
         }
@@ -187,7 +194,7 @@ public class GateItemModel implements ItemModel {
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return TRANSFORMS.groundOnly;
+        return TRANSFORMS.reportedTransforms;
     }
 
     @Override

@@ -147,7 +147,7 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
      *  per-face normals, already unit length, so nothing here recomputes them. (createFace's
      *  winding is outward, matching vanilla's FaceInfo, so getCalculatedNormal points the same
      *  way; the darkness once blamed on an "inverted" cross product came from its raw length,
-     *  the face's area, which setCalculatedNormal now normalises.) With unit outward normals
+     *  the face's area, which setCalculatedNormal normalises.) With unit outward normals
      *  the shader gets UP=full / DOWN=half / sides=0.6–0.8 like a vanilla block. */
     private static void addBox(List<MutableQuad> list, float minX, float minY, float minZ,
                                float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, boolean shade) {

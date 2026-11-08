@@ -153,7 +153,11 @@ public final class FabricAdapterTester {
     // wrapper per entity).
     private static void equipmentStorageIsOnePerEntity(GameTestHelper helper) {
         net.minecraft.world.entity.Mob zombie =
+            //? if >=26.2 {
             helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, new BlockPos(4, 2, 2));
+            //?} else {
+            /^helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, new BlockPos(4, 2, 2));
+            ^///?}
         try {
             // Inert: nothing here may tick, and a wandering mob could leave its own arena cell.
             zombie.setNoAi(true);

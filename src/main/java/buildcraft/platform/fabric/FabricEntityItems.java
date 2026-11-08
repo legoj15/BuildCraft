@@ -17,16 +17,26 @@ import com.google.common.collect.MapMaker;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.EntityType;
+//? if >=26.2 {
 import net.minecraft.world.entity.EntityTypes;
+//?}
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+//? if >=1.21.11 {
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+//?} else {
+/^import net.minecraft.world.entity.animal.horse.AbstractHorse;
+^///?}
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
+//?} else {
+/^import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+^///?}
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.item.PlayerInventoryStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.base.SingleStackStorage;
@@ -52,12 +62,16 @@ public final class FabricEntityItems {
             Identifier.fromNamespaceAndPath("buildcraftunofficial", "item_storage"), (Class) Storage.class, Void.class);
 
     static {
-        LOOKUP.registerForTypes((entity, context) -> ContainerStorage.of((Container) entity, null),
+        LOOKUP.registerForTypes((entity, context) -> containerStorage((Container) entity),
                 containerEntities());
+        //? if >=26.2 {
         LOOKUP.registerForType((player, context) -> PlayerInventoryStorage.of(player), EntityTypes.PLAYER);
+        //?} else {
+        /^LOOKUP.registerForType((player, context) -> PlayerInventoryStorage.of(player), EntityType.PLAYER);
+        ^///?}
         LOOKUP.registerFallback((entity, context) -> {
             if (entity instanceof AbstractHorse horse) {
-                return ContainerStorage.of(horse.inventory, null);
+                return containerStorage(horse.inventory);
             } else if (entity instanceof LivingEntity living) {
                 return equipment(living);
             }
@@ -70,8 +84,19 @@ public final class FabricEntityItems {
 
     private FabricEntityItems() {}
 
+    /^* A container's whole storage, no side (Fabric API's {@code ContainerStorage}, {@code InventoryStorage} before
+     *  26.1). *^/
+    private static Storage<ItemVariant> containerStorage(Container container) {
+        //? if >=26.1 {
+        return ContainerStorage.of(container, null);
+        //?} else {
+        /^return InventoryStorage.of(container, null);
+        ^///?}
+    }
+
     private static EntityType<?>[] containerEntities() {
         return new EntityType<?>[] {
+            //? if >=26.2 {
             EntityTypes.ACACIA_CHEST_BOAT,
             EntityTypes.BIRCH_CHEST_BOAT,
             EntityTypes.CHERRY_CHEST_BOAT,
@@ -82,16 +107,37 @@ public final class FabricEntityItems {
             EntityTypes.SPRUCE_CHEST_BOAT,
             EntityTypes.BAMBOO_CHEST_RAFT,
             EntityTypes.PALE_OAK_CHEST_BOAT,
+            //? if >=26.3 {
             EntityTypes.POPLAR_CHEST_BOAT,
+            //?}
             EntityTypes.CHEST_MINECART,
             EntityTypes.HOPPER_MINECART,
+            //?} elif >=1.21.10 {
+            /^EntityType.ACACIA_CHEST_BOAT,
+            EntityType.BIRCH_CHEST_BOAT,
+            EntityType.CHERRY_CHEST_BOAT,
+            EntityType.DARK_OAK_CHEST_BOAT,
+            EntityType.JUNGLE_CHEST_BOAT,
+            EntityType.MANGROVE_CHEST_BOAT,
+            EntityType.OAK_CHEST_BOAT,
+            EntityType.SPRUCE_CHEST_BOAT,
+            EntityType.BAMBOO_CHEST_RAFT,
+            EntityType.PALE_OAK_CHEST_BOAT,
+            EntityType.CHEST_MINECART,
+            EntityType.HOPPER_MINECART,
+            ^///?} else {
+            /^EntityType.CHEST_BOAT,
+            EntityType.CHEST_MINECART,
+            EntityType.HOPPER_MINECART,
+            ^///?}
         };
     }
 
     /^*
      * NeoForge's {@code LivingEntityEquipmentWrapper} hands and humanoid-armour handlers, combined: one slot per
-     * {@link EquipmentSlot} of those types in {@link EquipmentSlot#VALUES} order. A slot takes what the entity can
-     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}), up to the slot's count limit (one
+     * {@link EquipmentSlot} of those types in declaration order. A slot takes what the entity can
+     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}; on 1.21.1 any item, as NeoForge's
+     * wrapper there), up to the slot's count limit (one
      * in an armour slot); the stack is set without side
      * effects while the transaction is open and {@code onEquipItem} runs once the outer transaction commits.
      *
@@ -110,7 +156,7 @@ public final class FabricEntityItems {
     private static Storage<ItemVariant> newEquipment(LivingEntity entity) {
         List<SlotStorage> slots = new ArrayList<>();
         for (EquipmentSlot.Type type : List.of(EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR)) {
-            for (EquipmentSlot slot : EquipmentSlot.VALUES) {
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
                 if (slot.getType() == type) {
                     slots.add(new SlotStorage(entity, slot));
                 }
@@ -144,14 +190,24 @@ public final class FabricEntityItems {
 
         @Override
         protected void setStack(ItemStack stack) {
+            //? if >=1.21.10 {
             // Vanilla's setItemSlot is this plus onEquipItem, which waits for the commit (NeoForge's
             // setItemSlot(slot, stack, insideTransaction = true)).
             entity.equipment.set(slot, stack);
+            //?} else {
+            /^// 1.21.1 keeps equipment per entity class, with no setter that skips onEquipItem: setItemSlot, as NeoForge's
+            // 1.21.1 wrapper sets it (each set, a rollback's too, runs onEquipItem; onFinalCommit adds none).
+            entity.setItemSlot(slot, stack);
+            ^///?}
         }
 
         @Override
         protected boolean canInsert(ItemVariant variant) {
+            //? if >=1.21.10 {
             return entity.isEquippableInSlot(variant.toStack(), slot);
+            //?} else {
+            /^return true; // NeoForge's 1.21.1 wrapper takes any item in any slot
+            ^///?}
         }
 
         @Override
@@ -170,9 +226,11 @@ public final class FabricEntityItems {
 
         @Override
         protected void onFinalCommit() {
+            //? if >=1.21.10 {
             if (original != null) {
                 entity.onEquipItem(slot, original, getStack());
             }
+            //?}
         }
 
         @Override

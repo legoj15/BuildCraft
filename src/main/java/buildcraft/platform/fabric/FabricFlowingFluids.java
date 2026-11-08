@@ -21,10 +21,16 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+//? if >=1.21.11 {
 import net.minecraft.util.Util;
+//?} else {
+/^import net.minecraft.Util;
+^///?}
 import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.InsideBlockEffectType;
+//?}
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
@@ -180,7 +186,11 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
         }
 
         @Override
+        //? if >=1.21.10 {
         protected boolean canConvertToSource(ServerLevel level) {
+        //?} else {
+        /^protected boolean canConvertToSource(Level level) {^/
+        //?}
             return properties.canConvertToSource();
         }
 
@@ -220,6 +230,7 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
             return properties.tickRate();
         }
 
+        //? if >=1.21.10 {
         @Override
         protected void entityInside(Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier effects) {
             // NeoForge's Fluid.entityInside, with the type's canExtinguish (water's own override is WaterFluid's).
@@ -227,6 +238,9 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
                 effects.apply(InsideBlockEffectType.EXTINGUISH);
             }
         }
+        //?}
+        // 1.21.1 has no Fluid.entityInside: NeoForge reads canExtinguish in the entity's fluid tick instead, and no
+        // BuildCraft fluid sets it, so nothing is lost there.
 
         @Override
         protected float getExplosionResistance() {
@@ -250,6 +264,7 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
         }
 
         @Override
+        //? if >=1.21.10 {
         public void tick(ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
             if (behaviour.beforeTick(this, level, pos, fluidState)) {
                 return;
@@ -257,9 +272,22 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
             super.tick(level, pos, state, fluidState);
             behaviour.afterTick(this, level, pos, fluidState);
         }
+        //?} else {
+        /^public void tick(Level level, BlockPos pos, FluidState fluidState) {
+            if (behaviour.beforeTick(this, level, pos, fluidState)) {
+                return;
+            }
+            super.tick(level, pos, fluidState);
+            behaviour.afterTick(this, level, pos, fluidState);
+        }
+        ^///?}
 
         @Override
+        //? if >=1.21.10 {
         protected Map<Direction, FluidState> getSpread(ServerLevel level, BlockPos pos, BlockState state) {
+        //?} else {
+        /^protected Map<Direction, FluidState> getSpread(Level level, BlockPos pos, BlockState state) {^/
+        //?}
             Map<Direction, FluidState> map = new EnumMap<>(super.getSpread(level, pos, state));
             behaviour.adjustSpread(this, level, pos, state, map);
             return map;
@@ -277,7 +305,11 @@ public final class FabricFlowingFluids implements BCFluidRegistrar {
 
         @Override
         public Map<Direction, FluidState> spreadTargets(Level level, BlockPos pos, BlockState state) {
+            //? if >=1.21.10 {
             return getSpread((ServerLevel) level, pos, state);
+            //?} else {
+            /^return getSpread(level, pos, state);
+            ^///?}
         }
 
         @Override

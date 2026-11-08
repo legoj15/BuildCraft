@@ -10,8 +10,6 @@ package buildcraft.platform.fabric;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.item.crafting.RecipeMap;
 
 import buildcraft.platform.CraftingServices;
 
@@ -22,9 +20,12 @@ public final class FabricCraftingServices implements CraftingServices {
         return DefaultCustomIngredients.components(Ingredient.of(stack.getItem()), stack.getComponentsPatch());
     }
 
+    //? if >=1.21.10 {
     @Override
-    public RecipeMap recipeMap(RecipeManager manager) {
+    public net.minecraft.world.item.crafting.RecipeMap recipeMap(
+            net.minecraft.world.item.crafting.RecipeManager manager) {
         return manager.recipes;
     }
+    //?}
 }
 *///?}

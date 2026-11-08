@@ -99,9 +99,16 @@ abstract class PlayerMixin {
     }
 
     // A spectator's click opens a menu and asks nothing, as on NeoForge.
+    // Before 26.1 interactOn has no hit location (Fabric API's own plain-interact path passes no hit result either).
     @Inject(method = "interactOn", at = @At("HEAD"), cancellable = true)
+    //? if >=26.1 {
     private void buildcraft$fakePlayerEntityInteract(Entity entity, InteractionHand hand, Vec3 location,
             CallbackInfoReturnable<InteractionResult> cir) {
+    //?} else {
+    /^private void buildcraft$fakePlayerEntityInteract(Entity entity, InteractionHand hand,
+            CallbackInfoReturnable<InteractionResult> cir) {
+        Vec3 location = null;
+    ^///?}
         Player self = (Player) (Object) this;
         if (self instanceof FakePlayer && !self.isSpectator()) {
             InteractionResult refused = FabricGameHooks.fireFakePlayerEntityInteract(self, entity, hand, location);

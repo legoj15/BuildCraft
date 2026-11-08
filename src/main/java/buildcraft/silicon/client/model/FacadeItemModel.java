@@ -53,7 +53,7 @@ import buildcraft.silicon.plug.FacadePhasedState;
 //? if >=1.21.10 {
 public class FacadeItemModel implements ItemModel {
 //?} else {
-/*public class FacadeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
+/*public class FacadeItemModel implements buildcraft.platform.client.ClassicItemModel {*/
 //?}
 
     /** The item's quads, both passes of the in-world baker (the cutout pass first, the translucent second), and
@@ -149,13 +149,14 @@ public class FacadeItemModel implements ItemModel {
         renderState.appendModelIdentityElement(key);
 
         var layer = renderState.newLayer();
-        //? if >=26.3 {
-        // 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits. The
-        // platform hands it over so the quads keep their vertex colours on Fabric too.
+        //? if >=1.21.11 {
+        // Through the platform, so the quads keep their vertex colours on Fabric too (26.3 also dropped
+        // prepareQuadList(): a layer there takes one ItemQuads, pre-split into solid/translucent submits).
         buildcraft.platform.client.ClientPlatform.models().setItemQuads(layer, quads);
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
+        buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
         // 1.21.10/11: the item layer needs one explicit render type (26.1 infers it per quad from its
         // MaterialInfo). Matching vanilla BlockModelWrapper: the cutout block sheet, or the translucent block-item
         // sheet when the facade's block draws translucent (1.21.10 calls it translucentItemSheet).
@@ -208,9 +209,10 @@ public class FacadeItemModel implements ItemModel {
         }
         // The item's particle is the facade block's own (what the item shows), not the first quad's: a translucent-only
         // facade's cutout pass holds just the plug connector, whose sprite is the pipe plug's.
-        net.minecraft.client.renderer.texture.TextureAtlasSprite particle = net.minecraft.client.Minecraft.getInstance()
-                .getModelManager().getBlockModelShaper().getBlockModel(resolvedState)
-                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+        net.minecraft.client.resources.model.BakedModel particleModel = net.minecraft.client.Minecraft.getInstance()
+                .getModelManager().getBlockModelShaper().getBlockModel(resolvedState);
+        net.minecraft.client.renderer.texture.TextureAtlasSprite particle =
+                buildcraft.platform.client.ClientPlatform.extensions().modelParticle(particleModel);
         // A translucent facade takes the sheet vanilla 1.21.1 gives a translucent block item (cull + sorted).
         return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
                 quads, particle, false, baked.translucent()
@@ -218,12 +220,20 @@ public class FacadeItemModel implements ItemModel {
                         : net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 
+    // Vanilla's quad getter: NeoForge deprecates it for its model-data overload, which falls back here.
     @Override
+    @SuppressWarnings("deprecation")
     public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
-            @Nullable Direction side, net.minecraft.util.RandomSource rand,
-            net.neoforged.neoforge.model.data.ModelData extraData,
-            net.minecraft.client.renderer.rendertype.RenderType renderType) {
+            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand) {
         return List.of();
+    }
+
+    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
+    // getter; on Fabric it is abstract).
+    @Override
+    @SuppressWarnings("deprecation")
+    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
     }
 
     @Override
@@ -250,8 +260,8 @@ public class FacadeItemModel implements ItemModel {
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
-                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+        return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(
+                net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel());
     }*/
     //?}
 }

@@ -6,15 +6,17 @@
 package buildcraft.platform.fabric.gametest.mixin;
 
 //? if fabric {
-/*import java.util.concurrent.TimeUnit;
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
+import java.util.concurrent.TimeUnit;
 
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl;
+//?}
 
 /^*
  * Closes a start-up race in Fabric API's client game-test runner (the game-test mod only, never the shipped jar; #119).
@@ -27,8 +29,11 @@ import net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl;
  *
  * <p>This holds the client thread at the end of {@code runTestThread} until the test thread has registered, so its
  * first phase is always the one the client thread arrives at next. The test thread's registration needs nothing from
- * the client thread, so the wait cannot itself deadlock; it gives up after {@link #MAX_WAIT_SECONDS} seconds anyway.
+ * the client thread, so the wait cannot itself deadlock; it gives up after {@code MAX_WAIT_SECONDS} seconds anyway.
+ *
+ * <p>1.21.1's Fabric API has no client game-test runner: there the class is an empty mixin on {@code Minecraft}.
  *^/
+//? if >=1.21.10 {
 @Mixin(value = ThreadingImpl.class, remap = false)
 abstract class ClientGameTestThreadStartMixin {
 
@@ -56,4 +61,9 @@ abstract class ClientGameTestThreadStartMixin {
         }
     }
 }
+//?} else {
+/^@Mixin(net.minecraft.client.Minecraft.class)
+abstract class ClientGameTestThreadStartMixin {
+}
+^///?}
 *///?}

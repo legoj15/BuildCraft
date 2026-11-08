@@ -12,11 +12,18 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
 
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.resources.model.geometry.ItemQuads;
 
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+//?} else {
+/^import net.minecraft.client.renderer.block.model.BakedQuad;
+
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+^///?}
 
 import buildcraft.platform.client.ClientModels;
 
@@ -38,6 +45,7 @@ public final class FabricClientModels implements ClientModels {
      ^/
     private static final ConcurrentMap<BakedQuad, int[]> VERTEX_COLOURS = new MapMaker().weakKeys().makeMap();
 
+    //? if >=26.3 {
     @Override
     public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
             net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
@@ -49,7 +57,17 @@ public final class FabricClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission);
     }
+    //?} elif >=26.1 {
+    /^@Override
+    public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet, int tintIndex, boolean shade,
+            int lightEmission) {
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, tintIndex, shade, lightEmission);
+    }
+    ^///?}
 
+    //? if >=1.21.11 {
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
         // The quad itself stays vanilla's. An all-white quad is the default, so it is not worth an entry.
@@ -64,7 +82,9 @@ public final class FabricClientModels implements ClientModels {
         int[] colours = VERTEX_COLOURS.get(quad);
         return colours == null ? -1 : colours[vertex];
     }
+    //?}
 
+    //? if >=1.21.11 {
     @Override
     public void setItemQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
         List<BakedQuad> plain = new ArrayList<>(quads.size());
@@ -82,8 +102,36 @@ public final class FabricClientModels implements ClientModels {
             applyVertexColours(emitter, quad);
             emitter.emit();
         }
-        layer.setQuads(ItemQuads.split(plain));
+        setPlainQuads(layer, plain);
     }
+    //?}
+
+    //? if >=26.3 {
+    private static void setPlainQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> plain) {
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(plain));
+    }
+    //?} elif >=1.21.11 {
+    /^private static void setPlainQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> plain) {
+        layer.prepareQuadList().addAll(plain);
+    }
+    ^///?}
+
+    //? if <1.21.10 {
+    /^@Override
+    public net.minecraft.client.resources.model.BakedModel fixedQuadItemModel(List<BakedQuad> quads,
+            net.minecraft.client.renderer.texture.TextureAtlasSprite particle, boolean gui3d,
+            net.minecraft.client.renderer.rendertype.RenderType renderType) {
+        return new FabricQuadItemModel(quads, particle, gui3d, renderType);
+    }
+
+    // The fragile shard's fix is already in the Fabric fluid-container model of this line (FabricClassicModelLoaders):
+    // its fluid layer is a flat masked face with no extrusion walls, on the cull-and-sorted translucent sheet.
+    @Override
+    public net.minecraft.client.resources.model.BakedModel layeredFluidContainerModel(
+            net.minecraft.client.resources.model.BakedModel vanilla) {
+        return vanilla;
+    }
+    ^///?}
 
     /^*
      * Gives the quad {@code emitter} holds (just filled by {@code fromBakedQuad(quad)}, which leaves the colour white)

@@ -20,7 +20,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 
+//? if >=26.1 {
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
+//?} else {
+/^import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+^///?}
 
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
@@ -75,7 +79,7 @@ public final class FabricRegistryServices implements RegistryServices {
             }
             for (ResourceKey<? extends Registry<?>> registry : order) {
                 for (Pending<?> entry : pending) {
-                    if (entry.key.registryKey().equals(registry.identifier())) {
+                    if (entry.key.registryKey().equals(registryId(registry))) {
                         entry.holder();
                     }
                 }
@@ -148,13 +152,17 @@ public final class FabricRegistryServices implements RegistryServices {
 
     @Override
     public CreativeModeTab.Builder creativeTabBuilder() {
+        //? if >=26.1 {
         return FabricCreativeModeTab.builder();
+        //?} else {
+        /^return FabricItemGroup.builder();
+        ^///?}
     }
 
     @Override
     public CreativeModeTab.Builder creativeTabBuilder(ResourceKey<CreativeModeTab> after) {
         // Gap: no tab ordering on Fabric; the tab follows registration order (BuildCraft registers `after` first).
-        return FabricCreativeModeTab.builder();
+        return creativeTabBuilder();
     }
 
     @Override
@@ -179,9 +187,13 @@ public final class FabricRegistryServices implements RegistryServices {
 
         @SuppressWarnings("unchecked")
         private Registry<T> registry() {
-            Registry<T> registry = (Registry<T>) BuiltInRegistries.REGISTRY.getValue(registryKey.identifier());
+            //? if >=1.21.10 {
+            Registry<T> registry = (Registry<T>) BuiltInRegistries.REGISTRY.getValue(registryId(registryKey));
+            //?} else {
+            /^Registry<T> registry = (Registry<T>) BuiltInRegistries.REGISTRY.get(registryId(registryKey));
+            ^///?}
             if (registry == null) {
-                throw new IllegalStateException("No built-in registry " + registryKey.identifier());
+                throw new IllegalStateException("No built-in registry " + registryId(registryKey));
             }
             return registry;
         }
@@ -236,6 +248,15 @@ public final class FabricRegistryServices implements RegistryServices {
                 addPendingAliases();
             }
         }
+    }
+
+    /^* A registry key's own id ({@code identifier()} from 1.21.11, {@code location()} before). ^/
+    private static Identifier registryId(ResourceKey<? extends Registry<?>> key) {
+        //? if >=1.21.11 {
+        return key.identifier();
+        //?} else {
+        /^return key.location();
+        ^///?}
     }
 }
 *///?}

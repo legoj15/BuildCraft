@@ -39,12 +39,12 @@
   "mixins": [
     "buildcraftunofficial.mixins.json"
   ],
-  "accessWidener": "buildcraftunofficial.classtweaker",
+  "accessWidener": "${class_tweaker}",
   "depends": {
     "fabricloader": "${fabric_loader_dep_range}",
     "fabric-api": "${fabric_api_dep_range}",
     "minecraft": "~${minecraft_version}",
-    "forgeconfigapiport": ">=26.3.1",
-    "common-protection-api": ">=2.0.0"
+    "forgeconfigapiport": "${forge_config_api_port_dep_range}",
+    "common-protection-api": "${common_protection_api_dep_range}"
   }
 }

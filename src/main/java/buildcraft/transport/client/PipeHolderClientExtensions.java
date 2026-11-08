@@ -77,20 +77,20 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
      * the missing-texture sprite.
      *
      * <p>Each line spells the lookup its own way: the context-free forms ({@code BlockStateModel#particleMaterial()},
-     * {@code particleIcon()}, {@code getParticleIcon()}) are deprecated in favour of the context-aware ones, which are
-     * NeoForge-only on the 1.21.x lines, where the Fabric node does not exist. From 26.1 the shared
-     * {@code BlockStateModelSet} form takes no context and exists on both loaders.
+     * {@code particleIcon()}, {@code getParticleIcon()}) are deprecated on NeoForge in favour of the context-aware ones,
+     * which are NeoForge-only on the 1.21.x lines, so 1.21.10 and 1.21.11 ask the platform
+     * ({@code ClientVanillaExtensions#particleIcon}). From 26.1 the shared {@code BlockStateModelSet} form takes no
+     * context and exists on both loaders.
      */
     private static @Nullable TextureAtlasSprite blockParticleSprite(BlockState state) {
         var models = Minecraft.getInstance().getModelManager();
         //? if >=26.1 {
         return models.getBlockStateModelSet().getParticleMaterial(state).sprite();
         //?} elif >=1.21.10 {
-        /*return models.getBlockModelShaper().getParticleIcon(state,
-                net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);*/
+        /*return buildcraft.platform.client.ClientPlatform.extensions().particleIcon(state);*/
         //?} else {
-        /*return models.getBlockModelShaper().getBlockModel(state)
-                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);*/
+        /*return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(
+                models.getBlockModelShaper().getBlockModel(state));*/
         //?}
     }
 

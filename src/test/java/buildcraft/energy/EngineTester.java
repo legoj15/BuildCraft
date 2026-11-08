@@ -788,8 +788,13 @@ public class EngineTester {
             /*// Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages).
             var westFe = buildcraft.platform.transfer.TransferAccess.findEnergy(helper.getLevel(), feAbs, Direction.WEST);
             var northFe = buildcraft.platform.transfer.TransferAccess.findEnergy(helper.getLevel(), feAbs, Direction.NORTH);
+            //? if >=1.21.10 {
             TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos, TileEngineBase_BC8.class);
-            TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos, TileEngineBase_BC8.class);*/
+            TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos, TileEngineBase_BC8.class);
+            //?} else {
+            /^TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos);
+            TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos);
+            ^///?}*/
             //?} else {
             /*var westFe = helper.getLevel().getCapability(
                 net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, feAbs, Direction.WEST);

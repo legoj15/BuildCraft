@@ -1,14 +1,14 @@
 {
   "required": true,
   "package": "buildcraft.platform.fabric.gametest.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "${mixin_java_level}",
   "mixins": [
     "GameTestInfoChunkWaitMixin",
     "ServerLevelGameEventMixin"
   ],
   "client": [
     "ClientGameTestThreadStartMixin",
-    "ParticleEngineAccessor"
+    "ParticleEngineAccessor"${client_shim_mixins}
   ],
   "injectors": {
     "defaultRequire": 1

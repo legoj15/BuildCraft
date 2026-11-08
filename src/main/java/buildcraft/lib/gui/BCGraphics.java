@@ -231,12 +231,18 @@ public final class BCGraphics {
     // TextureAtlasSprite is drawn via blit(x, y, blitOffset, w, h, sprite[, r, g, b, a]). The region
     // blit overloads order args (x, y, width, height, u, v, regionW, regionH, texW, texH) — width/height
     // come BEFORE u/v on 1.21.1 (reverse of modern); the plain (no-region) overload keeps u/v first.
+    // The untinted sprite blits do not blend on 1.21.1 either (only the tinted overload does): statement, gate and
+    // engine-ledger icons would draw their clear pixels solid.
     public void blitSprite(TextureAtlasSprite sprite, int x, int y, int width, int height) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(x, y, 0, width, height, sprite);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blitSprite(Identifier texture, int x, int y, int width, int height) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blitSprite(texture, x, y, width, height);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blitSprite(TextureAtlasSprite sprite, int x, int y, int width, int height, int color) {
@@ -247,19 +253,28 @@ public final class BCGraphics {
             net.minecraft.util.FastColor.ARGB32.alpha(color) / 255.0F);
     }
 
+    // 1.21.1's texture blit does not blend by itself (later lines' GUI_TEXTURED pipeline does): without blending a
+    // part-transparent icon (the Filtered Buffer's blocked-slot mark, the Auto Workbench arrow) draws solid. Each
+    // blit turns it on and back off, so no state leaks into later draws.
     public void blit(Identifier texture, int x, int y, float u, float v,
             int width, int height, int textureWidth, int textureHeight) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(texture, x, y, u, v, width, height, textureWidth, textureHeight);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blit(Identifier texture, int x, int y, float u, float v,
             int width, int height, int regionWidth, int regionHeight, int textureSize) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(texture, x, y, width, height, u, v, regionWidth, regionHeight, textureSize, textureSize);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blit(Identifier texture, int x, int y, float u, float v,
             int width, int height, int regionWidth, int regionHeight, int textureWidth, int textureHeight) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(texture, x, y, width, height, u, v, regionWidth, regionHeight, textureWidth, textureHeight);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
     public void blit(Identifier texture, int x, int y, float u, float v,
@@ -269,7 +284,9 @@ public final class BCGraphics {
             net.minecraft.util.FastColor.ARGB32.green(color) / 255.0F,
             net.minecraft.util.FastColor.ARGB32.blue(color) / 255.0F,
             net.minecraft.util.FastColor.ARGB32.alpha(color) / 255.0F);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         raw.blit(texture, x, y, width, height, u, v, regionWidth, regionHeight, textureWidth, textureHeight);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         raw.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }*/
     //?}

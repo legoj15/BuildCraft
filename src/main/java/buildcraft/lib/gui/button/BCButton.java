@@ -171,12 +171,15 @@ public class BCButton extends AbstractButton {
         /*renderDefaultLabel(graphics.raw.textRendererForWidget(this,
             net.minecraft.client.gui.GuiGraphics.HoveredTextEffects.NONE));*/
         //?} elif >=1.21.10 {
-        /*renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
-            net.minecraft.util.ARGB.color(this.alpha, getFGColor()));*/
-        //?} else {
-        /*// 1.21.1: ARGB.color(alpha, rgb) is absent; pack ARGB as vanilla AbstractButton does (rgb | alpha<<24).
+        /*// Vanilla 1.21.10's label colour; NeoForge's getFGColor answers the same for a button with no packed colour
+        // (BC sets none), and Fabric has no getFGColor.
         renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
-            getFGColor() | (net.minecraft.util.Mth.ceil(this.alpha * 255.0F) << 24));*/
+            net.minecraft.util.ARGB.color(this.alpha, this.active ? -1 : -6250336));*/
+        //?} else {
+        /*// 1.21.1: ARGB.color(alpha, rgb) is absent; pack ARGB as vanilla AbstractButton does (rgb | alpha<<24), with
+        // vanilla's colours (NeoForge's getFGColor answers the same for a button with no packed colour).
+        renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
+            (this.active ? 0xFFFFFF : 0xA0A0A0) | (net.minecraft.util.Mth.ceil(this.alpha * 255.0F) << 24));*/
         //?}
     }
 
@@ -227,15 +230,29 @@ public class BCButton extends AbstractButton {
         action.press(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
-    // NeoForge's button-aware overload (IAbstractWidgetExtension); vanilla's onClick(double, double) has no button.
-    @Override
-    public void onClick(double mouseX, double mouseY, int button) {
-        action.press(button);
-    }
-
     @Override
     protected boolean isValidClickButton(int button) {
         return MouseButtons.accepts(mouseButtons, button);
+    }*/
+    //?}
+
+    //? if neoforge && <1.21.10 {
+    /*// NeoForge's button-aware overload (IAbstractWidgetExtension); vanilla's onClick(double, double) has no button.
+    @buildcraft.platform.LoaderHook("neoforge:IAbstractWidgetExtension#onClick")
+    @Override
+    public void onClick(double mouseX, double mouseY, int button) {
+        action.press(button);
+    }*/
+    //?} elif fabric && <1.21.10 {
+    /*// Vanilla's mouseClicked, which hands onClick no button: the same checks and sound, then the press with it.
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (!this.active || !this.visible || !isValidClickButton(button) || !clicked(mouseX, mouseY)) {
+            return false;
+        }
+        playDownSound(net.minecraft.client.Minecraft.getInstance().getSoundManager());
+        action.press(button);
+        return true;
     }*/
     //?}
 

@@ -6,8 +6,15 @@
 
 package buildcraft.lib.client.model;
 
+import java.util.List;
+
 import org.joml.Vector3f;
 
+//? if >=26.1 {
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
@@ -214,4 +221,18 @@ public class ModelUtil {
         if (shouldInvertForRender(face)) return face.getOpposite();
         return face;
     }
+
+    //? if >=1.21.10 {
+    /** Gives an item layer the extents of its quads, as vanilla's own item models do. ItemEntityRenderer lifts a
+     * dropped item by its model box's lowest point: with no extents that box is inside-out on 1.21.10/11 (the item
+     * draws nowhere) and empty on 26.x (the item sinks into the ground). */
+    public static void setItemExtents(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
+            List<BakedQuad> quads) {
+        //? if >=26.1 {
+        layer.setExtents(() -> net.minecraft.client.renderer.item.CuboidItemModelWrapper.computeExtents(quads));
+        //?} else {
+        /*layer.setExtents(() -> net.minecraft.client.renderer.item.BlockModelWrapper.computeExtents(quads));*/
+        //?}
+    }
+    //?}
 }

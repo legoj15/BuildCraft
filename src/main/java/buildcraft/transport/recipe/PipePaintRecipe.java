@@ -141,13 +141,11 @@ public class PipePaintRecipe extends CustomRecipe {
         //? if >=1.21.10 {
         NonNullList<ItemStack> remaining = CraftingRecipe.defaultCraftingReminder(input);
         //?} else {
-        /*// 1.21.1 has no CraftingRecipe.defaultCraftingReminder — inline the vanilla Recipe default.
+        /*// 1.21.1 has no CraftingRecipe.defaultCraftingReminder — inline the Recipe default, with the loader's
+        // stack-sensitive remainder (EMPTY when there is none).
         NonNullList<ItemStack> remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
         for (int j = 0; j < remaining.size(); j++) {
-            ItemStack item = input.getItem(j);
-            if (item.hasCraftingRemainingItem()) {
-                remaining.set(j, item.getCraftingRemainingItem());
-            }
+            remaining.set(j, buildcraft.platform.Platform.extensions().craftingRemainder(input.getItem(j)));
         }*/
         //?}
         Parsed parsed = parse(input);

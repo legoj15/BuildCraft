@@ -17,7 +17,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
 import net.minecraft.client.gui.Font;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/^import net.minecraft.client.gui.GuiGraphics;
+^///?}
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -38,6 +42,7 @@ abstract class AbstractContainerScreenMixin {
     @Shadow
     protected Slot hoveredSlot;
 
+    //? if >=26.3 {
     @WrapOperation(method = "extractTooltip",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;Z)V"))
     private void buildcraft$describeSlotTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
@@ -46,5 +51,33 @@ abstract class AbstractContainerScreenMixin {
         FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style, extraSpace));
     }
+    //?} elif >=26.1 {
+    /^// Before 26.3 the tooltip request has no extra-space flag.
+    @WrapOperation(method = "extractTooltip",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
+    private void buildcraft$describeSlotTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original) {
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
+                () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?} elif >=1.21.10 {
+    /^// Before 26.1 the screen's tooltip step is renderTooltip, on GuiGraphics.
+    @WrapOperation(method = "renderTooltip",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
+    private void buildcraft$describeSlotTooltip(GuiGraphics graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original) {
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
+                () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?} else {
+    /^// 1.21.1 draws the tooltip at once (no deferred draw), so the request is tagged as it is made.
+    @WrapOperation(method = "renderTooltip",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V"))
+    private void buildcraft$describeSlotTooltip(GuiGraphics graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Operation<Void> original) {
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
+                () -> FabricTooltipHooks.tagDeferred(() -> original.call(graphics, font, lines, image, x, y)).run());
+    }
+    ^///?}
 }
 *///?}

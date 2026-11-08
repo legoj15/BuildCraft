@@ -60,19 +60,28 @@ abstract class LivingEntityMixin {
     @Shadow
     protected boolean jumping;
 
+    //? if >=1.21.10 {
     @Shadow
     protected abstract double getEffectiveGravity();
+    //?}
 
+    //? if >=26.3 {
     @Shadow
     private void floatInLiquidWhileRidden(TagKey<Fluid> fluidTag) {}
+    //?}
+
+    //? if <1.21.10 {
+    /^// Protected on 1.21.1, public from 1.21.10.
+    @Shadow
+    protected abstract boolean isAffectedByFluids();
+    ^///?}
 
     /^* The BuildCraft fluid that is not water-like this entity travels in this tick (NeoForge's {@code travel} takes
      *  {@code travelInFluid} for it, which hands it to the type's {@code move}), or null. *^/
     @Unique
     private FluidProperties buildcraft$thickFluid() {
         LivingEntity self = (LivingEntity) (Object) this;
-        FabricFluidPhysics.Interaction interaction =
-                (FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction();
+        FabricFluidPhysics.Interaction interaction = FabricFluidPhysics.interaction(self);
         // The entity's own fluid tracking says first whether any BuildCraft fluid is near: the answer for nearly
         // every entity on every tick, and no block lookup for it (vanilla's travel makes its own right after).
         if (!interaction.buildcraft$inBuildCraftFluid()) {
@@ -81,7 +90,12 @@ abstract class LivingEntityMixin {
         FluidState state = self.level().getFluidState(self.blockPosition());
         FluidProperties declared = FabricFlowingFluids.declared(state.getType());
         if (declared != null && ThickFluidMotion.isThick(declared) && !self.isInWater() && !self.isInLava()
-                && self.isAffectedByFluids() && !self.canStandOnFluid(state)
+                //? if >=1.21.10 {
+                && self.isAffectedByFluids()
+                //?} else {
+                /^&& isAffectedByFluids()
+                ^///?}
+                && !self.canStandOnFluid(state)
                 && interaction.buildcraft$inKindOf(declared)) {
             return declared;
         }
@@ -101,10 +115,21 @@ abstract class LivingEntityMixin {
         if (jumping && !self.onGround()) {
             self.setDeltaMovement(self.getDeltaMovement().add(0.0, FabricFluidPhysics.FLUID_JUMP_SPEED, 0.0));
         }
+        //? if >=1.21.10 {
         ThickFluidMotion.travel(self, thick, input, getEffectiveGravity());
+        //?} else {
+        /^// 1.21.1 has no getEffectiveGravity: its travel works the same out inline (slow falling caps a fall).
+        double gravity = self.getGravity();
+        if (self.getDeltaMovement().y <= 0.0 && self.hasEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING)) {
+            gravity = Math.min(gravity, 0.01);
+        }
+        ThickFluidMotion.travel(self, thick, input, gravity);
+        ^///?}
         // Vanilla's travelInFluid ends with this lift for a ridden can_float_while_ridden mount in any water-tag
         // fluid, after the type's move on NeoForge 26.3, so a ridden horse floats in crude oil there too (#142).
+        //? if >=26.3 {
         floatInLiquidWhileRidden(FluidTags.ENTITY_FLOATABLE);
+        //?}
         ci.cancel();
     }
 
@@ -125,8 +150,7 @@ abstract class LivingEntityMixin {
             target = "Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
     private boolean buildcraft$eyeInDrowningFluid(LivingEntity self, TagKey<Fluid> tag, Operation<Boolean> original) {
         return tag == FluidTags.WATER
-                ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInDrowningFluid()
+                ? FabricFluidPhysics.interaction(self).buildcraft$eyeInDrowningFluid()
                 : original.call(self, tag);
     }
 
@@ -138,8 +162,7 @@ abstract class LivingEntityMixin {
             target = "Lnet/minecraft/world/entity/Entity;dismountsUnderwater()Z"))
     private boolean buildcraft$dismountsInWaterOnly(Entity vehicle, Operation<Boolean> original) {
         return original.call(vehicle)
-                && ((FabricFluidPhysics.Interaction) ((EntityAccessor) (Object) this).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInForeignWater();
+                && FabricFluidPhysics.interaction((Entity) (Object) this).buildcraft$eyeInForeignWater();
     }
 
     @WrapOperation(method = "checkFallDamage", at = @At(value = "INVOKE",
@@ -177,11 +200,21 @@ abstract class LivingEntityMixin {
         FabricGameHooks.finishDropCapture((LivingEntity) (Object) this, source);
     }
 
+    // 1.21.1 has no LivingEntity.drop: a player's drop reaches the level in ServerPlayer.drop (ServerPlayerMixin).
+    //? if >=26.3 {
     @WrapOperation(method = "drop(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)Lnet/minecraft/world/entity/item/ItemEntity;",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original) {
         return FabricGameHooks.captureDrop((LivingEntity) (Object) this, (ItemEntity) drop) || original.call(level, drop);
     }
+    //?} elif >=1.21.10 {
+    /^@WrapOperation(method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original) {
+        return FabricGameHooks.captureDrop((LivingEntity) (Object) this, (ItemEntity) drop) || original.call(level, drop);
+    }
+    ^///?}
 }
 *///?}

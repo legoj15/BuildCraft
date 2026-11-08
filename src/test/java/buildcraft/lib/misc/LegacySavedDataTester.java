@@ -107,7 +107,7 @@ public class LegacySavedDataTester {
     static SavedDataStorage newStorage(ServerLevel level, Path folder) {
         return new SavedDataStorage(level, folder, DataFixers.getDataFixer(), level.registryAccess());
     }
-    //?} elif fabric {
+    //?} elif fabric && >=26.1 {
     /*// A fresh type data for the level, as the level's storage would make it.
     static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
         return buildcraft.platform.fabric.FabricSavedDataLevels.with(level, () -> type.constructor().get());

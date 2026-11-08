@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "buildcraft.platform.fabric.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "${mixin_java_level}",
   "mixins": [
     "AbstractBoatMixin",
     "BlockBehaviourMixin",
@@ -25,8 +25,10 @@
     "LevelMixin",
     "LivingEntityMixin",
     "MobMixin",
+    "PersistentEntitySectionManagerMixin",
     "PlayerChunkSenderMixin",
     "PlayerMixin",
+    "RedStoneWireBlockMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",
     "ServerExplosionMixin",
@@ -37,9 +39,13 @@
   "client": [
     "client.AbstractContainerScreenMixin",
     "client.ClientLevelMixin",
+    "client.ClientPacketListenerMixin",
+    "client.EditBoxMixin",
+    "client.ItemRendererMixin",
     "client.FogRendererMixin",
     "client.GuiGraphicsExtractorMixin",
     "client.LevelEventHandlerMixin",
+    "client.ModelManagerMixin",
     "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"
   ],

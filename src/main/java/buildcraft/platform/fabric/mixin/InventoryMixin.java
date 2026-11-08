@@ -30,10 +30,14 @@ abstract class InventoryMixin {
     @Final
     public Player player;
 
+    // From 26.3 dropAll spawns the items itself; before, it goes through LivingEntity.drop(), whose spawn
+    // LivingEntityMixin captures, so this is empty there.
+    //? if >=26.3 {
     @WrapOperation(method = "dropAll", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original) {
         return FabricGameHooks.captureDrop(player, (ItemEntity) drop) || original.call(level, drop);
     }
+    //?}
 }
 *///?}

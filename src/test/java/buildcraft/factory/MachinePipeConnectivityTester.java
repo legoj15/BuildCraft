@@ -413,7 +413,7 @@ public class MachinePipeConnectivityTester {
         if (expectExposed) {
             helper.assertTrue(energy != null,
                 name + " must expose Forge Energy when MJ-RF autoconversion is enabled");
-            //? if >=1.21.10 {
+            //? if >=1.21.10 || fabric {
             helper.assertTrue(energy.getCapacityAsLong() > 0,
                 name + "'s Forge Energy handler should report a non-zero capacity");
             //?} else {

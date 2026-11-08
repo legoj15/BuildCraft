@@ -20,4 +20,6 @@ data class BcNode(
     val isPre1_21_10: Boolean,
     /** Below MC 26.3. */
     val isPre26_3: Boolean,
+    /** Below MC 26.1: Minecraft ships obfuscated, so a Fabric node remaps (Loom's remap mode, Mojang mappings). */
+    val isPre26_1: Boolean = false,
 )

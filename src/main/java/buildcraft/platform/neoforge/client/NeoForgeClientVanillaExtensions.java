@@ -33,6 +33,44 @@ public final class NeoForgeClientVanillaExtensions implements ClientVanillaExten
     /*@Override
     public int spritePixel(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
         return sprite.getPixelRGBA(frameIndex, x, y);
+    }
+
+    @Override
+    public void setTextShadow(net.minecraft.client.gui.components.EditBox box, boolean shadow) {
+        box.setTextShadow(shadow);
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> layerQuads(
+            net.minecraft.client.resources.model.BakedModel model, BlockState state, Direction side,
+            net.minecraft.util.RandomSource random, boolean translucent) {
+        java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> result = new java.util.ArrayList<>();
+        net.neoforged.neoforge.model.data.ModelData data = net.neoforged.neoforge.model.data.ModelData.EMPTY;
+        for (net.minecraft.client.renderer.rendertype.RenderType renderType : model.getRenderTypes(state, random, data)) {
+            if ((renderType == net.minecraft.client.renderer.rendertype.RenderTypes.translucent()) == translucent) {
+                result.addAll(model.getQuads(state, side, random, data, renderType));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> modelQuads(
+            net.minecraft.client.resources.model.BakedModel model, BlockState state, Direction side,
+            net.minecraft.util.RandomSource random) {
+        return model.getQuads(state, side, random, net.neoforged.neoforge.model.data.ModelData.EMPTY, null);
+    }
+
+    @Override
+    public TextureAtlasSprite modelParticle(net.minecraft.client.resources.model.BakedModel model) {
+        return model.getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+    }
+
+    @Override
+    public void renderSingleBlock(BlockState state, com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffers, int light, int overlay) {
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, buffers,
+                light, overlay, net.neoforged.neoforge.model.data.ModelData.EMPTY, null);
     }*/
     //?}
 
@@ -58,6 +96,27 @@ public final class NeoForgeClientVanillaExtensions implements ClientVanillaExten
     @Override
     public net.minecraft.client.gui.navigation.ScreenRectangle peekScissor(net.minecraft.client.gui.GuiGraphics graphics) {
         return graphics.peekScissorStack();
+    }*/
+    //?}
+
+    //? if >=1.21.10 && <26.1 {
+    /*@Override
+    public void renderSingleBlock(BlockState state, com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffers, int light, int overlay) {
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, buffers,
+                light, overlay, net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite particleIcon(BlockState state) {
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockModelShaper()
+                .getParticleIcon(state, net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.chunk.ChunkSectionLayer renderLayer(
+            net.minecraft.client.renderer.block.model.BlockModelPart part, BlockState state) {
+        return part.getRenderType(state);
     }*/
     //?}
 }

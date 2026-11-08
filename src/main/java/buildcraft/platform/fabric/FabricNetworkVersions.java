@@ -28,8 +28,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 
+//? if >=26.1 {
 import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationPacketListenerImpl;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+//?} else {
+/^import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationNetworkHandler;
+^///?}
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 
@@ -60,11 +63,15 @@ public final class FabricNetworkVersions {
             Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
     FabricNetworkVersions() {
-        PayloadTypeRegistry.clientboundConfiguration().register(VersionTable.TYPE, VersionTable.STREAM_CODEC);
-        PayloadTypeRegistry.serverboundConfiguration().register(VersionTable.TYPE, VersionTable.STREAM_CODEC);
+        FabricNetwork.clientboundConfiguration().register(VersionTable.TYPE, VersionTable.STREAM_CODEC);
+        FabricNetwork.serverboundConfiguration().register(VersionTable.TYPE, VersionTable.STREAM_CODEC);
         ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> configure(handler));
         ServerConfigurationNetworking.registerGlobalReceiver(VersionTable.TYPE,
+                //? if >=26.1 {
                 (reply, ctx) -> check(ctx.packetListener(), reply));
+                //?} else {
+                /^(reply, ctx) -> check(ctx.networkHandler(), reply));
+                ^///?}
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerVersionReply(VersionTable.TYPE, this::table);
         }
@@ -91,8 +98,13 @@ public final class FabricNetworkVersions {
                     "This server needs the same version of BuildCraft Redux installed on your game."));
             return;
         }
+        //? if >=26.1 {
         ((FabricServerConfigurationPacketListenerImpl) handler)
                 .addTask(new Task(table(), () -> awaiting.add(handler)));
+        //?} else {
+        /^((FabricServerConfigurationNetworkHandler) handler)
+                .addTask(new Task(table(), () -> awaiting.add(handler)));
+        ^///?}
     }
 
     private void check(ServerConfigurationPacketListenerImpl handler, VersionTable client) {
@@ -101,7 +113,11 @@ public final class FabricNetworkVersions {
         }
         List<String> mismatches = mismatches(table().versions(), client.versions());
         if (mismatches.isEmpty()) {
+            //? if >=26.1 {
             ((FabricServerConfigurationPacketListenerImpl) handler).completeTask(Task.TYPE);
+            //?} else {
+            /^((FabricServerConfigurationNetworkHandler) handler).completeTask(Task.TYPE);
+            ^///?}
             return;
         }
         String listed = String.join(", ", mismatches.subList(0, Math.min(LISTED_MISMATCHES, mismatches.size())));
@@ -139,7 +155,11 @@ public final class FabricNetworkVersions {
         @Override
         public void start(Consumer<Packet<?>> sender) {
             onStart.run();
+            //? if >=26.1 {
             sender.accept(ServerConfigurationNetworking.createClientboundPacket(server));
+            //?} else {
+            /^sender.accept(ServerConfigurationNetworking.createS2CPacket(server));
+            ^///?}
         }
 
         @Override

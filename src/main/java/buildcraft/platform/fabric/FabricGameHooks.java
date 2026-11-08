@@ -52,18 +52,28 @@ import net.minecraft.world.phys.Vec3;
 import eu.pb4.common.protection.api.CommonProtection;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
+//?} else {
+/^import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+^///?}
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+//?} else {
+/^import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+^///?}
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+//? if >=1.21.10 {
 import net.fabricmc.fabric.api.recipe.v1.sync.RecipeSynchronization;
+//?}
 
 import buildcraft.platform.Platform;
 import buildcraft.platform.event.GameHooks;
@@ -100,6 +110,26 @@ public final class FabricGameHooks implements GameHooks {
     private static final List<LivingDrops> LIVING_DROPS = new CopyOnWriteArrayList<>();
     private static final List<NeighborNotify> NEIGHBOR_NOTIFY = new CopyOnWriteArrayList<>();
     private static final List<Consumer<ServerPlayer>> PLAYER_TICK_END = new CopyOnWriteArrayList<>();
+    //? if <26.1 {
+    /^// Before 26.1, the twin of Fabric API's ServerEntityEvents.ALLOW_LOAD (which arrived with 26.1): posted by the
+    // join mixins before the entity is added; any listener answering false keeps it out, as cancelling NeoForge's
+    // join event does. The game tests' join claims register on it too.
+    public static final Event<AllowJoin> ENTITY_ALLOW_JOIN = EventFactory.createArrayBacked(AllowJoin.class,
+            listeners -> (entity, level, loadedFromDisk) -> {
+                for (AllowJoin listener : listeners) {
+                    if (!listener.allowJoin(entity, level, loadedFromDisk)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+    // One ENTITY_ALLOW_JOIN listener; loadedFromDisk: the entity was saved in a chunk.
+    @FunctionalInterface
+    public interface AllowJoin {
+        boolean allowJoin(Entity entity, ServerLevel level, boolean loadedFromDisk);
+    }
+    ^///?}
     private static final List<BreakSpeed> BREAK_SPEED = new CopyOnWriteArrayList<>();
     /^* The block whose dig speed this thread is working out ({@link #digSpeedAt}), or null. *^/
     private static final ThreadLocal<BlockPos> DIG_POS = new ThreadLocal<>();
@@ -149,7 +179,11 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onLevelTickEnd(Consumer<ServerLevel> listener) {
+        //? if >=26.1 {
         ServerTickEvents.END_LEVEL_TICK.register(listener::accept);
+        //?} else {
+        /^ServerTickEvents.END_WORLD_TICK.register(listener::accept);
+        ^///?}
     }
 
     @Override
@@ -159,13 +193,21 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onLevelUnload(Consumer<LevelAccessor> listener) {
+        //? if >=26.1 {
         ServerLevelEvents.UNLOAD.register((server, level) -> listener.accept(level));
+        //?} else {
+        /^ServerWorldEvents.UNLOAD.register((server, level) -> listener.accept(level));
+        ^///?}
         CLIENT_LEVEL_UNLOAD.add(listener);
     }
 
     @Override
     public void onChunkLoad(BiConsumer<ServerLevel, ChunkAccess> listener) {
+        //? if >=26.1 {
         ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> listener.accept(level, chunk));
+        //?} else {
+        /^ServerChunkEvents.CHUNK_LOAD.register(listener::accept);
+        ^///?}
     }
 
     @Override
@@ -182,10 +224,19 @@ public final class FabricGameHooks implements GameHooks {
     public void onEntityJoinLevel(EntityJoin listener) {
         // ALLOW_LOAD, not ENTITY_LOAD: it runs before the entity is added, as NeoForge's join event does, and it
         // knows whether the entity came from disk. Allowing is the default answer.
+        //? if >=26.1 {
         ServerEntityEvents.ALLOW_LOAD.register((entity, level, reason, loadedFromDisk) -> {
             listener.onJoin(entity, level, loadedFromDisk);
             return true;
         });
+        //?} else {
+        /^// Fabric API before 26.1 has no event before the entity is added (only ENTITY_LOAD, after): the mixins post at
+        // NeoForge's join points instead (PersistentEntitySectionManagerMixin, ServerLevelMixin's addPlayer).
+        ENTITY_ALLOW_JOIN.register((entity, level, loadedFromDisk) -> {
+            listener.onJoin(entity, level, loadedFromDisk);
+            return true;
+        });
+        ^///?}
     }
 
     @Override
@@ -200,8 +251,13 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onPlayerChangedDimension(Consumer<ServerPlayer> listener) {
+        //? if >=26.1 {
         ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register(
                 (player, origin, destination) -> listener.accept(player));
+        //?} else {
+        /^ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
+                (player, origin, destination) -> listener.accept(player));
+        ^///?}
     }
 
     @Override
@@ -295,12 +351,20 @@ public final class FabricGameHooks implements GameHooks {
                 throw new IllegalArgumentException("No Fabric recipe-sync serializers mapped for " + type);
             }
         }
+        //? if >=26.1 {
+        List<RecipeSerializer<?>> craftingBase = List.of(ShapedRecipe.SERIALIZER, ShapelessRecipe.SERIALIZER);
+        RecipeSerializer<?> smeltingBase = SmeltingRecipe.SERIALIZER;
+        //?} elif >=1.21.10 {
+        /^List<RecipeSerializer<?>> craftingBase = List.of(RecipeSerializer.SHAPED_RECIPE,
+                RecipeSerializer.SHAPELESS_RECIPE);
+        RecipeSerializer<?> smeltingBase = RecipeSerializer.SMELTING_RECIPE;
+        ^///?}
+        //? if >=1.21.10 {
         boolean crafting = types.contains(RecipeType.CRAFTING);
         boolean smelting = types.contains(RecipeType.SMELTING);
         Platform.lifecycle().onCommonSetup(() -> {
             if (crafting) {
-                RecipeSynchronization.synchronizeRecipeSerializer(ShapedRecipe.SERIALIZER);
-                RecipeSynchronization.synchronizeRecipeSerializer(ShapelessRecipe.SERIALIZER);
+                craftingBase.forEach(RecipeSynchronization::synchronizeRecipeSerializer);
                 for (RecipeSerializer<?> serializer : BuiltInRegistries.RECIPE_SERIALIZER) {
                     Identifier id = BuiltInRegistries.RECIPE_SERIALIZER.getKey(serializer);
                     if (id != null && "buildcraftunofficial".equals(id.getNamespace())) {
@@ -309,9 +373,11 @@ public final class FabricGameHooks implements GameHooks {
                 }
             }
             if (smelting) {
-                RecipeSynchronization.synchronizeRecipeSerializer(SmeltingRecipe.SERIALIZER);
+                RecipeSynchronization.synchronizeRecipeSerializer(smeltingBase);
             }
         });
+        //?}
+        // 1.21.1 still sends the whole recipe list to every client, as NeoForge's own hook says: nothing to ask for.
     }
 
     // ── Where the mixins post (and the game tests, as NeoForge's tests post its events) ──────────────────────
@@ -382,6 +448,14 @@ public final class FabricGameHooks implements GameHooks {
         EXPLOSION_DETONATE.invoker().onDetonate(level, explosion, blocks, entities);
     }
 
+    //? if <26.1 {
+    /^// An entity is about to join a server level (PersistentEntitySectionManager.addEntity, or ServerLevel.addPlayer
+    // for a player), where NeoForge posts its join event; loadedFromDisk: it was saved in a chunk. False: keep it out.
+    public static boolean fireEntityJoin(Entity entity, ServerLevel level, boolean loadedFromDisk) {
+        return ENTITY_ALLOW_JOIN.invoker().allowJoin(entity, level, loadedFromDisk);
+    }
+    ^///?}
+
     /^* {@code player} has finished its own tick ({@code Player.tick}). *^/
     public static void firePlayerTickEnd(ServerPlayer player) {
         for (Consumer<ServerPlayer> listener : PLAYER_TICK_END) {
@@ -393,15 +467,16 @@ public final class FabricGameHooks implements GameHooks {
      * A fake player is interacting with {@code target} ({@code Player.interactOn}, where NeoForge posts its
      * entity-interaction event; Fabric API asks only a real player's click, in its packet handler): the protection
      * providers are asked about the click, then {@code UseEntityCallback}, and the {@code receiveCancelled}
-     * listeners are told how it ended (see {@link #onEntityInteract}).
+     * listeners are told how it ended (see {@link #onEntityInteract}). {@code location} is null before 26.1, whose
+     * {@code interactOn} has none; the callback then gets no hit result, as from Fabric API's plain-interact path.
      *
      * @return null when the click may go on, else what {@code interactOn} answers instead: FAIL for a refusal, or the
      *         result the refusing callback gave (a consuming one is a callback that took the click itself)
      *^/
     @Nullable
     public static InteractionResult fireFakePlayerEntityInteract(Player player, Entity target, InteractionHand hand,
-            Vec3 location) {
-        if (!CommonProtection.canInteractEntity(player.level(), target, player.nameAndId(), player)) {
+            @Nullable Vec3 location) {
+        if (!CommonProtection.canInteractEntity(player.level(), target, FabricProtection.owner(player), player)) {
             tellInteractEnded(player, target, true, Set.of());
             return InteractionResult.FAIL;
         }
@@ -412,7 +487,8 @@ public final class FabricGameHooks implements GameHooks {
         InteractionResult result;
         try {
             result = UseEntityCallback.EVENT.invoker()
-                    .interact(player, player.level(), hand, target, new EntityHitResult(target, location));
+                    .interact(player, player.level(), hand, target,
+                            location == null ? null : new EntityHitResult(target, location));
         } finally {
             interactInFlight = outer;
         }
@@ -475,7 +551,11 @@ public final class FabricGameHooks implements GameHooks {
         if (drops == null) {
             return;
         }
+        //? if >=1.21.10 {
         fireLivingDrops(entity, source, entity.getLastHurtByPlayerMemoryTime() > 0, drops);
+        //?} else {
+        /^fireLivingDrops(entity, source, entity.lastHurtByPlayerTime > 0, drops);
+        ^///?}
         for (ItemEntity drop : drops) {
             entity.level().addFreshEntity(drop);
         }

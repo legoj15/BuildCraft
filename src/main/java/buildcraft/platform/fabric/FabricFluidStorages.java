@@ -57,7 +57,7 @@ public final class FabricFluidStorages extends FabricStorageAdapter<BCFluidStack
 
     @Override
     BCFluidStack resourceOf(FluidVariant variant) {
-        return variant.isBlank() ? BCFluidStack.EMPTY : new BCFluidStack(variant.getFluid(), 1, variant.getComponentsPatch());
+        return variant.isBlank() ? BCFluidStack.EMPTY : new BCFluidStack(variant.getFluid(), 1, FabricFluids.componentsOf(variant));
     }
 
     @Override

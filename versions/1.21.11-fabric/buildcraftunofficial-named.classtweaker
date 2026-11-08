@@ -1,0 +1,39 @@
+classTweaker	v1	named
+# Fabric twin of META-INF/accesstransformer.cfg for the 1.21.11 line (Mojang names; Loom remaps it). Keep in step with it
+# and with the shared 26.x src/main/resources-fabric/buildcraftunofficial.classtweaker: the same entries, translated to
+# this line's members, and only those that exist here (no ItemStackTemplate, no GuiGraphicsExtractor, no
+# CuboidItemModelWrapper: the 1.21.x arms reach BlockModelWrapper.properties and GuiGraphics instead).
+accessible	field	net/minecraft/world/item/crafting/ShapedRecipe	result	Lnet/minecraft/world/item/ItemStack;
+accessible	field	net/minecraft/world/item/crafting/ShapelessRecipe	result	Lnet/minecraft/world/item/ItemStack;
+accessible	field	net/minecraft/world/item/crafting/ShapelessRecipe	ingredients	Ljava/util/List;
+accessible	field	net/minecraft/world/item/crafting/SingleItemRecipe	result	Lnet/minecraft/world/item/ItemStack;
+accessible	field	net/minecraft/world/item/crafting/SingleItemRecipe	input	Lnet/minecraft/world/item/crafting/Ingredient;
+accessible	field	net/minecraft/client/renderer/item/BlockModelWrapper	properties	Lnet/minecraft/client/renderer/item/ModelRenderProperties;
+accessible	method	net/minecraft/world/level/material/FlowingFluid	canPassThroughWall	(Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Z
+accessible	method	net/minecraft/world/level/material/FlowingFluid	canPassThrough	(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/world/level/material/Fluid;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/material/FluidState;)Z
+accessible	method	net/minecraft/world/level/material/FlowingFluid	spreadToSides	(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/block/state/BlockState;)V
+accessible	field	net/minecraft/world/item/ItemCooldowns	cooldowns	Ljava/util/Map;
+accessible	class	net/minecraft/client/multiplayer/ClientChunkCache$Storage
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache	storage	Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	chunkRadius	I
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterX	I
+accessible	field	net/minecraft/client/multiplayer/ClientChunkCache$Storage	viewCenterZ	I
+# Members NeoForge opens with its own access transformer, so META-INF/accesstransformer.cfg has no line for them.
+accessible	field	net/minecraft/world/item/crafting/ShapedRecipe	pattern	Lnet/minecraft/world/item/crafting/ShapedRecipePattern;
+accessible	method	net/minecraft/world/level/block/Block	popExperience	(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;I)V
+accessible	field	net/minecraft/world/level/block/LiquidBlock	fluid	Lnet/minecraft/world/level/material/FlowingFluid;
+accessible	method	net/minecraft/world/item/Item	getPlayerPOVHitResult	(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/ClipContext$Fluid;)Lnet/minecraft/world/phys/BlockHitResult;
+accessible	method	net/minecraft/client/gui/screens/recipebook/GhostSlots	setInput	(Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessible	method	net/minecraft/client/gui/screens/recipebook/GhostSlots	setResult	(Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessible	field	net/minecraft/client/gui/components/AbstractButton	SPRITES	Lnet/minecraft/client/gui/components/WidgetSprites;
+# Fabric-only accesses: neither META-INF/accesstransformer.cfg nor NeoForge's own access transformer opens these.
+accessible	field	net/minecraft/world/item/component/CustomData	tag	Lnet/minecraft/nbt/CompoundTag;
+accessible	field	net/minecraft/client/gui/GuiGraphics	guiRenderState	Lnet/minecraft/client/gui/render/state/GuiRenderState;
+accessible	class	net/minecraft/client/gui/GuiGraphics$ScissorStack
+accessible	field	net/minecraft/client/gui/GuiGraphics	scissorStack	Lnet/minecraft/client/gui/GuiGraphics$ScissorStack;
+accessible	field	net/minecraft/world/item/crafting/RecipeManager	recipes	Lnet/minecraft/world/item/crafting/RecipeMap;
+# Members NeoForge reaches through its own patches (AbstractHorse.getInventory, the side-effect-free setItemSlot): the entity item fallback in FabricEntityItems.
+accessible	field	net/minecraft/world/entity/LivingEntity	equipment	Lnet/minecraft/world/entity/EntityEquipment;
+accessible	field	net/minecraft/world/entity/animal/equine/AbstractHorse	inventory	Lnet/minecraft/world/SimpleContainer;
+accessible	class	net/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier
+accessible	method	net/minecraft/world/level/block/entity/BlockEntityType	<init>	(Lnet/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier;Ljava/util/Set;)V

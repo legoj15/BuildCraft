@@ -6,8 +6,12 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import fuzs.forgeconfigapiport.fabric.api.v5.ConfigRegistry;
-import net.neoforged.fml.config.IConfigSpec;
+/*import net.neoforged.fml.config.IConfigSpec;
+//? if >=1.21.10 {
+import fuzs.forgeconfigapiport.fabric.api.v5.ConfigRegistry;
+//?} else {
+/^import fuzs.forgeconfigapiport.fabric.api.neoforge.v4.NeoForgeConfigRegistry;
+^///?}
 import net.neoforged.fml.config.ModConfig;
 
 import buildcraft.platform.config.BCConfigType;
@@ -31,11 +35,20 @@ public final class FabricConfigRegistrar implements ConfigRegistrar {
     public void register(BCConfigType type, Object spec, String fileName) {
         ModConfig.Type fcapType = type == BCConfigType.CLIENT ? ModConfig.Type.CLIENT : ModConfig.Type.COMMON;
         IConfigSpec configSpec = (IConfigSpec) spec;
+        //? if >=1.21.10 {
         if (fileName == null) {
             ConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec);
         } else {
             ConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec, fileName);
         }
+        //?} else {
+        /^// Forge Config API Port 21.1 keeps the NeoForge registry under its own versioned package.
+        if (fileName == null) {
+            NeoForgeConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec);
+        } else {
+            NeoForgeConfigRegistry.INSTANCE.register(MOD_ID, fcapType, configSpec, fileName);
+        }
+        ^///?}
     }
 }
 *///?}

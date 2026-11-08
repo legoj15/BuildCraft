@@ -6,7 +6,12 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import net.minecraft.core.Holder;
+/*import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import net.minecraft.core.Holder;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
@@ -46,7 +51,11 @@ import buildcraft.platform.FluidProperties;
  * BuildCraft's (NeoForge's {@code canBeRiddenUnderFluidType}; {@code LivingEntityMixin}).</li>
  * </ul>
  * The rest of vanilla's tag queries ({@code getFluidHeight(WATER)}, {@code isEyeInFluid(WATER)} elsewhere) stay tag
- * based, as NeoForge's deprecated tag paths are. Extinguishing is the fluid's own {@code entityInside}.
+ * based, as NeoForge's deprecated tag paths are. Extinguishing is the fluid's own {@code entityInside}. Vanilla 26.3
+ * tracks each fluid apart, and the answers above read its trackers; 26.1 and 26.2 track one per tag (water, lava),
+ * which cannot tell oil from water, so there they read {@link FluidTracking}, BuildCraft's per-fluid record of the
+ * same scan. Before 26.1 the scan is the entity's own ({@code updateFluidHeightAndDoFluidPushing}, once per tag) and
+ * the same per-fluid record is filled from it.
  *^/
 public final class FabricFluidPhysics {
     /^* NeoForge's default {@code FluidType.Properties.fallDistanceModifier}, which no BuildCraft fluid changes. *^/
@@ -55,6 +64,16 @@ public final class FabricFluidPhysics {
     public static final double FLUID_JUMP_SPEED = 0.04F;
 
     private FabricFluidPhysics() {}
+
+    /^* The {@link Interaction} of {@code entity}: its {@code EntityFluidInteraction} from 26.1, the entity itself before
+     *  (1.21.x keeps the fluid scan on {@code Entity}, so {@code EntityFluidInteractionMixin} targets it there). ^/
+    public static Interaction interaction(Entity entity) {
+        //? if >=26.1 {
+        return (Interaction) ((buildcraft.platform.fabric.mixin.EntityAccessor) entity).buildcraft$fluidInteraction();
+        //?} else {
+        /^return (Interaction) entity;
+        ^///?}
+    }
 
     /^* What {@code EntityFluidInteractionMixin} adds to an entity's {@code EntityFluidInteraction}. *^/
     public interface Interaction {
@@ -118,6 +137,71 @@ public final class FabricFluidPhysics {
     public static boolean canDrownIn(Holder<Fluid> fluid) {
         FluidProperties declared = FabricFlowingFluids.declared(fluid.value());
         return declared != null ? declared.canDrown() : fluid.is(FluidTags.WATER);
+    }
+
+    /^*
+     * The per-fluid side of vanilla's fluid scan where {@code EntityFluidInteraction} tracks per tag (26.1, 26.2): for
+     * each fluid (each form apart) the scan reached this tick, its surface height above the entity's feet and whether
+     * the entity's eyes are in it, which 26.3's per-fluid trackers hold. Entries are reused from tick to tick.
+     *^/
+    public static final class FluidTracking {
+        private final List<Entry> entries = new ArrayList<>(2);
+        private int count;
+        /^* The entry the last block went to: the scan meets the same fluid block after block. *^/
+        @Nullable
+        private Entry last;
+
+        public void reset() {
+            count = 0;
+            last = null;
+        }
+
+        /^* One scanned block of {@code fluid}, its surface {@code height} above the entity's feet. *^/
+        public void record(Holder<Fluid> fluid, double height, boolean eyesInside) {
+            Entry entry = last != null && last.fluid == fluid ? last : entryFor(fluid);
+            entry.height = Math.max(entry.height, height);
+            entry.eyesInside |= eyesInside;
+            last = entry;
+        }
+
+        private Entry entryFor(Holder<Fluid> fluid) {
+            for (int i = 0; i < count; i++) {
+                Entry entry = entries.get(i);
+                if (entry.fluid == fluid) {
+                    return entry;
+                }
+            }
+            if (count == entries.size()) {
+                entries.add(new Entry());
+            }
+            Entry entry = entries.get(count++);
+            entry.fluid = fluid;
+            entry.height = 0.0;
+            entry.eyesInside = false;
+            return entry;
+        }
+
+        public int count() {
+            return count;
+        }
+
+        public Holder<Fluid> fluid(int index) {
+            return entries.get(index).fluid;
+        }
+
+        public double height(int index) {
+            return entries.get(index).height;
+        }
+
+        public boolean eyesInside(int index) {
+            return entries.get(index).eyesInside;
+        }
+
+        private static final class Entry {
+            private Holder<Fluid> fluid;
+            private double height;
+            private boolean eyesInside;
+        }
     }
 
     /^*

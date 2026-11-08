@@ -15,8 +15,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+//? if >=1.21.10 {
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.ProblemReporter;
+//?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -30,7 +32,9 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
@@ -49,7 +53,7 @@ import buildcraft.platform.event.PlatformProtection;
  * for a player's act, and Common Protection API, the API Fabric claim mods answer through (bundled in the jar). A
  * callback answering anything but {@code PASS} stops the act there, and a protection provider answering false refuses
  * it: either refuses the machine's. The machine's fake player carries its owner's profile, so the providers are asked
- * about the owner ({@link Player#nameAndId}).
+ * about the owner ({@link #owner}).
  *
  * <p><b>Placements.</b> Fabric API has no block-placement event, so a placement is asked of the protection providers
  * alone, as NeoForge's placement event is all a machine's placement asks there (vanilla's spawn protection and world
@@ -73,6 +77,18 @@ public final class FabricProtection implements PlatformProtection {
     /^* The level a refused item use's blocks are being put back in right now, or null. Server thread only. *^/
     private static Level restoringIn;
 
+    /^* The profile Common Protection API asks about for {@code player}: its name and id (the API's 2.x, 26.1 on), its
+     *  game profile on the 1.21.x lines (the API's 1.x). *^/
+    //? if >=26.1 {
+    public static NameAndId owner(Player player) {
+        return player.nameAndId();
+    }
+    //?} else {
+    /^public static com.mojang.authlib.GameProfile owner(Player player) {
+        return player.getGameProfile();
+    }
+    ^///?}
+
     private record Probe(Level level, BlockPos pos, Player player) {
         boolean matches(Level level, BlockPos pos, Player player) {
             return this.level == level && this.pos.equals(pos) && this.player == player;
@@ -91,7 +107,7 @@ public final class FabricProtection implements PlatformProtection {
         } finally {
             probeInFlight = outer;
         }
-        return CommonProtection.canBreakBlock(level, pos, player.nameAndId(), player);
+        return CommonProtection.canBreakBlock(level, pos, owner(player), player);
     }
 
     /^*
@@ -104,7 +120,7 @@ public final class FabricProtection implements PlatformProtection {
             throw new IllegalArgumentException("a placement fills at least one cell");
         }
         for (BlockPos cell : cells) {
-            if (!CommonProtection.canPlaceBlock(level, cell, player.nameAndId(), player)) {
+            if (!CommonProtection.canPlaceBlock(level, cell, owner(player), player)) {
                 return false;
             }
         }
@@ -159,7 +175,7 @@ public final class FabricProtection implements PlatformProtection {
     public boolean canAttack(Player attacker, Entity target) {
         return AttackEntityCallback.EVENT.invoker()
                 .interact(attacker, attacker.level(), InteractionHand.MAIN_HAND, target, null) == InteractionResult.PASS
-            && CommonProtection.canDamageEntity(attacker.level(), target, attacker.nameAndId(), attacker);
+            && CommonProtection.canDamageEntity(attacker.level(), target, owner(attacker), attacker);
     }
 
     // Gap: no harvest-check event on Fabric; vanilla's tool check.
@@ -187,7 +203,7 @@ public final class FabricProtection implements PlatformProtection {
         if (result != InteractionResult.PASS) {
             return ClickVerdict.REFUSED;
         }
-        return CommonProtection.canInteractBlock(player.level(), hit.getBlockPos(), player.nameAndId(), player)
+        return CommonProtection.canInteractBlock(player.level(), hit.getBlockPos(), owner(player), player)
             ? ClickVerdict.DEFAULT : ClickVerdict.REFUSED;
     }
 
@@ -200,8 +216,12 @@ public final class FabricProtection implements PlatformProtection {
     // item right-click listener sees the use: at the player's position).
     @Override
     public boolean canUseItem(Player player, InteractionHand hand) {
+        //? if >=1.21.10 {
         return UseItemCallback.EVENT.invoker().interact(player, player.level(), hand) == InteractionResult.PASS
-            && CommonProtection.canInteractBlock(player.level(), player.blockPosition(), player.nameAndId(), player);
+        //?} else {
+        /^return UseItemCallback.EVENT.invoker().interact(player, player.level(), hand).getResult() == InteractionResult.PASS
+        ^///?}
+            && CommonProtection.canInteractBlock(player.level(), player.blockPosition(), owner(player), player);
     }
 
     /^* The placement capture {@link #useItemOn} is running right now (the innermost one), or null. Server thread only. *^/
@@ -255,7 +275,7 @@ public final class FabricProtection implements PlatformProtection {
             return result;
         }
         Player player = context.getPlayer();
-        NameAndId profile = player != null ? player.nameAndId() : CommonProtection.UNKNOWN;
+        var profile = player != null ? owner(player) : CommonProtection.UNKNOWN;
         BlockPos first = null;
         boolean refused = false;
         for (Captured cell : capture.before.values()) {
@@ -324,7 +344,7 @@ public final class FabricProtection implements PlatformProtection {
             return true;
         }
         Player player = placer instanceof Player p ? p : null;
-        NameAndId profile = player != null ? player.nameAndId() : CommonProtection.UNKNOWN;
+        var profile = player != null ? owner(player) : CommonProtection.UNKNOWN;
         BlockPos pos = replaced.pos();
         boolean allowed = CommonProtection.canPlaceBlock(level, pos, profile, player);
         postPlace(new Placed(level, pos, level.getBlockState(pos.relative(face.getOpposite())), placer, !allowed));
@@ -381,7 +401,11 @@ public final class FabricProtection implements PlatformProtection {
             if (tag != null) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be != null) {
+                    //? if >=1.21.10 {
                     be.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+                    //?} else {
+                    /^be.loadWithComponents(tag, level.registryAccess());
+                    ^///?}
                     be.setChanged();
                 }
             }

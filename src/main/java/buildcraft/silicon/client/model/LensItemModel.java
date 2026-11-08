@@ -57,7 +57,7 @@ import buildcraft.silicon.item.ItemPluggableLens;
 //? if >=1.21.10 {
 public class LensItemModel implements ItemModel {
 //?} else {
-/*public class LensItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
+/*public class LensItemModel implements buildcraft.platform.client.ClassicItemModel {*/
 //?}
 
     /** Inner identity for the lens itself: colour + isFilter. */
@@ -206,13 +206,14 @@ public class LensItemModel implements ItemModel {
         renderState.appendModelIdentityElement(displayContext);
 
         var layer = renderState.newLayer();
-        //? if >=26.3 {
-        // 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits. The
-        // platform hands it over so the quads keep their vertex colours on Fabric too.
+        //? if >=1.21.11 {
+        // Through the platform, so the quads keep their vertex colours on Fabric too (26.3 also dropped
+        // prepareQuadList(): a layer there takes one ItemQuads, pre-split into solid/translucent submits).
         buildcraft.platform.client.ClientPlatform.models().setItemQuads(layer, quads);
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
+        buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
         //? if <26.1 {
         /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
         // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet
@@ -260,12 +261,20 @@ public class LensItemModel implements ItemModel {
                 buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
     }
 
+    // Vanilla's quad getter: NeoForge deprecates it for its model-data overload, which falls back here.
     @Override
-    public List<BakedQuad> getQuads(@Nullable net.minecraft.world.level.block.state.BlockState s,
-            @Nullable Direction side, net.minecraft.util.RandomSource rand,
-            net.neoforged.neoforge.model.data.ModelData extraData,
-            net.minecraft.client.renderer.rendertype.RenderType renderType) {
+    @SuppressWarnings("deprecation")
+    public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
+            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand) {
         return List.of();
+    }
+
+    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
+    // getter; on Fabric it is abstract).
+    @Override
+    @SuppressWarnings("deprecation")
+    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
     }
 
     @Override
@@ -292,8 +301,8 @@ public class LensItemModel implements ItemModel {
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
-                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+        return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(
+                net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel());
     }*/
     //?}
 }

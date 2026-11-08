@@ -16,6 +16,10 @@ import net.minecraft.world.level.material.FlowingFluid;
 @Mixin(FlowingFluid.class)
 public interface FlowingFluidAccessor {
     @Invoker("canConvertToSource")
+    //? if >=1.21.10 {
     boolean buildcraft$canConvertToSource(ServerLevel level);
+    //?} else {
+    /^boolean buildcraft$canConvertToSource(net.minecraft.world.level.Level level); // any Level on 1.21.1
+    ^///?}
 }
 *///?}

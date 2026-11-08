@@ -162,7 +162,8 @@ public class GuiIcon implements ISimpleDrawable {
                 raw.texSize, raw.texSize
             );
             //?} else {
-            /*currentGraphics.blit(
+            /*// BCGraphics' 1.21.1 blit blends (the Filtered Buffer's blocked-slot mark is part-transparent).
+            currentGraphics.blit(
                 raw.location,
                 (int) xMin, (int) yMin,
                 uPixel, vPixel,

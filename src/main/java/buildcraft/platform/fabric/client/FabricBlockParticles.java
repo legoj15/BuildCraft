@@ -46,7 +46,20 @@ public final class FabricBlockParticles {
     public static boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face,
             ParticleEngine engine) {
         BlockParticleOverride particles = OVERRIDES.get(state.getBlock());
+        //? if >=26.3 {
         return particles != null && particles.addHitEffects(state, level, pos, face, engine);
+        //?} else {
+        /^if (particles == null) {
+            return false;
+        }
+        // Before 26.3 the override takes the hit, which NeoForge passes as the client's crosshair target.
+        net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
+        if (!(hit instanceof net.minecraft.world.phys.BlockHitResult blockHit) || !blockHit.getBlockPos().equals(pos)) {
+            hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos), face, pos,
+                    false);
+        }
+        return particles.addHitEffects(state, level, hit, engine);
+        ^///?}
     }
 }
 *///?}

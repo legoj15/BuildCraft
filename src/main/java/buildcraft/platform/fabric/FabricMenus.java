@@ -20,18 +20,24 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 
+//? if >=26.1 {
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuType;
+//?} else {
+/^import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
+^///?}
 
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.menu.BufferMenuFactory;
 
 /^*
- * {@link BCMenus} on Fabric: an {@link ExtendedMenuType} whose opening data is the writer's raw bytes, sent as one
+ * {@link BCMenus} on Fabric: an {@code ExtendedMenuType} whose opening data is the writer's raw bytes, sent as one
  * {@link ByteBufCodecs#BYTE_ARRAY} and unwrapped into a {@link RegistryFriendlyByteBuf} for the factory, so the
- * factory reads the same bytes it reads on NeoForge.
+ * factory reads the same bytes it reads on NeoForge. (Fabric API before 26.1 names the two types
+ * {@code ExtendedScreenHandlerType} and {@code ExtendedScreenHandlerFactory}.)
  *
- * <p>Fabric refuses to open an extended menu type through a provider that is not an {@link ExtendedMenuProvider}, and
+ * <p>Fabric refuses to open an extended menu type through a provider that is not an {@code ExtendedMenuProvider}, and
  * vanilla's spectator path ({@code ServerPlayerGameMode} calling {@code openMenu(blockEntity)}) hands it the block
  * entity itself. The {@code ServerPlayer#openMenu} mixin ({@code mixin.ServerPlayerMixin}, the route of NeoForge's
  * {@code writeClientSideData}) wraps such a provider with {@link #withOpeningData} first, so a spectator opens the GUI
@@ -40,9 +46,15 @@ import buildcraft.platform.menu.BufferMenuFactory;
 public final class FabricMenus implements BCMenus {
     @Override
     public <T extends AbstractContainerMenu> MenuType<T> create(BufferMenuFactory<T> factory) {
+        //? if >=26.1 {
         return new ExtendedMenuType<>((containerId, inventory, data) -> factory.create(containerId, inventory,
             new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(data), inventory.player.registryAccess())),
             ByteBufCodecs.BYTE_ARRAY);
+        //?} else {
+        /^return new ExtendedScreenHandlerType<>((containerId, inventory, data) -> factory.create(containerId, inventory,
+            new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(data), inventory.player.registryAccess())),
+            ByteBufCodecs.BYTE_ARRAY);
+        ^///?}
     }
 
     @Override
@@ -50,10 +62,22 @@ public final class FabricMenus implements BCMenus {
         player.openMenu(withOpeningData(provider, writer));
     }
 
+    /^* Whether {@code provider} already carries an extended menu type's opening data. *^/
+    public static boolean isExtended(MenuProvider provider) {
+        //? if >=26.1 {
+        return provider instanceof ExtendedMenuProvider<?>;
+        //?} else {
+        /^return provider instanceof ExtendedScreenHandlerFactory<?>;
+        ^///?}
+    }
+
     /^* {@code provider}, opening its menu with {@code writer}'s bytes as the extended menu type's data. *^/
-    public static ExtendedMenuProvider<byte[]> withOpeningData(MenuProvider provider,
-                                                               Consumer<RegistryFriendlyByteBuf> writer) {
+    public static MenuProvider withOpeningData(MenuProvider provider, Consumer<RegistryFriendlyByteBuf> writer) {
+        //? if >=26.1 {
         return new ExtendedMenuProvider<byte[]>() {
+        //?} else {
+        /^return new ExtendedScreenHandlerFactory<byte[]>() {
+        ^///?}
             @Override
             public Component getDisplayName() {
                 return provider.getDisplayName();

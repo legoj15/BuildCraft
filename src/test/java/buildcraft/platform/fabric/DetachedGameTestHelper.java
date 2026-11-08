@@ -54,16 +54,11 @@ public final class DetachedGameTestHelper extends GameTestHelper {
         throw new AssertionError(message);
     }
 
+    // 1.21.1's helper has only the String forms, 1.21.10's assertTrue only the Component one.
+    //? if >=1.21.10 {
     @Override
     public void fail(Component message) {
         throw new AssertionError(message.getString());
-    }
-
-    @Override
-    public void assertTrue(boolean condition, String message) {
-        if (!condition) {
-            fail(message);
-        }
     }
 
     @Override
@@ -72,5 +67,15 @@ public final class DetachedGameTestHelper extends GameTestHelper {
             fail(message);
         }
     }
+    //?}
+
+    //? if >=1.21.11 || <1.21.10 {
+    @Override
+    public void assertTrue(boolean condition, String message) {
+        if (!condition) {
+            fail(message);
+        }
+    }
+    //?}
 }
 *///?}

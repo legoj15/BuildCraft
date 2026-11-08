@@ -335,6 +335,16 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
 
 **Baseline** (26.3 view, before S1): about 317 main files with live references, 673 live import lines and 204 live fully qualified references.
 
+## Fabric nodes on every line (#170, as built 2026-11-08)
+
+Every NeoForge line has a `<mc>-fabric` twin (`settings.gradle.kts`; pins in `versions/<node>/gradle.properties`, files there need `git add -f` under the user's `/versions` ignore).
+- **Loom mode:** 26.x nodes apply `net.fabricmc.fabric-loom` (no remap); 1.21.x nodes apply `fabric-loom-remap` with Mojang mappings, `mod*` configurations, `remapJar`, and a per-node `buildcraftunofficial-named.classtweaker`.
+- **Render layers before 26.1:** `FabricLegacyRenderLayers` reads each BC blockstate's models (and their BC parents) for NeoForge's `render_type` key and fills Fabric's `BlockRenderLayerMap`; from 26.1 the layer comes from sprite transparency.
+- **1.21.1 item models:** NeoForge's 1.21.1 item-model hooks are replayed by `ClassicItemModel`/`ClassicItemRenderType` seams and `FabricClassicModelLoaders` (fluid-container and separate-transforms loaders; `DataFabric` renames the loader ids). The fluid layer is drawn flat (no walls, no glow, `force_opaque_fluid` ignored).
+- **1.21.1 gaps:** chunk tickets are not persisted; no packet splitting (vanilla's 1 MiB / 32 KiB limits); Fabric API 0.116 has no client game-test module, so the game-test mod carries a stand-in for the part the client game test uses (`gametest.ClientGameTestShim`, test sources only): the same body and screenshot names, but no dedicated server, so the multiplayer phase (`BCFabricMultiplayerChecks`) and its two shots are left out there, as is the hit-particle check (its hook sits in `Minecraft.continueAttack`).
+- **Game-test registration before 1.21.5** lives in `lib.test.LegacyGameTestRegistry`, shared by NeoForge 1.21.1 and 1.21.1-fabric (944 BC tests; later lines add vanilla's `always_pass`).
+- **Mixin checker:** `scripts/fabric-mixin-check.py` matches names and overloads by descriptor, but not field types or parameter types of injected handlers; a 0 there is not a guarantee, the game-test run is.
+
 ## Fabric node (Phase 2) prerequisites
 
 - The spike (SP) has answered these questions:

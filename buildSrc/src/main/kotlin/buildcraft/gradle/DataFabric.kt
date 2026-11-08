@@ -16,11 +16,14 @@ import java.io.File
 //      (buildcraftunofficial:*) pass through: DataServices.registerCondition registers them on Fabric too.
 //   2. {"neoforge:ingredient_type": "neoforge:components", items, components, strict?} ->
 //      {"fabric:type": "fabric:components", base, components} (fabric-recipe-api-v1's ComponentsIngredient, whose
-//      match is NeoForge's non-strict one: the listed components must be present and equal).
+//      match is NeoForge's non-strict one: the listed components must be present and equal). On 1.21.1 the
+//      down-port has already renamed the dispatch key to "type", and base takes that line's object form.
 //   3. data/neoforge/** and data/<ns>/neoforge/biome_modifier/** are dropped: Fabric reads neither. The biome
 //      modifiers are code on Fabric (FabricDataServices); each dropped modifier must be one this file knows.
 //   4. neoforge:fluid_container item models -> buildcraftunofficial:fluid_container, the Fabric twin of that model
-//      type (same codec), with each NeoForge mask texture swapped for the Fabric node's own one.
+//      type (same codec), with each NeoForge mask texture swapped for the Fabric node's own one. On 1.21.1 the same
+//      for the classic models/item loaders DataDownport1211 writes (fluid_container and separate_transforms), whose
+//      Fabric twins are FabricClassicModelLoaders.
 // Anything it cannot translate fails the build with the file named, rather than shipping data Fabric would
 // ignore or reject. verifyNoNeoForgeData then fails on any "neoforge:" left in the output.
 
@@ -65,6 +68,7 @@ object DataFabric {
         dataDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { transformDataFile(it) }
         resourcesDir.resolve("assets").listFiles()?.forEach { ns ->
             rewriteFluidContainerModels(ns.resolve("items"))
+            rewriteClassicModelLoaders(ns.resolve("models/item"))
         }
     }
 
@@ -92,6 +96,11 @@ object DataFabric {
             val m = node as Map<String, Any?>
             if (m.containsKey("neoforge:ingredient_type")) {
                 componentsIngredient(m, f)
+            } else if (m["type"] == "neoforge:components") {
+                // 1.21.1's shape: DataDownport1211 renamed the dispatch key to the "type" that line reads.
+                val renamed = LinkedHashMap(m)
+                renamed["neoforge:ingredient_type"] = renamed.remove("type")
+                componentsIngredient(renamed, f, legacyBase = true)
             } else {
                 val out = LinkedHashMap<String, Any?>()
                 for ((k, v) in m) {
@@ -142,7 +151,7 @@ object DataFabric {
         }
     }
 
-    private fun componentsIngredient(m: Map<String, Any?>, f: File): Map<String, Any?> {
+    private fun componentsIngredient(m: Map<String, Any?>, f: File, legacyBase: Boolean = false): Map<String, Any?> {
         val type = m["neoforge:ingredient_type"]
         if (type != "neoforge:components") fail(f, "ingredient type $type has no Fabric translation")
         val unknown = m.keys - setOf("neoforge:ingredient_type", "items", "components", "strict")
@@ -150,10 +159,11 @@ object DataFabric {
         // Fabric's ComponentsIngredient has no exhaustive mode; NeoForge's strict=false is the same test.
         if (m["strict"] == true) fail(f, "a strict neoforge:components ingredient has no Fabric twin")
         // NeoForge's items is an item holder set (id, #tag or list); Fabric's base is an Ingredient, which on
-        // 26.x has the same JSON forms.
+        // 26.x has the same JSON forms, and on 1.21.1 the {"item"}/{"tag"} object forms.
+        val items = m["items"] ?: fail(f, "neoforge:components ingredient has no items")
         return linkedMapOf(
             "fabric:type" to "fabric:components",
-            "base" to (m["items"] ?: fail(f, "neoforge:components ingredient has no items")),
+            "base" to (if (legacyBase) DataDownport1211.convIngredient1211(items) else items),
             "components" to (m["components"] ?: fail(f, "neoforge:components ingredient has no components")),
         )
     }
@@ -218,6 +228,33 @@ object DataFabric {
             model["textures"] = outTextures
             val out = LinkedHashMap(root)
             out["model"] = model
+            write(f, out)
+        }
+    }
+
+    // The classic (1.21.1) form: models/item/*.json naming a NeoForge loader. Same fields; the loader id and any
+    // NeoForge fluid-container texture change.
+    private val CLASSIC_LOADERS = mapOf(
+        "neoforge:fluid_container" to "buildcraftunofficial:fluid_container",
+        "neoforge:separate_transforms" to "buildcraftunofficial:separate_transforms",
+    )
+
+    @Suppress("UNCHECKED_CAST")
+    private fun rewriteClassicModelLoaders(modelsItemDir: File) {
+        if (!modelsItemDir.isDirectory) return
+        modelsItemDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { f ->
+            val root = parse(f) as? Map<String, Any?> ?: return@forEach
+            val loader = root["loader"] as? String ?: return@forEach
+            if (!loader.startsWith(NF)) return@forEach
+            val out = LinkedHashMap(root)
+            out["loader"] = CLASSIC_LOADERS[loader] ?: fail(f, "classic model loader $loader has no Fabric twin")
+            (root["textures"] as? Map<String, Any?>)?.let { textures ->
+                out["textures"] = textures.mapValuesTo(LinkedHashMap()) { (_, tex) ->
+                    if (tex is String && tex.startsWith(NF)) {
+                        FLUID_CONTAINER_TEXTURES[tex] ?: fail(f, "no Fabric twin of fluid-container texture $tex")
+                    } else tex
+                }
+            }
             write(f, out)
         }
     }

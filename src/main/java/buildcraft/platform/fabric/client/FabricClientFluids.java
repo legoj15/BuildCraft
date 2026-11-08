@@ -15,16 +15,23 @@ import buildcraft.platform.client.ClientFluids;
 import buildcraft.platform.fabric.FabricFluids;
 
 /^*
- * {@link ClientFluids} on Fabric: the fluid's baked model ({@link ClientFluids#model}) for the sprite, Fabric's variant
- * rendering for the tint. Only the pre-26.1 {@code FluidSprites} reads {@link #stillTexture} (26.1 and later read the
- * model itself, with its water fallback), so nothing on this node calls it.
+ * {@link ClientFluids} on Fabric: the fluid's baked model ({@code ClientFluids#model}, 26.1 and later) or Fabric's
+ * variant rendering (before) for the sprite, Fabric's variant rendering for the tint. Only the pre-26.1
+ * {@code FluidSprites} reads {@link #stillTexture} (26.1 and later read the model itself, with its water fallback).
  ^/
 public final class FabricClientFluids implements ClientFluids {
     /^* The model's still sprite: water's where the fluid has none, as NeoForge's lookup answers on 26.1 and later. ^/
     @Override
     public Identifier stillTexture(BCFluidStack stack) {
+        //? if >=26.1 {
         // The same missing-texture-to-water rule as the sprite FluidSprites draws and as NeoForge's lookup.
         return ClientFluids.model(stack).stillMaterial().sprite().contents().name();
+        //?} else {
+        /^// Before 26.1 FluidSprites reads this: the sprite Fabric's variant rendering declares, null for none.
+        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
+            FluidVariantRendering.getSprite(FabricFluids.toVariant(stack));
+        return sprite == null ? null : sprite.contents().name();
+        ^///?}
     }
 
     @Override

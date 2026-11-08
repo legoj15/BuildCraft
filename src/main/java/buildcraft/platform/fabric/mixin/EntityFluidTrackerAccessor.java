@@ -12,9 +12,16 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.material.Fluid;
 
-/^* One fluid an entity's {@code EntityFluidInteraction} tracks this tick, for {@code EntityFluidInteractionMixin}. ^/
+/^* One fluid an entity's {@code EntityFluidInteraction} tracks this tick, for {@code EntityFluidInteractionMixin}. On
+ *  26.1 and 26.2 a tracker stands for a whole tag, and the mixin keeps its own per-fluid record instead; before 26.1
+ *  there is no tracker class, and this targets {@code Entity} with nothing in it. ^/
+//? if >=26.1 {
 @Mixin(targets = "net.minecraft.world.entity.EntityFluidInteraction$Tracker")
+//?} else {
+/^@Mixin(net.minecraft.world.entity.Entity.class)
+^///?}
 public interface EntityFluidTrackerAccessor {
+    //? if >=26.3 {
     @Accessor("fluidType")
     Holder<Fluid> buildcraft$fluid();
 
@@ -23,5 +30,6 @@ public interface EntityFluidTrackerAccessor {
 
     @Accessor("eyesInside")
     boolean buildcraft$eyesInside();
+    //?}
 }
 *///?}

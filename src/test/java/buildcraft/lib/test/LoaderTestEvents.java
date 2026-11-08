@@ -35,12 +35,15 @@ public final class LoaderTestEvents {
 
     private LoaderTestEvents() {}
 
-    /** A server level unloading (NeoForge {@code LevelEvent.Unload}, Fabric {@code ServerLevelEvents.UNLOAD}). */
+    /** A server level unloading (NeoForge {@code LevelEvent.Unload}, Fabric {@code ServerLevelEvents.UNLOAD}, before
+     *  26.1 {@code ServerWorldEvents.UNLOAD}). */
     public static void levelUnload(ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Unload(level));
-        //?} else {
+        //?} elif >=26.1 {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents.UNLOAD.invoker().onLevelUnload(level.getServer(), level);*/
+        //?} else {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.UNLOAD.invoker().onWorldUnload(level.getServer(), level);*/
         //?}
     }
 
@@ -95,14 +98,17 @@ public final class LoaderTestEvents {
 
     /**
      * An entity joining a level, newly spawned (NeoForge {@code EntityJoinLevelEvent}, Fabric
-     * {@code ServerEntityEvents.ALLOW_LOAD}, whose answer is ignored here).
+     * {@code ServerEntityEvents.ALLOW_LOAD}, before 26.1 BuildCraft's {@code FabricGameHooks.ENTITY_ALLOW_JOIN}; the
+     * answer is ignored here).
      */
     public static void entityJoin(Entity entity, ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.EntityJoinLevelEvent(entity, level));
-        //?} else {
+        //?} elif >=26.1 {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ALLOW_LOAD.invoker()
                 .onAllowLoad(entity, level, null, false);*/
+        //?} else {
+        /*buildcraft.platform.fabric.FabricGameHooks.fireEntityJoin(entity, level, false);*/
         //?}
     }
 
@@ -229,8 +235,8 @@ public final class LoaderTestEvents {
 
     /**
      * A claim on entities joining a level, at {@code order}: {@code claim} answering true keeps the entity out (NeoForge
-     * {@code EntityJoinLevelEvent} cancelled at the order's priority; Fabric {@code ServerEntityEvents.ALLOW_LOAD}
-     * answering false in the order's phase).
+     * {@code EntityJoinLevelEvent} cancelled at the order's priority; Fabric {@code ServerEntityEvents.ALLOW_LOAD},
+     * before 26.1 {@code FabricGameHooks.ENTITY_ALLOW_JOIN}, answering false in the order's phase).
      */
     public static Observer claimEntityJoins(HookOrder order, java.util.function.Predicate<Entity> claim) {
         //? if neoforge {
@@ -427,7 +433,8 @@ public final class LoaderTestEvents {
         }
     }
 
-    /^* The open entity-join claims on Fabric: one ALLOW_LOAD callback per order, in its phase. *^/
+    /^* The open entity-join claims on Fabric: one ALLOW_LOAD (before 26.1 ENTITY_ALLOW_JOIN) callback per order, in
+     *  its phase. *^/
     private static final class FabricJoinClaims {
         private static final java.util.Map<HookOrder, java.util.List<java.util.function.Predicate<Entity>>> OPEN =
                 new java.util.EnumMap<>(HookOrder.class);
@@ -436,16 +443,25 @@ public final class LoaderTestEvents {
             for (HookOrder order : HookOrder.values()) {
                 java.util.List<java.util.function.Predicate<Entity>> open = new java.util.concurrent.CopyOnWriteArrayList<>();
                 OPEN.put(order, open);
+                //? if >=26.1 {
                 buildcraft.platform.fabric.FabricGameHooks.register(
                         net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ALLOW_LOAD, order,
-                        (entity, level, reason, loadedFromDisk) -> {
-                            boolean refused = false;
-                            for (java.util.function.Predicate<Entity> claim : open) {
-                                refused |= claim.test(entity);
-                            }
-                            return !refused;
-                        });
+                        (entity, level, reason, loadedFromDisk) -> allows(open, entity));
+                //?} else {
+                /^buildcraft.platform.fabric.FabricGameHooks.register(
+                        buildcraft.platform.fabric.FabricGameHooks.ENTITY_ALLOW_JOIN, order,
+                        (entity, level, loadedFromDisk) -> allows(open, entity));
+                ^///?}
             }
+        }
+
+        // Every open claim is asked (each may record what it saw); any one refusing keeps the entity out.
+        private static boolean allows(java.util.List<java.util.function.Predicate<Entity>> open, Entity entity) {
+            boolean refused = false;
+            for (java.util.function.Predicate<Entity> claim : open) {
+                refused |= claim.test(entity);
+            }
+            return !refused;
         }
 
         static Observer open(HookOrder order, java.util.function.Predicate<Entity> claim) {
@@ -475,7 +491,11 @@ public final class LoaderTestEvents {
 
         @Override
         public boolean canPlaceBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return !claim.test(player, pos);
         }
     }
@@ -498,19 +518,31 @@ public final class LoaderTestEvents {
 
         @Override
         public boolean canBreakBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return !breakRefused.test(pos);
         }
 
         @Override
         public boolean canInteractBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return !interactRefused.test(pos);
         }
 
         @Override
         public boolean canDamageEntity(net.minecraft.world.level.Level level, Entity entity,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return !damageRefused.test(entity);
         }
 
@@ -518,20 +550,32 @@ public final class LoaderTestEvents {
         // them, as its NeoForge arm posts nothing for them.
         @Override
         public boolean canPlaceBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return true;
         }
 
         @Override
         public boolean canExplodeBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.world.level.Explosion explosion, net.minecraft.server.players.NameAndId profile,
+                //?} else {
+                /^net.minecraft.world.level.Explosion explosion, com.mojang.authlib.GameProfile profile,
+                ^///?}
                 net.minecraft.world.entity.player.Player player) {
             return true;
         }
 
         @Override
         public boolean canInteractEntity(net.minecraft.world.level.Level level, Entity entity,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return true;
         }
     }

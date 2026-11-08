@@ -512,22 +512,25 @@ public class FluidPhysicsTest {
         if (slid[0] < BOAT_SLIDE_MIN_ON_WATER) {
             helper.fail("control: the push must carry a boat on water at least " + BOAT_SLIDE_MIN_ON_WATER + ": " + all);
         }
-        if (slid[1] < slid[0] * BOAT_UNSLOWED_MIN) {
-            helper.fail("with oilIsSticky off a boat on crude oil must slide as far as on water (at least "
-                    + BOAT_UNSLOWED_MIN + " of it): " + all);
+        if (slid[1] < slid[0] * BOAT_UNSLOWED_MIN || slid[1] > slid[0] * BOAT_UNSLOWED_MAX) {
+            helper.fail("with oilIsSticky off a boat on crude oil must slide as far as on water (" + BOAT_UNSLOWED_MIN
+                    + " to " + BOAT_UNSLOWED_MAX + " of it): " + all);
         }
-        if (slid[2] > slid[0] * BOAT_SLOWED_MAX) {
-            helper.fail("with oilIsSticky on a boat on crude oil must slide no more than " + BOAT_SLOWED_MAX
-                    + " of its slide on water: " + all);
+        if (slid[2] < slid[0] * BOAT_SLOWED_MIN || slid[2] > slid[0] * BOAT_SLOWED_MAX) {
+            helper.fail("with oilIsSticky on a boat on crude oil must slide " + BOAT_SLOWED_MIN + " to "
+                    + BOAT_SLOWED_MAX + " of its slide on water: " + all);
         }
     }
 
     /** The least a boat must slide on water for the push to count (about 0.8 expected). */
     private static final double BOAT_SLIDE_MIN_ON_WATER = 0.5;
-    /** How much of its slide on water a boat on un-sticky oil keeps (1 expected) and a boat on sticky oil may keep
-     *  (about 0.56 expected: half the top speed, over a window too short for the full halving). */
+    /** How much of its slide on water a boat on un-sticky oil keeps (1 expected) and a boat on sticky oil keeps
+     *  (about 0.56 expected: half the top speed, over a window too short for the full halving). Both windows are
+     *  two-sided, so a drag much stronger than the halving fails as well as none. */
     private static final double BOAT_UNSLOWED_MIN = 0.9;
-    private static final double BOAT_SLOWED_MAX = 0.75;
+    private static final double BOAT_UNSLOWED_MAX = 1.1;
+    private static final double BOAT_SLOWED_MIN = 0.45;
+    private static final double BOAT_SLOWED_MAX = 0.67;
 
     /**
      * Pins crude oil's deliberate non-water-like configuration (the {@code waterLike} flag in

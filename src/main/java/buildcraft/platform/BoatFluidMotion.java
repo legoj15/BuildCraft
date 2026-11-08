@@ -20,8 +20,10 @@ import net.minecraft.world.phys.Vec3;
  * <p>Whether a boat floats at all is the loader's own question, answered from {@link FluidProperties#supportsBoating}
  * (NeoForge's {@code canBoatInFluid} through the fluid type, Fabric's boat mixin through the declared properties). This
  * class only slows a boat that does: one on a fluid whose {@link FluidProperties#boatSpeed} is below 1, the factor
- * on the boat's top speed (water 1). The fluid is the one at the boat's own block, or the block below it when that
- * holds none; a fluid that is not a BuildCraft fluid, or one boats cannot float on, leaves the boat alone.
+ * on the boat's top speed (water 1). The fluid is the one at the boat's own block: a floating boat's origin sits
+ * below the surface, which is at most 8/9 of a block up, so a boat whose block holds no fluid is in the air (as
+ * vanilla's own {@code checkInWater} judges it). A fluid that is not a BuildCraft fluid, or one boats cannot float on,
+ * leaves the boat alone.
  *
  * <p><b>The maths.</b> A boat in water multiplies its horizontal speed by 0.9 each tick (vanilla's
  * {@code floatBoat}), then a paddling rider adds an acceleration {@code a}, then the boat moves by the result. Its
@@ -34,7 +36,8 @@ import net.minecraft.world.phys.Vec3;
  * {@code k} stops at zero: the slowest this can make a boat, whose speed is then just the paddle's acceleration.
  *
  * <p>The boat's turning ({@code deltaRotation}, private to vanilla's boat) is left alone: the drag is on its
- * speed, not its handling.
+ * speed, not its handling. The maths assumes the boat is afloat: a boat pushed fully under the surface has vanilla's
+ * submerged drag of 0.45 instead of 0.9, so while it stays under, the same {@code k} slows it by only about a tenth.
  *
  * <p>It runs on both logical sides every tick of the boat, because a boat a player rides is simulated by that
  * player's client, and the side that does not simulate it holds it at rest, where multiplying changes nothing. A
@@ -65,9 +68,6 @@ public final class BoatFluidMotion {
     public static FluidProperties floatingIn(Entity boat) {
         BlockPos pos = boat.blockPosition();
         FluidState state = boat.level().getFluidState(pos);
-        if (state.isEmpty()) {
-            state = boat.level().getFluidState(pos.below());
-        }
         FluidProperties fluid = state.isEmpty() ? null : Platform.fluids().declared(state.getType());
         return fluid != null && fluid.supportsBoating() ? fluid : null;
     }

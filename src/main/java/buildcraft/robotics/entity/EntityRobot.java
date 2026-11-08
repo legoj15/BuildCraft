@@ -1469,7 +1469,7 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
 
     /** How far, in blocks, Goggles keep a robot drawn: the type's tracking range (four chunks), past which the
      *  client has no robot to draw anyway. */
-    private static final double GOGGLES_RENDER_BLOCKS = 64;
+    public static final double GOGGLES_RENDER_BLOCKS = 64;
 
     /** Goggles keep robots drawn out to {@link #GOGGLES_RENDER_BLOCKS}. Vanilla scales the cull distance by the
      *  box (64 times its size), which for the 0.25 robot box is 16 blocks: the outline and the status label

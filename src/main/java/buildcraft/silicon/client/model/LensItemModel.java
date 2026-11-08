@@ -46,7 +46,7 @@ import buildcraft.silicon.item.ItemPluggableLens;
  * TRANSFORM_PLUG_AS_ITEM (see {@link PlugItemTransforms}, and
  * common/buildcraft/lib/client/model/ModelItemSimple.java and
  * common/buildcraft/silicon/client/model/plug/ModelLensItem.java on the 8.0.x-1.12.2 branch). The gate used the
- * BIGGER set; the lens never did.
+ * BIGGER set; the lens did not, though its inventory and hand poses here are the port's BIGGER ones, kept as they were.
  *
  * <p>PlugBakerLens emits geometry in WEST-facing orientation (thin axis on X), the way 1.12.2 baked the lens item,
  * and every context but the inventory and the hands draws that, with the context's transform on the item layer (on the

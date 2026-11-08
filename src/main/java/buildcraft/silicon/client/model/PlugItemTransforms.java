@@ -71,11 +71,13 @@ final class PlugItemTransforms {
     /**
      * Which quad set {@code context} draws: {@link ItemDisplayContext#GUI} for the inventory icon, the context itself
      * for a hand (its pose baked in, {@link #bakeHandPose}), and {@link ItemDisplayContext#NONE} for the WEST-facing
-     * quads every other context transforms.
+     * quads every other context transforms. The NONE context itself (an {@code item_display} entity with no display
+     * mode) has no transform, so it draws the face-on inventory quads, as it always has.
      */
     static ItemDisplayContext quadSet(ItemDisplayContext context) {
         return switch (context) {
-            case GUI, FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND ->
+            case GUI, NONE -> ItemDisplayContext.GUI;
+            case FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND ->
                 context;
             default -> ItemDisplayContext.NONE;
         };

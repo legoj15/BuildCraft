@@ -17,7 +17,9 @@ import com.google.common.collect.MapMaker;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.EntityType;
+//? if >=26.2 {
 import net.minecraft.world.entity.EntityTypes;
+//?}
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
@@ -54,7 +56,11 @@ public final class FabricEntityItems {
     static {
         LOOKUP.registerForTypes((entity, context) -> ContainerStorage.of((Container) entity, null),
                 containerEntities());
+        //? if >=26.2 {
         LOOKUP.registerForType((player, context) -> PlayerInventoryStorage.of(player), EntityTypes.PLAYER);
+        //?} else {
+        /^LOOKUP.registerForType((player, context) -> PlayerInventoryStorage.of(player), EntityType.PLAYER);
+        ^///?}
         LOOKUP.registerFallback((entity, context) -> {
             if (entity instanceof AbstractHorse horse) {
                 return ContainerStorage.of(horse.inventory, null);
@@ -72,6 +78,7 @@ public final class FabricEntityItems {
 
     private static EntityType<?>[] containerEntities() {
         return new EntityType<?>[] {
+            //? if >=26.2 {
             EntityTypes.ACACIA_CHEST_BOAT,
             EntityTypes.BIRCH_CHEST_BOAT,
             EntityTypes.CHERRY_CHEST_BOAT,
@@ -87,6 +94,20 @@ public final class FabricEntityItems {
             //?}
             EntityTypes.CHEST_MINECART,
             EntityTypes.HOPPER_MINECART,
+            //?} else {
+            /^EntityType.ACACIA_CHEST_BOAT,
+            EntityType.BIRCH_CHEST_BOAT,
+            EntityType.CHERRY_CHEST_BOAT,
+            EntityType.DARK_OAK_CHEST_BOAT,
+            EntityType.JUNGLE_CHEST_BOAT,
+            EntityType.MANGROVE_CHEST_BOAT,
+            EntityType.OAK_CHEST_BOAT,
+            EntityType.SPRUCE_CHEST_BOAT,
+            EntityType.BAMBOO_CHEST_RAFT,
+            EntityType.PALE_OAK_CHEST_BOAT,
+            EntityType.CHEST_MINECART,
+            EntityType.HOPPER_MINECART,
+            ^///?}
         };
     }
 

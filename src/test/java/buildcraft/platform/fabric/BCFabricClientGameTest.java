@@ -33,7 +33,11 @@ import org.slf4j.LoggerFactory;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+//? if >=26.2 {
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerConnection;
+//?} else {
+/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext;
+^///?}
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
@@ -136,7 +140,11 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             ctx.waitTicks(10);
             orientEngine(server, ENGINE);
             ctx.waitTicks(40);
+            //? if >=26.2 {
             sp.getConnection().waitForChunksRender();
+            //?} else {
+            /^sp.getClientLevel().waitForChunksRender();
+            ^///?}
             ctx.waitTicks(20);
             // The client must draw the engine turned too (its renderer reads the synced tile orientation).
             String clientEngine = ctx.computeOnClient(mc ->
@@ -152,7 +160,11 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
             // The world shots, HUD hidden (F1): the whole rig, then each part close up.
             setHudHidden(ctx, true);
+            //? if >=26.2 {
             TestServerConnection spConn = sp.getConnection();
+            //?} else {
+            /^TestClientLevelContext spConn = sp.getClientLevel();
+            ^///?}
             worldShot(ctx, spConn, server, "5.5 " + (Y + 4) + " 15.5 180 25", "bc-rig-overview", problems);
             worldShot(ctx, spConn, server, "-5.5 " + Y + " 3.5 180 30", "bc-kinesis-engine", problems);
             worldShot(ctx, spConn, server, "-1.5 " + Y + " 3.5 180 30", "bc-item-pipes", problems);
@@ -384,7 +396,12 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         properties.setProperty("server-port", String.valueOf(freeLoopbackPort()));
         try (TestDedicatedServerContext server = ctx.worldBuilder().createServer(properties)) {
             int port = server.computeOnServer(MinecraftServer::getPort);
+            //? if >=26.2 {
             try (TestDedicatedServerConnection conn = server.connect()) {
+            //?} else {
+            /^try (TestServerConnection link = server.connect()) {
+                TestClientLevelContext conn = link.getClientLevel();
+            ^///?}
                 checkMultiplayerMachines(ctx, server, conn, problems);
                 checkLargeSnapshot(ctx, server, problems);
             }
@@ -408,7 +425,12 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
     /^* Machine state reaching the client over the wire, and a BuildCraft menu opening from a server-side tile. *^/
     private static void checkMultiplayerMachines(ClientGameTestContext ctx, TestServerContext server,
-        TestServerConnection conn, List<String> problems) {
+        //? if >=26.2 {
+        TestServerConnection conn,
+        //?} else {
+        /^TestClientLevelContext conn,
+        ^///?}
+        List<String> problems) {
         for (String cmd : new String[] {
             "gamemode creative @p",
             "time set 6000",
@@ -605,12 +627,12 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         ctx.runOnClient(mc -> ConnectScreen.startConnecting(new TitleScreen(), mc, ServerAddress.parseString(address),
             new ServerData("BuildCraft client game test", address, ServerData.Type.OTHER), false, null));
         try {
-            ctx.waitFor(mc -> mc.gui.screen() instanceof DisconnectedScreen || mc.level != null, 1200);
+            ctx.waitFor(mc -> currentScreen(mc) instanceof DisconnectedScreen || mc.level != null, 1200);
         } catch (AssertionError timedOut) {
             // Reported below with what the client shows.
         }
         String outcome = ctx.computeOnClient(mc -> {
-            Screen screen = mc.gui.screen();
+            Screen screen = currentScreen(mc);
             if (screen instanceof DisconnectedScreen disconnected) {
                 return disconnected.getNarrationMessage().getString();
             }
@@ -884,8 +906,13 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     /^* Teleports the player ({@code "x y z yaw pitch"}), waits for the view to settle and screenshots it. *^/
-    private static void worldShot(ClientGameTestContext ctx, TestServerConnection conn, TestServerContext server,
-        String where, String shot, List<String> problems) {
+    private static void worldShot(ClientGameTestContext ctx,
+        //? if >=26.2 {
+        TestServerConnection conn,
+        //?} else {
+        /^TestClientLevelContext conn,
+        ^///?}
+        TestServerContext server, String where, String shot, List<String> problems) {
         server.runCommand("tp @p " + where);
         ctx.waitTicks(10);
         conn.waitForChunksRender();
@@ -894,19 +921,37 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         checkShot(ctx.takeScreenshot(shot), problems);
     }
 
+    // The open screen: the GUI holds it from 26.2, the Minecraft instance before.
+    private static Screen currentScreen(net.minecraft.client.Minecraft mc) {
+        //? if >=26.2 {
+        return mc.gui.screen();
+        //?} else {
+        /^return mc.screen;
+        ^///?}
+    }
+
     private static void setHudHidden(ClientGameTestContext ctx, boolean hidden) {
         ctx.runOnClient(mc -> {
+            //? if >=26.2 {
             if (mc.gui.hud.isHidden() != hidden) {
                 mc.gui.hud.toggle();
             }
+            //?} else {
+            /^mc.options.hideGui = hidden;
+            ^///?}
         });
     }
 
     /^* The command-feedback chat lines and the advancement/recipe toasts would cover the rig in every shot. *^/
     private static void clearOverlays(ClientGameTestContext ctx) {
         ctx.runOnClient(mc -> {
+            //? if >=26.2 {
             mc.gui.hud.getChat().clearMessages(false);
             mc.gui.toastManager().clear();
+            //?} else {
+            /^mc.gui.getChat().clearMessages(false);
+            mc.getToastManager().clear();
+            ^///?}
         });
         ctx.waitTick();
     }
@@ -934,7 +979,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
     private static void expectScreen(ClientGameTestContext ctx, String screenName, List<String> problems) {
         Function<Minecraft, String> current = mc -> {
-            Screen screen = mc.gui.screen();
+            Screen screen = currentScreen(mc);
             return screen == null ? "none" : screen.getClass().getSimpleName();
         };
         try {

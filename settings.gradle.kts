@@ -29,6 +29,7 @@ stonecutter {
         // (#98; see buildSrc bc.fabric.gradle.kts and docs/platform-layer.md).
         version("26.3-fabric", "26.3")
         version("26.2-fabric", "26.2")
+        version("26.1.2-fabric", "26.1.2")
         vcsVersion = "26.3"
     }
 }

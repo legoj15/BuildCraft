@@ -38,6 +38,7 @@ import buildcraft.platform.fabric.client.FabricTooltipHooks;
 @Mixin(GuiGraphicsExtractor.class)
 abstract class GuiGraphicsExtractorMixin {
 
+    //? if >=26.3 {
     @WrapOperation(method = "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;Z)V"))
     private void buildcraft$describeItemTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
@@ -45,8 +46,22 @@ abstract class GuiGraphicsExtractorMixin {
             Operation<Void> original, @Local(argsOnly = true) ItemStack stack) {
         FabricTooltipHooks.describing(stack, () -> original.call(graphics, font, lines, image, x, y, style, extraSpace));
     }
+    //?} else {
+    /^// Before 26.3 the tooltip calls carry no extra-space flag.
+    @WrapOperation(method = "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
+    private void buildcraft$describeItemTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original,
+            @Local(argsOnly = true) ItemStack stack) {
+        FabricTooltipHooks.describing(stack, () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?}
 
+    //? if >=26.3 {
     @WrapOperation(method = "setTooltipForNextFrameInternal(Lnet/minecraft/client/gui/Font;Ljava/util/List;IILnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipPositioner;Lnet/minecraft/resources/Identifier;ZZ)V",
+    //?} else {
+    /^@WrapOperation(method = "setTooltipForNextFrameInternal(Lnet/minecraft/client/gui/Font;Ljava/util/List;IILnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipPositioner;Lnet/minecraft/resources/Identifier;Z)V",
+    ^///?}
             at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;deferredTooltip:Ljava/lang/Runnable;",
                     opcode = Opcodes.PUTFIELD))
     private void buildcraft$tagDeferredTooltip(GuiGraphicsExtractor graphics, Runnable draw, Operation<Void> original) {
@@ -55,7 +70,11 @@ abstract class GuiGraphicsExtractorMixin {
 
     @Inject(method = "tooltip", at = @At("HEAD"))
     private void buildcraft$tooltipPre(Font font, List<ClientTooltipComponent> lines, int x, int y,
+    //? if >=26.3 {
             ClientTooltipPositioner positioner, Identifier style, boolean extraSpace, CallbackInfo ci) {
+    //?} else {
+    /^        ClientTooltipPositioner positioner, Identifier style, CallbackInfo ci) {
+    ^///?}
         FabricTooltipHooks.firePre((GuiGraphicsExtractor) (Object) this, font, lines, x, y, positioner);
     }
 }

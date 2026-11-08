@@ -133,9 +133,20 @@ public final class FabricClientHooks implements ClientHooks {
             PoseStack poseStack = context.poseStack();
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
+            //? if >=26.2 {
             context.submitNodeCollector().submitShapeOutline(poseStack, shape,
                     buildcraft.lib.client.render.BCLibRenderTypes.blockOutline(),
                     ARGB.black(102), 2.5F, outline.isTranslucent());
+            //?} else {
+            /^// 26.1's collector has no shape outline: the same lines go in as custom geometry.
+            context.submitNodeCollector().submitCustomGeometry(poseStack,
+                    buildcraft.lib.client.render.BCLibRenderTypes.blockOutline(), (pose, lines) -> {
+                        PoseStack at = new PoseStack();
+                        at.last().set(pose);
+                        net.minecraft.client.renderer.ShapeRenderer.renderShape(at, lines, shape, 0, 0, 0,
+                                ARGB.black(102), 2.5F);
+                    });
+            ^///?}
             poseStack.popPose();
             return false;
         });

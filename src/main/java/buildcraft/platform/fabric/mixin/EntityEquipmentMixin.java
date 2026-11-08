@@ -25,11 +25,15 @@ import buildcraft.platform.fabric.FabricGameHooks;
 @Mixin(EntityEquipment.class)
 abstract class EntityEquipmentMixin {
 
+    // From 26.3 dropAll spawns the items itself; before, it goes through LivingEntity.drop(), whose spawn
+    // LivingEntityMixin captures, so this is empty there.
+    //? if >=26.3 {
     @WrapOperation(method = "dropAll", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original,
                                            @Local(argsOnly = true) LivingEntity dropper) {
         return FabricGameHooks.captureDrop(dropper, (ItemEntity) drop) || original.call(level, drop);
     }
+    //?}
 }
 *///?}

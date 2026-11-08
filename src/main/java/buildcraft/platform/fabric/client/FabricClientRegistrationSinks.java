@@ -180,12 +180,23 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         }
     }
 
+    //? if >=26.2 {
     @Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
             Supplier<PictureInPictureRenderer<S>> factory) {
         // Fabric keys a PiP renderer by the state class its renderer reports, so the class is not passed on.
         PictureInPictureRendererRegistry.register(context -> factory.get());
     }
+    //?} else {
+    /^// Before 26.2 a PiP renderer draws into the buffer source the GUI renderer is built with, the game's own.
+    @Override
+    public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
+            java.util.function.Function<net.minecraft.client.renderer.MultiBufferSource.BufferSource,
+                    PictureInPictureRenderer<S>> factory) {
+        PictureInPictureRendererRegistry.register(
+                context -> factory.apply(context.minecraft().renderBuffers().bufferSource()));
+    }
+    ^///?}
 
     @Override
     public void clientSetup(Runnable work) {

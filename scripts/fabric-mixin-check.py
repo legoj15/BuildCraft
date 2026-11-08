@@ -23,7 +23,7 @@ jar proves unrelated, an ordinal past the last match. What it cannot resolve con
 JDK, a type variable, an interface pair, a handler parameter type that is only a super- or subtype of the expected one
 where the injector may allow it, a dynamic annotation value) is a warning and does not change the exit status. It is
 still a lead finder, not Mixin: @Local captures, local-variable ordinals, constants and slices are not checked, and a
-miss in a class the node never loads (another loader's mixin) is still reported.
+target outside net.minecraft / com.mojang (another mod's class, such as Fabric API's) is skipped.
 
 Readiness: it reads the Stonecutter view (versions/<node>/build/generated/stonecutter/{main,test}/java), which
 ./gradlew :<node>:compileJava (or :<node>:stonecutterGenerate :<node>:stonecutterGenerateTest) writes IN PLACE, a file at
@@ -750,7 +750,10 @@ class MixinChecker:
         """The classes (internal names) a @Mixin's `value` and `targets` name."""
         out = []
         for m in re.finditer(r"targets\s*=\s*(\{[^}]*\}|\"[^\"]*\")", mixin_args):
-            out += [t.replace(".", "/") for t in re.findall(r"\"([^\"]+)\"", m.group(1))]
+            for t in re.findall(r"\"([^\"]+)\"", m.group(1)):
+                if t.startswith("L") and t.endswith(";"):  # descriptor form, Lnet/minecraft/Foo;
+                    t = t[1:-1]
+                out.append(t.replace(".", "/"))
         stripped = re.sub(r"targets\s*=\s*(\{[^}]*\}|\"[^\"]*\")", "", mixin_args)
         for t in re.findall(r"([\w.$]+)\.class", stripped):
             c = self.R.class_of(t)
@@ -758,7 +761,8 @@ class MixinChecker:
                 out.append(c)
             else:
                 self.rep.warn(self.src.path.name, f"cannot resolve mixin target {t}.class")
-        return [t for t in out if t.startswith(("net/minecraft/", "com/mojang/"))]  # the rest is another mod's class
+        # another mod's class (Fabric API's, say) is not in the Minecraft jar: nothing to check it against
+        return [t for t in out if t.startswith(("net/minecraft/", "com/mojang/"))]
 
     def check(self, mixin_args, members, class_name):
         src, jar, rep = self.src, self.jar, self.rep
@@ -1081,7 +1085,8 @@ class MixinChecker:
             rep.fail(ctx, "@Inject handler has no CallbackInfo parameter")
             return
         ci_name = mem.params[k].type.split("<")[0].strip().rsplit(".", 1)[-1]
-        handler = self.tys(mem.params[:k])
+        # MixinExtras captures (@Local, @Share) are not target arguments wherever they sit
+        handler = self.tys([p for p in mem.params[:k] if not any(a.name in ("Local", "Share") for a in p.annos)])
         results = []  # per overload, the failures it gave ([] = it fits)
         for m in cands:
             tp, tr = parse_desc(m.desc)

@@ -16,7 +16,9 @@ import buildcraft.robotics.IStationFilter;
 /** Finds a station the robot can UNLOAD its carried fluid into, and flies to it.
  *  {@link AIRobotUnloadFluids#unload} as a dry-run predicate makes only a station with room for the
  *  carried fluid a candidate. Ported from 7.1.x {@code AIRobotGotoStationToUnloadFluids}. */
-public class AIRobotGotoStationToUnloadFluids extends AIRobot {
+public class AIRobotGotoStationToUnloadFluids extends AIRobot implements StationOutcome {
+
+    private boolean stationUnavailable;
 
     public AIRobotGotoStationToUnloadFluids(IRobotAccess iRobot) {
         super(iRobot);
@@ -33,9 +35,15 @@ public class AIRobotGotoStationToUnloadFluids extends AIRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoStation) {
+            stationUnavailable = !ai.success() && StationOutcome.unavailable(ai);
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 
     private class StationFilter implements IStationFilter {

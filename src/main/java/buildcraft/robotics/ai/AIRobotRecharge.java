@@ -19,7 +19,7 @@ import buildcraft.robotics.IStationFilter;
  *  is going away), drops all motion, and terminates once the battery reaches the headroom threshold —
  *  {@code MAX_POWER - MAX_POWER/200} (Decision 3's re-pin-safe headroom, not 7.1.x's hard 500). A powered station
  *  it cannot reach is passed over for the next-nearest one. */
-public class AIRobotRecharge extends AIRobot {
+public class AIRobotRecharge extends AIRobot implements StationOutcome {
 
     public AIRobotRecharge(IRobotAccess iRobot) {
         super(iRobot);
@@ -38,6 +38,8 @@ public class AIRobotRecharge extends AIRobot {
     /** The stations a robot can charge at. */
     static final IStationFilter POWERED = DockingStation::providesPower;
 
+    private boolean stationUnavailable;
+
     @Override
     public long getPowerCost() {
         return 0;
@@ -54,9 +56,15 @@ public class AIRobotRecharge extends AIRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoStation) {
             if (!ai.success()) {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

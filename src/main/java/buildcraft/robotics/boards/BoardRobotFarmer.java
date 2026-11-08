@@ -26,6 +26,7 @@ import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
 import buildcraft.robotics.entity.RobotSleepReason;
@@ -78,6 +79,7 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
                             && isExpectedHoe(stack)));
         } else {
             Level level = robot.level();
+            refusals.startSearch();
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, pos -> isSearchCandidate(level, pos),
                     pos -> approveSearchTarget(level, pos)));
         }
@@ -118,11 +120,12 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotUseToolOnBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_TOOL));
+                startDelegateAI(new AIRobotGotoSleep(robot, StationOutcome.sleepReason(ai, RobotSleepReason.NO_TOOL)));
             }
         } else if (ai instanceof AIRobotUseToolOnBlock) {
             // A till that failed (a claim mod said no, or the dirt changed under the hoe) must not be tried again on

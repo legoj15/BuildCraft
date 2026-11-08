@@ -14,10 +14,11 @@ import buildcraft.api.robots.IRobotAccess;
 
 /** Goes to a station (either {@code station} if given, or the nearest unloadable one) and empties the robot
  *  through {@link AIRobotUnload}. */
-public class AIRobotGotoStationAndUnload extends AIRobot {
+public class AIRobotGotoStationAndUnload extends AIRobot implements StationOutcome {
 
     private DockingStation station;
     private boolean emptiesHand;
+    private boolean stationUnavailable;
 
     /** The unload a board starts to get rid of the tool in the robot's hand (a worn sword, a worn pickaxe): it fails
      *  unless the hand ends up empty, which is what sends such a board to sleep when no station will take the tool.
@@ -60,6 +61,7 @@ public class AIRobotGotoStationAndUnload extends AIRobot {
             if (ai.success()) {
                 startDelegateAI(new AIRobotUnload(robot, emptiesHand));
             } else {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
@@ -67,6 +69,8 @@ public class AIRobotGotoStationAndUnload extends AIRobot {
             if (ai.success()) {
                 startDelegateAI(new AIRobotUnload(robot, emptiesHand));
             } else {
+                // The station was named, so it exists: the flight could not reach it.
+                stationUnavailable = true;
                 setSuccess(false);
                 terminate();
             }
@@ -75,8 +79,16 @@ public class AIRobotGotoStationAndUnload extends AIRobot {
             // (true) was reported even when the robot still carried everything (station output filled
             // between the search dry-run and the arrival), so the boards re-entered fetch/unload instead
             // of sleeping. Mirrors the load twin's propagation in AIRobotGotoStationAndLoad.
+            // The station took some cargo when the search chose it. What is left over is "busy" only while some
+            // station would still take it; one every station refuses is nowhere to unload.
+            stationUnavailable = !ai.success() && AIRobotGotoStationToUnload.anyTaker(robot);
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

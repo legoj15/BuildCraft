@@ -17,7 +17,9 @@ import buildcraft.robotics.IStationFilter;
 /** Finds a station the robot can LOAD a filter-matching fluid from, and flies to it.
  *  {@link AIRobotLoadFluids#load} as a dry-run predicate makes only a station with a live, compatible
  *  supply a candidate. Ported from 7.1.x {@code AIRobotGotoStationToLoadFluids}. */
-public class AIRobotGotoStationToLoadFluids extends AIRobot {
+public class AIRobotGotoStationToLoadFluids extends AIRobot implements StationOutcome {
+
+    private boolean stationUnavailable;
 
     private IFluidFilter filter;
 
@@ -39,9 +41,15 @@ public class AIRobotGotoStationToLoadFluids extends AIRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoStation) {
+            stationUnavailable = !ai.success() && StationOutcome.unavailable(ai);
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 
     private class StationFilter implements IStationFilter {

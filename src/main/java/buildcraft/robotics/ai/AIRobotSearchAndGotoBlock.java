@@ -41,6 +41,9 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     private IBlockFilter approve;
     private boolean random;
     private double maxDistanceToEnd;
+    /** Whether the search found a block and then lost it: the flight to it failed, or another robot claimed it first
+     *  (the block was given back either way). Not saved. */
+    private boolean flightFailed;
 
     public AIRobotSearchAndGotoBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -101,7 +104,9 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
      *  and worked it unreserved. */
     @Override
     public void preempt(AIRobot ai) {
-        blockFound.preempt(this, ai);
+        if (blockFound.preempt(this, ai)) {
+            flightFailed = true; // a reloaded flight lost its block to another robot: found, then lost
+        }
     }
 
     /** Reserves the found block (the search's {@code takeResource()}) and takes it as this AI's job; the caller
@@ -125,6 +130,13 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
         return !blockFound.isEmpty();
     }
 
+    /** After a failure: true when there was work - the search found a block - but the robot lost it (the flight
+     *  failed, or another robot claimed it first), so a board's sleep reason is "retrying", not "no work", and not
+     *  whatever the search skipped on the way. */
+    public boolean foundButUnreached() {
+        return flightFailed;
+    }
+
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchBlock searchAI) {
@@ -137,10 +149,12 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
                     terminate();
                 }
             } else {
+                flightFailed = searchAI.success(); // true only when the search found one and the claim was lost
                 terminate();
             }
         } else if (ai instanceof AIRobotGotoBlock gotoAI) {
             if (!gotoAI.success()) {
+                flightFailed = true;
                 releaseBlockFound();
             }
             terminate();

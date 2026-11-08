@@ -55,6 +55,7 @@ public class AIRobotPumpBlock extends AIRobot {
     int pumped = 0;
     /** Whether a protection mod (or the block's own pickup) refused to give the block up; see {@link #refused()}. */
     private boolean refused = false;
+    private boolean protectionRefused = false;
 
     public AIRobotPumpBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -129,6 +130,11 @@ public class AIRobotPumpBlock extends AIRobot {
         return refused;
     }
 
+    /** Whether the {@link #refused()} came from a protection mod, rather than the block's own pickup. */
+    public boolean refusedByProtection() {
+        return protectionRefused;
+    }
+
     /** Asks protection mods whether this robot may take fluid from the block, as {@link RobotProtection} does for
      *  every robot that changes the world; only the block this pass actually targets is asked about. A refusal is
      *  recorded for {@link #refused()}. */
@@ -137,6 +143,7 @@ public class AIRobotPumpBlock extends AIRobot {
             return true;
         }
         refused = true;
+        protectionRefused = true;
         return false;
     }
 

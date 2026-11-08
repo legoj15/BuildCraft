@@ -26,7 +26,7 @@ import buildcraft.robotics.StationIndex;
  *  goto is capped (the A* weight prune and its expansion budget keep a path within ~96 blocks), so a robot further
  *  than that from the nearest powered station would otherwise fail its recharge and shut down where it stood, with
  *  another powered station in reach. The stations tried are this AI's alone and not saved. */
-public class AIRobotSearchAndGotoStation extends AIRobot {
+public class AIRobotSearchAndGotoStation extends AIRobot implements StationOutcome {
 
     private IStationFilter filter;
     private IZone zone;
@@ -34,6 +34,7 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
     private boolean homeIgnoresZone;
     private final Set<StationIndex> tried = new HashSet<>();
     private DockingStation target;
+    private boolean stationUnavailable;
 
     public AIRobotSearchAndGotoStation(IRobotAccess iRobot) {
         super(iRobot);
@@ -98,6 +99,9 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
                 target = ((AIRobotSearchStation) ai).targetStation;
                 startDelegateAI(gotoStation(target));
             } else {
+                // Nothing matched that the robot may use now; whether anything matches at all, busy or not, is what
+                // tells "no station" from "station busy".
+                stationUnavailable = AIRobotSearchStation.anyTaker(robot, filter, zone, homeIgnoresZone);
                 setSuccess(false);
                 terminate();
             }
@@ -111,8 +115,15 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
                 search();
                 return;
             }
+            // A failed flight was to a station that matched: there is one, just not one in reach.
+            stationUnavailable = !ai.success();
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

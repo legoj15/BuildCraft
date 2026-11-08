@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import buildcraft.lib.test.MainSourceSet;
 import buildcraft.robotics.entity.RobotActivity;
 import buildcraft.robotics.entity.RobotSleepReason;
+import buildcraft.robotics.entity.RobotStatus;
 
 /** Structural checks on the shipped translation files.
  *
@@ -269,6 +270,10 @@ public class LangFileIntegrityTester {
         List<String> keys = new ArrayList<>();
         for (RobotActivity activity : RobotActivity.values()) {
             keys.add(activity.translationKey());
+            if (RobotStatus.carriesReason(activity)) {
+                // The format key that places the reason's phrase ("Sleeping: %s").
+                keys.add(activity.translationKey() + ".reason");
+            }
         }
         for (RobotSleepReason reason : RobotSleepReason.values()) {
             keys.add(reason.translationKey());

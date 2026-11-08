@@ -97,6 +97,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         updateFilter();
 
         Level level = robot.level();
+        refusals.startSearch();
         startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, pos -> isSearchCandidate(level, pos),
                 pos -> approveSearchTarget(level, pos)));
     }
@@ -199,7 +200,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
                 // (a flight that came back from NBT unreserved), preempt re-claims or drops it on the next cycle.
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                // Nothing found - or nothing but blocks that refused this robot, or that it failed on, lately.
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         }
     }

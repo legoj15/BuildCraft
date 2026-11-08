@@ -40,6 +40,15 @@ val bcDebug = findProperty("bcDebug")?.toString()
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
 val bcTests = findProperty("bcTests")?.toString()
 val bcLoudGameTestLogs = hasProperty("bcLoudGameTestLogs")
+// FallingTree (tree-felling mod), opt-in for dev runs and game tests: `-PwithFallingTree` puts it on the runtime
+// classpath (dependencies below) and tells the game-test run to expect it, so robot_break_fallingtree_* fails if the
+// mod did not load instead of passing as a no-op. Only the nodes that pin `fallingtree_version` take part; the others
+// ignore the flag. Null when the flag is off or this node takes no part. BC has no code dependency on it.
+val fallingTreeVersion: String? = if (hasProperty("withFallingTree")) {
+    (findProperty("fallingtree_version") as String?).also {
+        if (it == null) logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
+    }
+} else null
 val gameTestRunDir = file("run-gameTestServer")
 val quietGameTestLog4j = rootProject.file("gradle/gameTestServerLog4j2-quiet.xml").absolutePath
 
@@ -156,6 +165,10 @@ neoForge {
             // Dev workspace, like every other BC run env (see the client run).
             systemProperty("buildcraft.dev", "true")
             gameDirectory = gameTestRunDir
+            // -PwithFallingTree: the mod is on the classpath, so a missing one is a failure (RobotFallingTreeTester).
+            if (fallingTreeVersion != null) {
+                systemProperty("buildcraft.test.fallingTreeExpected", "true")
+            }
             // Optional test filter, on every node: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
             // runs only the matching tests instead of the whole suite (a ResourceSelectorArgument glob —
             // `namespace:pattern`, `*`/`?` wildcards). Inert without the property: empty selection = run all.
@@ -234,17 +247,10 @@ dependencies {
     // on it (the guide is resources only), so it stays off the default runtime and the test runs.
     if (project.hasProperty("withGuideMe")) runtimeOnly("org.appliedenergistics:guideme:${property("guideme_version")}")
 
-    // FallingTree (tree-felling mod), opt-in for dev runs and game tests: `-PwithFallingTree` puts it on the runtime
-    // classpath so a robot's tree chop can be checked against a real tree feller (robot_break_fallingtree_*; the
-    // game test is a no-op without it). Only the nodes that pin `fallingtree_version` take part; the others ignore
-    // the flag. BC has no code dependency on it.
-    if (project.hasProperty("withFallingTree")) {
-        val fallingTreeVersion = findProperty("fallingtree_version") as String?
-        if (fallingTreeVersion != null) {
-            runtimeOnly("maven.modrinth:fallingtree:$fallingTreeVersion")
-        } else {
-            logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
-        }
+    // FallingTree, opt-in (see fallingTreeVersion above): on the runtime classpath so a robot's tree chop can be checked
+    // against a real tree feller (robot_break_fallingtree_*).
+    if (fallingTreeVersion != null) {
+        runtimeOnly("maven.modrinth:fallingtree:$fallingTreeVersion") { isTransitive = false }
     }
 
     // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the

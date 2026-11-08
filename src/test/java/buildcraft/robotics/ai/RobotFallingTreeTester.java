@@ -42,12 +42,20 @@ import buildcraft.robotics.entity.EntityRobot;
  * the same break event a real break does, at search approval while the robot is still on its way, and a tree feller
  * cannot tell it from a break: it would fell the tree during the ask if the probe's player held an axe. It holds
  * nothing (a leased fake player is reset empty), and the watch below fails the test the moment a log disappears
- * before the robot's own break event at the base has been posted.
+ * before the robot's own break event at the base has been posted, and that at least one probe was posted for the trunk
+ * and every probe's player held nothing (so "the probe does not fell" is earned, not vacuous).
+ *
+ * <p>The exact wear and drop counts are FallingTree's defaults. It persists its config in the run directory's
+ * {@code config/fallingtree.json}, so a manually edited file there changes the result.
  */
 public class RobotFallingTreeTester {
 
     /** The mod id of FallingTree, on both loaders. */
     private static final String FALLING_TREE = "fallingtree";
+
+    /** System property the build sets on the game-test run when {@code -PwithFallingTree} put the mod on its classpath:
+     *  the mod is then expected, and not finding it loaded fails the test. */
+    private static final String EXPECTED_PROPERTY = "buildcraft.test.fallingTreeExpected";
 
     /** Logs in the trunk: more than the two or three the vine tests chop, so a one-by-one chop is unmistakable. */
     private static final int TRUNK_LOGS = 4;
@@ -75,6 +83,10 @@ public class RobotFallingTreeTester {
      */
     public static void lumberjackRobotFellsTheWholeTreeWithFallingTree(GameTestHelper helper) {
         if (!Platform.loader().isModLoaded(FALLING_TREE)) {
+            if (Boolean.getBoolean(EXPECTED_PROPERTY)) {
+                helper.fail("-PwithFallingTree was given (" + EXPECTED_PROPERTY + " is set) but the mod '" + FALLING_TREE
+                        + "' is not loaded: the check below would not have run");
+            }
             BCLog.logger.info("[robot_break_fallingtree_fells_whole_tree] FallingTree is not loaded; nothing to check"
                     + " (run with -PwithFallingTree)");
             helper.succeed();
@@ -113,8 +125,14 @@ public class RobotFallingTreeTester {
                     helper.assertTrue(spread <= MAX_FELL_SPREAD_TICKS, "the trunk came down log by log, over " + spread
                             + " ticks (first log gone on tick " + watch.firstGoneAt + ", last on " + watch.allGoneAt
                             + "), not felled at once by FallingTree");
-                    helper.assertTrue(watch.realBaseEventAt >= 0 && watch.realBaseEventAt <= watch.firstGoneAt,
-                            "no real break event at the base preceded the first log going");
+                    helper.assertTrue(watch.realBaseEventAt >= 0,
+                            "no real break event was posted at the base (the poll fails a log that goes before one)");
+                    // The probes must have happened, and held nothing, for "the probe did not fell the tree" to mean
+                    // anything: a probe whose player held an axe would have felled it (the poll above fails that).
+                    helper.assertTrue(!watch.probes.isEmpty(),
+                            "no permission probe was posted for the trunk, so the probe check proved nothing");
+                    helper.assertTrue(watch.probeHands.stream().allMatch("empty"::equals),
+                            "a permission probe's player held " + watch.probeHands + " in its main hand, not nothing");
                     // One point for the cut and one per extra log (FallingTree's default), so the same as chopping them one
                     // by one: more is a double charge (the robot's own wear on top of the break's), fewer a free log.
                     helper.assertTrue(wear == TRUNK_LOGS, "the axe was charged " + wear + " durability for a "

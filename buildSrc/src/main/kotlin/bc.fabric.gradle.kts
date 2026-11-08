@@ -24,7 +24,6 @@ val fabricLoaderVersion = property("fabric_loader_version") as String
 val fabricApiVersion = property("fabric_api_version") as String
 val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
 val modMenuVersion = property("mod_menu_version") as String
-val fallingTreeVersion = property("fallingtree_version") as String
 val jeiVersion = property("jei_version") as String
 val reiVersion = property("rei_version") as String
 // The player-facing minimums fabric.mod.json declares: their own properties, so a routine bump of the dev pins above
@@ -35,6 +34,14 @@ val fabricApiDepRange = property("fabric_api_dep_range") as String
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
 val bcTests = findProperty("bcTests")?.toString()
+// FallingTree (tree-felling mod), opt-in for dev runs and game tests, as on the NeoForge nodes (bc.neoforge): `-PwithFallingTree`
+// loads it (dependencies below) and tells the game-test run to expect it, so robot_break_fallingtree_* fails if the mod
+// did not load instead of passing as a no-op. Null when the flag is off or this node pins no fallingtree_version.
+val fallingTreeVersion: String? = if (hasProperty("withFallingTree")) {
+    (findProperty("fallingtree_version") as String?).also {
+        if (it == null) logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
+    }
+} else null
 
 sourceSets {
     named("main") {
@@ -138,6 +145,10 @@ tasks.named<JavaExec>("runGameTest") {
     // Dev workspace, like every BC run (BCLib.DEV-gated affordances). Set on the task: Loom's RunConfigSettings
     // property setters are deprecated.
     systemProperty("buildcraft.dev", "true")
+    // -PwithFallingTree: the mod is on the classpath, so a missing one is a failure (RobotFallingTreeTester).
+    if (fallingTreeVersion != null) {
+        systemProperty("buildcraft.test.fallingTreeExpected", "true")
+    }
     // No fabric-api.gametest.report-file: its XML reporter replaces vanilla's log reporter, so a failure would
     // reach no log until the run ends. A failed required test fails the task through the exit code.
     // Optional filter, as on NeoForge: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's test selector glob).
@@ -324,10 +335,10 @@ dependencies {
     // runtime deps are Fabric Loader and Fabric API modules this node already has; Placeholder API rides inside it.
     "localRuntime"("com.terraformersmc:modmenu:$modMenuVersion") { isTransitive = false }
 
-    // FallingTree (tree-felling mod), opt-in for dev runs and game tests: `-PwithFallingTree` loads it so a robot's tree
-    // chop can be checked against a real tree feller (robot_break_fallingtree_*; the game test is a no-op without it).
-    // Same Modrinth jar as the NeoForge 26.3 node (its fabric.mod.json rides in it); BC has no code dependency on it.
-    if (project.hasProperty("withFallingTree")) {
+    // FallingTree, opt-in (see fallingTreeVersion above): loaded so a robot's tree chop can be checked against a real tree
+    // feller (robot_break_fallingtree_*). Same Modrinth jar as the NeoForge 26.3 node (its fabric.mod.json rides in it);
+    // BC has no code dependency on it.
+    if (fallingTreeVersion != null) {
         "localRuntime"("maven.modrinth:fallingtree:$fallingTreeVersion") { isTransitive = false }
     }
 }

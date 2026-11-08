@@ -27,7 +27,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ./gradlew :26.3:runClient
 ./gradlew :26.3:runServer
 ./gradlew :26.3:runClient -Precipe_viewer=rei   # dev runtime gets REI instead of JEI (default jei; never both)
-./gradlew :26.3:runGameTestServer -PwithFallingTree   # opt-in FallingTree (tree felling) on the 26.3 and 26.3-fabric runtime; other nodes ignore it
+./gradlew :26.3:runGameTestServer -PwithFallingTree   # opt-in FallingTree (tree felling) on the 26.3 and 26.3-fabric runtime (robot_break_fallingtree_* then fails if it did not load); other nodes ignore it
 ./gradlew :26.3-fabric:runClient
 ./gradlew :26.3-fabric:runServer
 # Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> on the client), as the NeoForge ones do; -PbcRunDir is NeoForge-only (Loom fixes the working dir).

@@ -29,6 +29,9 @@ public final class BCFabricGameTestEntrypoint implements ModInitializer {
             buildcraft.lib.test.TestOnlyBlocks.register();
         }
         buildcraft.lib.test.LegacyGameTestRegistry.registerAll();
+        // No client game-test module in its Fabric API either: on Loom's clientGameTest run the shim starts the
+        // client game test (BCFabricClientGameTest) instead.
+        buildcraft.platform.fabric.gametest.ClientGameTestShim.install();
         ^///?}
         // The test-only cart's items, through the entity item lookup (NeoForge: a RegisterCapabilitiesEvent listener).
         buildcraft.lib.test.CapabilityOnlyCart.registerLookup();

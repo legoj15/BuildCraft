@@ -5,109 +5,90 @@
  */
 package buildcraft.platform.fabric;
 
-//? if fabric && >=1.21.10 {
+//? if fabric {
 /*import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
-import io.netty.buffer.Unpooled;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+//? if >=1.21.10 {
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-//? if >=26.2 {
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerConnection;
-//?} elif >=26.1 {
-/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext;
-^///?} else {
-/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext;
-^///?}
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
+//?} else {
+/^import buildcraft.platform.fabric.gametest.ClientGameTestShim.ClientGameTestContext;
+import buildcraft.platform.fabric.gametest.ClientGameTestShim.FabricClientGameTest;
+import buildcraft.platform.fabric.gametest.ClientGameTestShim.TestServerContext;
+import buildcraft.platform.fabric.gametest.ClientGameTestShim.TestSingleplayerContext;
+^///?}
+//? if >=26.2 {
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
+//?} elif >=26.1 {
+/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext;
+^///?} elif >=1.21.10 {
+/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext;
+^///?} else {
+/^import buildcraft.platform.fabric.gametest.ClientGameTestShim.TestClientWorldContext;
+^///?}
 import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ConnectScreen;
-import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.api.fluids.BCFluidStack;
-import buildcraft.api.schematics.SchematicBlockContext;
-import buildcraft.builders.BCBuildersItems;
-import buildcraft.builders.snapshot.Blueprint;
-import buildcraft.builders.snapshot.ClientSnapshots;
-import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
-import buildcraft.builders.snapshot.SchematicBlockManager;
-import buildcraft.builders.snapshot.Snapshot;
-import buildcraft.builders.snapshot.SnapshotResponsePayload;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache;
+import buildcraft.lib.misc.RegistryUtilBC;
 import buildcraft.platform.fabric.gametest.mixin.ParticleEngineAccessor;
 import buildcraft.transport.recipe.DyedPipeRecipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /^*
- * The Fabric node's in-world visual check ({@code :26.3-fabric:runClientGameTest}, Fabric API's client game-test
+ * The Fabric nodes' in-world visual check ({@code :26.3-fabric:runClientGameTest}, Fabric API's client game-test
  * runner under {@code -Dfabric.client.gametest}): a flat singleplayer world, a rig of BuildCraft content built by
  * commands (a line of pipes of every kind, a powered redstone engine, a tank of oil, a distiller, a heat exchanger,
  * Stirling and combustion engines, a quarry beside a volume marker and frames), the oil bucket and fragile fluid shards
  * in the hotbar, the tank and Stirling engine GUIs and the guide book, each screenshotted into the run's
- * {@code screenshots/} folder for a person to look at.
+ * {@code screenshots/} folder for a person to look at. On 1.21.1, whose Fabric API has no client game-test module,
+ * {@code gametest.ClientGameTestShim} stands in for the part of it used here.
  * <p>
  * It also runs the game-test bodies that load client classes, which the dedicated game-test server cannot
  * ({@link #runClientClassGameTests}).
  * <p>
- * Then a real multiplayer join ({@link #runDedicatedServerChecks}): Fabric API starts a dedicated server in this JVM
- * and the client connects to it over localhost TCP, so every packet also passes vanilla's frame codec and its 2 MiB
- * frame limit, which a singleplayer join's in-memory connection never applies. It checks machine state reaching the client, a menu opening, a
- * blueprint larger than a packet making the round trip, and the version handshake turning away a client whose
- * payload table differs or that has none.
+ * Then, from 1.21.10, a real multiplayer join ({@code BCFabricMultiplayerChecks}): Fabric API starts a dedicated server
+ * in this JVM and the client connects to it over localhost TCP, so every packet also passes vanilla's frame codec and
+ * its 2 MiB frame limit, which a singleplayer join's in-memory connection never applies. It checks machine state
+ * reaching the client, a menu opening, a blueprint larger than a packet making the round trip, and the version
+ * handshake turning away a client whose payload table differs or that has none.
  * <p>
  * What it asserts on its own: each GUI opens as its BuildCraft screen; no world or held-item shot is dominated by the
  * missing-texture magenta; and the run's log carries no BuildCraft ERROR line and no BuildCraft missing-model,
@@ -115,11 +96,11 @@ import buildcraft.transport.tile.TilePipeHolder;
  *^/
 public final class BCFabricClientGameTest implements FabricClientGameTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft client game test");
+    static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft client game test");
     /^* bc.fabric's runClientGameTest requires this line in the log: the runner exits 0 on some aborts too. *^/
     public static final String PASS_MARKER = "BuildCraft client game test: all checks passed";
 
-    private static final String NS = "buildcraftunofficial";
+    static final String NS = "buildcraftunofficial";
     /^* The flat world's surface is grass at y -61. *^/
     private static final int Y = -60;
     private static final BlockPos ENGINE = new BlockPos(-8, Y, 0);
@@ -223,7 +204,14 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         LogMark scanned = scanLog(LogMark.START, problems);
         Throwable phaseError = null;
         try {
-            runDedicatedServerChecks(ctx, problems);
+            //? if >=1.21.10 {
+            BCFabricMultiplayerChecks.run(ctx, problems);
+            //?} else {
+            /^// Fabric API has no dedicated server for a client game test before 1.21.4 (ClientGameTestShim builds
+            // singleplayer worlds only), so the multiplayer phase and its two shots (bc-mp-rig, bc-mp-tank-gui) do not
+            // run on 1.21.1.
+            LOGGER.info("Multiplayer phase not run on 1.21.1: its Fabric API cannot host a dedicated server in this JVM");
+            ^///?}
         } catch (Throwable t) {
             phaseError = t;
             problems.add("multiplayer: the phase threw " + t + " (attached as the cause)");
@@ -260,25 +248,40 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                     out.add("particles: the client sees " + state + " at the tube spot, not the tube");
                     continue;
                 }
-                mc.particleEngine.clearParticles();
+                clearParticles(mc, queued);
                 level.addDestroyBlockEffect(at, state);
                 out.addAll(particleProblems("break", state, pipe, queued));
                 if (pipe) {
                     // Only a pipe: the tube renders INVISIBLE, which vanilla's hit effects skip anyway.
-                    mc.particleEngine.clearParticles();
                     //? if >=26.3 {
+                    clearParticles(mc, queued);
                     level.addBreakingBlockEffects(at, Direction.UP, false);
-                    //?} else {
-                    /^level.addBreakingBlockEffect(at, Direction.UP);
-                    ^///?}
                     out.addAll(particleProblems("hit", state, true, queued));
+                    //?} elif >=1.21.10 {
+                    /^clearParticles(mc, queued);
+                    level.addBreakingBlockEffect(at, Direction.UP);
+                    out.addAll(particleProblems("hit", state, true, queued));
+                    ^///?} else {
+                    /^// 1.21.1 has no level hit-effect method: MinecraftMixin wraps the crack call inside
+                    // Minecraft.continueAttack, which takes a real attack on the block, so only the break is checked.
+                    LOGGER.info("Particles: the hit check is not run on 1.21.1 (its hook sits in Minecraft.continueAttack)");
+                    ^///?}
                 }
             }
-            mc.particleEngine.clearParticles();
+            clearParticles(mc, queued);
             return out;
         });
         problems.addAll(found);
         server.runCommand("setblock " + PARTICLE_TUBE.getX() + " " + Y + " " + PARTICLE_TUBE.getZ() + " minecraft:air");
+    }
+
+    /^* Empties the particle engine; on 1.21.1, whose clearParticles is private, the queue the checks read. *^/
+    private static void clearParticles(Minecraft mc, Queue<Particle> queued) {
+        //? if >=1.21.10 {
+        mc.particleEngine.clearParticles();
+        //?} else {
+        /^queued.clear();
+        ^///?}
     }
 
     private static List<String> particleProblems(String effect, BlockState state, boolean pipe,
@@ -382,286 +385,6 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         new ClientClassGameTest("zone_planner_survey_outline_on_cells",
             buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells));
 
-    /^* The multiplayer rig stands on its own floor, in the air above the server's flat world. *^/
-    private static final int MP_Y = 100;
-    private static final BlockPos MP_ENGINE = new BlockPos(0, MP_Y, 0);
-    private static final BlockPos MP_PIPE = new BlockPos(1, MP_Y, 0);
-    private static final BlockPos MP_TANK = new BlockPos(4, MP_Y, 0);
-    /^*
-     * Vanilla's largest frame (Varint21FrameDecoder: a 21-bit length). A payload above it reaches the client only if
-     * FabricNetwork's splitter cut it up, so the blueprint must be larger than this for the check to mean anything.
-     *^/
-    private static final int VANILLA_FRAME_LIMIT = (1 << 21) - 1;
-    /^* The payload id the mismatch check's client claims and the server does not have. *^/
-    private static final String FAKE_PAYLOAD = NS + ":client_game_test_only";
-
-    /^*
-     * The multiplayer half: one dedicated server (in this JVM, its own thread, real TCP on localhost), a join that must
-     * pass the version handshake, then two joins the handshake must refuse. A refused join leaves the client on a
-     * {@link DisconnectedScreen}, whose reason is what a player reads.
-     *^/
-    private static void runDedicatedServerChecks(ClientGameTestContext ctx, List<String> problems) {
-        // Bound to 127.0.0.1, so nothing off this machine can join; the test server runs offline-mode (no account
-        // check), which makes that bind the only thing keeping other machines out. A free port rather than vanilla's
-        // 25565, which a dev server of the user's may already hold.
-        java.util.Properties properties = new java.util.Properties();
-        properties.setProperty("server-ip", "127.0.0.1");
-        properties.setProperty("server-port", String.valueOf(freeLoopbackPort()));
-        try (TestDedicatedServerContext server = ctx.worldBuilder().createServer(properties)) {
-            int port = server.computeOnServer(MinecraftServer::getPort);
-            //? if >=26.2 {
-            try (TestDedicatedServerConnection conn = server.connect()) {
-            //?} elif >=26.1 {
-            /^try (TestServerConnection link = server.connect()) {
-                TestClientLevelContext conn = link.getClientLevel();
-            ^///?} else {
-            /^try (TestServerConnection link = server.connect()) {
-                TestClientWorldContext conn = link.getClientWorld();
-            ^///?}
-                checkMultiplayerMachines(ctx, server, conn, problems);
-                checkLargeSnapshot(ctx, server, problems);
-            }
-            checkMismatchedClientRefused(ctx, port, problems);
-            checkClientWithoutHandshakeRefused(ctx, port, problems);
-            ctx.setScreen(() -> new TitleScreen());
-        }
-    }
-
-    /^*
-     * A port free on 127.0.0.1 right now. The probe closes before the server binds, so another socket can take the port
-     * in between; that fails the run loudly at server start (never a false pass: the joins read the server's bound port back), and the window is short.
-     *^/
-    private static int freeLoopbackPort() {
-        try (java.net.ServerSocket probe = new java.net.ServerSocket(0, 0, java.net.InetAddress.getByName("127.0.0.1"))) {
-            return probe.getLocalPort();
-        } catch (IOException e) {
-            throw new java.io.UncheckedIOException("no free loopback port for the test server", e);
-        }
-    }
-
-    /^* Machine state reaching the client over the wire, and a BuildCraft menu opening from a server-side tile. *^/
-    private static void checkMultiplayerMachines(ClientGameTestContext ctx, TestServerContext server,
-        //? if >=26.2 {
-        TestServerConnection conn,
-        //?} elif >=26.1 {
-        /^TestClientLevelContext conn,
-        ^///?} else {
-        /^TestClientWorldContext conn,
-        ^///?}
-        List<String> problems) {
-        for (String cmd : new String[] {
-            "gamemode creative @p",
-            "time set 6000",
-            "fill -4 " + (MP_Y - 1) + " -4 8 " + (MP_Y - 1) + " 6 minecraft:smooth_stone",
-            "fill -4 " + MP_Y + " -4 8 " + (MP_Y + 4) + " 6 minecraft:air",
-            "setblock " + MP_ENGINE.getX() + " " + (MP_Y - 1) + " " + MP_ENGINE.getZ() + " minecraft:redstone_block",
-        }) {
-            server.runCommand(cmd);
-        }
-        pipe(server, MP_PIPE, "wood_power");
-        pipe(server, MP_PIPE.east(), "stone_power");
-        pipe(server, MP_PIPE.east(2), "wood_item");
-        server.runCommand("setblock " + MP_ENGINE.getX() + " " + MP_Y + " " + MP_ENGINE.getZ() + " " + NS
-            + ":engine_redstone");
-        server.runCommand("setblock " + MP_TANK.getX() + " " + MP_Y + " " + MP_TANK.getZ() + " " + NS + ":tank");
-        server.runCommand("tp @p 2.5 " + MP_Y + " 4.5 180 25");
-        ctx.waitTicks(10);
-        fillTank(server, MP_TANK);
-        orientEngine(server, MP_ENGINE);
-        conn.waitForChunksRender();
-        ctx.waitTicks(20);
-
-        // Each wants its synced state on the client within ten seconds; the reason names what the client has instead.
-        expectOnClient(ctx, problems, "the tank's 12000 mB of oil", mc ->
-            mc.level.getBlockEntity(MP_TANK) instanceof TileTank t ? t.tank.getAmountMb(0) + " mB" : "no tank",
-            "12000 mB");
-        expectOnClient(ctx, problems, "the redstone engine turned east", mc ->
-            mc.level.getBlockEntity(MP_ENGINE) instanceof buildcraft.lib.engine.TileEngineBase_BC8 e
-                ? String.valueOf(e.getOrientation()) : "no engine",
-            "east");
-        String[] defs = {"wood_power", "stone_power", "wood_item"};
-        for (int i = 0; i < defs.length; i++) {
-            BlockPos at = MP_PIPE.east(i);
-            String def = defs[i];
-            expectOnClient(ctx, problems, "a " + def + " pipe at " + at.toShortString(), mc ->
-                mc.level.getBlockEntity(at) instanceof TilePipeHolder p && p.getPipe() != null
-                    ? p.getPipe().getDefinition().identifier : "no pipe",
-                NS + ":" + def);
-        }
-
-        setHudHidden(ctx, true);
-        worldShot(ctx, conn, server, "2.5 " + MP_Y + " 4.5 180 25", "bc-mp-rig", problems);
-        setHudHidden(ctx, false);
-        openScreenOn(ctx, server, MP_TANK, "GuiTank", "bc-mp-tank-gui", problems);
-    }
-
-    /^* Waits up to 200 ticks for {@code read} to answer {@code want} on the client, else records what it answered. *^/
-    private static void expectOnClient(ClientGameTestContext ctx, List<String> problems, String what,
-        Function<Minecraft, String> readInWorld, String want) {
-        // A client the server turned away has no level: report that rather than throw and lose the other problems.
-        Function<Minecraft, String> read = mc -> mc.level == null ? "no world (not joined)" : readInWorld.apply(mc);
-        try {
-            ctx.waitFor(mc -> want.equals(read.apply(mc)), 200);
-        } catch (AssertionError timedOut) {
-            problems.add("multiplayer: the client never saw " + what + "; it has " + ctx.computeOnClient(read::apply));
-        }
-    }
-
-    /^*
-     * A blueprint too large for one packet, asked for the way a tooltip asks (the client requests the hash it holds an
-     * item for; the server checks the item and replies): the reply is larger than one vanilla frame, so it arrives
-     * only if it was split, and it must reassemble and decode to the same cells. The cells are noise over a 16-block
-     * palette, which keeps the payload well over the frame limit; the size is re-measured below on every run.
-     *^/
-    private static void checkLargeSnapshot(ClientGameTestContext ctx, TestServerContext server,
-        List<String> problems) {
-        record Sent(Snapshot.Key key, int[] cells, int bytes) {}
-        Sent sent = server.computeOnServer(s -> {
-            ServerLevel level = s.overworld();
-            Blueprint blueprint = noisyBlueprint(level);
-            blueprint.computeKey();
-            GlobalSavedDataSnapshots.get(level).addSnapshot(blueprint);
-            List<ServerPlayer> players = s.getPlayerList().getPlayers();
-            if (players.isEmpty()) {
-                return null;
-            }
-            ServerPlayer player = players.get(0);
-            player.getInventory().setItem(20, BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(
-                new Snapshot.Header(blueprint.key, player.getUUID(), new Date(0), "client-game-test")));
-            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-            try {
-                SnapshotResponsePayload.STREAM_CODEC.encode(buf, new SnapshotResponsePayload(blueprint));
-                return new Sent(blueprint.key, blueprint.data, buf.readableBytes());
-            } finally {
-                buf.release();
-            }
-        });
-        if (sent == null) {
-            problems.add("multiplayer: nobody was on the test server to ask for the blueprint");
-            return;
-        }
-        if (sent.bytes() <= VANILLA_FRAME_LIMIT) {
-            problems.add("multiplayer: the test blueprint encodes to " + sent.bytes()
-                + " bytes, small enough to cross unsplit");
-            return;
-        }
-        try {
-            ctx.waitFor(mc -> ClientSnapshots.INSTANCE.getSnapshot(sent.key()) != null, 1200);
-        } catch (AssertionError timedOut) {
-            problems.add("multiplayer: a " + sent.bytes() + "-byte blueprint never reached the client");
-            return;
-        }
-        boolean same = ctx.computeOnClient(mc ->
-            ClientSnapshots.INSTANCE.getSnapshot(sent.key()) instanceof Blueprint got
-                && Arrays.equals(got.data, sent.cells()));
-        if (!same) {
-            problems.add("multiplayer: the " + sent.bytes() + "-byte blueprint arrived with different cells");
-        }
-        LOGGER.info("Multiplayer: a {}-byte blueprint made the round trip", sent.bytes());
-    }
-
-    private static Blueprint noisyBlueprint(ServerLevel level) {
-        Block[] blocks = {Blocks.STONE, Blocks.DIRT, Blocks.COBBLESTONE, Blocks.OAK_PLANKS, Blocks.SAND, Blocks.GRAVEL,
-            Blocks.GLASS, Blocks.BRICKS, Blocks.SANDSTONE, Blocks.GRANITE, Blocks.DIORITE, Blocks.ANDESITE,
-            Blocks.CLAY, Blocks.OBSIDIAN, Blocks.NETHERRACK, Blocks.END_STONE};
-        Blueprint blueprint = new Blueprint();
-        // About 3.5 million cells, roughly 2.7 MB compressed (2.6 million gave 1.98 MB).
-        blueprint.size = new BlockPos(192, 144, 128);
-        blueprint.facing = Direction.NORTH;
-        blueprint.offset = BlockPos.ZERO;
-        BlockPos sample = new BlockPos(0, MP_Y + 20, 0);
-        for (Block block : blocks) {
-            blueprint.palette.add(SchematicBlockManager.getSchematicBlock(new SchematicBlockContext(level, sample,
-                sample, block.defaultBlockState(), block)));
-        }
-        blueprint.data = new int[blueprint.getDataSize()];
-        Random noise = new Random(98);
-        for (int i = 0; i < blueprint.data.length; i++) {
-            blueprint.data[i] = noise.nextInt(blocks.length);
-        }
-        return blueprint;
-    }
-
-    /^*
-     * A client whose BuildCraft names a payload the server lacks: its handshake reply is the server's own table plus
-     * {@link #FAKE_PAYLOAD}, so the refusal must name that id (the wording around it is not pinned). The real reply handler goes back afterwards.
-     *^/
-    private static void checkMismatchedClientRefused(ClientGameTestContext ctx, int port, List<String> problems) {
-        var original = ctx.computeOnClient(mc -> ClientConfigurationNetworking.unregisterGlobalReceiver(
-            FabricNetworkVersions.VersionTable.TYPE));
-        try {
-            ctx.runOnClient(mc -> ClientConfigurationNetworking.registerGlobalReceiver(
-                FabricNetworkVersions.VersionTable.TYPE, (serverTable, c) -> {
-                    Map<String, String> claimed = new TreeMap<>(serverTable.versions());
-                    claimed.put(FAKE_PAYLOAD, "1");
-                    c.responseSender().sendPacket(new FabricNetworkVersions.VersionTable(claimed));
-                }));
-            String reason = joinExpectingRefusal(ctx, port);
-            if (!reason.contains(FAKE_PAYLOAD)) {
-                problems.add("multiplayer: a client with a payload the server lacks was not refused naming it: "
-                    + reason);
-            }
-        } finally {
-            restoreVersionReply(ctx, original);
-        }
-    }
-
-    /^* A client that cannot take part in the handshake at all (no BuildCraft, or a jar from before it). *^/
-    private static void checkClientWithoutHandshakeRefused(ClientGameTestContext ctx, int port,
-        List<String> problems) {
-        var original = ctx.computeOnClient(mc -> ClientConfigurationNetworking.unregisterGlobalReceiver(
-            FabricNetworkVersions.VersionTable.TYPE));
-        try {
-            String reason = joinExpectingRefusal(ctx, port);
-            String want = ctx.computeOnClient(mc -> Component.translatable(NS + ".network.missing").getString());
-            if (!reason.contains(want)) {
-                problems.add("multiplayer: a client without the handshake was not refused as missing BuildCraft: "
-                    + reason);
-            }
-        } finally {
-            restoreVersionReply(ctx, original);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void restoreVersionReply(ClientGameTestContext ctx,
-        ClientConfigurationNetworking.ConfigurationPayloadHandler<?> original) {
-        ctx.runOnClient(mc -> {
-            ClientConfigurationNetworking.unregisterGlobalReceiver(FabricNetworkVersions.VersionTable.TYPE);
-            if (original == null) {
-                return; // there was none to put back; at least the check's own handler is gone
-            }
-            ClientConfigurationNetworking.registerGlobalReceiver(FabricNetworkVersions.VersionTable.TYPE,
-                (ClientConfigurationNetworking.ConfigurationPayloadHandler<FabricNetworkVersions.VersionTable>) original);
-        });
-    }
-
-    /^*
-     * Connects to the local dedicated server as the multiplayer screen does and waits for the refusal; answers the
-     * disconnect screen's title and reason, or what happened instead.
-     *^/
-    private static String joinExpectingRefusal(ClientGameTestContext ctx, int port) {
-        String address = "127.0.0.1:" + port; // the bind itself: "localhost" may resolve to ::1 first
-        ctx.runOnClient(mc -> ConnectScreen.startConnecting(new TitleScreen(), mc, ServerAddress.parseString(address),
-            new ServerData("BuildCraft client game test", address, ServerData.Type.OTHER), false, null));
-        try {
-            ctx.waitFor(mc -> currentScreen(mc) instanceof DisconnectedScreen || mc.level != null, 1200);
-        } catch (AssertionError timedOut) {
-            // Reported below with what the client shows.
-        }
-        String outcome = ctx.computeOnClient(mc -> {
-            Screen screen = currentScreen(mc);
-            if (screen instanceof DisconnectedScreen disconnected) {
-                return disconnected.getNarrationMessage().getString();
-            }
-            return mc.level != null ? "it joined the world" : "still on " + (screen == null ? "no screen"
-                : screen.getClass().getSimpleName());
-        });
-        ctx.setScreen(() -> new TitleScreen());
-        ctx.waitTicks(5);
-        return outcome;
-    }
-
     private static void buildRig(TestServerContext server) {
         for (String cmd : new String[] {
             "gamemode creative @p",
@@ -748,7 +471,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             ItemStack facade = new ItemStack(buildcraft.silicon.BCSiliconItems.PLUG_FACADE.get());
             ItemStack gate = new ItemStack(buildcraft.silicon.BCSiliconItems.PLUG_GATE.get());
             ItemStack redLens = buildcraft.silicon.BCSiliconItems.PLUG_LENS.get().getStack(DyeColor.RED, false);
-            ItemStack paintedPipe = new ItemStack(BuiltInRegistries.ITEM.getValue(
+            ItemStack paintedPipe = new ItemStack(RegistryUtilBC.getValue(BuiltInRegistries.ITEM,
                 Identifier.fromNamespaceAndPath(NS, "pipe_wood_item")));
             paintedPipe.set(buildcraft.transport.BCTransportItems.PIPE_COLOUR.get(), DyeColor.RED);
             expectItemModel(mc, facade, buildcraft.silicon.client.model.FacadeItemModel.class, bad);
@@ -768,9 +491,15 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     private static void expectItemModel(Minecraft mc, ItemStack stack, Class<?> want, List<String> bad) {
+        //? if >=1.21.10 {
         Identifier modelId = stack.get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
         net.minecraft.client.renderer.item.ItemModel model =
             modelId == null ? null : mc.getModelManager().getItemModel(modelId);
+        //?} else {
+        /^// 1.21.1 has no item models: BuildCraft puts its own BakedModel in the item's model slot at bake time.
+        net.minecraft.client.resources.model.BakedModel model =
+            mc.getItemRenderer().getItemModelShaper().getItemModel(stack);
+        ^///?}
         if (!want.isInstance(model)) {
             bad.add(stack.getItem() + " resolves to " + (model == null ? "no item model" : model.getClass().getName())
                 + ", not BuildCraft's " + want.getSimpleName());
@@ -779,10 +508,23 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
     /^*
      * The per-vertex colours of every quad in the Fabric meshes of {@code stack}'s item layers (GUI context): where
-     * Fabric draws an item quad with its own colour. The layers are vanilla's private fields, read reflectively.
+     * Fabric draws an item quad with its own colour.
      *^/
     private static List<int[]> itemMeshColours(Minecraft mc, ItemStack stack, List<String> bad) {
         List<int[]> colours = new ArrayList<>();
+        for (Object layer : itemLayers(mc, stack, bad)) {
+            layerColours(layer, colours);
+        }
+        return colours;
+    }
+
+    /^*
+     * The layers {@code stack} draws in the GUI: vanilla's item render state layers (private fields, read
+     * reflectively), or on 1.21.1 the one model its classic item model answers for the GUI.
+     *^/
+    private static List<Object> itemLayers(Minecraft mc, ItemStack stack, List<String> bad) {
+        List<Object> layers = new ArrayList<>();
+        //? if >=1.21.10 {
         net.minecraft.client.renderer.item.ItemStackRenderState state =
             new net.minecraft.client.renderer.item.ItemStackRenderState();
         mc.getItemModelResolver().updateForTopItem(state, stack, net.minecraft.world.item.ItemDisplayContext.GUI,
@@ -793,41 +535,74 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 .getDeclaredField("activeLayerCount");
             layersField.setAccessible(true);
             countField.setAccessible(true);
-            Object[] layers = (Object[]) layersField.get(state);
+            Object[] all = (Object[]) layersField.get(state);
             int count = countField.getInt(state);
             for (int i = 0; i < count; i++) {
-                //? if >=26.1 {
-                var mesh = ((net.fabricmc.fabric.impl.client.renderer.LayerRenderStateExtension) layers[i])
-                    .fabric_getMutableMesh();
-                if (mesh != null) {
-                    mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
-                }
-                //?} elif >=1.21.11 {
-                /^var mesh = ((net.fabricmc.fabric.impl.client.indigo.renderer.accessor.AccessLayerRenderState) layers[i])
-                    .fabric_getMutableMesh();
-                if (mesh != null) {
-                    mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
-                }
-                ^///?} else {
-                /^// 1.21.10 draws an item quad with the colours in its own vertex data (int 3 of each vertex's eight,
-                // ABGR), so BuildCraft hands Fabric no mesh there: the layer's quads are what carry them.
-                var layer = (net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState) layers[i];
-                for (net.minecraft.client.renderer.block.model.BakedQuad quad : layer.prepareQuadList()) {
-                    int[] vd = quad.vertices();
-                    colours.add(new int[] {net.minecraft.util.ARGB.fromABGR(vd[3]),
-                        net.minecraft.util.ARGB.fromABGR(vd[11]), net.minecraft.util.ARGB.fromABGR(vd[19]),
-                        net.minecraft.util.ARGB.fromABGR(vd[27])});
-                }
-                ^///?}
+                layers.add(all[i]);
             }
         } catch (ReflectiveOperationException e) {
             bad.add("cannot read the item render state's layers: " + e);
         }
-        return colours;
+        //?} else {
+        /^net.minecraft.client.resources.model.BakedModel model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
+        if (model instanceof buildcraft.platform.client.ClassicItemModel classic) {
+            model = classic.applyTransform(net.minecraft.world.item.ItemDisplayContext.GUI,
+                new com.mojang.blaze3d.vertex.PoseStack(), false);
+        }
+        layers.add(model);
+        ^///?}
+        return layers;
     }
 
-    /^* One quad as a pipe's block model emits it into the chunk mesh: its layer and its four ARGB colours. *^/
-    private record EmittedQuad(net.minecraft.client.renderer.chunk.ChunkSectionLayer layer, int[] colours) {}
+    /^* Adds the four ARGB vertex colours of each quad that {@code layer}, one of {@link #itemLayers}, draws. *^/
+    private static void layerColours(Object layer, List<int[]> colours) {
+        //? if >=26.1 {
+        var mesh = ((net.fabricmc.fabric.impl.client.renderer.LayerRenderStateExtension) layer).fabric_getMutableMesh();
+        if (mesh != null) {
+            mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
+        }
+        //?} elif >=1.21.11 {
+        /^var mesh = ((net.fabricmc.fabric.impl.client.indigo.renderer.accessor.AccessLayerRenderState) layer)
+            .fabric_getMutableMesh();
+        if (mesh != null) {
+            mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
+        }
+        ^///?} elif >=1.21.10 {
+        /^// 1.21.10 draws an item quad with the colours in its own vertex data, so BuildCraft hands Fabric no mesh
+        // there: the layer's quads are what carry them.
+        var renderLayer = (net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState) layer;
+        for (net.minecraft.client.renderer.block.model.BakedQuad quad : renderLayer.prepareQuadList()) {
+            colours.add(vertexColours(quad.vertices()));
+        }
+        ^///?} else {
+        /^// 1.21.1 likewise: the quads of the model the classic item model answers carry them in their vertex data.
+        var model = (net.minecraft.client.resources.model.BakedModel) layer;
+        var random = net.minecraft.util.RandomSource.create(0);
+        List<Direction> faces = new ArrayList<>(List.of(Direction.values()));
+        faces.add(null);
+        for (Direction face : faces) {
+            for (net.minecraft.client.renderer.block.model.BakedQuad quad : model.getQuads(null, face, random)) {
+                colours.add(vertexColours(quad.getVertices()));
+            }
+        }
+        ^///?}
+    }
+
+    //? if <1.21.11 {
+    /^// The ARGB colours of a vanilla quad's four vertices, which it stores ABGR as int 3 of each vertex's eight.
+    private static int[] vertexColours(int[] vertexData) {
+        int[] argb = new int[4];
+        for (int v = 0; v < 4; v++) {
+            int abgr = vertexData[v * 8 + 3];
+            argb[v] = (abgr & 0xFF00FF00) | ((abgr & 0xFF) << 16) | ((abgr >> 16) & 0xFF);
+        }
+        return argb;
+    }
+    ^///?}
+
+    /^* One quad as a pipe's block model emits it into the chunk mesh: whether its layer is the translucent one, and
+     * its four ARGB colours. *^/
+    private record EmittedQuad(boolean translucent, int[] colours) {}
 
     /^*
      * The vertex colours a pipe's block model emits into the chunk mesh (#154): BuildCraft bakes its directional
@@ -847,21 +622,20 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         }
         List<String> found = ctx.computeOnClient(mc -> {
             List<String> bad = new ArrayList<>();
-            var translucent = net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT;
             List<EmittedQuad> lens = emittedQuads(mc, LENS_PIPE);
             int red = DyeColor.RED.getTextureDiffuseColor() & 0xFFFFFF;
-            if (lens.stream().noneMatch(q -> q.layer() == translucent && allRgb(q.colours(), red))) {
+            if (lens.stream().noneMatch(q -> q.translucent() && allRgb(q.colours(), red))) {
                 bad.add("the red lens's glass is not emitted red: translucent quad colours "
-                    + describe(lens.stream().filter(q -> q.layer() == translucent).map(EmittedQuad::colours).toList()));
+                    + describe(lens.stream().filter(EmittedQuad::translucent).map(EmittedQuad::colours).toList()));
             }
-            if (lens.stream().noneMatch(q -> q.layer() != translucent && !allRgb(q.colours(), 0xFFFFFF))) {
+            if (lens.stream().noneMatch(q -> !q.translucent() && !allRgb(q.colours(), 0xFFFFFF))) {
                 bad.add("the lens pipe's opaque quads are all white: no directional shading reached the mesh ("
                     + lens.size() + " quads)");
             }
             List<EmittedQuad> painted = emittedQuads(mc, PAINTED_PIPE);
-            if (painted.stream().noneMatch(q -> q.layer() == translucent && (q.colours()[0] >>> 24) == 76)) {
+            if (painted.stream().noneMatch(q -> q.translucent() && (q.colours()[0] >>> 24) == 76)) {
                 bad.add("the red-painted pipe's glaze is not emitted at alpha 76: translucent quad colours "
-                    + describe(painted.stream().filter(q -> q.layer() == translucent).map(EmittedQuad::colours)
+                    + describe(painted.stream().filter(EmittedQuad::translucent).map(EmittedQuad::colours)
                         .toList()));
             }
             return bad;
@@ -874,19 +648,51 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         List<EmittedQuad> out = new ArrayList<>();
         //? if >=26.1 {
         var model = mc.getModelManager().getBlockStateModelSet().get(state);
-        var capture = net.fabricmc.fabric.api.client.renderer.v1.Renderer.get().quadEmitter(
-            q -> out.add(new EmittedQuad(q.chunkLayer(), new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
+        var translucent = net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT;
+        var capture = net.fabricmc.fabric.api.client.renderer.v1.Renderer.get().quadEmitter(q -> out.add(
+            new EmittedQuad(q.chunkLayer() == translucent, new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
         model.emitQuads(capture, mc.level, pos, state, net.minecraft.util.RandomSource.create(0), face -> false);
-        //?} else {
+        //?} elif >=1.21.10 {
         /^// Before 26.1 the renderer has no emitter that hands each quad on: the quads collect in a mesh, read after.
         var model = mc.getModelManager().getBlockModelShaper().getBlockModel(state);
         var mesh = net.fabricmc.fabric.api.renderer.v1.Renderer.get().mutableMesh();
         model.emitQuads(mesh.emitter(), mc.level, pos, state, net.minecraft.util.RandomSource.create(0), face -> false);
-        mesh.forEach(q -> out.add(new EmittedQuad(q.renderLayer(),
+        var translucent = net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT;
+        mesh.forEach(q -> out.add(new EmittedQuad(q.renderLayer() == translucent,
+            new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
+        ^///?} else {
+        /^// 1.21.1's renderer API (Fabric API 0.116) emits a block model's quads only into a RenderContext, an interface
+        // whose abstract members include one deprecated for removal; a proxy implements it without naming that member,
+        // its emitter the one of a mesh read after. The pipe model emits on its own materials and pushes no transform.
+        var model = mc.getModelManager().getBlockModelShaper().getBlockModel(state);
+        var builder = net.fabricmc.fabric.api.renderer.v1.RendererAccess.INSTANCE.getRenderer().meshBuilder();
+        var emitter = builder.getEmitter();
+        var context = (net.fabricmc.fabric.api.renderer.v1.render.RenderContext) java.lang.reflect.Proxy.newProxyInstance(
+            BCFabricClientGameTest.class.getClassLoader(),
+            new Class<?>[] {net.fabricmc.fabric.api.renderer.v1.render.RenderContext.class},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "getEmitter" -> emitter;
+                case "hasTransform", "isFaceCulled" -> false;
+                case "pushTransform", "popTransform" -> null;
+                case "toString" -> "client game test render context";
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == args[0];
+                default -> method.isDefault() ? java.lang.reflect.InvocationHandler.invokeDefault(proxy, method, args)
+                    : unsupported(method);
+            });
+        model.emitBlockQuads(mc.level, state, pos, () -> net.minecraft.util.RandomSource.create(0), context);
+        var translucent = net.fabricmc.fabric.api.renderer.v1.material.BlendMode.TRANSLUCENT;
+        builder.build().forEach(q -> out.add(new EmittedQuad(q.material().blendMode() == translucent,
             new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
         ^///?}
         return out;
     }
+
+    //? if <1.21.10 {
+    /^private static Object unsupported(java.lang.reflect.Method method) {
+        throw new UnsupportedOperationException("the client game test's render context has no " + method.getName());
+    }
+    ^///?}
 
     private static boolean allRgb(int[] argb, int rgb) {
         for (int c : argb) {
@@ -908,19 +714,19 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         return colours.isEmpty() ? "(no quads)" : distinct.toString();
     }
 
-    private static void pipe(TestServerContext server, int x, int z, String def) {
+    static void pipe(TestServerContext server, int x, int z, String def) {
         pipe(server, new BlockPos(x, Y, z), def);
     }
 
-    private static void pipe(TestServerContext server, BlockPos at, String def) {
+    static void pipe(TestServerContext server, BlockPos at, String def) {
         String xyz = at.getX() + " " + at.getY() + " " + at.getZ();
         server.runCommand("setblock " + xyz + " " + NS + ":pipe_holder");
         server.runCommand("data merge block " + xyz + " {pipe:{def:\"" + NS + ":" + def + "\"}}");
     }
 
-    private static void fillTank(TestServerContext server, BlockPos at) {
+    static void fillTank(TestServerContext server, BlockPos at) {
         server.runOnServer(s -> {
-            Fluid oil = BuiltInRegistries.FLUID.getValue(Identifier.fromNamespaceAndPath(NS, "oil"));
+            Fluid oil = RegistryUtilBC.getValue(BuiltInRegistries.FLUID, Identifier.fromNamespaceAndPath(NS, "oil"));
             if (!(s.overworld().getBlockEntity(at) instanceof TileTank tank)) {
                 throw new AssertionError("No tank at " + at);
             }
@@ -934,7 +740,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
      * placed state says, and an engine only turns on its own to a receiver that already connects to it, which a
      * kinesis pipe does only to an engine facing it.
      *^/
-    private static void orientEngine(TestServerContext server, BlockPos at) {
+    static void orientEngine(TestServerContext server, BlockPos at) {
         server.runOnServer(s -> {
             var level = s.overworld();
             if (!(level.getBlockEntity(at) instanceof buildcraft.lib.engine.TileEngineBase_BC8 engine)) {
@@ -951,7 +757,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     /^* Teleports the player ({@code "x y z yaw pitch"}), waits for the view to settle and screenshots it. *^/
-    private static void worldShot(ClientGameTestContext ctx,
+    static void worldShot(ClientGameTestContext ctx,
         //? if >=26.2 {
         TestServerConnection conn,
         //?} elif >=26.1 {
@@ -969,7 +775,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     // The open screen: the GUI holds it from 26.2, the Minecraft instance before.
-    private static Screen currentScreen(net.minecraft.client.Minecraft mc) {
+    static Screen currentScreen(net.minecraft.client.Minecraft mc) {
         //? if >=26.2 {
         return mc.gui.screen();
         //?} else {
@@ -977,7 +783,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         ^///?}
     }
 
-    private static void setHudHidden(ClientGameTestContext ctx, boolean hidden) {
+    static void setHudHidden(ClientGameTestContext ctx, boolean hidden) {
         ctx.runOnClient(mc -> {
             //? if >=26.2 {
             if (mc.gui.hud.isHidden() != hidden) {
@@ -995,9 +801,12 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             //? if >=26.2 {
             mc.gui.hud.getChat().clearMessages(false);
             mc.gui.toastManager().clear();
-            //?} else {
+            //?} elif >=1.21.10 {
             /^mc.gui.getChat().clearMessages(false);
             mc.getToastManager().clear();
+            ^///?} else {
+            /^mc.gui.getChat().clearMessages(false);
+            mc.getToasts().clear();
             ^///?}
         });
         ctx.waitTick();
@@ -1008,7 +817,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     /^* Stands in front of {@code pos}, uses it with an empty hand and screenshots the screen that opens. *^/
-    private static void openScreenOn(ClientGameTestContext ctx, TestServerContext server, BlockPos pos,
+    static void openScreenOn(ClientGameTestContext ctx, TestServerContext server, BlockPos pos,
         String screenName, String shot, List<String> problems) {
         server.runCommand("tp @p " + (pos.getX() + 0.5) + " " + pos.getY() + " " + (pos.getZ() + 2.5) + " 180 30");
         selectSlot(ctx, 8);
@@ -1102,7 +911,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         }
         for (String line : lines.subList(from, lines.size())) {
             String lower = line.toLowerCase(java.util.Locale.ROOT);
-            if (!lower.contains("buildcraft")) {
+            if (!lower.contains("buildcraft") || vanillaNoise(line)) {
                 continue;
             }
             if (line.contains("/ERROR]") || BC_PROBLEM.matcher(line).find()) {
@@ -1110,6 +919,17 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             }
         }
         return new LogMark(complete, lines.isEmpty() ? null : lines.get(0));
+    }
+
+    /^* A vanilla log line that names a BuildCraft id but says nothing about BuildCraft. *^/
+    private static boolean vanillaNoise(String line) {
+        //? if >=1.21.10 {
+        return false;
+        //?} else {
+        /^// 1.21.1's EntityType.Builder.build looks each entity id up in vanilla's data fixer, which has none for a mod's,
+        // and logs that at ERROR (NeoForge turns the line down to DEBUG; the later lines do not log it).
+        return line.contains("(Minecraft) No data fixer registered for " + NS + ":");
+        ^///?}
     }
 }
 *///?}

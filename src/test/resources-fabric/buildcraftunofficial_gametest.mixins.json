@@ -8,7 +8,7 @@
   ],
   "client": [
     "ClientGameTestThreadStartMixin",
-    "ParticleEngineAccessor"
+    "ParticleEngineAccessor"${client_shim_mixins}
   ],
   "injectors": {
     "defaultRequire": 1

@@ -105,9 +105,10 @@ fabricApi {
         createSourceSet = true
         modId = "buildcraftunofficial_gametest"
         enableGameTests = true
-        // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check. Not on
-        // 1.21.1, whose Fabric API has no client game-test module (fabric-client-gametest-api-v1 starts at 1.21.4).
-        enableClientGameTests = !isPre1_21_10
+        // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check. On 1.21.1,
+        // whose Fabric API has no client game-test module (fabric-client-gametest-api-v1 starts at 1.21.4), Loom's run
+        // only sets -Dfabric.client.gametest, and the game-test mod's ClientGameTestShim runs the test in its place.
+        enableClientGameTests = true
         // EULA accepted (user, 2026-11-06). Loom writes it only into the client game test's run dir (its
         // multiplayer phase starts a real dedicated server, which will not run without it); runGameTest's
         // headless server never asks.
@@ -157,7 +158,11 @@ tasks.named<ProcessResources>("processGametestResources") {
     // naming a test function this node does not register would fail that test at run time, so it is dropped.
     val registrar = sourceSets["test"].java.srcDirs.map { it.resolve("buildcraft/BuildCraftGameTests.java") }
     inputs.files(registrar).optional()
-    val mixinLevel = mapOf("mixin_java_level" to mixinJavaLevel)
+    // The shim's mixins (ClientGameTestShim, the 1.21.1 stand-in for Fabric's client game-test module) join the
+    // client list only where their classes are compiled.
+    val clientShimMixins =
+        if (isPre1_21_10) ", \"ClientShimInputConstantsMixin\", \"ClientShimMouseHandlerInvoker\"" else ""
+    val mixinLevel = mapOf("mixin_java_level" to mixinJavaLevel, "client_shim_mixins" to clientShimMixins)
     inputs.properties(mixinLevel)
     filesMatching("buildcraftunofficial_gametest.mixins.json") { expand(mixinLevel) }
     doLast {
@@ -215,13 +220,14 @@ tasks.named<JavaExec>("runGameTest") {
 
 // ─── Client game test ────────────────────────────────────────────────────────
 // `:26.3-fabric:runClientGameTest`: Fabric API's client game-test runner (fabric-client-gametest-api-v1,
-// `-Dfabric.client.gametest`) boots the dev client, runs the game-test mod's `fabric-client-gametest` entrypoint
+// `-Dfabric.client.gametest`; on 1.21.1 the game-test mod's ClientGameTestShim, the same entrypoint and screenshot
+// names, without the multiplayer phase) boots the dev client, runs the game-test mod's `fabric-client-gametest` entrypoint
 // (BCFabricClientGameTest: a flat world, a rig of BuildCraft content, the held fluid items, two GUIs and the guide
 // book) and exits. Screenshots land in build/run/clientGameTest/screenshots/ for a person to look at; the test itself
 // fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
 // It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
 // hang it on `check`).
-if (!isPre1_21_10) tasks.named<JavaExec>("runClientGameTest") {
+tasks.named<JavaExec>("runClientGameTest") {
     systemProperty("buildcraft.dev", "true")
     val runDir = project.file("build/run/clientGameTest")
     val consoleLog = runDir.resolve("console.log")

@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.fabric;
 
-//? if fabric && >=1.21.10 {
+//? if fabric {
 /*import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
@@ -54,20 +54,12 @@ public final class DetachedGameTestHelper extends GameTestHelper {
         throw new AssertionError(message);
     }
 
+    // 1.21.1's helper has only the String forms, 1.21.10's assertTrue only the Component one.
+    //? if >=1.21.10 {
     @Override
     public void fail(Component message) {
         throw new AssertionError(message.getString());
     }
-
-    // 1.21.10's helper has only the Component form.
-    //? if >=1.21.11 {
-    @Override
-    public void assertTrue(boolean condition, String message) {
-        if (!condition) {
-            fail(message);
-        }
-    }
-    //?}
 
     @Override
     public void assertTrue(boolean condition, Component message) {
@@ -75,5 +67,15 @@ public final class DetachedGameTestHelper extends GameTestHelper {
             fail(message);
         }
     }
+    //?}
+
+    //? if >=1.21.11 || <1.21.10 {
+    @Override
+    public void assertTrue(boolean condition, String message) {
+        if (!condition) {
+            fail(message);
+        }
+    }
+    //?}
 }
 *///?}

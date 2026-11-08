@@ -8,6 +8,8 @@ package buildcraft.platform.fabric.mixin;
 //? if fabric {
 /*import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -18,15 +20,17 @@ import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 
-import buildcraft.platform.fabric.FabricFlowingFluids;
+import buildcraft.platform.BoatFluidMotion;
 import buildcraft.platform.fabric.FabricFluidPhysics;
 
 /^*
- * NeoForge's {@code canBoatInFluid} on Fabric: a boat floats only on a fluid whose type supports boating, which
- * BuildCraft's fluid types do not (the default is off), so a boat sinks in oil and fuel. Vanilla asks the water tag at
- * five places, and every BuildCraft fluid is in it, so there a boat would sail on them. Those five (the water level
- * above the boat, whether it is in water, under water, whether its fall ends in water, and whether a passenger may
- * board with its eyes in water) now leave BuildCraft's fluids out.
+ * NeoForge's {@code canBoatInFluid} on Fabric: a boat floats on a fluid whose type supports boating, which BuildCraft's
+ * fluid types do for every liquid and not for a gas ({@code FluidProperties#supportsBoating}). Vanilla asks the water
+ * tag at five places, and every BuildCraft fluid is in it, so a gas would hold a boat up there. Those five (the water
+ * level above the boat, whether it is in water, under water, whether its fall ends in water, and whether a passenger
+ * may board with its eyes in water) leave out a BuildCraft fluid that declares no boating and count every other
+ * water-tag fluid as before. The end of the boat's tick then runs {@link BoatFluidMotion}, the drag of a sticky fluid
+ * that NeoForge applies from an entity-tick listener.
  *^/
 @Mixin(AbstractBoat.class)
 abstract class AbstractBoatMixin {
@@ -35,10 +39,10 @@ abstract class AbstractBoatMixin {
     @WrapOperation(method = {"getWaterLevelAbove", "checkInWater", "isUnderwater", "checkFallDamage"},
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/level/material/FluidState;is(Lnet/minecraft/tags/TagKey;)Z"))
-    private boolean buildcraft$boatsFloatOnWaterOnly(FluidState state, TagKey<Fluid> tag,
-                                                     Operation<Boolean> original) {
+    private boolean buildcraft$boatsFloatOnBoatableWater(FluidState state, TagKey<Fluid> tag,
+                                                         Operation<Boolean> original) {
         return original.call(state, tag)
-                && !(tag == FluidTags.WATER && FabricFlowingFluids.declared(state.getType()) != null);
+                && (tag != FluidTags.WATER || FabricFluidPhysics.boatsFloatOn(state.getType()));
     }
 
     /^* The boarding test (NeoForge's {@code isEyeInFluidMatching(canBoatInFluid)}): eyes in a fluid boats float on. *^/
@@ -49,6 +53,12 @@ abstract class AbstractBoatMixin {
                 ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) boat).buildcraft$fluidInteraction())
                         .buildcraft$eyeInBoatableWater()
                 : original.call(boat, tag);
+    }
+
+    /^* The end of the boat's tick (NeoForge: {@code EntityTickEvent.Post}), after it has floated and moved. *^/
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void buildcraft$stickyFluidDrag(CallbackInfo ci) {
+        BoatFluidMotion.tick((AbstractBoat) (Object) this);
     }
 }
 *///?}

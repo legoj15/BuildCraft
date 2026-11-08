@@ -139,7 +139,7 @@ abstract class LivingEntityMixin {
     private boolean buildcraft$dismountsInWaterOnly(Entity vehicle, Operation<Boolean> original) {
         return original.call(vehicle)
                 && ((FabricFluidPhysics.Interaction) ((EntityAccessor) (Object) this).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInBoatableWater();
+                        .buildcraft$eyeInForeignWater();
     }
 
     @WrapOperation(method = "checkFallDamage", at = @At(value = "INVOKE",

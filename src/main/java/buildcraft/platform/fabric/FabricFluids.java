@@ -6,7 +6,9 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import net.minecraft.core.Holder;
+/*import javax.annotation.Nullable;
+
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
@@ -63,6 +65,12 @@ public final class FabricFluids implements FluidServices {
         // NeoForge's (FluidConstants.WATER_VISCOSITY is 1000). No level: the nether lava variant is not seen.
         FluidProperties declared = FabricFlowingFluids.DECLARED.get(fluid);
         return declared != null ? declared.viscosity() : FluidVariantAttributes.getViscosity(stillVariant(fluid), null);
+    }
+
+    @Override
+    @Nullable
+    public FluidProperties declared(Fluid fluid) {
+        return FabricFlowingFluids.declared(fluid);
     }
 
     @Override

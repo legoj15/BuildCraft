@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:crude_oil_does_not_float_boats",
+    "function": "buildcraftunofficial:sticky_oil_slows_boats",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 330,
+    "max_ticks": 410,
     "setup_ticks": 0,
     "required": true
 }

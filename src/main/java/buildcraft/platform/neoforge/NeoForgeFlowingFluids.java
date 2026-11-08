@@ -91,6 +91,7 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
                 .canSwim(p.canSwim())
                 .canPushEntity(p.canPushEntity())
                 .canDrown(p.canDrown())
+                .supportsBoating(p.supportsBoating())
                 //? if >=1.21.10 {
                 .isWaterLike(p.waterLike())
                 //?}
@@ -115,7 +116,9 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
                 .tickRate(p.tickRate());
     }
 
-    /** The fluid type: the properties, plus a motion scale read on every use (it may follow a config value). */
+    /** The fluid type: the properties, plus a motion scale read on every use (it may follow a config value). Whether a
+     *  boat floats on it is NeoForge's own {@code supportsBoating}, set from the properties; how fast it sails is
+     *  {@link buildcraft.platform.BoatFluidMotion}'s. */
     static final class Type extends FluidType {
         private final FluidProperties properties;
         private final DoubleSupplier motionScale;
@@ -124,6 +127,11 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
             super(typeProperties(properties));
             this.properties = properties;
             this.motionScale = properties.motionScale();
+        }
+
+        /** What this type was built from, for {@link NeoForgeFluids#declared}. */
+        FluidProperties properties() {
+            return properties;
         }
 
         @Override

@@ -157,6 +157,19 @@ abstract class EntityFluidInteractionMixin implements FabricFluidPhysics.Interac
         for (Object tracked : fluidTrackers) {
             EntityFluidTrackerAccessor tracker = (EntityFluidTrackerAccessor) tracked;
             Holder<Fluid> fluid = tracker.buildcraft$fluid();
+            if (tracker.buildcraft$eyesInside() && fluid.is(FluidTags.WATER)
+                    && FabricFluidPhysics.boatsFloatOn(fluid.value())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean buildcraft$eyeInForeignWater() {
+        for (Object tracked : fluidTrackers) {
+            EntityFluidTrackerAccessor tracker = (EntityFluidTrackerAccessor) tracked;
+            Holder<Fluid> fluid = tracker.buildcraft$fluid();
             if (tracker.buildcraft$eyesInside() && FabricFlowingFluids.declared(fluid.value()) == null
                     && fluid.is(FluidTags.WATER)) {
                 return true;

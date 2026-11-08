@@ -56,7 +56,7 @@ Known differences from the NeoForge version:
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the jar `BuildCraftRedux-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`, beside the Fabric jar `BuildCraftRedux-<version>+mc26.3-fabric.jar`.
+5. Once the build finishes, the jar `BuildCraftRedux-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`, each beside its Fabric jar `BuildCraftRedux-<version>+mc<minecraft version>-fabric.jar`.
 
 ### Running in a Development Environment
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.3:`):
@@ -65,9 +65,9 @@ To test the mod locally, use the NeoForge run tasks. These are **per-node**, so 
 
 Valid versions are `:1.21.1:`, `:1.21.10:`, `:1.21.11:`, `:26.1.2:`, `:26.2:` and `:26.3:`.
 
-The Fabric build is the `:26.3-fabric:` node: `./gradlew :26.3-fabric:runClient`, `./gradlew :26.3-fabric:runServer`,
-and `./gradlew :26.3-fabric:runGameTest` (headless game tests) or `./gradlew :26.3-fabric:runClientGameTest` (an
-in-world client check that needs a display).
+Each version also has a Fabric build: add `-fabric` to the version, e.g. `./gradlew :26.3-fabric:runClient`,
+`./gradlew :1.21.1-fabric:runServer`, `./gradlew :26.3-fabric:runGameTest` (headless game tests) or
+`./gradlew :26.3-fabric:runClientGameTest` (an in-world client check that needs a display).
 
 On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.3` node by default) to reduce the amount of steps.
 

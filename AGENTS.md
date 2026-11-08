@@ -7,14 +7,18 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ```bash
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
 # Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.3 is the primary from its first release; nothing ships until the user says so).
-# Plus one Fabric node, 26.3-fabric (#98): all of BuildCraft on Fabric Loader + Fabric API + Forge Config API Port,
-# jar BuildCraftRedux-<v>+mc26.3-fabric.jar; :26.3-fabric:runServer / :26.3-fabric:runClient work,
-# :26.3-fabric:runGameTest runs the shared game tests on Fabric, and :26.3-fabric:runClientGameTest is the in-world
-# client check (needs a GL context; not in nodeVerification). No JUnit tests on it (FML-JUnit has no Fabric twin);
-# its compiles are the deprecated-API guard (-Werror, :26.3-fabric:checkDeprecations).
+# Plus a Fabric twin of every line (#98, #170): 1.21.1-fabric, 1.21.10-fabric, 1.21.11-fabric, 26.1.2-fabric,
+# 26.2-fabric, 26.3-fabric. All of BuildCraft on Fabric Loader + Fabric API + Forge Config API Port,
+# jar BuildCraftRedux-<v>+mc<mc>-fabric.jar; :<node>-fabric:runServer / :<node>-fabric:runClient work,
+# :<node>-fabric:runGameTest runs the shared game tests on Fabric, and :<node>-fabric:runClientGameTest is the in-world
+# client check with screenshots (needs a GL context; not in nodeVerification). 26.x Fabric nodes use Loom without
+# remapping; the 1.21.x ones use fabric-loom-remap (Mojang mappings, mod* configurations, remapJar). No JUnit tests on
+# them (FML-JUnit has no Fabric twin); their compiles are the deprecated-API guard (-Werror, :<node>-fabric:checkDeprecations).
+# `python -I scripts/fabric-mixin-check.py <node>-fabric` checks mixin targets exist by name (not by type) on that
+# node's Minecraft; never run it while Gradle is regenerating sources.
 # Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
-# `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and the Fabric node's nodeVerification.
+# `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and each Fabric node's nodeVerification.
 # The ACTIVE node (the raw text of src/, what the IDE sees) is 26.3; see stonecutter.gradle.kts.
 
 # Compile the node (fast feedback)

@@ -162,9 +162,7 @@ public class GuiIcon implements ISimpleDrawable {
                 raw.texSize, raw.texSize
             );
             //?} else {
-            /*// 1.21.1's texture blit does not blend by itself (later lines' GUI_TEXTURED pipeline does): without this a
-            // part-transparent icon, such as the Filtered Buffer's blocked-slot mark, draws solid.
-            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+            /*// BCGraphics' 1.21.1 blit blends (the Filtered Buffer's blocked-slot mark is part-transparent).
             currentGraphics.blit(
                 raw.location,
                 (int) xMin, (int) yMin,

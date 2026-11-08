@@ -140,6 +140,11 @@ public class LensItemModel implements ItemModel {
             mq.translatef(x.tx() / 16f, x.ty() / 16f, x.tz() / 16f);
         }
         mq.setCalculatedNormal();
+        // The rotation above leaves each quad's face at its WEST-facing original (the lens face the GUI sees is still
+        // tagged EAST). NeoForge lights an item quad by that face and Fabric by the geometry, so the lens drew at the
+        // ambient floor (0.4) on NeoForge 1.21.11+ and fully lit on Fabric (#173). Realigned, both draw it fully lit, as
+        // 1.12.2 did: its lens item was not gui3d, so the GUI drew it with lighting off.
+        mq.setFaceFromCalculatedNormal();
 
         // Set full white vertex colours only for cutout (frame) quads.
         // Translucent quads keep the dye color set by bakeTranslucentQuads.

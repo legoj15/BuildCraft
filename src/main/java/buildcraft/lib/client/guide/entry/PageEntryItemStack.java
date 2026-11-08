@@ -69,11 +69,11 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
             // Dedup against guide-defined entries (matched JSON loop adds the Item
             // instance) so BC items keep their authored chapter placement.
             if (!GuideManager.INSTANCE.objectsAdded.add(item)) continue;
-            // This whole index runs on the login packet handler (GuideManager.ensureLoaded fires on
-            // ClientPlayerNetworkEvent.LoggingIn), so an uncaught throw from any single item's name
-            // or link resolution disconnects the player. Items from this or any other mod can throw
-            // in getName()/getHoverName() (BC facades did, before init, on multiplayer join). Log
-            // and skip the offender so one bad item can't take down the join.
+            // This whole index runs inside GuideManager's reload, which can fire from a packet handler
+            // (the recipe sync, when a guide screen is already open), so an uncaught throw from any
+            // single item's name or link resolution can disconnect the player. Items from this or any
+            // other mod can throw in getName()/getHoverName() (BC facades did, before init, on
+            // multiplayer join). Log and skip the offender so one bad item can't take down the join.
             try {
                 String displayName = stack.getHoverName().getString();
                 if (displayName == null || displayName.trim().isEmpty()) continue;

@@ -82,16 +82,16 @@ public class BCLibClient {
         // guide content is resource-pack content (client-side). F3+T is the right gesture.
         EventBuildCraftReload.FinishLoad.LISTENERS.addListener(GuideManager.INSTANCE::onRegistryReload);
 
-        // Feed the guide's recipe store from the server's recipe sync, then (re)build guide
-        // content. This event fires on every world join (and again on datapack /reload), so it
-        // replaces the old LoggingIn ensureLoaded() warm-up — same render thread, still hidden
-        // by the "Loading world" screen, but now guaranteed to parse AFTER recipe data is
-        // present, so recipe panels are never baked empty. Re-fires also re-bake panels, which
-        // keeps an open guide correct across server switches and /reload (GuiGuide polls
-        // reloadGeneration and rebuilds open pages). The synchronous ensureLoaded() in
-        // openGuideScreen() stays as a fallback for any path that opens the book first.
+        // Feed the guide's recipe store from the server's recipe sync, and mark the guide
+        // content stale. This event fires on every world join (and again on datapack /reload).
+        // It runs on the render thread inside the packet handler, so the guide's rebuild must
+        // NOT happen here (it froze every world join): GuideManager only flags the content
+        // dirty, and ensureLoaded() in openGuideScreen() pays the rebuild at the first book
+        // open, which is guaranteed to parse AFTER recipe data is present, so recipe panels are
+        // never baked empty. A guide that is already open is rebuilt immediately (GuiGuide polls
+        // reloadGeneration and rebuilds open pages), which keeps it correct across /reload.
         // The facade scan stays on LoggingIn (BCSiliconClient, HIGH priority), which always
-        // precedes the recipe packets — ordering with the guide parse is preserved.
+        // precedes the recipe packets and any book open.
         // On >=1.21.10 the source is NeoForge's opt-in sync (requested server-side in BCCore
         // via OnDatapackSyncEvent.sendRecipes): real RecipeHolders over the wire on Neo<->Neo
         // connections; empty maps (no mod requested recipes) still refresh the store,
@@ -99,15 +99,18 @@ public class BCLibClient {
         // recipe list to every client itself, and RecipesUpdatedEvent fires once it has been
         // received (same join + /reload lifecycle).
         ClientPlatform.hooks().onRecipesReceived(recipes -> {
-            boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
-                .hasSeenSyncThisConnection();
             buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.setSynced(recipes);
-            GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
+            GuideManager.INSTANCE.onRecipeDataReceived();
         });
 
         // Forget the previous server's recipes on disconnect (the next join re-fills the store;
         // recommended cleanup per RecipesReceivedEvent's own javadoc).
-        ClientPlatform.hooks().onLoggingOut(buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache::clear);
+        // The guide's baked recipe panels belong to that server too: mark them stale, so a server that sends no
+        // sync never shows the previous one's recipes.
+        ClientPlatform.hooks().onLoggingOut(() -> {
+            buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.clear();
+            GuideManager.INSTANCE.markStale();
+        });
 
         // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
         // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which
@@ -128,7 +131,9 @@ public class BCLibClient {
         // been resolved to null (registry empty) and gui.bookData locked to BOOK_ALL_DATA.
         // Calling ensureLoaded() up here means by the time the constructor runs the registry
         // is populated, so getBook(bookName) returns the correct GuideBook for both the
-        // gameplay and configuration guide-book items. Subsequent opens are no-ops.
+        // gameplay and configuration guide-book items. It is also where the rebuild deferred by
+        // a world join or /reload is paid (see GuideManager#onRecipeDataReceived); once the
+        // content is current, further opens are no-ops.
         GuideManager.INSTANCE.ensureLoaded();
         //? if >=26.2 {
         net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new buildcraft.lib.client.guide.GuiGuide(bookName));

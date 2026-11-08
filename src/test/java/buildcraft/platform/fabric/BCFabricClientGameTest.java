@@ -580,8 +580,9 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
         }
         ^///?} elif >=1.21.10 {
-        /^// 1.21.10 draws an item quad with the colours in its own vertex data, so BuildCraft hands Fabric no mesh
-        // there: the layer's quads are what carry them.
+        /^// 1.21.10 draws an item quad with the colours in its own vertex data (ItemRendererMixin makes vanilla's draw read
+        // them), so BuildCraft hands Fabric no mesh there: the layer's quads are what carry them. That they reach the
+        // screen is checked on the inventory shot's pixels (BCFabricVisualScenes.checkLensSlots), not here.
         var renderLayer = (net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState) layer;
         for (net.minecraft.client.renderer.block.model.BakedQuad quad : renderLayer.prepareQuadList()) {
             colours.add(vertexColours(quad.vertices()));

@@ -243,7 +243,8 @@ tasks.named<JavaExec>("runGameTest") {
 // not need -Dfabric.client.gametest.disableNetworkSynchronizer (which would also drop its guarantee that a tick's
 // packets are handled before the next one): ClientGameTestThreadStartMixin (#119, a hang at the title screen) and
 // NetworkSynchronizerWakeupMixin (#174, a lost wakeup in NetworkSynchronizer.waitForPacketHandlers that crashed about one
-// run in ten with 'Network synchronizer in invalid state'; Fabric API for 1.21.10, 1.21.11 and 26.1.2 only).
+// run in ten with 'Network synchronizer in invalid state'; 1.21.10 and 1.21.11 only: Fabric API for 26.1 leaves the
+// synchronizer off by default and 26.2 removed it).
 tasks.named<JavaExec>("runClientGameTest") {
     systemProperty("buildcraft.dev", "true")
     val runDir = project.file("build/run/clientGameTest")

@@ -456,8 +456,9 @@ public class MutableQuad {
         normalvf(n);
     }
 
-    /** Points {@link #getFace()} at the axis direction nearest this quad's geometric normal. Moving the vertices
-     * ({@link #rotate}, {@link #rotateX} and friends) never touches the face, yet the 1.21.11+ item draws light a quad
+    /** Points {@link #getFace()} at the axis direction nearest this quad's geometric normal. {@link #rotate} turns the
+     * face with the vertices, but the free-angle turns ({@link #rotateX} and friends), warps and translations never touch
+     * it, yet the 1.21.11+ item draws light a quad
      * by its face alone (vanilla's {@code putBulkData}; NeoForge too unless the quad carries baked normals, which BC's
      * do not), while Fabric's item mesh lights it by the geometric normal. A quad turned away from its original face
      * is therefore lit differently on the two loaders until this realigns it. A degenerate quad keeps its face. */
@@ -862,39 +863,70 @@ public class MutableQuad {
         }
 
         translatef(-ox, -oy, -oz);
+        rotateVertex(from, to, vertex_0);
+        rotateVertex(from, to, vertex_1);
+        rotateVertex(from, to, vertex_2);
+        rotateVertex(from, to, vertex_3);
+        translatef(ox, oy, oz);
+        // The face turns with the vertices: it is the quad's BakedQuad direction, which lights the item draws on 1.21.1,
+        // 1.21.11 and 26.x (and culls in the world), so leaving the source side there shaded every rotated plug (#176).
+        if (face != null) {
+            face = rotateDirection(from, to, face);
+        }
+        return this;
+    }
+
+    /** Where {@link #rotate(Direction, Direction, float, float, float) rotate(from, to, ...)} carries {@code dir}: the same
+     * quarter or half turn, applied to the direction itself (exact; no geometry involved). */
+    public static Direction rotateDirection(Direction from, Direction to, Direction dir) {
+        if (from == to) {
+            return dir;
+        }
+        MutableVertex v = new MutableVertex();
+        v.positionf(dir.getStepX(), dir.getStepY(), dir.getStepZ());
+        rotateVertex(from, to, v);
+        int x = Math.round(v.position_x), y = Math.round(v.position_y), z = Math.round(v.position_z);
+        for (Direction d : Direction.values()) {
+            if (d.getStepX() == x && d.getStepY() == y && d.getStepZ() == z) {
+                return d;
+            }
+        }
+        throw new IllegalStateException("A quarter turn moved " + dir + " off the axes: " + x + ", " + y + ", " + z);
+    }
+
+    /** The turn that takes {@code from} to {@code to}, about the origin. */
+    private static void rotateVertex(Direction from, Direction to, MutableVertex v) {
         // @formatter:off
         switch (from.getAxis()) {
             case X: {
                 int mult = from.getStepX();
                 switch (to.getAxis()) {
-                    case X: rotateY_180(); break;
-                    case Y: rotateZ_90(mult * to.getStepY()); break;
-                    case Z: rotateY_90(mult * to.getStepZ()); break;
+                    case X: v.rotateY_180(); break;
+                    case Y: v.rotateZ_90(mult * to.getStepY()); break;
+                    case Z: v.rotateY_90(mult * to.getStepZ()); break;
                 }
                 break;
             }
             case Y: {
                 int mult = from.getStepY();
                 switch (to.getAxis()) {
-                    case X: rotateZ_90(-mult * to.getStepX()); break;
-                    case Y: rotateZ_180(); break;
-                    case Z: rotateX_90(mult * to.getStepZ()); break;
+                    case X: v.rotateZ_90(-mult * to.getStepX()); break;
+                    case Y: v.rotateZ_180(); break;
+                    case Z: v.rotateX_90(mult * to.getStepZ()); break;
                 }
                 break;
             }
             case Z: {
                 int mult = -from.getStepZ();
                 switch (to.getAxis()) {
-                    case X: rotateY_90(mult * to.getStepX()); break;
-                    case Y: rotateX_90(mult * to.getStepY()); break;
-                    case Z: rotateY_180(); break;
+                    case X: v.rotateY_90(mult * to.getStepX()); break;
+                    case Y: v.rotateX_90(mult * to.getStepY()); break;
+                    case Z: v.rotateY_180(); break;
                 }
                 break;
             }
         }
         // @formatter:on
-        translatef(ox, oy, oz);
-        return this;
     }
 
     public MutableQuad rotateX_90(float scale) {

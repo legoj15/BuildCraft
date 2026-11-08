@@ -33,6 +33,35 @@ public class MutableQuadTest {
         }
     }
 
+    /** The face turns with the vertices (#176): the item draws on 1.21.1, 1.21.11 and 26.x light a quad by its face, so a
+     *  stale one shades a rotated plug (a lens baked WEST and turned NORTH still claimed WEST). Each face is checked against
+     *  where the same rotation carries a vertex sitting on that face's unit vector. */
+    @Test
+    public void testRotateMapsFace() {
+        MutableQuad lens = new MutableQuad(-1, Direction.WEST);
+        lens.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
+        Assertions.assertEquals(Direction.NORTH, lens.getFace(), "WEST -> NORTH");
+
+        for (Direction from : Direction.values()) {
+            for (Direction to : Direction.values()) {
+                for (Direction face : Direction.values()) {
+                    MutableQuad q = new MutableQuad(-1, face);
+                    q.vertex_0.positionf(face.getStepX(), face.getStepY(), face.getStepZ());
+                    q.rotate(from, to, 0, 0, 0);
+                    Direction want = null;
+                    for (Direction d : Direction.values()) {
+                        if (Math.round(q.vertex_0.position_x) == d.getStepX()
+                            && Math.round(q.vertex_0.position_y) == d.getStepY()
+                            && Math.round(q.vertex_0.position_z) == d.getStepZ()) {
+                            want = d;
+                        }
+                    }
+                    Assertions.assertEquals(want, q.getFace(), from + " -> " + to + ", face " + face);
+                }
+            }
+        }
+    }
+
     /** Per-vertex colour survives the bake: every node carries it differently (a loader's ARGB BakedColors, or the
      *  R-low colour int of the 1.21.1/1.21.10 vertex array), and a channel mix-up swaps red and blue on the tinted
      *  lens glass in the snapshot preview without failing any compile. Distinct R/G/B/A per vertex pins each one. */

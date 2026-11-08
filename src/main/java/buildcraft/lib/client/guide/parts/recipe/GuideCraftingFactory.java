@@ -51,6 +51,31 @@ public class GuideCraftingFactory implements GuidePartFactory {
         return output.matches(target);
     }
 
+    /** False only when {@code recipe} certainly cannot make {@code target}: a plain shaped or shapeless recipe
+     * whose result differs from it. Everything else (including every {@link IRecipeViewable}, whose outputs
+     * come from the recipe itself) answers true and is left to the full lookup. Lets a lookup skip
+     * building the display factory of the thousands of recipes that make something else. */
+    static boolean mayProduce(CraftingRecipe recipe, ItemStack target) {
+        if (recipe instanceof IRecipeViewable) {
+            return true;
+        }
+        if (recipe instanceof ShapedRecipe shaped) {
+            //? if >=26.1 {
+            return ItemStack.isSameItemSameComponents(shaped.result.create(), target);
+            //?} else {
+            /*return ItemStack.isSameItemSameComponents(shaped.result, target);*/
+            //?}
+        }
+        if (recipe instanceof ShapelessRecipe shapeless) {
+            //? if >=26.1 {
+            return ItemStack.isSameItemSameComponents(shapeless.result.create(), target);
+            //?} else {
+            /*return ItemStack.isSameItemSameComponents(shapeless.result, target);*/
+            //?}
+        }
+        return true;
+    }
+
     /** Create a factory from a 1.21 CraftingRecipe.
      * Handles ShapedRecipe, ShapelessRecipe, and IRecipeViewable. */
     @Nullable

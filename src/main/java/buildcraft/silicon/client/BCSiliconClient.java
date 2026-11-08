@@ -246,10 +246,10 @@ public class BCSiliconClient {
          * the dedup pass calls it too; calling twice is idempotent.)
          */
         // HIGH priority so facade state init runs before other LoggingIn listeners that may name
-        // facades. The guide-book content build happens even later — it now triggers off the
-        // server's recipe sync arriving (BCLibClient's RecipesReceivedEvent handler), which
-        // always follows LoggingIn — so facade state and the assembly registry below are both
-        // ready before the guide indexes every item. On a multiplayer client this is the only
+        // facades. The guide-book content build happens even later — at the first book open
+        // after joining (GuideManager.ensureLoaded), or when a recipe sync arrives with the book
+        // open — so facade state and the assembly registry below are both ready before the
+        // guide indexes every item. On a multiplayer client this is the only
         // init trigger for either (ServerAboutToStartEvent never fires there); without it the
         // guide would index facades with no valid states and an empty assembly registry.
         public static void onClientLoggingIn() {

@@ -22,7 +22,7 @@ import buildcraft.platform.client.ClassicItemRenderType;
 
 /^*
  * {@code ClientModels#fixedQuadItemModel} on Fabric 1.21.1, the twin of {@code NeoForgeQuadItemModel}: a fixed list of
- * item quads (on the general, null-side pass only) with the display transform baked in, drawn on one sheet, which
+ * item quads (on the general, null-side pass only), whose producer has already baked or posed its display transform, drawn on one sheet, which
  * {@code ItemRendererMixin} reads through {@link ClassicItemRenderType}.
  *^/
 final class FabricQuadItemModel implements ClassicItemRenderType {
@@ -73,7 +73,7 @@ final class FabricQuadItemModel implements ClassicItemRenderType {
         return particle;
     }
 
-    // The transform is in the quads, as NeoForge's model reports none either.
+    // The producer has applied the transform (in the quads or on the pose); NeoForge's model reports none either.
     @Override
     public ItemTransforms getTransforms() {
         return ItemTransforms.NO_TRANSFORMS;

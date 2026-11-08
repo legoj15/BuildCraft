@@ -64,8 +64,9 @@ public interface ClientModels {
      * it (from 26.3 a layer takes one {@code ItemQuads}, split into its solid and translucent submits; before, its
      * quad list). NeoForge: the quads themselves carry the colours. Fabric: the uncoloured quads go that way and the
      * coloured ones through the layer's mesh emitter ({@code FabricLayerRenderState#emitter}), the one item path in
-     * Fabric API that takes a colour per vertex. (1.21.10 keeps a quad's colours in its own vertex data, which every
-     * draw reads, so it needs none of this.)
+     * Fabric API that takes a colour per vertex. (1.21.10 keeps a quad's colours in its own vertex data and so needs
+     * none of this: NeoForge's item draw reads them, and Fabric's ItemRendererMixin makes vanilla's do the same, which
+     * ignores them on its own.)
      */
     void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
             java.util.List<BakedQuad> quads);

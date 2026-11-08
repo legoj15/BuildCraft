@@ -79,8 +79,8 @@ public class BCEnergyClient {
 
         // Fuel/coolant/distillation registries feed the guide book and JEI. Servers populate
         // them at ServerAboutToStartEvent (BCEnergy); a multiplayer client never fires that
-        // event, so populate at login — the guide content build runs even later (off the
-        // server's recipe sync arriving, see BCLibClient), so ordering is safe.
+        // event, so populate at login — the guide content build runs even later (at the first
+        // book open, see GuideManager.ensureLoaded), so ordering is safe.
         ClientPlatform.hooks().onLoggingIn(buildcraft.energy.BCEnergyRecipes::ensureInitialized);
         // The server's oilIsSticky (OilStickySync) belongs to the world just left; the next one sends its own.
         ClientPlatform.hooks().onLoggingOut(buildcraft.energy.BCEnergyConfig::clearSyncedOilIsSticky);

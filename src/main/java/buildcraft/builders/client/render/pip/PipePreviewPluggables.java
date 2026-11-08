@@ -209,9 +209,7 @@ public final class PipePreviewPluggables {
      *  <p>
      *  Vertex normals stay at {@code MutableQuad}'s default (straight up) on purpose: the face shading is
      *  already in the vertex colour, and an up normal saturates the preview's shader diffuse to 1.0 on
-     *  every face, so it is not applied twice (the same trick as {@code PlugRobotStationRenderer}).
-     *  Restoring the face normals would also need the quad's direction, which {@code MutableQuad.rotate}
-     *  leaves stale on every rotated plug. */
+     *  every face, so it is not applied twice (the same trick as {@code PlugRobotStationRenderer}). */
     private static void emit(VertexConsumer vc, PoseStack.Pose pose, BakedQuad quad, int light) {
         new MutableQuad().fromBakedItem(quad).fromBakedColours(quad).lighti(light).render(pose, vc);
     }

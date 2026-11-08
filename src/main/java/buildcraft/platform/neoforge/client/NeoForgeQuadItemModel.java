@@ -32,8 +32,9 @@ import net.neoforged.neoforge.model.data.ModelData;
 //
 // Dynamic BuildCraft item models (facade / gate / lens / pipe) resolve per-stack via
 // their ItemOverrides, then return one of these per ItemDisplayContext from
-// applyTransform(...), through ClientModels.fixedQuadItemModel. The per-context display
-// transform is baked directly into the quads (so getTransforms() is NO_TRANSFORMS here),
+// applyTransform(...), through ClientModels.fixedQuadItemModel. Whatever transform the
+// caller did not bake into the quads it has already applied to the pose (so getTransforms()
+// is NO_TRANSFORMS here),
 // and one RenderType sheet covers all quads: cutoutBlockSheet() for opaque geometry,
 // translucentItemSheet() when a coloured translucent overlay is present (alpha-255
 // cutout quads stay opaque on that sheet).

@@ -349,10 +349,11 @@ public class BCEnergyFluids {
      * The flow-push scalar of every energy fluid: the per-tick scalar applied to the fluid FLOW velocity that carries
      * entities along a current, NOT friction. Vanilla water is 0.014; the old 0.8/0.5 here were ~40-57x too strong and
      * launched entities downstream in flowing fluid. Oil stays a touch weaker than water (denser/sluggish) but in the
-     * correct range. Read on every use, so the config may change it at runtime.
+     * correct range. Read on every use, so the config may change it at runtime; on a client it is the connected server's
+     * setting ({@link BCEnergyConfig#isOilSticky}).
      */
     private static double motionScale() {
-        if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+        if (BCEnergyConfig.isOilSticky()) {
             return 0.007D; // sticky: sluggish, ~half of water's current
         }
         return 0.012D; // dense oil: a slightly weaker current than water (0.014)
@@ -364,7 +365,7 @@ public class BCEnergyFluids {
      * {@code BoatFluidMotion} turns it into a drag on both loaders.
      */
     private static double boatSpeed() {
-        if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+        if (BCEnergyConfig.isOilSticky()) {
             return 0.5D; // sticky: a boat sails at half the speed it does on water
         }
         return 1.0D;

@@ -41,8 +41,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>It runs on both logical sides every tick of the boat, because a boat a player rides is simulated by that
  * player's client, and the side that does not simulate it holds it at rest, where multiplying changes nothing. A
- * client reads {@link FluidProperties#boatSpeed} from its own config, as it does the current's
- * {@link FluidProperties#motionScale}.
+ * client therefore reads {@link FluidProperties#boatSpeed}, as it does the current's
+ * {@link FluidProperties#motionScale}, from the connected server's settings: the energy fluids' options are COMMON
+ * config, so the server sends them on join and on reload rather than the client trusting its own file.
  */
 public final class BoatFluidMotion {
     /** The horizontal drag vanilla puts on a boat floating in water each tick ({@code floatBoat}'s inverse friction). */

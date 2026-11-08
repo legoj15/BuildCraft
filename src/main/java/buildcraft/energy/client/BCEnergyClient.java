@@ -82,6 +82,8 @@ public class BCEnergyClient {
         // event, so populate at login — the guide content build runs even later (off the
         // server's recipe sync arriving, see BCLibClient), so ordering is safe.
         ClientPlatform.hooks().onLoggingIn(buildcraft.energy.BCEnergyRecipes::ensureInitialized);
+        // The server's oilIsSticky (OilStickySync) belongs to the world just left; the next one sends its own.
+        ClientPlatform.hooks().onLoggingOut(buildcraft.energy.BCEnergyConfig::clearSyncedOilIsSticky);
         //? if >=26.3 {
         // The server-sent Stirling fuel list belongs to the world just left.
         ClientPlatform.hooks().onLoggingOut(buildcraft.energy.compat.viewer.StirlingFuelSync::clearReceived);

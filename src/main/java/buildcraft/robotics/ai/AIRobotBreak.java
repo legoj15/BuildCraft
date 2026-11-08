@@ -20,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
@@ -154,9 +155,15 @@ public class AIRobotBreak extends AIRobot {
      *  leaves it and fails the AI. The effect decides, not the method's answer: a mod that cancels the event and
      *  takes the block down itself (a tree-felling mod does, with the rest of the tree) has still done the job. The
      *  support cascade the removal sets off is re-synced to clients afterwards, as
-     *  {@link BlockUtil#breakBlockAndGetDropsWithXp} does for the machines. */
+     *  {@link BlockUtil#breakBlockAndGetDropsWithXp} does for the machines.
+     *
+     *  <p>The player is stood at the block's centre first, where the permission probe stood it
+     *  ({@link BlockUtil#canMachineBreak} leases at the block): a lease without a position leaves the cached player
+     *  at its construction-time spot, and a claim mod judges a break by where the breaker stands. Only here, after the
+     *  progress maths: the progress is measured for the player as the lease left it. */
     private void breakAsPlayer(ServerLevel serverLevel, BlockState state, ServerPlayer player) {
         boolean hadTool = !robot.getHeldItem().isEmpty();
+        FakePlayerUtil.pose(player, Vec3.atCenterOf(blockToBreak), player.getYRot(), player.getXRot());
         Long2ObjectOpenHashMap<BlockState> supportsBefore = BlockUtil.snapshotSupportsForResync(serverLevel, blockToBreak);
         player.gameMode.destroyBlock(blockToBreak);
         BlockUtil.resyncChangedBlocks(serverLevel, supportsBefore);

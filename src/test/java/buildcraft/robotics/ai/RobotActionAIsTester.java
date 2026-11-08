@@ -129,7 +129,8 @@ public class RobotActionAIsTester {
      *  as it sees anyone's. Four stones, one diamond pickaxe:
      *  <ul>
      *  <li>an unclaimed one breaks, and a break listener is told exactly once (apart from the up-front permission
-     *  probe, which {@code isProbe} tells from a break) naming the [BuildCraft] player, with the cobblestone dropped
+     *  probe, which {@code isProbe} tells from a break) naming the [BuildCraft] player standing at the block, with the
+     *  cobblestone dropped
      *  and the pickaxe charged ONE durability point (vanilla's {@code mineBlock}; the robot's own hurtAndBreak on top
      *  would be two);</li>
      *  <li>one whose real event a claim refuses, while the probe lets it through, stays, the AI fails and the tool is
@@ -177,6 +178,7 @@ public class RobotActionAIsTester {
         // A claim mod as most are written: the permission probe passes, the break itself is what it refuses.
         List<BlockPos> realBreaks = new ArrayList<>();
         List<java.util.UUID> breakers = new ArrayList<>();
+        List<BlockPos> breakersAt = new ArrayList<>();
         int[] probes = { 0 };
         PlatformProtection.Registration claim = Platform.protection().onBreak(event -> {
             BlockPos at = event.pos();
@@ -189,6 +191,7 @@ public class RobotActionAIsTester {
             }
             realBreaks.add(at.immutable());
             breakers.add(event.player().getUUID());
+            breakersAt.add(event.player().blockPosition());
             if (!at.equals(allowed)) {
                 event.cancel();
             }
@@ -210,6 +213,9 @@ public class RobotActionAIsTester {
                             + realBreaks);
             helper.assertTrue(breakers.get(0).equals(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE)),
                     "and it names the robot's fake player, the [BuildCraft] identity of an unowned robot");
+            helper.assertTrue(breakersAt.get(0).equals(allowed),
+                    "the fake player stands at the block it breaks, where the permission probe stood it (a claim mod"
+                            + " judges where the actor stands), not at its construction-time spot, got " + breakersAt.get(0));
             helper.assertTrue(probes[0] >= 1, "the permission probe ran first and was told apart from the break");
             helper.assertTrue(pickaxe.getDamageValue() == 1,
                     "the tool is charged one durability point for the one block, not two, got "

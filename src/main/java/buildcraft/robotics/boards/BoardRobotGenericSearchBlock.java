@@ -22,8 +22,10 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.core.IZone;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
@@ -57,6 +59,11 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  wholesale rather than mutated in place, so the search predicate can never observe a half-built
      *  set — 7.1.x's own comment warned that this predicate may be evaluated off the tick thread. */
     private volatile Set<Block> gateBlockFilter = Set.of();
+
+    /** The work zone the linked station's gate names, or null for none, refreshed with {@link #gateBlockFilter}
+     *  ({@link #updateFilter()}) so {@link #searchMayPick} does not rebuild it from the station for every block it
+     *  is asked about. */
+    private volatile IZone workZone;
 
     /** Blocks that refused this robot - protection mods said no, or the work on them failed anyway (a break or a
      *  harvest that did not take, {@link #finishAttempt}) - so a refused block is not chosen again (and not asked
@@ -132,8 +139,10 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  of every {@code update()} so a gate re-parameterised while robots are running takes effect on the
      *  next cycle). Only BLOCK items contribute — 7.1.x collected {@code ItemBlock} parameters alone, so
      *  a Filter holding nothing placeable leaves the search unrestricted. An unlinked robot keeps an
-     *  empty filter, i.e. no restriction. */
+     *  empty filter, i.e. no restriction. The work zone the gate names is re-read with it (not 7.1.x: the search
+     *  itself takes the zone from the robot when it starts, this copy is for {@link #searchMayPick}). */
     public final void updateFilter() {
+        workZone = robot.getZoneToWork();
         DockingStation station = robot.getLinkedStation();
         if (station == null) {
             gateBlockFilter = Set.of();
@@ -155,6 +164,29 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     protected boolean matchesGateFilter(BlockState state) {
         Set<Block> filter = gateBlockFilter;
         return filter.isEmpty() || filter.contains(state.getBlock());
+    }
+
+    /**
+     * Whether this robot's search may pick the block at {@code pos}, whatever the board hunts there: the limits the
+     * search enforces on every candidate, gathered for a board whose target depends on ANOTHER block being takeable.
+     * The gate's Filter names the block ({@link #matchesGateFilter}), protection mods have not refused it and no
+     * failed attempt on it is remembered ({@code access} must be the level for the refusal memory to be read), it lies
+     * inside the work zone (the test {@code PathFindingSearch} makes on a candidate), and no recent search gave up on
+     * reaching it ({@link IRobotAccess#isKnownUnreachableBlock}). A claim another robot holds is not one of the
+     * limits: that robot is on the block. Reads the filter and zone as {@link #updateFilter()} last left them.
+     */
+    protected final boolean searchMayPick(BlockGetter access, BlockPos pos) {
+        if (!matchesGateFilter(access.getBlockState(pos))) {
+            return false;
+        }
+        if (access instanceof Level level && refusals.isRefused(level, pos)) {
+            return false;
+        }
+        if (robot.isKnownUnreachableBlock(pos)) {
+            return false;
+        }
+        IZone zone = workZone;
+        return zone == null || zone.contains(new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
     }
 
     @Override

@@ -23,6 +23,7 @@ public final class BCFabricClientEntrypoint implements ClientModInitializer {
         FabricFluidContainerModel.register();
         //?} else {
         /^FabricLegacyFluidContainerModel.register();
+        FabricLegacyRenderLayers.register();
         ^///?}
         BCCoreClient.init();
     }

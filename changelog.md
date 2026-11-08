@@ -27,3 +27,4 @@
 - Fixed a tree-felling mod (such as FallingTree) felling a tree when a stripes pipe swings an axe at the air beside it: BuildCraft's protection checks now ask with an empty hand, not the item about to be used.
 - Fixed lenses and filters in inventory slots drawing dimmer on NeoForge (Minecraft 1.21.11 and later) than on Fabric; they are as bright as in 1.12.2 again.
 - Fixed a dispenser on Fabric setting a boat down on a gas (where it sinks); it ejects the boat item instead, as on NeoForge.
+- Fixed facade items being drawn as a full block-sized panel when dropped, held or put in an item frame: they are block-item sized again, as in 1.12.2 (a quarter on the ground), and show their face in an item frame. The inventory icon is unchanged.

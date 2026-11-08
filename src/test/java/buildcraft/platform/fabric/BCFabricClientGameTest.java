@@ -796,7 +796,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     }
 
     /^* The command-feedback chat lines and the advancement/recipe toasts would cover the rig in every shot. *^/
-    private static void clearOverlays(ClientGameTestContext ctx) {
+    static void clearOverlays(ClientGameTestContext ctx) {
         ctx.runOnClient(mc -> {
             //? if >=26.2 {
             mc.gui.hud.getChat().clearMessages(false);
@@ -816,9 +816,26 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         ctx.getInput().pressKey(o -> o.keyHotbarSlots[slot]);
     }
 
+    /^* The Stirling screen's remembered power-ledger state (GuiConfigManager, saved to gui_state.json). *^/
+    static void setEngineLedgerOpen(ClientGameTestContext ctx, boolean open) {
+        ctx.runOnClient(mc -> buildcraft.lib.gui.config.GuiConfigManager.getOrAddBoolean(
+            buildcraft.energy.client.gui.ScreenEngineStone.class.getName(), "LedgerEngine.is_open", false).set(open));
+    }
+
     /^* Stands in front of {@code pos}, uses it with an empty hand and screenshots the screen that opens. *^/
     static void openScreenOn(ClientGameTestContext ctx, TestServerContext server, BlockPos pos,
         String screenName, String shot, List<String> problems) {
+        openScreen(ctx, server, pos, screenName, problems);
+        ctx.waitTicks(10);
+        clearOverlays(ctx);
+        ctx.takeScreenshot(shot);
+        ctx.setScreen(() -> null);
+        ctx.waitTicks(5);
+    }
+
+    /^* Stands in front of {@code pos} and uses it with an empty hand; the screen stays open. *^/
+    static void openScreen(ClientGameTestContext ctx, TestServerContext server, BlockPos pos,
+        String screenName, List<String> problems) {
         server.runCommand("tp @p " + (pos.getX() + 0.5) + " " + pos.getY() + " " + (pos.getZ() + 2.5) + " 180 30");
         selectSlot(ctx, 8);
         ctx.waitTicks(5);
@@ -832,11 +849,6 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         ctx.waitTicks(2);
         ctx.getInput().pressKey(o -> o.keyUse);
         expectScreen(ctx, screenName, problems);
-        ctx.waitTicks(10);
-        clearOverlays(ctx);
-        ctx.takeScreenshot(shot);
-        ctx.setScreen(() -> null);
-        ctx.waitTicks(5);
     }
 
     private static void expectScreen(ClientGameTestContext ctx, String screenName, List<String> problems) {

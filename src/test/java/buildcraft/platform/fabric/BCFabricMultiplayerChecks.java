@@ -8,11 +8,14 @@ package buildcraft.platform.fabric;
 //? if fabric && >=1.21.10 {
 /*import static buildcraft.platform.fabric.BCFabricClientGameTest.LOGGER;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.NS;
+import static buildcraft.platform.fabric.BCFabricClientGameTest.clearOverlays;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.currentScreen;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.fillTank;
+import static buildcraft.platform.fabric.BCFabricClientGameTest.openScreen;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.openScreenOn;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.orientEngine;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.pipe;
+import static buildcraft.platform.fabric.BCFabricClientGameTest.setEngineLedgerOpen;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.setHudHidden;
 import static buildcraft.platform.fabric.BCFabricClientGameTest.worldShot;
 
@@ -57,6 +60,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
+import buildcraft.api.mj.MjAPI;
 import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.snapshot.Blueprint;
@@ -66,6 +70,7 @@ import buildcraft.builders.snapshot.SchematicBlockManager;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.SnapshotResponsePayload;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /^*
@@ -83,6 +88,7 @@ final class BCFabricMultiplayerChecks {
     private static final BlockPos MP_ENGINE = new BlockPos(0, MP_Y, 0);
     private static final BlockPos MP_PIPE = new BlockPos(1, MP_Y, 0);
     private static final BlockPos MP_TANK = new BlockPos(4, MP_Y, 0);
+    private static final BlockPos MP_STIRLING = new BlockPos(-2, MP_Y, 0);
     /^*
      * Vanilla's largest frame (Varint21FrameDecoder: a 21-bit length). A payload above it reaches the client only if
      * FabricNetwork's splitter cut it up, so the blueprint must be larger than this for the check to mean anything.
@@ -189,6 +195,59 @@ final class BCFabricMultiplayerChecks {
         worldShot(ctx, conn, server, "2.5 " + MP_Y + " 4.5 180 25", "bc-mp-rig", problems);
         setHudHidden(ctx, false);
         openScreenOn(ctx, server, MP_TANK, "GuiTank", "bc-mp-tank-gui", problems);
+        checkStirlingScreenSync(ctx, server, problems);
+    }
+
+    /^*
+     * A running Stirling engine's screen must show the server's numbers. Vanilla's menu-data packet carries 16 bits a
+     * slot and Fabric has no wider one, so a value packed into a slot past that arrives as noise: before
+     * WideContainerData the heat arrived as garbled float bits (NaN, or about 0 °C) and the stored power as a few
+     * hundredths of an MJ. Only a real connection encodes the packet, which is why this runs on the dedicated server.
+     *^/
+    private static void checkStirlingScreenSync(ClientGameTestContext ctx, TestServerContext server,
+        List<String> problems) {
+        String xyz = MP_STIRLING.getX() + " " + MP_Y + " " + MP_STIRLING.getZ();
+        server.runCommand("setblock " + MP_STIRLING.getX() + " " + (MP_Y - 1) + " " + MP_STIRLING.getZ()
+            + " minecraft:redstone_block");
+        server.runCommand("setblock " + xyz + " " + NS + ":engine_stone");
+        server.runCommand("data merge block " + xyz + " {fuel:{id:\"minecraft:coal\",count:64}}");
+        // With no receiver it banks what it burns: about 1 MJ a tick, far past one slot's 16 bits within a second.
+        ctx.waitTicks(100);
+        // The power ledger opens from its remembered state, so the shot shows the numbers. Set (and put back below)
+        // rather than clicked: a click toggles that state, which persists across runs, and lands only at one GUI scale.
+        setEngineLedgerOpen(ctx, true);
+        openScreen(ctx, server, MP_STIRLING, "ScreenEngineStone", problems);
+        if (!"ScreenEngineStone".equals(ctx.computeOnClient(mc ->
+            currentScreen(mc) == null ? "none" : currentScreen(mc).getClass().getSimpleName()))) {
+            setEngineLedgerOpen(ctx, false);
+            return; // expectScreen has said what opened instead; any input now would hit the world
+        }
+        ctx.waitTicks(20);
+        // Client first, then server, a tick or so apart: the engine moves a little between the two reads.
+        float[] shown = ctx.computeOnClient(mc ->
+            mc.player.containerMenu instanceof buildcraft.energy.container.ContainerEngineStone m
+                ? new float[] {m.getSyncedPower() / (float) MjAPI.MJ, m.getSyncedHeat(), m.getBurnTime()} : null);
+        float[] real = server.computeOnServer(s ->
+            s.overworld().getBlockEntity(MP_STIRLING) instanceof buildcraft.energy.tile.TileEngineStone_BC8 e
+                ? new float[] {e.getPower() / (float) MjAPI.MJ, e.getHeat(), e.burnTime} : null);
+        clearOverlays(ctx);
+        ctx.takeScreenshot("bc-mp-stirling-gui");
+        ctx.setScreen(() -> null);
+        ctx.waitTicks(5);
+        setEngineLedgerOpen(ctx, false);
+        if (shown == null || real == null) {
+            problems.add("Stirling screen sync: no " + (shown == null ? "ContainerEngineStone open" : "engine tile"));
+            return;
+        }
+        String got = String.format(java.util.Locale.ROOT,
+            "screen %.2f MJ / %.1f C / burn %.0f, engine %.2f MJ / %.1f C / burn %.0f", shown[0], shown[1], shown[2], real[0], real[1], real[2]);
+        LOGGER.info("Stirling screen sync: {}", got);
+        if (real[0] < 20 || real[1] <= TileEngineBase_BC8.MIN_HEAT) {
+            problems.add("Stirling screen sync: the engine never warmed up (" + got + ")");
+        } else if (!(Math.abs(shown[0] - real[0]) <= 10 && Math.abs(shown[1] - real[1]) <= 5
+            && Math.abs(shown[2] - real[2]) <= 40)) { // written so a NaN (garbled float bits) fails too
+            problems.add("Stirling screen sync: the screen does not show the engine's numbers (" + got + ")");
+        }
     }
 
     /^* Waits up to 200 ticks for {@code read} to answer {@code want} on the client, else records what it answered. *^/

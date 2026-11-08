@@ -24,6 +24,7 @@ val fabricLoaderVersion = property("fabric_loader_version") as String
 val fabricApiVersion = property("fabric_api_version") as String
 val forgeConfigApiPortVersion = property("forge_config_api_port_version") as String
 val modMenuVersion = property("mod_menu_version") as String
+val fallingTreeVersion = property("fallingtree_version") as String
 val jeiVersion = property("jei_version") as String
 val reiVersion = property("rei_version") as String
 // The player-facing minimums fabric.mod.json declares: their own properties, so a routine bump of the dev pins above
@@ -322,6 +323,13 @@ dependencies {
     // runClient has the mod list whose config button opens the screen FabricClientConfigScreens registers. Its POM's
     // runtime deps are Fabric Loader and Fabric API modules this node already has; Placeholder API rides inside it.
     "localRuntime"("com.terraformersmc:modmenu:$modMenuVersion") { isTransitive = false }
+
+    // FallingTree (tree-felling mod), opt-in for dev runs and game tests: `-PwithFallingTree` loads it so a robot's tree
+    // chop can be checked against a real tree feller (robot_break_fallingtree_*; the game test is a no-op without it).
+    // Same Modrinth jar as the NeoForge 26.3 node (its fabric.mod.json rides in it); BC has no code dependency on it.
+    if (project.hasProperty("withFallingTree")) {
+        "localRuntime"("maven.modrinth:fallingtree:$fallingTreeVersion") { isTransitive = false }
+    }
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),

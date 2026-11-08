@@ -62,6 +62,11 @@ repositories {
         forRepository { maven("https://maven.wispforest.io/releases/") }
         filter { includeModule("io.wispforest", "accessories-neoforge") }
     }
+    // Modrinth's maven, for the opt-in FallingTree dev runtime alone (-PwithFallingTree, below).
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
     mavenCentral()
 }
 
@@ -228,6 +233,19 @@ dependencies {
     // generated guide under assets/buildcraftunofficial/guides/ can be checked in-game. BC has no code dependency
     // on it (the guide is resources only), so it stays off the default runtime and the test runs.
     if (project.hasProperty("withGuideMe")) runtimeOnly("org.appliedenergistics:guideme:${property("guideme_version")}")
+
+    // FallingTree (tree-felling mod), opt-in for dev runs and game tests: `-PwithFallingTree` puts it on the runtime
+    // classpath so a robot's tree chop can be checked against a real tree feller (robot_break_fallingtree_*; the
+    // game test is a no-op without it). Only the nodes that pin `fallingtree_version` take part; the others ignore
+    // the flag. BC has no code dependency on it.
+    if (project.hasProperty("withFallingTree")) {
+        val fallingTreeVersion = findProperty("fallingtree_version") as String?
+        if (fallingTreeVersion != null) {
+            runtimeOnly("maven.modrinth:fallingtree:$fallingTreeVersion")
+        } else {
+            logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
+        }
+    }
 
     // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the
     // 21.10.x line does not put it on the compile classpath — add it explicitly for that node.

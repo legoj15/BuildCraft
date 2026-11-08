@@ -1187,6 +1187,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_lumberjack_e2e_drops_vines", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testLumberjackRobotChopsTreeAndDropsItsVines);
         reg.accept("buildcraftunofficial:robot_break_canopy_tree_vines_fall_with_decay", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testLumberjackCanopyTreeVinesFallWithLeafDecay);
         reg.accept("buildcraftunofficial:robot_break_resync_diff_catches_cascade", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testResyncDiffCatchesCascadedVines);
+        // A real tree feller (FallingTree, opt-in: -PwithFallingTree) fells the whole tree from the Lumberjack robot's
+        // one cut, and its permission probe does not; succeeds at once when the mod is not loaded.
+        reg.accept("buildcraftunofficial:robot_break_fallingtree_fells_whole_tree", () -> buildcraft.robotics.ai.RobotFallingTreeTester::lumberjackRobotFellsTheWholeTreeWithFallingTree);
 
         // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
         // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),

@@ -15,6 +15,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 import buildcraft.robotics.ai.AIRobotLoad;
@@ -49,11 +50,13 @@ public class BoardRobotCarrier extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOTHING_TO_LOAD)));
             }
         } else if (ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOWHERE_TO_UNLOAD)));
             }
         }
     }

@@ -24,6 +24,7 @@ import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.entity.RobotSleepReason;
@@ -91,6 +92,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                     && CropManager.canSustainPlant(level, seed, pos)
                     && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                     && !refusals.isRefused(level, pos);
+            refusals.startSearch();
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, blockFilter, 1));
         }
     }
@@ -102,7 +104,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPlant(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotPlant) {
             // A planting that failed (a claim mod refused the right-click or placement, or the soil changed under the
@@ -120,7 +122,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_SEEDS));
+                startDelegateAI(new AIRobotGotoSleep(robot, StationOutcome.sleepReason(ai, RobotSleepReason.NO_SEEDS)));
             }
         }
     }

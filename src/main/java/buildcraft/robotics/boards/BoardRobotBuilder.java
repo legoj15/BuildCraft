@@ -35,6 +35,7 @@ import buildcraft.builders.tile.TileBuilder;
 import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStation;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotRecharge;
@@ -203,7 +204,9 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
                 // No station could stock this machine's delivery (none holds the item, or none the delivery
-                // flight could leave for it). Keeping the machine chosen would repeat the same fetch on every
+                // flight could leave for it: the load's StationOutcome tells the two apart for the sleep reason,
+                // "station out of reach" rather than "nothing to load"). Keeping the machine chosen would repeat the
+                // same fetch on every
                 // pass, since it still needs the item, and starve every other needy machine (one whose supply
                 // station IS in reach). Bench it like a failed delivery and forget it, so the next pass re-picks.
                 if (builderToSupply != null) {
@@ -211,7 +214,8 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                 }
                 builderToSupply = null;
                 requiredStack = ItemStack.EMPTY;
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOTHING_TO_LOAD)));
             }
         } else if (ai instanceof AIRobotRecharge) {
             if (!ai.success()) {

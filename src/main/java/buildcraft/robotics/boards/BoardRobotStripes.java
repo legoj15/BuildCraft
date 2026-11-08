@@ -23,6 +23,7 @@ import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotStripesHandler;
 import buildcraft.robotics.entity.RobotSleepReason;
@@ -103,6 +104,7 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
         } else if (robot.getHeldItem().isEmpty()) {
             startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, this::worthEquipping));
         } else {
+            refusals.startSearch();
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, pos ->
                     robot.level().isEmptyBlock(pos)
                             && !BlockClaims.isClaimed(robot.getRegistry(), pos)
@@ -121,13 +123,13 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
                 blockFound.adopt(searchAI.getBlockFound(), searchAI.holdsReservation());
                 startDelegateAI(new AIRobotStripesHandler(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (ai.success()) {
                 failedUses = 0;
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_ITEM));
+                startDelegateAI(new AIRobotGotoSleep(robot, StationOutcome.sleepReason(ai, RobotSleepReason.NO_ITEM)));
             }
         } else if (ai instanceof AIRobotStripesHandler stripesAI) {
             BlockPos used = blockFound.job();
@@ -138,7 +140,7 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
             } else if (stripesAI.refused()) {
                 // Not the item's fault: the cell is skipped while it stays refused, and a run of refusals sends the
                 // robot to sleep, leaving the count of unusable uses where it was.
-                if (refusals.failed(robot.level(), used)) {
+                if (refusals.refused(robot.level(), used)) {
                     startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
                 }
             } else if (++failedUses >= GIVE_UP_AFTER_FAILED_USES) {

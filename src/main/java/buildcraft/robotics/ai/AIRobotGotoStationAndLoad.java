@@ -16,11 +16,12 @@ import buildcraft.robotics.IStationFilter;
 /** {@link AIRobotGotoStationToLoad} then {@link AIRobotLoad}: go to a loadable station and actually take
  *  {@code quantity} items matching {@code filter} onto the robot. An optional station filter narrows which
  *  stations are candidates (see {@link AIRobotGotoStationToLoad}). */
-public class AIRobotGotoStationAndLoad extends AIRobot {
+public class AIRobotGotoStationAndLoad extends AIRobot implements StationOutcome {
 
     private IStackFilter filter;
     private int quantity;
     private IStationFilter stationFilter;
+    private boolean stationUnavailable;
 
     public AIRobotGotoStationAndLoad(IRobotAccess iRobot) {
         super(iRobot);
@@ -51,12 +52,20 @@ public class AIRobotGotoStationAndLoad extends AIRobot {
             if (filter != null && ai.success()) {
                 startDelegateAI(new AIRobotLoad(robot, filter, quantity));
             } else {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
         } else if (ai instanceof AIRobotLoad) {
+            // The station had the stack when the search chose it; one with none on arrival was emptied meanwhile.
+            stationUnavailable = !ai.success();
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

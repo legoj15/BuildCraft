@@ -15,7 +15,9 @@ import buildcraft.api.robots.IRobotAccess;
 /** {@link AIRobotGotoStationToLoadFluids} then {@link AIRobotLoadFluids}: go to a loadable station and
  *  actually fill the robot's tank with filter-matching fluid, bucket by bucket. Ported from 7.1.x
  *  {@code AIRobotGotoStationAndLoadFluids}. */
-public class AIRobotGotoStationAndLoadFluids extends AIRobot {
+public class AIRobotGotoStationAndLoadFluids extends AIRobot implements StationOutcome {
+
+    private boolean stationUnavailable;
 
     private IFluidFilter filter;
 
@@ -40,14 +42,22 @@ public class AIRobotGotoStationAndLoadFluids extends AIRobot {
             if (filter != null && ai.success()) {
                 startDelegateAI(new AIRobotLoadFluids(robot, filter));
             } else {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
         } else if (ai instanceof AIRobotLoadFluids) {
             // The load's own outcome decides the composite's — the item twin (AIRobotGotoStationAndLoad)
             // propagates it the same way.
+            // The station passed the search's dry run; one that fails the real transfer changed meanwhile.
+            stationUnavailable = !ai.success();
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

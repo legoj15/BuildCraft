@@ -31,6 +31,7 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
@@ -64,6 +65,9 @@ public class BoardRobotPump extends RedstoneBoardRobot {
      *  identity the robot acts as and its home station's owner. A refusal says nothing about any other pair.
      *  Policy {@link RefusalMemory#DRAIN}. Transient: a reloaded board asks once more. */
     private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
+    /** Whether the search under way skipped a source only because it had refused this robot, so an empty search
+     *  sleeps for {@link RobotSleepReason#PROTECTED} rather than "no work". Reset when each search starts. */
+    private boolean skippedRefused;
 
     public BoardRobotPump(IRobotAccess iRobot) {
         super(iRobot);
@@ -121,8 +125,16 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))
-                && !refusals.isRefused(level, pos, RobotProtection.identityOf(robot),
-                        RobotProtection.refusalKeyOf(robot));
+                && !skipRefused(level, pos);
+    }
+
+    /** The predicate's last conjunct: whether {@code pos} refused this robot lately, noting the skip. */
+    private boolean skipRefused(Level level, BlockPos pos) {
+        if (refusals.isRefused(level, pos, RobotProtection.identityOf(robot), RobotProtection.refusalKeyOf(robot))) {
+            skippedRefused = true;
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -133,6 +145,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             updateFilter();
             Level level = robot.level();
             IBlockFilter blockFilter = pos -> isSearchCandidate(level, pos);
+            skippedRefused = false;
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, blockFilter));
         }
     }
@@ -144,7 +157,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPumpBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        skippedRefused ? RobotSleepReason.PROTECTED : RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotPumpBlock pumpAi) {
             // A block that would not be given up (a claim mod said no, or its pickup refused) must not be
@@ -158,7 +172,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOWHERE_TO_UNLOAD)));
             }
         }
     }

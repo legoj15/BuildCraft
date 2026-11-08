@@ -128,6 +128,25 @@ public class AIRobotSearchStation extends AIRobot {
      *  it). Flight reach is not checked. */
     public static Hold unavailableTakers(IRobotAccess robot, IStationFilter filter, IZone zone,
             boolean homeIgnoresZone) {
+        Takers takers = scanTakers(robot, filter, zone, homeIgnoresZone);
+        return takers == Takers.FORBIDDEN ? Hold.FORBIDDEN : takers == Takers.TRANSIENT ? Hold.TRANSIENT : Hold.NONE;
+    }
+
+    /** Whether a search with {@code filter} and {@code zone} has any station to hope for: one usable now, or one that
+     *  is only unavailable for now in any of the ways {@link #unavailableTakers} lists. False means no such station
+     *  exists at all, which is what a robot sleeping for "no tool" or "nothing to load" should mean; a failed search
+     *  for which this is true failed on a station that is busy, forbidding, unloaded or out of the flight's reach. */
+    public static boolean anyTaker(IRobotAccess robot, IStationFilter filter, IZone zone, boolean homeIgnoresZone) {
+        return scanTakers(robot, filter, zone, homeIgnoresZone) != Takers.NONE;
+    }
+
+    /** What {@link #unavailableTakers} and {@link #anyTaker} both read: the best station a search could hope for. */
+    private enum Takers {
+        NONE, TRANSIENT, FORBIDDEN, USABLE
+    }
+
+    private static Takers scanTakers(IRobotAccess robot, IStationFilter filter, IZone zone,
+            boolean homeIgnoresZone) {
         boolean forbidden = false;
         boolean passing = false;
         for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
@@ -150,10 +169,10 @@ public class AIRobotSearchStation extends AIRobot {
             } else if (heldByAnother) {
                 passing = true;
             } else {
-                return Hold.NONE;
+                return Takers.USABLE;
             }
         }
-        return forbidden ? Hold.FORBIDDEN : passing ? Hold.TRANSIENT : Hold.NONE;
+        return forbidden ? Takers.FORBIDDEN : passing ? Takers.TRANSIENT : Takers.NONE;
     }
 
     /** Everything but the filter and the forbid: the station is loaded, free (or this robot's) and in the zone. */

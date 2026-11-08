@@ -30,10 +30,11 @@ import buildcraft.robotics.statements.ActionRobotFilterTool;
  *  actually supply a matching stack is a candidate. 7.1.x's null-filter hard abort (a load can wipe the
  *  filter out from under a running robot) is folded into the plain failure path: the board reacts to
  *  {@code !success()} with a sleep, which is the same observable behaviour. */
-public class AIRobotFetchAndEquipItemStack extends AIRobot {
+public class AIRobotFetchAndEquipItemStack extends AIRobot implements StationOutcome {
 
     private IStackFilter filter;
     private int delay = 0;
+    private boolean stationUnavailable;
 
     public AIRobotFetchAndEquipItemStack(IRobotAccess iRobot) {
         super(iRobot);
@@ -85,10 +86,16 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationToLoad) {
             if (!ai.success()) {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 
     private boolean equipItemStack() {

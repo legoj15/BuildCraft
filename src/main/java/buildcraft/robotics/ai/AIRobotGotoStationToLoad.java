@@ -18,11 +18,12 @@ import buildcraft.robotics.IStationFilter;
  *  The station search uses {@link AIRobotLoad#load} as a dry-run predicate, so only a station with enough
  *  compatible supply is a candidate. An optional {@code stationFilter} narrows the candidates further (a board
  *  that has somewhere to take the cargo next only wants stations it can leave for there). */
-public class AIRobotGotoStationToLoad extends AIRobot {
+public class AIRobotGotoStationToLoad extends AIRobot implements StationOutcome {
 
     private IStackFilter filter;
     private int quantity;
     private IStationFilter stationFilter;
+    private boolean stationUnavailable;
 
     public AIRobotGotoStationToLoad(IRobotAccess iRobot) {
         super(iRobot);
@@ -50,9 +51,22 @@ public class AIRobotGotoStationToLoad extends AIRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoStation) {
+            if (!ai.success()) {
+                // A station that holds the stack but fails the caller's extra condition (the Builder's: too far from
+                // the machine for the delivery flight) is a station out of reach, not a missing stack.
+                stationUnavailable = StationOutcome.unavailable(ai)
+                        || (stationFilter != null && AIRobotSearchStation.anyTaker(robot,
+                                station -> AIRobotLoad.load(robot, station, filter, quantity, false),
+                                robot.getZoneToLoadUnload(), false));
+            }
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 
     private class StationFilter implements IStationFilter {

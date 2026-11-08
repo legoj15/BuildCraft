@@ -23,6 +23,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 import buildcraft.robotics.entity.RobotSleepReason;
 
@@ -113,7 +114,8 @@ public class BoardRobotPicker extends RedstoneBoardRobot {
             }
         } else if (ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOWHERE_TO_UNLOAD)));
             }
         }
     }

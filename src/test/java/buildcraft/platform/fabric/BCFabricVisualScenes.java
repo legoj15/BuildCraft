@@ -6,8 +6,13 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import java.util.ArrayList;
+/*import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -320,6 +325,12 @@ final class BCFabricVisualScenes {
 
     private static final int SLOT_FACADE = 9;
     private static final int SLOT_GATE = 12;
+    private static final int SLOT_RED_LENS = 15;
+    private static final int SLOT_BLUE_FILTER = 16;
+    /^* How much a channel must lead the other two for a pixel to count as that dye (slot grey and a bare lens do not). *^/
+    private static final int TINT_LEAD = 40;
+    /^* Dyed pixels a lens or filter slot must show; the glass covers the better part of the item's 16 by 16 square. *^/
+    private static final int MIN_TINTED_PIXELS = 400;
     private static final int SLOT_OIL_BUCKET = 27;
     private static final int SLOT_SHARD = 29;
 
@@ -339,7 +350,7 @@ final class BCFabricVisualScenes {
         ctx.getInput().setCursorPos(10, 10);
         ctx.waitTicks(2);
         BCFabricClientGameTest.clearOverlays(ctx);
-        ctx.takeScreenshot("bc-inventory-items");
+        checkLensSlots(ctx, ctx.takeScreenshot("bc-inventory-items"), problems);
 
         hoverSlot(ctx, SLOT_SHARD, "fragile_fluid_container", "bc-tooltip-fluid-shard", problems);
         hoverSlot(ctx, SLOT_GATE, "plug_gate", "bc-tooltip-gate", problems);
@@ -352,6 +363,69 @@ final class BCFabricVisualScenes {
         closeScreen(ctx);
         server.runCommand("gamemode creative @p");
         ctx.waitTicks(5);
+    }
+
+    /^*
+     * The coloured lens and filter must draw their dye in an inventory slot (#175), read off the shot's pixels: the
+     * lens's colour rides only in its quads' vertex colours, which a draw that drops them (1.21.10's vanilla item draw)
+     * shows as bare grey glass. The client game test's other colour checks read the quads, not what reaches the screen.
+     *^/
+    private static void checkLensSlots(ClientGameTestContext ctx, Path shot, List<String> problems) {
+        BufferedImage image;
+        try {
+            image = ImageIO.read(shot.toFile());
+        } catch (IOException e) {
+            problems.add(shot.getFileName() + ": unreadable (" + e + ")");
+            return;
+        }
+        expectSlotDye(ctx, image, SLOT_RED_LENS, 0, "red lens", problems);
+        expectSlotDye(ctx, image, SLOT_BLUE_FILTER, 2, "blue filter", problems);
+    }
+
+    /^* A problem unless {@code what}'s inventory slot shows enough pixels led by colour channel {@code channel} (0 red, 2 blue). *^/
+    private static void expectSlotDye(ClientGameTestContext ctx, BufferedImage image, int slot, int channel,
+            String what, List<String> problems) {
+        // The item's 16 by 16 square in the shot's pixels (the shot is the window's framebuffer; the GUI draws in scaled units).
+        int[] square = ctx.computeOnClient(mc -> {
+            if (!(BCFabricClientGameTest.currentScreen(mc) instanceof AbstractContainerScreen<?> screen)) {
+                return null;
+            }
+            for (Slot s : screen.getMenu().slots) {
+                if (s.container == mc.player.getInventory() && s.getContainerSlot() == slot) {
+                    double scale = (double) image.getWidth() / mc.getWindow().getGuiScaledWidth();
+                    return new int[] {(int) Math.round((intField(screen, "leftPos") + s.x) * scale),
+                        (int) Math.round((intField(screen, "topPos") + s.y) * scale), (int) Math.round(16 * scale)};
+                }
+            }
+            return null;
+        });
+        if (square == null) {
+            problems.add("bc-inventory-items: no inventory screen with slot " + slot + " for the " + what);
+            return;
+        }
+        int tinted = 0;
+        long[] sum = new long[3];
+        for (int y = square[1]; y < square[1] + square[2] && y < image.getHeight(); y++) {
+            for (int x = square[0]; x < square[0] + square[2] && x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                int[] c = {(rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF};
+                for (int i = 0; i < 3; i++) {
+                    sum[i] += c[i];
+                }
+                int lead = c[channel] - Math.max(c[(channel + 1) % 3], c[(channel + 2) % 3]);
+                if (lead >= TINT_LEAD) {
+                    tinted++;
+                }
+            }
+        }
+        int area = Math.max(1, square[2] * square[2]);
+        BCFabricClientGameTest.LOGGER.info("bc-inventory-items: the {} slot ({} px square at {},{}) has {} pixels led by "
+            + "channel {} by {}+, mean colour ({}, {}, {})", what, square[2], square[0], square[1], tinted, channel,
+            TINT_LEAD, sum[0] / area, sum[1] / area, sum[2] / area);
+        if (tinted < MIN_TINTED_PIXELS) {
+            problems.add("bc-inventory-items: the " + what + " slot draws no dye: " + tinted + " pixels led by channel "
+                + channel + " (mean colour " + sum[0] / area + ", " + sum[1] / area + ", " + sum[2] / area + ")");
+        }
     }
 
     /^*

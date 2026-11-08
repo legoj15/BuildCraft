@@ -37,7 +37,7 @@ since) is only a warning, as a save that changed nothing looks the same: compile
 refusal (a long run/test task of this checkout would keep the first rule firing).
 
 Usage: python -I scripts/fabric-mixin-check.py <node> [--jar <minecraft jar>] [--wait SECONDS] [--no-ready-check] [-v]
-  <node>  a Fabric node, e.g. 26.2-fabric; its view must exist (./gradlew :<node>:compileJava, run first).
+  <node>  a Fabric node, e.g. 26.2-fabric; its view must exist (./gradlew :<node>:compileJava :<node>:compileGametestJava, run first; the gametest compile writes the test view its test mixins live in).
   --jar   the Mojang-named Minecraft jar; found under the Gradle user home's fabric-loom cache (for the 1.x lines,
           the named merged jar in its minecraftMaven cache).
   -v      also list every check that passed (the audit trail), not just problems and warnings.
@@ -1220,7 +1220,7 @@ def refuse(node, reasons):
     print(f"fabric mixin check ({node}): refusing to read the generated sources: not ready", file=sys.stderr)
     for r in reasons:
         print("  " + r, file=sys.stderr)
-    print(f"  wait for Gradle to finish, then run ./gradlew :{node}:compileJava and this again (--no-ready-check skips this)",
+    print(f"  wait for Gradle to finish, then run ./gradlew :{node}:compileJava :{node}:compileGametestJava and this again (--no-ready-check skips this)",
           file=sys.stderr)
     sys.exit(2)
 
@@ -1268,7 +1268,7 @@ def main():
         if reasons:
             refuse(a.node, reasons)
     elif any(not v.is_dir() for v in views):
-        print(f"error: {next(v for v in views if not v.is_dir())} does not exist; run ./gradlew :{a.node}:compileJava first", file=sys.stderr)
+        print(f"error: {next(v for v in views if not v.is_dir())} does not exist; run ./gradlew :{a.node}:compileJava :{a.node}:compileGametestJava first", file=sys.stderr)
         sys.exit(2)
     javap = find_javap()
     if not javap:
@@ -1291,7 +1291,7 @@ def main():
     if stale:
         rep.warn("generated sources", f"{len(stale)} mixin file(s) in src/ are newer than their generated copy "
                                       f"({', '.join(stale[:4])}{', ...' if len(stale) > 4 else ''}); if they were edited, "
-                                      f"this checked the old text: run ./gradlew :{a.node}:compileJava first")
+                                      f"this checked the old text: run ./gradlew :{a.node}:compileJava :{a.node}:compileGametestJava first")
     if cut:
         if not a.no_ready_check:
             refuse(a.node, [f"a mixin file is cut off, so it is being written: {c}" for c in cut])

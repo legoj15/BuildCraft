@@ -72,7 +72,7 @@ import net.minecraft.util.ARGB;
  * 1.21.10: the same third patch, for every item quad, as NeoForge applies it. A 1.21.10 quad still keeps its colour in
  * its own vertex data, but the item draw ({@code ItemRenderer.renderQuadList}) goes through vanilla's eight-argument
  * {@code putBulkData}, which reads the tint and ignores that colour: BuildCraft's lens, filter and clear lens draw as
- * their greyscale glass textures, and the gate and facade lose theirs. Vanilla bakes every quad white, fully opaque,
+ * their greyscale glass textures (the gate and facade bake theirs white, so they look the same). Vanilla bakes every quad white, fully opaque,
  * with no light and no normal, so a quad that sets none of them draws as vanilla draws it.
  * <p>
  * 1.21.11 and later carry nothing: a 1.21.11 quad has no colour slot at all (BuildCraft's ride in a side table and

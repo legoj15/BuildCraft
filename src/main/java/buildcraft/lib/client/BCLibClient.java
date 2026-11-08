@@ -105,7 +105,12 @@ public class BCLibClient {
 
         // Forget the previous server's recipes on disconnect (the next join re-fills the store;
         // recommended cleanup per RecipesReceivedEvent's own javadoc).
-        ClientPlatform.hooks().onLoggingOut(buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache::clear);
+        // The guide's baked recipe panels belong to that server too: mark them stale, so a server that sends no
+        // sync never shows the previous one's recipes.
+        ClientPlatform.hooks().onLoggingOut(() -> {
+            buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.clear();
+            GuideManager.INSTANCE.markStale();
+        });
 
         // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
         // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which

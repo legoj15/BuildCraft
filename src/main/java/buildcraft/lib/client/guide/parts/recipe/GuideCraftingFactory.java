@@ -53,7 +53,7 @@ public class GuideCraftingFactory implements GuidePartFactory {
 
     /** False only when {@code recipe} certainly cannot make {@code target}: a plain shaped or shapeless recipe
      * whose result differs from it. Everything else (including every {@link IRecipeViewable}, whose outputs
-     * come from the recipe itself) answers true and is left to {@link #outputMatches}. Lets a lookup skip
+     * come from the recipe itself) answers true and is left to the full lookup. Lets a lookup skip
      * building the display factory of the thousands of recipes that make something else. */
     static boolean mayProduce(CraftingRecipe recipe, ItemStack target) {
         if (recipe instanceof IRecipeViewable) {

@@ -255,6 +255,11 @@ public enum GuideManager {
         }
     }
 
+    /** Marks the parsed content stale without reloading; the next {@link #ensureLoaded()} rebuilds it (logout). */
+    public void markStale() {
+        recipeDataDirty = true;
+    }
+
     private static boolean isGuideScreenOpen() {
         //? if >=26.2 {
         return Minecraft.getInstance().gui.screen() instanceof GuiGuide;

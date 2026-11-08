@@ -281,14 +281,14 @@ public class BlockUtil {
      * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
      * pipes and robots), so the player is the cached one, leased for the duration of the event. The event is a
      * probe — {@link buildcraft.platform.event.PlatformProtection.BlockBreak#isProbe} tells BuildCraft's own break
-     * listeners to ignore it.
+     * listeners to ignore it, and the player asks with an empty main hand ({@link #askBreak}).
      */
     public static boolean canMachineBreak(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {
             return true;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
-            return Platform.protection().canBreak(level, pos, level.getBlockState(pos), lease.player());
+            return askBreak(level, pos, lease.player());
         }
     }
 
@@ -296,7 +296,9 @@ public class BlockUtil {
      * {@link #canMachineBreak} for a machine that already holds its fake player (a stripes handler's, leased by the
      * pipe for the whole drop), with no second lease: the break event is posted for {@code machine} standing where
      * {@link #canMachineBreak}'s own player stands, the centre of {@code pos}, so a claim that judges where the actor
-     * stands answers both alike. The player is put back where it was, facing the same way, afterwards.
+     * stands answers both alike. The player is put back where it was, facing the same way, afterwards, and holding
+     * the same stack in its main hand: whatever it holds there is out of its hand while the event is posted
+     * ({@link #askBreak}).
      */
     public static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
         if (BCCoreConfig.minePlayerProtected.get()) {
@@ -307,10 +309,23 @@ public class BlockUtil {
         float xRot = machine.getXRot();
         FakePlayerUtil.pose(machine, Vec3.atCenterOf(pos), yRot, xRot);
         try {
-            return Platform.protection().canBreak(level, pos, level.getBlockState(pos), machine);
+            return askBreak(level, pos, machine);
         } finally {
             FakePlayerUtil.pose(machine, feet, yRot, xRot);
         }
+    }
+
+    /**
+     * The one place BuildCraft posts a break permission probe. The event cannot tell a listener it is a probe, and a
+     * mod that acts on a break without cancelling it (a tree feller, which reads the axe in the breaker's main hand and
+     * fells the tree) would act on the probe as on a break, so the player asks with its main hand empty, whatever the
+     * machine has put in it for the use it is about to make; the same stack is back in the hand when the answer is
+     * ({@link FakePlayerUtil#withEmptyMainHand}). A break that really happens is posted by the break itself, with the
+     * tool in the hand.
+     */
+    private static boolean askBreak(ServerLevel level, BlockPos pos, Player player) {
+        return FakePlayerUtil.withEmptyMainHand(player,
+                () -> Platform.protection().canBreak(level, pos, level.getBlockState(pos), player));
     }
 
     /**

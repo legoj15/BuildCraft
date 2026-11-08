@@ -19,6 +19,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -130,6 +132,72 @@ public class MachineProtectionTester {
             notifier.removeSubscriberFromUpdateNotifications(laser);
         }
         helper.succeed();
+    }
+
+    /**
+     * The permission probe posts a real break event, and a listener that acts on the event without cancelling it (a
+     * tree feller reads the axe in the breaker's hand and fells the tree, as it does for any break) cannot tell it from
+     * a break. So a probe never shows a listener an item in the main hand, even when the machine's player already
+     * holds the item it is about to use (a stripes pipe's leased player does, when it asks about a use in the air):
+     * the hand is empty while the event is posted, whichever way the answer goes, and the player holds the very same
+     * stack again afterwards, untouched.
+     */
+    public static void probeShowsListenersAnEmptyMainHand(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, Blocks.OAK_LOG);
+        BlockPos pos = helper.absolutePos(rel);
+
+        // What each break event at the log showed in the breaker's main hand, read through both accessors a listener
+        // may use; recorded here and asserted below, since a throw inside the event would be the event bus's problem.
+        List<String> mainHandSeen = new ArrayList<>();
+        int[] probes = { 0 };
+        boolean[] refuse = { false };
+        PlatformProtection.Registration listener = Platform.protection().onBreak(event -> {
+            if (!event.pos().equals(pos)) {
+                return; // another arena's break
+            }
+            if (event.isProbe()) {
+                probes[0]++;
+            }
+            mainHandSeen.add(describe(event.player().getMainHandItem()) + " / "
+                    + describe(event.player().getItemInHand(InteractionHand.MAIN_HAND)));
+            if (refuse[0]) {
+                event.cancel();
+            }
+        });
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, pos)) {
+            ServerPlayer machine = lease.player();
+            ItemStack axe = new ItemStack(Items.DIAMOND_AXE);
+            ItemStack offhandStone = new ItemStack(Items.STONE, 3);
+            machine.setItemInHand(InteractionHand.MAIN_HAND, axe);
+            machine.setItemInHand(InteractionHand.OFF_HAND, offhandStone);
+
+            check(BlockUtil.canMachineBreakAs(level, pos, machine), "an unclaimed log may be broken");
+            check(probes[0] == 1 && mainHandSeen.size() == 1,
+                    "precondition: the listener heard exactly one break event, a probe: " + probes[0]
+                            + " probe(s), heard " + mainHandSeen);
+            check(mainHandSeen.get(0).equals("empty / empty"),
+                    "the listener saw " + mainHandSeen.get(0) + " in the probing player's main hand, not nothing");
+            check(machine.getMainHandItem() == axe && machine.getItemInHand(InteractionHand.MAIN_HAND) == axe,
+                    "the player holds the very same axe stack again after the probe");
+            check(axe.getCount() == 1 && axe.getDamageValue() == 0, "and the probe left the stack as it was");
+            check(machine.getOffhandItem() == offhandStone, "the off hand was never touched");
+
+            refuse[0] = true;
+            check(!BlockUtil.canMachineBreakAs(level, pos, machine), "a claimed log may not be broken");
+            check(probes[0] == 2 && mainHandSeen.get(1).equals("empty / empty"),
+                    "a refused probe showed the listener an empty hand too: " + mainHandSeen);
+            check(machine.getMainHandItem() == axe, "and the axe is back in the hand after a refusal");
+        } finally {
+            listener.close();
+        }
+        helper.succeed();
+    }
+
+    private static String describe(ItemStack stack) {
+        return stack.isEmpty() ? "empty" : stack.getCount() + "x " + stack.getItem();
     }
 
     /**

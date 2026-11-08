@@ -157,6 +157,7 @@ public class FacadeItemModel implements ItemModel {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
         buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
+        FacadeItemTransforms.apply(layer, displayContext);
         // 1.21.10/11: the item layer needs one explicit render type (26.1 infers it per quad from its
         // MaterialInfo). Matching vanilla BlockModelWrapper: the cutout block sheet, or the translucent block-item
         // sheet when the facade's block draws translucent (1.21.10 calls it translucentItemSheet).
@@ -207,6 +208,7 @@ public class FacadeItemModel implements ItemModel {
         if (quads.isEmpty()) {
             return this;
         }
+        FacadeItemTransforms.apply(displayContext, pose, leftHand);
         // The item's particle is the facade block's own (what the item shows), not the first quad's: a translucent-only
         // facade's cutout pass holds just the plug connector, whose sprite is the pipe plug's.
         net.minecraft.client.resources.model.BakedModel particleModel = net.minecraft.client.Minecraft.getInstance()
@@ -228,12 +230,13 @@ public class FacadeItemModel implements ItemModel {
         return List.of();
     }
 
-    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
-    // getter; on Fabric it is abstract).
+    // Only the ground entry, which vanilla's ItemEntityRenderer reads off the resolved model: applyTransform has already put
+    // FacadeItemTransforms on the pose and answers a model with no transforms of its own (NeoForge deprecates the getter; on
+    // Fabric it is abstract).
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return FacadeItemTransforms.GROUND_ONLY;
     }
 
     @Override

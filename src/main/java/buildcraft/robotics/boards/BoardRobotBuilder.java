@@ -38,6 +38,7 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStation;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotRecharge;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /**
  * REWRITTEN for main's snapshot system — 7.1.x's {@code BoardRobotBuilder} fed construction markers
@@ -146,13 +147,13 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                     // The only machines that still want this cargo are benched after a failed flight: the
                     // need has not vanished, so keep the cargo aboard and sleep out the bench window
                     // (disposing would drop it on the ground whenever no station accepts it).
-                    startDelegateAI(new AIRobotGotoSleep(robot));
+                    startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
                 } else if (carrying) {
                     // No machine requires anything the robot carries any more (it was loaded for one that has
                     // since finished or lost its blueprint): never hand it to a machine that wants something else.
                     startDelegateAI(new AIRobotDisposeItems(robot));
                 } else {
-                    startDelegateAI(new AIRobotGotoSleep(robot));
+                    startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
                 }
                 return;
             }
@@ -198,7 +199,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
             // Only stations that are out of reach for now (AIRobotSearchStation.unavailableTakers) could
             // take the cargo back: keep it and sleep, then try again.
-            startDelegateAI(new AIRobotGotoSleep(robot));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
         } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
                 // No station could stock this machine's delivery (none holds the item, or none the delivery
@@ -210,7 +211,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                 }
                 builderToSupply = null;
                 requiredStack = ItemStack.EMPTY;
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
             }
         } else if (ai instanceof AIRobotRecharge) {
             if (!ai.success()) {
@@ -218,7 +219,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                 // leave this board idle and start the same doomed search again on the very next cycle,
                 // forever. Go home and sleep like every other failure path — AIRobotMain's own recharge
                 // preempt (below SAFETY_POWER) keeps retrying on its 120-tick cooldown meanwhile.
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_CHARGER));
             }
         } else if (ai instanceof AIRobotGotoBlock) {
             if (!ai.success()) {
@@ -273,7 +274,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             if (leftover) {
                 // The machine's grid is full — nothing more to insert this pass. Sleep out the rest
                 // of the cycle rather than hammering a full inventory (7.1.x slept on load failures).
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.TARGET_FULL));
             }
         }
     }

@@ -21,6 +21,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** A robot that cannot reach the nearest powered station must try the next one. A goto is capped (the A* weight prune
  *  and the expansion budget keep a path within ~96 blocks), so a robot that wandered further than that from the
@@ -75,7 +76,7 @@ public class AIRobotStationFallbackTest {
         robot.setLinkedStation(new Station(HOME, false));
         Parent parent = new Parent(robot);
 
-        parent.startDelegateAI(new AIRobotGotoSleep(robot));
+        parent.startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
 
         Assertions.assertEquals(List.of(HOME, NEAR, FAR), asked,
                 "home first, then every powered station nearest first");
@@ -87,7 +88,7 @@ public class AIRobotStationFallbackTest {
     public void aRobotWithNoHomeStillSleepsWhereItIs() {
         Parent parent = new Parent(robot);
 
-        parent.startDelegateAI(new AIRobotGotoSleep(robot));
+        parent.startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
 
         Assertions.assertTrue(asked.isEmpty(), "a homeless robot does not go looking for stations to sleep at");
         Assertions.assertTrue(parent.getActiveAI() instanceof AIRobotSleep, "it sleeps in place, as in 7.1.x");

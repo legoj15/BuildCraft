@@ -28,6 +28,7 @@ import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotSearchStackRequest;
+import buildcraft.robotics.entity.RobotSleepReason;
 import buildcraft.robotics.statements.ActionRobotFilter;
 
 /** The delivery board, ported from 7.1.x {@code BoardRobotDelivery}: find an open request on the network,
@@ -127,7 +128,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         if (ai instanceof AIRobotSearchStackRequest) {
             if (!ai.success()) {
                 deliveryBlacklist.clear();
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             } else {
                 // The search reserved the order before reporting it.
                 StackRequest order = ((AIRobotSearchStackRequest) ai).request;
@@ -157,7 +158,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             // The sleep frees every reservation the robot holds, so the order's claims are marked unheld first, as
             // for a requester that is away, and the next cycle's preempt takes them back.
             currentRequest.releaseClaims();
-            startDelegateAI(new AIRobotGotoSleep(robot));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.RETRYING));
         } else if (ai instanceof AIRobotDeliverRequested deliver) {
             if (deliver.requesterAway() && currentRequest.job() != null) {
                 // The requester's chunk is not loaded: no flight can reach it, but the order can still be filled once
@@ -169,7 +170,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 // requester left the registry or forbids the robot), the order is given up as any lost order is.
                 currentRequest.releaseClaims();
                 awaitingRequester = true;
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.AWAITING_REQUESTER));
             } else {
                 releaseCurrentRequest();
             }

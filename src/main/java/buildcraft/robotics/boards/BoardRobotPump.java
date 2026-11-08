@@ -34,6 +34,7 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.entity.RobotSleepReason;
 import buildcraft.robotics.path.IBlockFilter;
 
 /** The pump: when its tank holds fluid it offloads it at the station
@@ -143,7 +144,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPumpBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotPumpBlock pumpAi) {
             // A block that would not be given up (a claim mod said no, or its pickup refused) must not be
@@ -157,7 +158,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
             }
         }
     }

@@ -19,6 +19,7 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.properties.WorldPropertyIsHarvestable;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotHarvest;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The harvester: finds fully-grown crops (the {@code "harvestable"} world property) and harvests them
  *  with {@code AIRobotHarvest} (no tool needed — the hand is the tool). Ported from 7.1.x
@@ -68,7 +69,7 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotHarvest && finishAttempt(ai)) {
-            startDelegateAI(new AIRobotGotoSleep(robot));
+            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
         }
         super.delegateAIEnded(ai);
     }

@@ -27,6 +27,7 @@ import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 import buildcraft.robotics.ai.AIRobotSearchEntity;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The knight: keeps a sword equipped (fetching one from the station when none is held, unloading a
  *  broken one), then searches for hostile entities (monsters, or an angry wolf) and attacks them with
@@ -93,19 +94,21 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
         // the board started the same unload again on the next tick, forever (the break-board base handles both).
         if (ai instanceof AIRobotFetchAndEquipItemStack || ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                // No tool to be had, or nowhere to put the broken one.
+                startDelegateAI(new AIRobotGotoSleep(robot, ai instanceof AIRobotFetchAndEquipItemStack
+                        ? RobotSleepReason.NO_TOOL : RobotSleepReason.NOWHERE_TO_UNLOAD));
             }
         } else if (ai instanceof AIRobotSearchEntity search) {
             if (search.success()) {
                 startDelegateAI(new AIRobotAttack(robot, search.target));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotAttack attack) {
             if (!attack.refused()) {
                 refusals.succeeded();
             } else if (refusals.failed(null, null)) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
             }
         }
     }

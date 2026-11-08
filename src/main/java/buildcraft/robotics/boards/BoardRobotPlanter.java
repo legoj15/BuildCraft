@@ -26,6 +26,7 @@ import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.entity.RobotSleepReason;
 import buildcraft.lib.inventory.filter.AggregateFilter;
 import buildcraft.robotics.path.IBlockFilter;
 import buildcraft.robotics.statements.ActionRobotFilter;
@@ -101,7 +102,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPlant(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotPlant) {
             // A planting that failed (a claim mod refused the right-click or placement, or the soil changed under the
@@ -115,11 +116,11 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
             }
             releaseBlockFound();
             if (giveUp) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_SEEDS));
             }
         }
     }

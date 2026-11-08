@@ -26,7 +26,6 @@ import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.ai.AIRobotGoto;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
-import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStation;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoadFluids;
@@ -198,7 +197,9 @@ public class BCRobotics {
         RobotManager.registerAIRobot(AIRobotGotoBlock.class, "aiRobotGotoBlock", "buildcraft.core.robots.AIRobotGotoBlock");
         RobotManager.registerAIRobot(AIRobotGotoStation.class, "aiRobotGotoStation",
                 "buildcraft.core.robots.AIRobotGotoStation");
-        RobotManager.registerAIRobot(AIRobotGotoSleep.class, "aiRobotGotoSleep", "buildcraft.core.robots.AIRobotGotoSleep");
+        // AIRobotGotoSleep is deliberately not registered: the registry requires an (IRobotAccess) constructor for the
+        // NBT load, and the class has none on purpose (a sleep must name its reason). It is never saved either, so no
+        // save carries its "aiRobotGotoSleep" name; a reloaded robot's board decides again and goes back to sleep.
         RobotManager.registerAIRobot(AIRobotSearchStation.class, "aiRobotSearchStation",
                 "buildcraft.core.robots.AIRobotSearchStation");
         RobotManager.registerAIRobot(AIRobotSearchAndGotoStation.class, "aiRobotSearchAndGotoStation",

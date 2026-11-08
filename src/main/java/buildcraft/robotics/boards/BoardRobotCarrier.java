@@ -18,6 +18,7 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 import buildcraft.robotics.ai.AIRobotLoad;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** Loads from a supply station (any quantity) when empty, carries the cargo to another station, unloads, and
  *  sleeps when nothing is available. The supply-side input is the wooden-pipe discovery on the station
@@ -48,11 +49,11 @@ public class BoardRobotCarrier extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
             }
         } else if (ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
             }
         }
     }

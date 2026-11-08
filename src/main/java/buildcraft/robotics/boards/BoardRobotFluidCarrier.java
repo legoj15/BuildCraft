@@ -18,6 +18,7 @@ import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoadFluids;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The fluid twin of {@link BoardRobotCarrier}: when its tank is empty it loads filter-matching fluid at a
  *  supply station (the wooden fluid pipe's discovery, {@code DockingStationPipe.getFluidInput}), carries it
@@ -56,11 +57,11 @@ public class BoardRobotFluidCarrier extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoadFluids) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
             }
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOWHERE_TO_UNLOAD));
             }
         }
     }

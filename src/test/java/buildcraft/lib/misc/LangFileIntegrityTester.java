@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.lib.test.MainSourceSet;
+import buildcraft.robotics.entity.RobotActivity;
+import buildcraft.robotics.entity.RobotSleepReason;
 
 /** Structural checks on the shipped translation files.
  *
@@ -257,6 +259,24 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(keys.contains("buildcraft.help.zone_planner.map.title"), "scan lost GuiZonePlanner");
 
         assertTranslatedInChinese(en, zh, keys, "lang keys named by robotics code");
+    }
+
+    /** The robot status label builds its keys from enum names, which no literal scan sees: every value needs
+     *  English text (and Chinese, as robotics text), or the Goggles label shows a raw key. */
+    @Test
+    public void robotStatusKeysExist() {
+        Map<String, String> en = parse(EN);
+        List<String> keys = new ArrayList<>();
+        for (RobotActivity activity : RobotActivity.values()) {
+            keys.add(activity.translationKey());
+        }
+        for (RobotSleepReason reason : RobotSleepReason.values()) {
+            keys.add(reason.translationKey());
+        }
+        for (String key : keys) {
+            Assertions.assertTrue(en.containsKey(key), "en_us lacks " + key);
+        }
+        assertTranslatedInChinese(en, parse(ZH), keys, "robot status labels");
     }
 
     /** Fails on any of {@code keys} that zh_cn lacks, leaves blank, or copies verbatim from English. A value with no

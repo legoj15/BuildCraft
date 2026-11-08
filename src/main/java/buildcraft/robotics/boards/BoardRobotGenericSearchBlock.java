@@ -33,6 +33,7 @@ import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.entity.RobotSleepReason;
 import buildcraft.robotics.statements.ActionRobotFilter;
 
 /** The search-board base: each cycle, search for the nearest block matching {@link #isExpectedBlock}
@@ -164,7 +165,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
                 // (a flight that came back from NBT unreserved), preempt re-claims or drops it on the next cycle.
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot));
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         }
     }

@@ -79,6 +79,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotOverlayItem;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
@@ -196,6 +197,13 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
             SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING =
             SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.BOOLEAN);
+    /** What the robot is doing and, asleep, why: the ordinals of {@link RobotActivity} and {@link RobotSleepReason}
+     *  ({@link RobotStatus#NO_SLEEP_REASON} for none), worked out from the AI chain each server tick for the Robot
+     *  Goggles label. Two small ints so they go dirty only when the robot actually changes what it does. */
+    private static final EntityDataAccessor<Integer> ACTIVITY =
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> SLEEP_REASON =
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> ENERGY_SPEND =
             SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> HURT_TIME =
@@ -330,6 +338,8 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
         builder.define(AIM_PITCH, 0F);
         builder.define(ENERGY_MJ, 0);
         builder.define(SLEEPING, false);
+        builder.define(ACTIVITY, RobotActivity.IDLE.ordinal());
+        builder.define(SLEEP_REASON, RobotStatus.NO_SLEEP_REASON);
         builder.define(ENERGY_SPEND, 0);
         builder.define(HURT_TIME, 0);
         builder.define(STEAM_DIR, new Vector3f(STEAM_DIR_DEFAULT));
@@ -1118,6 +1128,9 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
         // Synched pushes. Every one of these is value-compared by SynchedEntityData before it goes dirty,
         // EXCEPT the ItemStacks — see pushStack.
         entityData.set(SLEEPING, isSleeping() && ticksCharging == 0);
+        RobotStatus status = RobotStatus.derive(mainAI, getPower() <= IRobotAccess.SHUTDOWN_POWER);
+        entityData.set(ACTIVITY, status.activity().ordinal());
+        entityData.set(SLEEP_REASON, status.sleepReasonId());
         entityData.set(ENERGY_MJ, (int) (battery.getStored() / MjAPI.MJ));
         entityData.set(ENERGY_SPEND, energySpendPerCycle);
         if (hurtTime > 0) {
@@ -1454,6 +1467,19 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
         return super.isCurrentlyGlowing() || gogglesView();
     }
 
+    /** How far, in blocks, Goggles keep a robot drawn: the type's tracking range (four chunks), past which the
+     *  client has no robot to draw anyway. */
+    private static final double GOGGLES_RENDER_BLOCKS = 64;
+
+    /** Goggles keep robots drawn out to {@link #GOGGLES_RENDER_BLOCKS}. Vanilla scales the cull distance by the
+     *  box (64 times its size), which for the 0.25 robot box is 16 blocks: the outline and the status label
+     *  vanished long before the label's 64-block look ray ran out. */
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distanceSqr) {
+        return super.shouldRenderAtSqrDistance(distanceSqr)
+                || (distanceSqr < GOGGLES_RENDER_BLOCKS * GOGGLES_RENDER_BLOCKS && gogglesView());
+    }
+
     /** The outline colour: red when the battery is empty to green when it is full while the Goggles view applies,
      *  otherwise the stock team colour. */
     @Override
@@ -1495,6 +1521,11 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     /** The client-visible sleep flag — {@link #isSleeping()} gated on not-currently-charging. */
     public boolean isSleepingClient() {
         return entityData.get(SLEEPING);
+    }
+
+    /** What the robot is doing and, asleep, why - the server's last answer, for the Robot Goggles label. */
+    public RobotStatus getStatus() {
+        return RobotStatus.ofIds(entityData.get(ACTIVITY), entityData.get(SLEEP_REASON));
     }
 
     /** Resolved from {@link #getBoardId()} through the board registry. Entity textures are direct file paths,

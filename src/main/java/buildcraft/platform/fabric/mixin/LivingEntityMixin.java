@@ -181,7 +181,11 @@ abstract class LivingEntityMixin {
         FabricGameHooks.finishDropCapture((LivingEntity) (Object) this, source);
     }
 
+    //? if >=26.3 {
     @WrapOperation(method = "drop(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)Lnet/minecraft/world/entity/item/ItemEntity;",
+    //?} else {
+    /^@WrapOperation(method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
+    ^///?}
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original) {

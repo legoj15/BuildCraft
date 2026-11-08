@@ -26,7 +26,8 @@ still a lead finder, not Mixin: @Local captures, local-variable ordinals, consta
 target outside net.minecraft / com.mojang (another mod's class, such as Fabric API's) is skipped.
 
 Readiness: it reads the Stonecutter view (versions/<node>/build/generated/stonecutter/{main,test}/java), which
-./gradlew :<node>:compileJava (or :<node>:stonecutterGenerate :<node>:stonecutterGenerateTest) writes IN PLACE, a file at
+./gradlew :<node>:compileJava :<node>:compileGametestJava (or :<node>:stonecutterGenerate
+:<node>:stonecutterGenerateTest) writes IN PLACE, a file at
 a time, over several seconds; read mid-write it silently undercounts. So it refuses (exit 2, nothing checked) when
   - a Gradle wrapper client of THIS checkout is running (its gradle-wrapper.jar is on a live java command line), or
   - the view is missing a file that src/{main,test}/java has (never generated, or generation not finished), or

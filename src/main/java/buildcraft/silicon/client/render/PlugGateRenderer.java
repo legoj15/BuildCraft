@@ -144,12 +144,11 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
      *
      *  Vertex colours are left at their default (full white = 0xFF). Vertex normals come
      *  directly from createFace's normalf(face.getStepX/Y/Z) — i.e. correct outward-pointing
-     *  per-face normals. We deliberately do NOT call setCalculatedNormal(): that recomputes
-     *  the normal as a cross-product of the quad's vertices, which for ModelUtil.createFace's
-     *  vertex winding ends up INVERTED (UP face's cross-product points -Y), feeding the
-     *  shader's automatic diffuse the wrong sign and producing a floor of darkness on every
-     *  face regardless of orientation. With createFace's correct normals, the shader gets
-     *  UP=full / DOWN=half / sides=0.6–0.8 like a vanilla block. */
+     *  per-face normals, already unit length, so nothing here recomputes them. (createFace's
+     *  winding is outward, matching vanilla's FaceInfo, so getCalculatedNormal points the same
+     *  way; the darkness once blamed on an "inverted" cross product came from its raw length,
+     *  the face's area, which setCalculatedNormal now normalises.) With unit outward normals
+     *  the shader gets UP=full / DOWN=half / sides=0.6–0.8 like a vanilla block. */
     private static void addBox(List<MutableQuad> list, float minX, float minY, float minZ,
                                float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, boolean shade) {
         Vector3f center = new Vector3f((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);

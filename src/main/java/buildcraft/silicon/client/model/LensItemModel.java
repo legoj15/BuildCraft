@@ -8,7 +8,6 @@ package buildcraft.silicon.client.model;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -43,16 +42,16 @@ import buildcraft.silicon.item.ItemPluggableLens;
 
 /**
  * Dynamic ItemModel for lens/filter items. Renders the lens/filter as 3D
- * geometry using PlugBakerLens with per-ItemDisplayContext camera transforms
- * matching 1.12.2's TRANSFORM_PLUG_AS_ITEM_BIGGER (see
- * common/buildcraft/lib/client/model/ModelItemSimple.java on the
- * 8.0.x-1.12.2 branch).
+ * geometry using PlugBakerLens, with the display transforms of 1.12.2's
+ * TRANSFORM_PLUG_AS_ITEM (see {@link PlugItemTransforms}, and
+ * common/buildcraft/lib/client/model/ModelItemSimple.java and
+ * common/buildcraft/silicon/client/model/plug/ModelLensItem.java on the 8.0.x-1.12.2 branch). The gate used the
+ * BIGGER set; the lens never did.
  *
- * <p>PlugBakerLens emits geometry in WEST-facing orientation (thin axis on
- * X). The bake pre-rotates to NORTH-facing so the lens face points at the
- * camera without needing a runtime rotation, then per-context rotate/scale/
- * translate is applied so dropped, in-hand and item-frame views each match
- * what 1.12.2 did.
+ * <p>PlugBakerLens emits geometry in WEST-facing orientation (thin axis on X), the way 1.12.2 baked the lens item,
+ * and every context but the inventory draws that, with the context's transform on the item layer (on the pose on
+ * 1.21.1). The inventory icon is its own quad set: the lens turned NORTH (face on) and scaled 1.8 about the cell
+ * centre, with no display transform.
  */
 //? if >=1.21.10 {
 public class LensItemModel implements ItemModel {
@@ -63,53 +62,30 @@ public class LensItemModel implements ItemModel {
     /** Inner identity for the lens itself: colour + isFilter. */
     private record LensKey(@Nullable DyeColor colour, boolean isFilter) {}
 
-    /**
-     * Per-context display transform. Rotations are degrees, translation is in
-     * 1/16 world units, scale is a uniform multiplier applied around the
-     * model centre (0.5, 0.5, 0.5).
-     */
-    private record ContextXform(float rotX, float rotY, float rotZ, float tx, float ty, float tz, float scale) {}
+    private static final PlugItemTransforms TRANSFORMS = PlugItemTransforms.PLUG_AS_ITEM;
 
-    private static final ContextXform DEFAULT_XFORM = new ContextXform(0, 0, 0, 0, 0, 0, 1.8f);
+    /** The inventory icon's size, baked into its quads. */
+    private static final float GUI_SCALE = 1.8f;
 
-    /**
-     * Values from 1.12.2 ModelItemSimple.TRANSFORM_PLUG_AS_ITEM_BIGGER, which
-     * is TRANSFORM_PLUG_AS_ITEM with each context's scale multiplied by 1.8.
-     * GUI rotation is identity here (not Y=90 as 1.12.2 used) because the
-     * base geometry has already been rotated WEST -> NORTH, so the lens face
-     * points at the camera without needing 1.12.2's runtime Y rotation.
-     */
-    private static final EnumMap<ItemDisplayContext, ContextXform> XFORMS = new EnumMap<>(ItemDisplayContext.class);
-    static {
-        XFORMS.put(ItemDisplayContext.GUI,                     new ContextXform(0,    0, 0,  0,  0f,    0f, 1.8f));
-        XFORMS.put(ItemDisplayContext.GROUND,                  new ContextXform(0,    0, 0,  0,  3f,    0f, 0.9f));
-        XFORMS.put(ItemDisplayContext.HEAD,                    new ContextXform(0,    0, 0,  0,  0f,    0f, 1.8f));
-        XFORMS.put(ItemDisplayContext.FIXED,                   new ContextXform(0,    0, 0,  0,  0f,    0f, 1.53f));
-        XFORMS.put(ItemDisplayContext.FIRST_PERSON_RIGHT_HAND, new ContextXform(0,   45, 0,  0,  0f,   -4f, 0.72f));
-        XFORMS.put(ItemDisplayContext.FIRST_PERSON_LEFT_HAND,  new ContextXform(0,  225, 0,  0,  0f,   -4f, 0.72f));
-        XFORMS.put(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, new ContextXform(75, 225, 0,  0,  2.5f,  0f, 0.675f));
-        XFORMS.put(ItemDisplayContext.THIRD_PERSON_LEFT_HAND,  new ContextXform(75,  45, 0,  0,  2.5f,  0f, 0.675f));
-    }
-
-    private record CacheKey(LensKey lensKey, ItemDisplayContext context) {}
+    /** {@code gui}: the inventory icon's quads; otherwise the WEST-facing ones every other context transforms. */
+    private record CacheKey(LensKey lensKey, boolean gui) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
-            ContextXform xform = XFORMS.getOrDefault(key.context(), DEFAULT_XFORM);
             LensKey lk = key.lensKey();
             List<BakedQuad> quads = new ArrayList<>();
 
             // Bake cutout quads (frame) — set white vertex colors so texture shows unmodified
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), true)) {
-                transformForItem(mq, xform, true);
+                transformForItem(mq, key.gui(), true);
                 quads.add(mq.toBakedItem());
             }
 
             // Bake translucent quads (coloured glass overlay) — use toBakedTranslucent so the
             // quad is routed to the correct render layer and vertex colours are preserved via BakedColors
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), false)) {
-                transformForItem(mq, xform, false);
+                transformForItem(mq, key.gui(), false);
                 quads.add(mq.toBakedTranslucent());
             }
 
@@ -117,33 +93,27 @@ public class LensItemModel implements ItemModel {
         }));
 
     /**
-     * Rotates a MutableQuad from WEST-facing in-world orientation to
-     * NORTH-facing item orientation, applies the per-context display
-     * transform, and resets vertex colours for cutout (frame) quads.
+     * Readies a WEST-facing PlugBakerLens quad for the item: for the inventory icon, turns it NORTH and scales it about
+     * the cell centre; then realigns normal and face with the geometry and resets vertex colours for cutout (frame)
+     * quads.
      *
      * @param resetColors true for cutout quads (white vertex colors so texture is unmodified),
      *                    false for translucent quads (preserve vertex colors set by tinting)
      */
-    private static void transformForItem(MutableQuad mq, ContextXform x, boolean resetColors) {
+    private static void transformForItem(MutableQuad mq, boolean gui, boolean resetColors) {
         mq.setShade(false);
-        // Rotate from WEST -> NORTH so the lens face points at the camera
-        mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
-
-        // Per-context display transform around the model centre, then world-space translation
-        mq.translatef(-0.5f, -0.5f, -0.5f);
-        if (x.rotX() != 0f) mq.rotateX((float) Math.toRadians(x.rotX()));
-        if (x.rotY() != 0f) mq.rotateY((float) Math.toRadians(x.rotY()));
-        if (x.rotZ() != 0f) mq.rotateZ((float) Math.toRadians(x.rotZ()));
-        if (x.scale() != 1f) mq.scalef(x.scale());
-        mq.translatef(0.5f, 0.5f, 0.5f);
-        if (x.tx() != 0f || x.ty() != 0f || x.tz() != 0f) {
-            mq.translatef(x.tx() / 16f, x.ty() / 16f, x.tz() / 16f);
+        if (gui) {
+            // Rotate from WEST -> NORTH so the lens face points at the camera
+            mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
+            mq.translatef(-0.5f, -0.5f, -0.5f);
+            mq.scalef(GUI_SCALE);
+            mq.translatef(0.5f, 0.5f, 0.5f);
         }
         mq.setCalculatedNormal();
-        // The rotation above leaves each quad's face at its WEST-facing original (the lens face the GUI sees is still
-        // tagged EAST). NeoForge lights an item quad by that face and Fabric by the geometry, so the lens drew at the
-        // ambient floor (0.4) on NeoForge 1.21.11+ and fully lit on Fabric (#173). Realigned, both draw it fully lit, as
-        // 1.12.2 did: its lens item was not gui3d, so the GUI drew it with lighting off.
+        // NeoForge lights an item quad by its face and Fabric by the geometry, so a face that disagrees with the
+        // geometry drew the lens at the ambient floor (0.4) on NeoForge 1.21.11+ and fully lit on Fabric (#173).
+        // Realigned, both agree; in the inventory both draw it fully lit, as 1.12.2 did: its lens item was not gui3d,
+        // so the GUI drew it with lighting off.
         mq.setFaceFromCalculatedNormal();
 
         // Set full white vertex colours only for cutout (frame) quads.
@@ -182,7 +152,7 @@ public class LensItemModel implements ItemModel {
                        @Nullable ItemOwner owner, int seed) {
         DyeColor colour = ItemPluggableLens.getColour(stack);
         boolean isFilter = ItemPluggableLens.isFilter(stack);
-        CacheKey key = new CacheKey(new LensKey(colour, isFilter), displayContext);
+        CacheKey key = new CacheKey(new LensKey(colour, isFilter), displayContext == ItemDisplayContext.GUI);
 
         List<BakedQuad> quads = cache.getUnchecked(key);
         if (quads.isEmpty()) {
@@ -219,6 +189,7 @@ public class LensItemModel implements ItemModel {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
         buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
+        TRANSFORMS.apply(layer, displayContext);
         //? if <26.1 {
         /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
         // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet
@@ -228,9 +199,10 @@ public class LensItemModel implements ItemModel {
     }
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the lens
-    // colour + filter flag per-stack, applyTransform() picks the per-(lens, context) pre-baked quad
-    // set — the same cache the modern update() uses — and wraps it in a fixed-quad item model (ClientModels.fixedQuadItemModel) on the
-    // translucent item sheet (opaque frame stays opaque at alpha 255; coloured glass blends).
+    // colour + filter flag per-stack, applyTransform() picks the inventory or the WEST-facing quad set (the same cache
+    // the modern update() uses), puts the context's transform on the pose and wraps the quads in a fixed-quad item model
+    // (ClientModels.fixedQuadItemModel) on the translucent item sheet (opaque frame stays opaque at alpha 255; coloured
+    // glass blends).
     // The modern setAnimated() bookkeeping is unnecessary here: 1.21.1's classic ItemRenderer GUI
     // path re-renders each frame, so the clear-lens water overlay animates without an explicit flag.
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
@@ -257,10 +229,12 @@ public class LensItemModel implements ItemModel {
         if (resolvedLens == null) {
             return this;
         }
-        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(resolvedLens, displayContext));
+        List<BakedQuad> quads = cache.getUnchecked(
+                new CacheKey(resolvedLens, displayContext == ItemDisplayContext.GUI));
         if (quads.isEmpty()) {
             return this;
         }
+        TRANSFORMS.apply(displayContext, pose, leftHand);
         return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
                 quads, quads.get(0).getSprite(), true,
                 buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
@@ -274,12 +248,13 @@ public class LensItemModel implements ItemModel {
         return List.of();
     }
 
-    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
-    // getter; on Fabric it is abstract).
+    // Only the ground entry, which vanilla's ItemEntityRenderer reads off the resolved model: applyTransform has already put
+    // the transform on the pose and answers a model with none of its own (NeoForge deprecates the getter; on Fabric it is
+    // abstract).
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return TRANSFORMS.groundOnly;
     }
 
     @Override

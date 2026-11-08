@@ -78,9 +78,10 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
      * Bake gate geometry as MutableQuads for item rendering.
      * Unlike the in-world baker, items use gate_off.png directly (the dark red texture
      * is correct for items since vertex colors can be applied through the item rendering path).
-     * Geometry is built facing NORTH (thin axis on Z) so the gate face points at the camera
-     * without needing any post-hoc rotation (which would corrupt BakedQuad face metadata
-     * and break item rendering brightness/size).
+     * Geometry is built facing NORTH (thin axis on Z), the gate face pointing at the camera:
+     * GateItemModel draws the inventory icon from it as is and turns it WEST, the way 1.12.2
+     * baked the gate item, for every other display context ({@code MutableQuad.rotate} keeps
+     * each quad's face in step).
      */
     public List<MutableQuad> bakeForItem(buildcraft.silicon.gate.GateVariant variant) {
         List<MutableQuad> quads = new ArrayList<>();

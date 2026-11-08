@@ -8,7 +8,6 @@ package buildcraft.silicon.client.model;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 
 import com.google.common.cache.CacheBuilder;
@@ -29,6 +28,7 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.ItemOwner;
 //?}
+import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
@@ -40,14 +40,14 @@ import buildcraft.silicon.client.model.plug.PlugGateBaker;
 
 /**
  * Dynamic ItemModel for gate items. Renders the gate as 3D geometry using the
- * same quads as the in-world PlugGateBaker, with per-ItemDisplayContext camera
- * transforms matching 1.12.2's TRANSFORM_PLUG_AS_ITEM_BIGGER (see
- * common/buildcraft/lib/client/model/ModelItemSimple.java on the
- * 8.0.x-1.12.2 branch).
+ * same quads as the in-world PlugGateBaker, with the display transforms of 1.12.2's
+ * TRANSFORM_PLUG_AS_ITEM_BIGGER (see {@link PlugItemTransforms}, and
+ * common/buildcraft/lib/client/model/ModelItemSimple.java on the 8.0.x-1.12.2 branch).
  *
- * <p>The base quads come out of PlugGateBaker NORTH-facing at native size;
- * this class applies the per-context rotate/scale/translate so dropped
- * entities, in-hand, and item-frame renderings each match what 1.12.2 did.
+ * <p>Two quad sets per variant. The inventory icon is PlugGateBaker's NORTH-facing gate scaled 1.8 about the cell
+ * centre, face on and with no display transform. Everywhere else the gate is turned to face WEST, as 1.12.2 baked it,
+ * and the context's transform goes on the item layer (on the pose on 1.21.1), so the engine applies it the way 1.12.2's
+ * did.
  */
 //? if >=1.21.10 {
 public class GateItemModel implements ItemModel {
@@ -55,62 +55,32 @@ public class GateItemModel implements ItemModel {
 /*public class GateItemModel implements buildcraft.platform.client.ClassicItemModel {*/
 //?}
 
-    /**
-     * Per-context display transform. Rotations are degrees, translation is in
-     * 1/16 world units, scale is a uniform multiplier applied around the
-     * model centre (0.5, 0.5, 0.5).
-     */
-    private record ContextXform(float rotX, float rotY, float rotZ, float tx, float ty, float tz, float scale) {}
+    private static final PlugItemTransforms TRANSFORMS = PlugItemTransforms.PLUG_AS_ITEM_BIGGER;
 
-    private static final ContextXform DEFAULT_XFORM = new ContextXform(0, 0, 0, 0, 0, 0, 1.8f);
+    /** The inventory icon's size, baked into its quads (1.12.2's GUI scale for the gate). */
+    private static final float GUI_SCALE = 1.8f;
 
-    /**
-     * Values from 1.12.2 ModelItemSimple.TRANSFORM_PLUG_AS_ITEM_BIGGER, which
-     * is TRANSFORM_PLUG_AS_ITEM with each context's scale multiplied by 1.8.
-     * GUI rotation is identity here (not Y=90 as 1.12.2 used) because our base
-     * geometry is already NORTH-facing — the gate face points at the camera
-     * without needing the rotation 1.12.2 applied to its WEST-mounted geometry.
-     */
-    private static final EnumMap<ItemDisplayContext, ContextXform> XFORMS = new EnumMap<>(ItemDisplayContext.class);
-    static {
-        XFORMS.put(ItemDisplayContext.GUI,                     new ContextXform(0,    0, 0,  0,  0f,    0f, 1.8f));
-        XFORMS.put(ItemDisplayContext.GROUND,                  new ContextXform(0,    0, 0,  0,  3f,    0f, 0.9f));
-        XFORMS.put(ItemDisplayContext.HEAD,                    new ContextXform(0,    0, 0,  0,  0f,    0f, 1.8f));
-        XFORMS.put(ItemDisplayContext.FIXED,                   new ContextXform(0,    0, 0,  0,  0f,    0f, 1.53f));
-        XFORMS.put(ItemDisplayContext.FIRST_PERSON_RIGHT_HAND, new ContextXform(0,   45, 0,  0,  0f,   -4f, 0.72f));
-        XFORMS.put(ItemDisplayContext.FIRST_PERSON_LEFT_HAND,  new ContextXform(0,  225, 0,  0,  0f,   -4f, 0.72f));
-        XFORMS.put(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, new ContextXform(75, 225, 0,  0,  2.5f,  0f, 0.675f));
-        XFORMS.put(ItemDisplayContext.THIRD_PERSON_LEFT_HAND,  new ContextXform(75,  45, 0,  0,  2.5f,  0f, 0.675f));
-    }
-
-    private record CacheKey(GateVariant variant, ItemDisplayContext context) {}
+    /** {@code gui}: the inventory icon's quads; otherwise the WEST-facing ones every other context transforms. */
+    private record CacheKey(GateVariant variant, boolean gui) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
-            ContextXform x = XFORMS.getOrDefault(key.context(), DEFAULT_XFORM);
             List<BakedQuad> quads = new ArrayList<>();
             for (MutableQuad mq : PlugGateBaker.INSTANCE.bakeForItem(key.variant())) {
                 mq.setShade(false);
-                applyXform(mq, x);
+                if (key.gui()) {
+                    mq.translatef(-0.5f, -0.5f, -0.5f);
+                    mq.scalef(GUI_SCALE);
+                    mq.translatef(0.5f, 0.5f, 0.5f);
+                } else {
+                    mq.rotate(Direction.NORTH, Direction.WEST, 0.5f, 0.5f, 0.5f);
+                }
                 mq.setCalculatedNormal();
                 quads.add(mq.toBakedItem());
             }
             return quads;
         }));
-
-    /** Pivot to centre, rotate, scale, pivot back, then apply world-space translation. */
-    private static void applyXform(MutableQuad mq, ContextXform x) {
-        mq.translatef(-0.5f, -0.5f, -0.5f);
-        if (x.rotX() != 0f) mq.rotateX((float) Math.toRadians(x.rotX()));
-        if (x.rotY() != 0f) mq.rotateY((float) Math.toRadians(x.rotY()));
-        if (x.rotZ() != 0f) mq.rotateZ((float) Math.toRadians(x.rotZ()));
-        if (x.scale() != 1f) mq.scalef(x.scale());
-        mq.translatef(0.5f, 0.5f, 0.5f);
-        if (x.tx() != 0f || x.ty() != 0f || x.tz() != 0f) {
-            mq.translatef(x.tx() / 16f, x.ty() / 16f, x.tz() / 16f);
-        }
-    }
 
     //? if <1.21.10 {
     /*// 1.21.1 per-stack resolved gate variant. Null on the registry-level model; populated by the
@@ -141,8 +111,7 @@ public class GateItemModel implements ItemModel {
             return;
         }
 
-        CacheKey key = new CacheKey(variant, displayContext);
-        List<BakedQuad> quads = cache.getUnchecked(key);
+        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(variant, displayContext == ItemDisplayContext.GUI));
         if (quads.isEmpty()) {
             return;
         }
@@ -160,6 +129,7 @@ public class GateItemModel implements ItemModel {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
         buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
+        TRANSFORMS.apply(layer, displayContext);
         //? if <26.1 {
         /*// 1.21.11: the item layer needs an explicit render type (26.1 infers it from the quad's
         // MaterialInfo). Block-textured cutout → cutoutBlockSheet, matching vanilla BlockModelWrapper.
@@ -168,8 +138,9 @@ public class GateItemModel implements ItemModel {
     }
     //?} else {
     /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the gate
-    // variant per-stack, applyTransform() picks the per-(variant, context) pre-baked quad set —
-    // the same cache the modern update() uses — and wraps it in a fixed-quad item model (ClientModels.fixedQuadItemModel).
+    // variant per-stack, applyTransform() picks the inventory or the WEST-facing quad set (the same cache the modern
+    // update() uses), puts the context's transform on the pose and wraps the quads in a fixed-quad item model
+    // (ClientModels.fixedQuadItemModel).
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
         new net.minecraft.client.renderer.block.model.ItemOverrides() {
             @Override
@@ -192,10 +163,12 @@ public class GateItemModel implements ItemModel {
         if (resolvedVariant == null) {
             return this;
         }
-        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(resolvedVariant, displayContext));
+        List<BakedQuad> quads = cache.getUnchecked(
+                new CacheKey(resolvedVariant, displayContext == ItemDisplayContext.GUI));
         if (quads.isEmpty()) {
             return this;
         }
+        TRANSFORMS.apply(displayContext, pose, leftHand);
         return buildcraft.platform.client.ClientPlatform.models().fixedQuadItemModel(
                 quads, quads.get(0).getSprite(), true, net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
@@ -208,12 +181,13 @@ public class GateItemModel implements ItemModel {
         return List.of();
     }
 
-    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
-    // getter; on Fabric it is abstract).
+    // Only the ground entry, which vanilla's ItemEntityRenderer reads off the resolved model: applyTransform has already put
+    // the transform on the pose and answers a model with none of its own (NeoForge deprecates the getter; on Fabric it is
+    // abstract).
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return TRANSFORMS.groundOnly;
     }
 
     @Override

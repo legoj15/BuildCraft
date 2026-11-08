@@ -85,8 +85,8 @@ public enum PlugRobotStationRenderer implements IPlugDynamicRenderer<RobotStatio
      *  (docs/robotics-ph3-design.md amendment 7). A straight-up normal saturates the term to 1.0 on
      *  all six faces. Culling is by winding, not normal, so nothing downstream misses them.
      *
-     *  <p>Deliberately NOT {@code setCalculatedNormal()} — it comes out inverted for
-     *  {@code createFace}'s winding (see {@code PlugGateRenderer}). */
+     *  <p>No {@code setCalculatedNormal()}: {@code createFace} already hands {@code multShade} unit outward
+     *  normals, which the rotation carries along. */
     private static MutableQuad[] buildSide(TextureAtlasSprite sprite, Direction side) {
         MutableQuad[] quads = RobotStationModel.buildPedestal(sprite, PROUD);
         for (MutableQuad q : quads) {

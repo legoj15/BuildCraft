@@ -13,7 +13,8 @@ not checked, and a miss in a class the node never loads (another loader's mixin)
 Usage: python -I scripts/fabric-mixin-check.py <node> [--jar <minecraft jar>]
   <node>  a Fabric node, e.g. 26.2-fabric; its view must exist (./gradlew :<node>:stonecutterGenerate
           :<node>:stonecutterGenerateTest, or any compile of it).
-  --jar   the Mojang-named Minecraft jar; found under the Gradle user home's fabric-loom cache for the 26.x lines.
+  --jar   the Mojang-named Minecraft jar; found under the Gradle user home's fabric-loom cache (for the 1.x lines,
+          the named merged jar in its minecraftMaven cache).
 Exit status: 0 when nothing is missing, 1 otherwise.
 """
 import argparse
@@ -29,16 +30,19 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def find_jar(mc):
     home = Path(os.environ.get("GRADLE_USER_HOME", Path.home() / ".gradle"))
+    # Remap mode (the obfuscated 1.x lines): the minecraft-merged.jar beside the mappings is the obfuscated one, so
+    # take Loom's Mojang-named merged jar from its maven cache (minecraft-merged-<mc>-loom.mappings..., not the
+    # intermediary twin; the global cache's has no class tweaker applied, which a member lookup does not need).
+    if mc.startswith("1."):
+        for base in (home / "caches" / "fabric-loom" / "minecraftMaven", ROOT / ".gradle" / "loom-cache" / "minecraftMaven"):
+            if base.is_dir():
+                hits = sorted(p for p in base.rglob(f"minecraft-merged*-{mc}-loom.mappings*.jar")
+                              if "intermediary" not in p.name and "sources" not in p.name)
+                if hits:
+                    return hits[-1]
+        return None
     merged = home / "caches" / "fabric-loom" / mc / "minecraft-merged.jar"
-    if merged.is_file():
-        return merged
-    # Remap mode (1.21.x): Loom's Mojang-named merged jar in its maven cache.
-    for base in (home / "caches" / "fabric-loom" / "minecraftMaven", ROOT / ".gradle" / "loom-cache" / "minecraftMaven"):
-        if base.is_dir():
-            hits = sorted(p for p in base.rglob(f"*{mc}*.jar") if "merged" in p.name and "sources" not in p.name)
-            if hits:
-                return hits[-1]
-    return None
+    return merged if merged.is_file() else None
 
 
 class Jar:
@@ -47,7 +51,7 @@ class Jar:
 
     @functools.lru_cache(maxsize=None)
     def javap(self, cls):
-        r = subprocess.run(["javap", "-p", "-c", "-cp", self.jar, cls], capture_output=True, text=True)
+        r = subprocess.run(["javap", "-p", "-c", "-s", "-cp", self.jar, cls], capture_output=True, text=True)
         return r.stdout if r.returncode == 0 else None
 
     @functools.lru_cache(maxsize=None)
@@ -129,6 +133,14 @@ def head_params(head):
     return [re.sub(r"<.*?>", "", p).strip().replace("...", "[]") for p in m.group(1).split(",")]
 
 
+def body_params(body):
+    """A javap -c -s method block's parameters, from its descriptor line (the head's spelling when there is none)."""
+    m = re.search(r"^\s+descriptor: (\(.*?\)\S*)\s*$", body, re.M)
+    if m:
+        return desc_params(m.group(1))
+    return head_params(body.strip().split(chr(10), 1)[0])
+
+
 IMPORT_RE = re.compile(r"^\s*import\s+([\w.]+)\s*;", re.M)
 MIXIN_RE = re.compile(r"@Mixin\s*\((.*?)\)\s*\n\s*(?:public\s+|abstract\s+|final\s+)*(?:class|interface)", re.S)
 INJ_RE = re.compile(r"@(Inject|WrapOperation|WrapWithCondition|ModifyReturnValue|ModifyVariable|ModifyArg|ModifyArgs|"
@@ -202,8 +214,10 @@ def check_file(path, jar, problems):
                     problems.append(f"{rel}: {cls} has no method {name} (@{im.group(1)})")
                     continue
                 if desc:
+                    # By the JVM descriptor javap -s prints under each head: a generic parameter's source spelling
+                    # (T) is not its erasure.
                     want = desc_params(desc)
-                    bodies = [b for b in bodies if head_params(b.strip().split(chr(10), 1)[0]) == want]
+                    bodies = [b for b in bodies if body_params(b) == want]
                     if not bodies:
                         problems.append(f"{rel}: {cls} has no {name}{desc} (@{im.group(1)})")
                         continue

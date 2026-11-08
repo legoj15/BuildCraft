@@ -11,7 +11,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import net.minecraft.client.gui.Font;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/^import net.minecraft.client.gui.GuiGraphics;
+^///?}
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.world.item.ItemStack;
@@ -21,10 +25,11 @@ import buildcraft.platform.client.BCTooltipPreContext;
 /^*
  * NeoForge's {@code RenderTooltipEvent.Pre} on Fabric ({@link FabricClientHooks#onTooltipPre}), fed by the client
  * mixins {@code GuiGraphicsExtractorMixin} and {@code AbstractContainerScreenMixin}. It fires where NeoForge's does: at
- * the head of {@link GuiGraphicsExtractor#tooltip}, before the positioner runs.
+ * the head of vanilla's tooltip draw ({@code GuiGraphicsExtractor.tooltip}; {@code GuiGraphics.renderTooltip} before
+ * 26.1), before the positioner runs.
  *
  * <p>Vanilla's tooltip draw carries no item stack (NeoForge patches one through), so the stack takes a side channel:
- * the item tooltip requests ({@link GuiGraphicsExtractor#setTooltipForNextFrame(Font, ItemStack, int, int)} and a
+ * the item tooltip requests ({@code setTooltipForNextFrame(Font, ItemStack, int, int)} and a
  * container screen's hovered slot) name it with {@link #describing}, the deferred draw queued during that request is
  * tagged with it ({@link #tagDeferred}), and that draw hands it to the listeners once: {@link #firePre} consumes it, so
  * a tooltip drawn directly inside the tagged one (a bundle tooltip's selected-item name) reaches them with an empty
@@ -75,8 +80,13 @@ public final class FabricTooltipHooks {
     }
 
     /^* A tooltip is about to be drawn; {@code x}/{@code y} are the positioner's inputs. *^/
+    //? if >=26.1 {
     public static void firePre(GuiGraphicsExtractor graphics, Font font, List<ClientTooltipComponent> components,
             int x, int y, ClientTooltipPositioner positioner) {
+    //?} else {
+    /^public static void firePre(GuiGraphics graphics, Font font, List<ClientTooltipComponent> components,
+            int x, int y, ClientTooltipPositioner positioner) {
+    ^///?}
         // Consumed whether or not anyone listens: a tooltip nested inside this draw is not the tagged request's.
         ItemStack stack = drawStack;
         drawStack = ItemStack.EMPTY;
@@ -90,7 +100,11 @@ public final class FabricTooltipHooks {
         }
     }
 
+    //? if >=26.1 {
     private record Context(ItemStack stack, GuiGraphicsExtractor graphics, int x, int y, int screenWidth,
+    //?} else {
+    /^private record Context(ItemStack stack, GuiGraphics graphics, int x, int y, int screenWidth,
+    ^///?}
             int screenHeight, Font font, List<ClientTooltipComponent> components, ClientTooltipPositioner positioner)
             implements BCTooltipPreContext {}
 }

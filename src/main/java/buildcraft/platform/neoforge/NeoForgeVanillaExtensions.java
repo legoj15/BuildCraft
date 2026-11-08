@@ -79,6 +79,13 @@ public final class NeoForgeVanillaExtensions implements VanillaExtensions {
     }
     *///?}
 
+    //? if >=1.21.10 && <26.1 {
+    /*@Override
+    public ItemStack craftingRemainder(ItemStack stack) {
+        return stack.getCraftingRemainder();
+    }
+    *///?}
+
     //? if >=26.1 {
     @Override
     public <T extends net.minecraft.world.level.saveddata.SavedData> net.minecraft.world.level.saveddata.SavedDataType<T>

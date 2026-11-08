@@ -54,7 +54,8 @@ import buildcraft.platform.FluidProperties;
  * based, as NeoForge's deprecated tag paths are. Extinguishing is the fluid's own {@code entityInside}. Vanilla 26.3
  * tracks each fluid apart, and the answers above read its trackers; 26.1 and 26.2 track one per tag (water, lava),
  * which cannot tell oil from water, so there they read {@link FluidTracking}, BuildCraft's per-fluid record of the
- * same scan.
+ * same scan. Before 26.1 the scan is the entity's own ({@code updateFluidHeightAndDoFluidPushing}, once per tag) and
+ * the same per-fluid record is filled from it.
  *^/
 public final class FabricFluidPhysics {
     /^* NeoForge's default {@code FluidType.Properties.fallDistanceModifier}, which no BuildCraft fluid changes. *^/
@@ -63,6 +64,16 @@ public final class FabricFluidPhysics {
     public static final double FLUID_JUMP_SPEED = 0.04F;
 
     private FabricFluidPhysics() {}
+
+    /^* The {@link Interaction} of {@code entity}: its {@code EntityFluidInteraction} from 26.1, the entity itself before
+     *  (1.21.x keeps the fluid scan on {@code Entity}, so {@code EntityFluidInteractionMixin} targets it there). ^/
+    public static Interaction interaction(Entity entity) {
+        //? if >=26.1 {
+        return (Interaction) ((buildcraft.platform.fabric.mixin.EntityAccessor) entity).buildcraft$fluidInteraction();
+        //?} else {
+        /^return (Interaction) entity;
+        ^///?}
+    }
 
     /^* What {@code EntityFluidInteractionMixin} adds to an entity's {@code EntityFluidInteraction}. *^/
     public interface Interaction {

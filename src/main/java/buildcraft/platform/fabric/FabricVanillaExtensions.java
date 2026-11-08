@@ -169,6 +169,14 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
     }
     ^///?}
 
+    //? if >=1.21.10 && <26.1 {
+    /^@Override
+    public ItemStack craftingRemainder(ItemStack stack) {
+        return stack.getRecipeRemainder();
+    }
+    ^///?}
+
+    //? if >=26.1 {
     @Override
     public <T extends SavedData> SavedDataType<T> levelSavedDataType(Identifier id, Function<ServerLevel, T> factory,
             Function<ServerLevel, Codec<T>> codec, DataFixTypes fixType) {
@@ -184,5 +192,6 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
             }
         }, fixType);
     }
+    //?}
 }
 *///?}

@@ -48,4 +48,26 @@ public interface ClientVanillaExtensions {
     /^* The innermost scissor rectangle {@code graphics} clips to, or null for none. *^/
     net.minecraft.client.gui.navigation.ScreenRectangle peekScissor(net.minecraft.client.gui.GuiGraphics graphics);*/
     //?}
+
+    //? if >=1.21.10 && <26.1 {
+    /*/^*
+     * Draws {@code state}'s block model into {@code buffers} as a lone block (no level, no neighbours): NeoForge's
+     * context-aware {@code renderSingleBlock}, given an empty level at the origin; Fabric: vanilla's.
+     *^/
+    void renderSingleBlock(BlockState state, com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffers, int light, int overlay);
+
+    /^*
+     * The particle sprite of {@code state}'s block model, the one vanilla's break and sprint particles use: NeoForge's
+     * context-aware {@code getParticleIcon}, given an empty level at the origin; Fabric: vanilla's.
+     *^/
+    net.minecraft.client.renderer.texture.TextureAtlasSprite particleIcon(BlockState state);
+
+    /^*
+     * The chunk layer {@code part} of {@code state}'s model draws on: NeoForge's per-part {@code getRenderType};
+     * Fabric: the block's own layer ({@code ItemBlockRenderTypes}), which is all vanilla tracks.
+     *^/
+    net.minecraft.client.renderer.chunk.ChunkSectionLayer renderLayer(
+            net.minecraft.client.renderer.block.model.BlockModelPart part, BlockState state);*/
+    //?}
 }

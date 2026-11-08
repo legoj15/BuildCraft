@@ -35,8 +35,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 //? if >=26.2 {
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerConnection;
-//?} else {
+//?} elif >=26.1 {
 /^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext;
+^///?} else {
+/^import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext;
 ^///?}
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
@@ -142,8 +144,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             ctx.waitTicks(40);
             //? if >=26.2 {
             sp.getConnection().waitForChunksRender();
-            //?} else {
+            //?} elif >=26.1 {
             /^sp.getClientLevel().waitForChunksRender();
+            ^///?} else {
+            /^sp.getClientWorld().waitForChunksRender();
             ^///?}
             ctx.waitTicks(20);
             // The client must draw the engine turned too (its renderer reads the synced tile orientation).
@@ -162,8 +166,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             setHudHidden(ctx, true);
             //? if >=26.2 {
             TestServerConnection spConn = sp.getConnection();
-            //?} else {
+            //?} elif >=26.1 {
             /^TestClientLevelContext spConn = sp.getClientLevel();
+            ^///?} else {
+            /^TestClientWorldContext spConn = sp.getClientWorld();
             ^///?}
             worldShot(ctx, spConn, server, "5.5 " + (Y + 4) + " 15.5 180 25", "bc-rig-overview", problems);
             worldShot(ctx, spConn, server, "-5.5 " + Y + " 3.5 180 30", "bc-kinesis-engine", problems);
@@ -303,10 +309,17 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 received.add(holder.value().getSerializer());
             }
             List<String> absent = new ArrayList<>();
-            if (!received.contains(ShapedRecipe.SERIALIZER)) {
+            //? if >=26.1 {
+            RecipeSerializer<?> shaped = ShapedRecipe.SERIALIZER;
+            RecipeSerializer<?> smelting = SmeltingRecipe.SERIALIZER;
+            //?} else {
+            /^RecipeSerializer<?> shaped = RecipeSerializer.SHAPED_RECIPE;
+            RecipeSerializer<?> smelting = RecipeSerializer.SMELTING_RECIPE;
+            ^///?}
+            if (!received.contains(shaped)) {
                 absent.add("shaped");
             }
-            if (!received.contains(SmeltingRecipe.SERIALIZER)) {
+            if (!received.contains(smelting)) {
                 absent.add("smelting");
             }
             if (!received.contains(DyedPipeRecipe.SERIALIZER)) {
@@ -398,9 +411,12 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             int port = server.computeOnServer(MinecraftServer::getPort);
             //? if >=26.2 {
             try (TestDedicatedServerConnection conn = server.connect()) {
-            //?} else {
+            //?} elif >=26.1 {
             /^try (TestServerConnection link = server.connect()) {
                 TestClientLevelContext conn = link.getClientLevel();
+            ^///?} else {
+            /^try (TestServerConnection link = server.connect()) {
+                TestClientWorldContext conn = link.getClientWorld();
             ^///?}
                 checkMultiplayerMachines(ctx, server, conn, problems);
                 checkLargeSnapshot(ctx, server, problems);
@@ -427,8 +443,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     private static void checkMultiplayerMachines(ClientGameTestContext ctx, TestServerContext server,
         //? if >=26.2 {
         TestServerConnection conn,
-        //?} else {
+        //?} elif >=26.1 {
         /^TestClientLevelContext conn,
+        ^///?} else {
+        /^TestClientWorldContext conn,
         ^///?}
         List<String> problems) {
         for (String cmd : new String[] {
@@ -778,11 +796,29 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             Object[] layers = (Object[]) layersField.get(state);
             int count = countField.getInt(state);
             for (int i = 0; i < count; i++) {
+                //? if >=26.1 {
                 var mesh = ((net.fabricmc.fabric.impl.client.renderer.LayerRenderStateExtension) layers[i])
                     .fabric_getMutableMesh();
                 if (mesh != null) {
                     mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
                 }
+                //?} elif >=1.21.11 {
+                /^var mesh = ((net.fabricmc.fabric.impl.client.indigo.renderer.accessor.AccessLayerRenderState) layers[i])
+                    .fabric_getMutableMesh();
+                if (mesh != null) {
+                    mesh.forEach(q -> colours.add(new int[] {q.color(0), q.color(1), q.color(2), q.color(3)}));
+                }
+                ^///?} else {
+                /^// 1.21.10 draws an item quad with the colours in its own vertex data (int 3 of each vertex's eight,
+                // ABGR), so BuildCraft hands Fabric no mesh there: the layer's quads are what carry them.
+                var layer = (net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState) layers[i];
+                for (net.minecraft.client.renderer.block.model.BakedQuad quad : layer.prepareQuadList()) {
+                    int[] vd = quad.vertices();
+                    colours.add(new int[] {net.minecraft.util.ARGB.fromABGR(vd[3]),
+                        net.minecraft.util.ARGB.fromABGR(vd[11]), net.minecraft.util.ARGB.fromABGR(vd[19]),
+                        net.minecraft.util.ARGB.fromABGR(vd[27])});
+                }
+                ^///?}
             }
         } catch (ReflectiveOperationException e) {
             bad.add("cannot read the item render state's layers: " + e);
@@ -835,11 +871,20 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
     private static List<EmittedQuad> emittedQuads(Minecraft mc, BlockPos pos) {
         net.minecraft.world.level.block.state.BlockState state = mc.level.getBlockState(pos);
-        var model = mc.getModelManager().getBlockStateModelSet().get(state);
         List<EmittedQuad> out = new ArrayList<>();
+        //? if >=26.1 {
+        var model = mc.getModelManager().getBlockStateModelSet().get(state);
         var capture = net.fabricmc.fabric.api.client.renderer.v1.Renderer.get().quadEmitter(
             q -> out.add(new EmittedQuad(q.chunkLayer(), new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
         model.emitQuads(capture, mc.level, pos, state, net.minecraft.util.RandomSource.create(0), face -> false);
+        //?} else {
+        /^// Before 26.1 the renderer has no emitter that hands each quad on: the quads collect in a mesh, read after.
+        var model = mc.getModelManager().getBlockModelShaper().getBlockModel(state);
+        var mesh = net.fabricmc.fabric.api.renderer.v1.Renderer.get().mutableMesh();
+        model.emitQuads(mesh.emitter(), mc.level, pos, state, net.minecraft.util.RandomSource.create(0), face -> false);
+        mesh.forEach(q -> out.add(new EmittedQuad(q.renderLayer(),
+            new int[] {q.color(0), q.color(1), q.color(2), q.color(3)})));
+        ^///?}
         return out;
     }
 
@@ -909,8 +954,10 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
     private static void worldShot(ClientGameTestContext ctx,
         //? if >=26.2 {
         TestServerConnection conn,
-        //?} else {
+        //?} elif >=26.1 {
         /^TestClientLevelContext conn,
+        ^///?} else {
+        /^TestClientWorldContext conn,
         ^///?}
         TestServerContext server, String where, String shot, List<String> problems) {
         server.runCommand("tp @p " + where);
@@ -966,7 +1013,13 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         server.runCommand("tp @p " + (pos.getX() + 0.5) + " " + pos.getY() + " " + (pos.getZ() + 2.5) + " 180 30");
         selectSlot(ctx, 8);
         ctx.waitTicks(5);
+        //? if >=26.1 {
         ctx.getInput().lookAt(pos);
+        //?} else {
+        /^// Fabric API's test input has no lookAt before 26.1: the player turns to the block's centre itself.
+        ctx.runOnClient(mc -> mc.player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+            net.minecraft.world.phys.Vec3.atCenterOf(pos)));
+        ^///?}
         ctx.waitTicks(2);
         ctx.getInput().pressKey(o -> o.keyUse);
         expectScreen(ctx, screenName, problems);

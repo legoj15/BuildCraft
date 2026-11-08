@@ -171,8 +171,10 @@ public class BCButton extends AbstractButton {
         /*renderDefaultLabel(graphics.raw.textRendererForWidget(this,
             net.minecraft.client.gui.GuiGraphics.HoveredTextEffects.NONE));*/
         //?} elif >=1.21.10 {
-        /*renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
-            net.minecraft.util.ARGB.color(this.alpha, getFGColor()));*/
+        /*// Vanilla 1.21.10's label colour; NeoForge's getFGColor answers the same for a button with no packed colour
+        // (BC sets none), and Fabric has no getFGColor.
+        renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
+            net.minecraft.util.ARGB.color(this.alpha, this.active ? -1 : -6250336));*/
         //?} else {
         /*// 1.21.1: ARGB.color(alpha, rgb) is absent; pack ARGB as vanilla AbstractButton does (rgb | alpha<<24).
         renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,

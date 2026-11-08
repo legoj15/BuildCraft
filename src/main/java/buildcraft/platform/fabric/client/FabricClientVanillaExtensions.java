@@ -6,9 +6,7 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
-import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+/*import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -28,14 +26,53 @@ public final class FabricClientVanillaExtensions implements ClientVanillaExtensi
         return Block.shouldRenderFace(state, level.getBlockState(pos.relative(face)), face);
     }
 
+    //? if >=26.1 {
     @Override
-    public void submitPictureInPicture(GuiGraphicsExtractor graphics, PictureInPictureRenderState state) {
+    public void submitPictureInPicture(net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+            net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState state) {
         graphics.guiRenderState.addPicturesInPictureState(state);
     }
 
     @Override
-    public ScreenRectangle peekScissor(GuiGraphicsExtractor graphics) {
+    public ScreenRectangle peekScissor(net.minecraft.client.gui.GuiGraphicsExtractor graphics) {
         return graphics.scissorStack.peek();
     }
+    //?} else {
+    /^@Override
+    public void submitPictureInPicture(net.minecraft.client.gui.GuiGraphics graphics,
+            net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState state) {
+        graphics.guiRenderState.submitPicturesInPictureState(state);
+    }
+
+    @Override
+    public ScreenRectangle peekScissor(net.minecraft.client.gui.GuiGraphics graphics) {
+        return graphics.scissorStack.peek();
+    }
+    ^///?}
+
+    //? if >=1.21.10 && <26.1 {
+    /^@Override
+    public void renderSingleBlock(net.minecraft.world.level.block.state.BlockState state,
+            com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffers,
+            int light, int overlay) {
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, buffers,
+                light, overlay);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite particleIcon(
+            net.minecraft.world.level.block.state.BlockState state) {
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockModelShaper()
+                .getParticleIcon(state);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.chunk.ChunkSectionLayer renderLayer(
+            net.minecraft.client.renderer.block.model.BlockModelPart part,
+            net.minecraft.world.level.block.state.BlockState state) {
+        // Vanilla tracks one layer per block; Fabric API's per-quad render type lives on its mesh, not the part.
+        return net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(state);
+    }
+    ^///?}
 }
 *///?}

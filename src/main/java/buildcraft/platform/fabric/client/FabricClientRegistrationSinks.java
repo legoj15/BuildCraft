@@ -13,7 +13,9 @@ import java.util.function.Supplier;
 
 import com.mojang.serialization.MapCodec;
 
+//? if >=26.1 {
 import net.minecraft.client.color.block.BlockTintSource;
+//?}
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.color.item.ItemTintSources;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
@@ -26,7 +28,11 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+//?} else {
+/^import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
+^///?}
 import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
@@ -42,16 +48,26 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
-import net.minecraft.client.renderer.block.FluidModel;
-import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.world.level.material.Fluid;
 
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
+//? if >=26.1 {
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.resources.model.sprite.Material;
+
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.SpriteSourceRegistry;
+//?} else {
+/^import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
+import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
+^///?}
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
@@ -91,8 +107,13 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public <T extends ParticleOptions> void particleSpriteSet(Supplier<? extends ParticleType<T>> type,
             SpriteParticleFactory<T> factory) {
+        //? if >=26.1 {
         ParticleProviderRegistry.PendingParticleProvider<T> pending = factory::create;
         ParticleProviderRegistry.getInstance().register(type.get(), pending);
+        //?} else {
+        /^ParticleFactoryRegistry.PendingParticleFactory<T> pending = factory::create;
+        ParticleFactoryRegistry.getInstance().register(type.get(), pending);
+        ^///?}
     }
 
     @Override
@@ -114,10 +135,17 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         ItemTintSources.ID_MAPPER.put(id, codec);
     }
 
+    //? if >=26.1 {
     @Override
     public void blockTintSources(Supplier<? extends Block> block, Supplier<List<BlockTintSource>> sources) {
         BlockColorRegistry.register(sources.get(), block.get());
     }
+    //?} else {
+    /^@Override
+    public void blockColor(net.minecraft.client.color.block.BlockColor color, Supplier<? extends Block> block) {
+        ColorProviderRegistry.BLOCK.register(color, block.get());
+    }
+    ^///?}
 
     //? if >=26.3 {
     @Override
@@ -131,12 +159,20 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
 
     @Override
     public void spriteSource(Identifier id, MapCodec<? extends SpriteSource> codec) {
+        //? if >=26.1 {
         SpriteSourceRegistry.register(id, codec);
+        //?} else {
+        /^AtlasSourceRegistry.register(id, codec);
+        ^///?}
     }
 
     @Override
     public void clientReloadListener(Identifier id, PreparableReloadListener listener) {
+        //? if >=26.1 {
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(id, listener);
+        //?} else {
+        /^ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(id, listener);
+        ^///?}
     }
 
     @Override
@@ -166,8 +202,13 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
             // One reload listener, ordered after the model manager's, whose apply step makes the new models live.
             Identifier id = Identifier.fromNamespaceAndPath("buildcraftunofficial", "models_baked");
             ResourceLoader loader = ResourceLoader.get(PackType.CLIENT_RESOURCES);
+            //? if >=26.1 {
             loader.registerReloadListener(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
             loader.addListenerOrdering(ResourceReloaderKeys.Client.MODELS, id);
+            //?} else {
+            /^loader.registerReloader(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
+            loader.addReloaderOrdering(ResourceReloaderKeys.Client.MODELS, id);
+            ^///?}
         }
         modelsBaked.computeIfAbsent(order, key -> new ArrayList<>()).add(listener);
     }
@@ -187,7 +228,7 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         // Fabric keys a PiP renderer by the state class its renderer reports, so the class is not passed on.
         PictureInPictureRendererRegistry.register(context -> factory.get());
     }
-    //?} else {
+    //?} elif >=26.1 {
     /^// Before 26.2 a PiP renderer draws into the buffer source the GUI renderer is built with, the game's own.
     @Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
@@ -195,6 +236,14 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
                     PictureInPictureRenderer<S>> factory) {
         PictureInPictureRendererRegistry.register(
                 context -> factory.apply(context.minecraft().renderBuffers().bufferSource()));
+    }
+    ^///?} else {
+    /^// Fabric API's special GUI element registry hands the renderer the GUI renderer's buffer source.
+    @Override
+    public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
+            java.util.function.Function<net.minecraft.client.renderer.MultiBufferSource.BufferSource,
+                    PictureInPictureRenderer<S>> factory) {
+        SpecialGuiElementRegistry.register(context -> factory.apply(context.vertexConsumers()));
     }
     ^///?}
 
@@ -218,8 +267,13 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public void fluidAppearance(Supplier<? extends Fluid> source, Supplier<? extends Fluid> flowing,
             Identifier stillTexture, Identifier flowingTexture, int fogColor, float fogDistance) {
+        //? if >=26.1 {
         FluidRenderingRegistry.register(source.get(), flowing.get(),
                 new FluidModel.Unbaked(new Material(stillTexture), new Material(flowingTexture), null, null));
+        //?} else {
+        /^FluidRenderHandlerRegistry.INSTANCE.register(source.get(), flowing.get(),
+                new SimpleFluidRenderHandler(stillTexture, flowingTexture));
+        ^///?}
         // Fabric API 26.3 has no fluid fog hook: FogRendererMixin applies this through FabricFluidFog.
         FabricFluidFog.register(source.get(), flowing.get(), fogColor, fogDistance);
     }

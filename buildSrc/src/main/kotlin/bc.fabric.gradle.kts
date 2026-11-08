@@ -134,6 +134,8 @@ dependencies {
     "gametestCompileOnly"("com.google.code.findbugs:jsr305:3.0.2")
     "gametestCompileOnly"("com.electronwill.night-config:core:3.8.4")
     "gametestCompileOnly"("com.electronwill.night-config:toml:3.8.4")
+    // jspecify, as for main (Minecraft brings it only from 1.21.11).
+    if (bcNode.isPre1_21_11) "gametestCompileOnly"("org.jspecify:jspecify:1.0.0")
     // Team Reborn Energy at run time, so the FE tests exercise FabricEnergyStorages (it is optional in the jar).
     // (Remap mode: on the main dev runtime instead; the gametest set has no mod* configuration of its own.)
     if (remap) {
@@ -372,8 +374,15 @@ dependencies {
     modConfig("implementation")("maven.modrinth:forge-config-api-port:$forgeConfigApiPortVersion")
     compileOnly("com.electronwill.night-config:core:3.8.4")
     compileOnly("com.electronwill.night-config:toml:3.8.4")
+    if (remap) {
+        // Loom's remapped copy of a mod drops its nested-jar list, so the dev runs need the libraries named too.
+        "localRuntime"("com.electronwill.night-config:core:3.8.4")
+        "localRuntime"("com.electronwill.night-config:toml:3.8.4")
+    }
     // javax.annotation (@Nullable/@Nonnull, used throughout BC): ModDevGradle brings it transitively on NeoForge.
     compileOnly("com.google.code.findbugs:jsr305:3.0.2")
+    // jspecify @Nullable/@NonNull: Minecraft brings it from 1.21.11; the 1.21.10 (and 1.21.1) compile needs it named.
+    if (bcNode.isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")
     // Recipe viewers, compile-only like on NeoForge (BC's plugins are found by the viewers' own entrypoints).
     modConfig("compileOnly")("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
     modConfig("compileOnly")("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")

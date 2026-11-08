@@ -24,7 +24,11 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+//?} else {
+/^import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+^///?}
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.PlayerPickItemEvents;
@@ -97,7 +101,11 @@ public final class FabricLoaderHookRoutes {
             }
         });
         // A level that unloads never ticks again: its queued entries would pin it (and its server) until a later one.
+        //? if >=26.1 {
         ServerLevelEvents.UNLOAD.register((server, level) -> SERVER_JOINED.removeIf(be -> be.getLevel() == level));
+        //?} else {
+        /^ServerWorldEvents.UNLOAD.register((server, level) -> SERVER_JOINED.removeIf(be -> be.getLevel() == level));
+        ^///?}
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> SERVER_JOINED.clear());
         ServerChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> chunkUnloading(chunk));
         // NeoForge's onRemovedFromLevel, server side (BuildCraft's only user, the robot, deregisters there alone).

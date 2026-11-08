@@ -10,12 +10,14 @@ package buildcraft.platform.fabric.mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityFluidInteraction;
 
-/^* The entity's fluid tracking (NeoForge's {@code getFluidInteraction}), for the subclass mixins. ^/
+/^* The entity's fluid tracking (NeoForge's {@code getFluidInteraction}), for {@code FabricFluidPhysics#interaction}.
+ *  Nothing before 26.1, where the tracking is the entity's own. ^/
 @Mixin(Entity.class)
 public interface EntityAccessor {
+    //? if >=26.1 {
     @Accessor("fluidInteraction")
-    EntityFluidInteraction buildcraft$fluidInteraction();
+    net.minecraft.world.entity.EntityFluidInteraction buildcraft$fluidInteraction();
+    //?}
 }
 *///?}

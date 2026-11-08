@@ -26,13 +26,22 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
+//?} else {
+/^import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+^///?}
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.recipe.v1.sync.ClientRecipeSynchronizedEvent;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+//?} else {
+/^import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+^///?}
 import net.fabricmc.fabric.api.event.Event;
 
 import buildcraft.platform.client.BCLevelRenderContext;
@@ -51,9 +60,15 @@ public final class FabricClientHooks implements ClientHooks {
 
     @Override
     public void onLevelRender(Consumer<BCLevelRenderContext> renderer) {
+        //? if >=26.1 {
         // COLLECT_SUBMITS is fabric-rendering-v1's point for queueing custom geometry on the frame's collector,
         // NeoForge's SubmitCustomGeometryEvent.
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> renderer.accept(new LevelContext(context)));
+        //?} else {
+        /^// END_MAIN runs after the translucent terrain, NeoForge's AfterTranslucentBlocks stage; the geometry is drawn
+        // into the main buffer source, which the renderers flush themselves.
+        WorldRenderEvents.END_MAIN.register(context -> renderer.accept(new LevelContext(context)));
+        ^///?}
     }
 
     @Override
@@ -116,6 +131,7 @@ public final class FabricClientHooks implements ClientHooks {
 
     @Override
     public void onBlockOutline(BlockOutlineOverride override) {
+        //? if >=26.1 {
         LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register((context, outline) -> {
             Minecraft mc = Minecraft.getInstance();
             Level level = mc.level;
@@ -150,13 +166,51 @@ public final class FabricClientHooks implements ClientHooks {
             poseStack.popPose();
             return false;
         });
+        //?} else {
+        /^// Fabric asks inside vanilla's outline draw, in the pass (translucent or not) the outline belongs to, so the
+        // shape is drawn there at once, as NeoForge's custom outline renderer draws it on these lines.
+        WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((context, outline) -> {
+            Minecraft mc = Minecraft.getInstance();
+            Level level = mc.level;
+            if (level == null || !(mc.hitResult instanceof BlockHitResult hit)) {
+                return true;
+            }
+            BlockPos pos = outline.pos();
+            VoxelShape shape = override.outline(level, pos, level.getBlockState(pos), hit);
+            if (shape == null) {
+                return true;
+            }
+            Vec3 cam = context.worldState().cameraRenderState.pos;
+            drawOutline(context.matrices(),
+                    context.consumers().getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.lines()), shape,
+                    pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
+            return false;
+        });
+        ^///?}
     }
+
+    //? if >=1.21.11 && <26.1 {
+    /^private static void drawOutline(PoseStack poseStack, com.mojang.blaze3d.vertex.VertexConsumer lines,
+                                    VoxelShape shape, double x, double y, double z) {
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack, lines, shape, x, y, z, ARGB.black(102),
+                2.5F);
+    }
+    ^///?} elif <1.21.11 {
+    /^private static void drawOutline(PoseStack poseStack, com.mojang.blaze3d.vertex.VertexConsumer lines,
+                                    VoxelShape shape, double x, double y, double z) {
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack, lines, shape, x, y, z, ARGB.color(102, 0));
+    }
+    ^///?}
 
     @Override
     public void onClientLevelUnload(Runnable listener) {
         // Fabric has no client level-unload event: a level change (dimension change) and a disconnect are the two
         // ways a client level closes.
+        //? if >=26.1 {
         ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> listener.run());
+        //?} else {
+        /^ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, level) -> listener.run());
+        ^///?}
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> listener.run());
     }
 
@@ -170,6 +224,7 @@ public final class FabricClientHooks implements ClientHooks {
         ClientChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> listener.accept(level, chunk.getPos()));
     }
 
+    //? if >=26.1 {
     private record LevelContext(LevelRenderContext context) implements BCLevelRenderContext {
         @Override
         public PoseStack poseStack() {
@@ -186,5 +241,23 @@ public final class FabricClientHooks implements ClientHooks {
             return context.submitNodeCollector();
         }
     }
+    //?} else {
+    /^private record LevelContext(WorldRenderContext context) implements BCLevelRenderContext {
+        @Override
+        public PoseStack poseStack() {
+            return context.matrices();
+        }
+
+        @Override
+        public Vec3 cameraPos() {
+            return context.worldState().cameraRenderState.pos;
+        }
+
+        @Override
+        public net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource() {
+            return Minecraft.getInstance().renderBuffers().bufferSource();
+        }
+    }
+    ^///?}
 }
 *///?}

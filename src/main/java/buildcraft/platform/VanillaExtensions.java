@@ -65,6 +65,14 @@ public interface VanillaExtensions {
     int burnTime(ItemStack stack, net.minecraft.world.level.Level level);
     *///?}
 
+    //? if >=1.21.10 && <26.1 {
+    /*/^*
+     * What crafting with {@code stack} leaves behind (an empty bucket for a lava bucket), EMPTY for nothing: NeoForge's
+     * stack-sensitive {@code getCraftingRemainder}; Fabric API's {@code getRecipeRemainder}, which asks the item too.
+     ^/
+    ItemStack craftingRemainder(ItemStack stack);
+    *///?}
+
     //? if >=26.1 {
     /**
      * A saved-data type whose factory and codec are handed the level the storage belongs to (null for a storage with

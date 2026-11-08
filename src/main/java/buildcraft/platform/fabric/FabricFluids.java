@@ -146,7 +146,16 @@ public final class FabricFluids implements FluidServices {
         if (variant.isBlank() || mb <= 0) {
             return BCFluidStack.EMPTY;
         }
-        return new BCFluidStack(variant.getFluid(), mb, variant.getComponentsPatch());
+        return new BCFluidStack(variant.getFluid(), mb, componentsOf(variant));
+    }
+
+    /^* The variant's component patch ({@code getComponentsPatch} from 26.1, {@code getComponents} before). ^/
+    static net.minecraft.core.component.DataComponentPatch componentsOf(FluidVariant variant) {
+        //? if >=26.1 {
+        return variant.getComponentsPatch();
+        //?} else {
+        /^return variant.getComponents();
+        ^///?}
     }
 }
 *///?}

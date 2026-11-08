@@ -31,8 +31,7 @@ abstract class ItemEntityMixin {
             target = "Lnet/minecraft/world/entity/item/ItemEntity;isInWater()Z"))
     private boolean buildcraft$floatsInBuildCraftFluid(ItemEntity item, Operation<Boolean> original) {
         return original.call(item)
-                || ((FabricFluidPhysics.Interaction) ((EntityAccessor) item).buildcraft$fluidInteraction())
-                        .buildcraft$inBuildCraftFluid();
+                || FabricFluidPhysics.interaction(item).buildcraft$inBuildCraftFluid();
     }
 }
 *///?}

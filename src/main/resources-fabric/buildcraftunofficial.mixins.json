@@ -25,6 +25,7 @@
     "LevelMixin",
     "LivingEntityMixin",
     "MobMixin",
+    "PersistentEntitySectionManagerMixin",
     "PlayerChunkSenderMixin",
     "PlayerMixin",
     "RedStoneWireBlockMixin",

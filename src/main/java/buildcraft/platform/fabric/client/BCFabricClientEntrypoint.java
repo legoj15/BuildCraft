@@ -19,7 +19,11 @@ public final class BCFabricClientEntrypoint implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         FabricClientLoaderHookRoutes.register();
+        //? if >=26.1 {
         FabricFluidContainerModel.register();
+        //?} else {
+        /^FabricLegacyFluidContainerModel.register();
+        ^///?}
         BCCoreClient.init();
     }
 }

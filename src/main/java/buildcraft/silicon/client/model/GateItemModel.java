@@ -152,7 +152,7 @@ public class GateItemModel implements ItemModel {
         renderState.appendModelIdentityElement(displayContext);
 
         var layer = renderState.newLayer();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         // Through the platform, so the quads keep their vertex colours on Fabric too (26.3 also dropped
         // prepareQuadList(): a layer there takes one ItemQuads, pre-split into solid/translucent submits).
         buildcraft.platform.client.ClientPlatform.models().setItemQuads(layer, quads);

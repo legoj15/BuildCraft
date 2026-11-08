@@ -23,7 +23,8 @@ import buildcraft.platform.fabric.FabricGameHooks;
 
 /^*
  * NeoForge's {@code NeighborNotifyEvent} on Fabric ({@link FabricGameHooks#onNeighborNotify}), at the two server-level
- * methods NeoForge posts it from, before the neighbours are told ({@code DiodeBlockMixin} is the third site).
+ * methods NeoForge posts it from, before the neighbours are told ({@code DiodeBlockMixin} is the third site). Before
+ * 26.1 also NeoForge's entity-join point for a player ({@code FabricGameHooks.fireEntityJoin}).
  *^/
 @Mixin(ServerLevel.class)
 abstract class ServerLevelMixin {
@@ -41,5 +42,16 @@ abstract class ServerLevelMixin {
         ServerLevel self = (ServerLevel) (Object) this;
         FabricGameHooks.fireNeighborNotify(self, pos, self.getBlockState(pos));
     }
+
+    //? if <26.1 {
+    /^// NeoForge's entity-join point for a player (a new, respawned or teleported one), before it is added; other
+    // entities join through PersistentEntitySectionManagerMixin. 26.1's Fabric API posts ALLOW_LOAD here itself.
+    @Inject(method = "addPlayer", at = @At("HEAD"), cancellable = true)
+    private void buildcraft$playerJoin(net.minecraft.server.level.ServerPlayer player, CallbackInfo ci) {
+        if (!FabricGameHooks.fireEntityJoin(player, (ServerLevel) (Object) this, false)) {
+            ci.cancel();
+        }
+    }
+    ^///?}
 }
 *///?}

@@ -60,5 +60,26 @@ public final class NeoForgeClientVanillaExtensions implements ClientVanillaExten
         return graphics.peekScissorStack();
     }*/
     //?}
+
+    //? if >=1.21.10 && <26.1 {
+    /*@Override
+    public void renderSingleBlock(BlockState state, com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffers, int light, int overlay) {
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, buffers,
+                light, overlay, net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite particleIcon(BlockState state) {
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockModelShaper()
+                .getParticleIcon(state, net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.chunk.ChunkSectionLayer renderLayer(
+            net.minecraft.client.renderer.block.model.BlockModelPart part, BlockState state) {
+        return part.getRenderType(state);
+    }*/
+    //?}
 }
 //?}

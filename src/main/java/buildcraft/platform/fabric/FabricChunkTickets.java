@@ -60,6 +60,15 @@ public final class FabricChunkTickets implements ChunkTickets {
         });
     }
 
+    /^* The chunk's packed position ({@code ChunkPos.pack} from 26.1, {@code asLong} before). *^/
+    private static long chunkKey(int chunkX, int chunkZ) {
+        //? if >=26.1 {
+        return ChunkPos.pack(chunkX, chunkZ);
+        //?} else {
+        /^return ChunkPos.asLong(chunkX, chunkZ);
+        ^///?}
+    }
+
     private synchronized void forget(ServerLevel level) {
         owners.remove(level.dimension());
     }
@@ -72,7 +81,7 @@ public final class FabricChunkTickets implements ChunkTickets {
      ^/
     public synchronized boolean claim(ResourceKey<Level> dimension, BlockPos owner, int chunkX, int chunkZ) {
         Set<BlockPos> held = owners.computeIfAbsent(dimension, k -> new HashMap<>())
-            .computeIfAbsent(ChunkPos.pack(chunkX, chunkZ), k -> new HashSet<>());
+            .computeIfAbsent(chunkKey(chunkX, chunkZ), k -> new HashSet<>());
         boolean first = held.isEmpty();
         held.add(owner.immutable());
         return first;
@@ -81,7 +90,7 @@ public final class FabricChunkTickets implements ChunkTickets {
     /^* Lets {@code owner}'s hold on the chunk go: whether it was the last owner, whose release removes the ticket. ^/
     public synchronized boolean release(ResourceKey<Level> dimension, BlockPos owner, int chunkX, int chunkZ) {
         Map<Long, Set<BlockPos>> byChunk = owners.get(dimension);
-        long key = ChunkPos.pack(chunkX, chunkZ);
+        long key = chunkKey(chunkX, chunkZ);
         Set<BlockPos> held = byChunk == null ? null : byChunk.get(key);
         if (held == null) {
             return false;

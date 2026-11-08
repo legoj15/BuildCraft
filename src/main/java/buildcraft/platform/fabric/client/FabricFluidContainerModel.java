@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.fabric.client;
 
-//? if fabric {
+//? if fabric && >=26.1 {
 /*import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.IdentityHashMap;

@@ -50,9 +50,9 @@ public final class PlaceTaskCubeRenderer {
             // the 0..1 model on the origin and scale to ~0.30 block.
             poseStack.scale(0.30F, 0.30F, 0.30F);
             poseStack.translate(-0.5F, -0.5F, -0.5F);
-            mc.getBlockRenderer().renderSingleBlock(blockItem.getBlock().defaultBlockState(), poseStack,
-                bufferSource, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
-                net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, net.minecraft.core.BlockPos.ZERO);
+            buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(
+                blockItem.getBlock().defaultBlockState(), poseStack, bufferSource, light,
+                net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
         } else {
             // Non-block items: small cube textured with the item's particle sprite.
             net.minecraft.client.renderer.item.ItemStackRenderState rs =

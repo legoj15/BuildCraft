@@ -13,9 +13,15 @@ import java.util.concurrent.ConcurrentMap;
 import com.google.common.collect.MapMaker;
 
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+//?} else {
+/^import net.minecraft.client.renderer.block.model.BakedQuad;
+
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+^///?}
 
 import buildcraft.platform.client.ClientModels;
 
@@ -59,6 +65,7 @@ public final class FabricClientModels implements ClientModels {
     }
     ^///?}
 
+    //? if >=1.21.11 {
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
         // The quad itself stays vanilla's. An all-white quad is the default, so it is not worth an entry.
@@ -73,7 +80,9 @@ public final class FabricClientModels implements ClientModels {
         int[] colours = VERTEX_COLOURS.get(quad);
         return colours == null ? -1 : colours[vertex];
     }
+    //?}
 
+    //? if >=1.21.11 {
     @Override
     public void setItemQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
         List<BakedQuad> plain = new ArrayList<>(quads.size());
@@ -91,12 +100,19 @@ public final class FabricClientModels implements ClientModels {
             applyVertexColours(emitter, quad);
             emitter.emit();
         }
-        //? if >=26.3 {
-        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(plain));
-        //?} else {
-        /^layer.prepareQuadList().addAll(plain);
-        ^///?}
+        setPlainQuads(layer, plain);
     }
+    //?}
+
+    //? if >=26.3 {
+    private static void setPlainQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> plain) {
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(plain));
+    }
+    //?} elif >=1.21.11 {
+    /^private static void setPlainQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> plain) {
+        layer.prepareQuadList().addAll(plain);
+    }
+    ^///?}
 
     /^*
      * Gives the quad {@code emitter} holds (just filled by {@code fromBakedQuad(quad)}, which leaves the colour white)

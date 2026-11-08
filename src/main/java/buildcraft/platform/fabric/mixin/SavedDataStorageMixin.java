@@ -6,12 +6,13 @@
 package buildcraft.platform.fabric.mixin;
 
 //? if fabric {
-/*import java.util.Map;
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=26.1 {
+import java.util.Map;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 import net.minecraft.nbt.CompoundTag;
@@ -21,11 +22,15 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.SavedDataStorage;
 
 import buildcraft.platform.fabric.FabricSavedDataLevels;
+//?}
 
 /^*
  * NeoForge's level-aware saved data on Fabric: the storage remembers its dimension ({@code ServerChunkCacheMixin}),
- * and the calls that build, decode or encode data run with that level as {@link FabricSavedDataLevels#current}.
+ * and the calls that build, decode or encode data run with that level as {@code FabricSavedDataLevels.current}.
+ * Before 26.1 vanilla's own {@code SavedData.Context} carries the level, and this class (on the storage's older name,
+ * {@code DimensionDataStorage}) carries nothing.
  *^/
+//? if >=26.1 {
 @Mixin(SavedDataStorage.class)
 abstract class SavedDataStorageMixin implements FabricSavedDataLevels.LevelAwareStorage {
     @Unique
@@ -57,4 +62,9 @@ abstract class SavedDataStorageMixin implements FabricSavedDataLevels.LevelAware
         return FabricSavedDataLevels.with(buildcraft$level, original::call);
     }
 }
+//?} else {
+/^@Mixin(net.minecraft.world.level.storage.DimensionDataStorage.class)
+abstract class SavedDataStorageMixin {
+}
+^///?}
 *///?}

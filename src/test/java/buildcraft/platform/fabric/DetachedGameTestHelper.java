@@ -59,12 +59,15 @@ public final class DetachedGameTestHelper extends GameTestHelper {
         throw new AssertionError(message.getString());
     }
 
+    // 1.21.10's helper has only the Component form.
+    //? if >=1.21.11 {
     @Override
     public void assertTrue(boolean condition, String message) {
         if (!condition) {
             fail(message);
         }
     }
+    //?}
 
     @Override
     public void assertTrue(boolean condition, Component message) {

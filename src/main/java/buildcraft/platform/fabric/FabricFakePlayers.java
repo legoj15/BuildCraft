@@ -63,7 +63,9 @@ public final class FabricFakePlayers implements FakePlayers {
             setLivingEntityFlag(2, false); // ...with the off hand
             useItem = ItemStack.EMPTY;
             useItemRemaining = 0;
+            //? if >=1.21.11 {
             recentKineticEnemies = null;
+            //?}
         }
 
         @Override

@@ -10,12 +10,12 @@ import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 //? if <26.3 {
-/*import net.minecraft.world.item.Item;
+/*import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.Level;
 *///?}
 //? if >=1.21.10 && <26.3 {
-/*import net.minecraft.client.Minecraft;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.FuelValues;
+/*import net.minecraft.world.level.block.entity.FuelValues;
 *///?}
 
 import buildcraft.api.fluids.BCFluidStack;

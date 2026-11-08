@@ -143,7 +143,11 @@ public final class WorkClaimMod implements AutoCloseable {
 
         @Override
         public boolean canPlaceBlock(net.minecraft.world.level.Level level, BlockPos pos,
+                //? if >=26.1 {
                 net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+                //?} else {
+                /^com.mojang.authlib.GameProfile profile, net.minecraft.world.entity.player.Player player) {
+                ^///?}
             return !placeAsk(pos);
         }
     }*/

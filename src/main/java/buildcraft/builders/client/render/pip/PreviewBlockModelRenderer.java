@@ -102,8 +102,7 @@ public final class PreviewBlockModelRenderer {
         *///?}
         return true;
         //?} elif >=1.21.10 {
-        /*Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, sink, light, overlay,
-                net.minecraft.world.level.EmptyBlockAndTintGetter.INSTANCE, net.minecraft.core.BlockPos.ZERO);
+        /*buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(state, poseStack, sink, light, overlay);
         return true;*/
         //?} else {
         /*Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, sink, light, overlay,

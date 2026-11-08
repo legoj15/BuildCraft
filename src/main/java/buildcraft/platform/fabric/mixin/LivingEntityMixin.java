@@ -73,8 +73,7 @@ abstract class LivingEntityMixin {
     @Unique
     private FluidProperties buildcraft$thickFluid() {
         LivingEntity self = (LivingEntity) (Object) this;
-        FabricFluidPhysics.Interaction interaction =
-                (FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction();
+        FabricFluidPhysics.Interaction interaction = FabricFluidPhysics.interaction(self);
         // The entity's own fluid tracking says first whether any BuildCraft fluid is near: the answer for nearly
         // every entity on every tick, and no block lookup for it (vanilla's travel makes its own right after).
         if (!interaction.buildcraft$inBuildCraftFluid()) {
@@ -129,8 +128,7 @@ abstract class LivingEntityMixin {
             target = "Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
     private boolean buildcraft$eyeInDrowningFluid(LivingEntity self, TagKey<Fluid> tag, Operation<Boolean> original) {
         return tag == FluidTags.WATER
-                ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInDrowningFluid()
+                ? FabricFluidPhysics.interaction(self).buildcraft$eyeInDrowningFluid()
                 : original.call(self, tag);
     }
 
@@ -142,8 +140,7 @@ abstract class LivingEntityMixin {
             target = "Lnet/minecraft/world/entity/Entity;dismountsUnderwater()Z"))
     private boolean buildcraft$dismountsInWaterOnly(Entity vehicle, Operation<Boolean> original) {
         return original.call(vehicle)
-                && ((FabricFluidPhysics.Interaction) ((EntityAccessor) (Object) this).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInForeignWater();
+                && FabricFluidPhysics.interaction((Entity) (Object) this).buildcraft$eyeInForeignWater();
     }
 
     @WrapOperation(method = "checkFallDamage", at = @At(value = "INVOKE",

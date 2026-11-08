@@ -28,7 +28,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+//? if >=26.1 {
 import net.minecraft.world.entity.EntityFluidInteraction;
+//?}
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -51,10 +53,6 @@ import buildcraft.platform.hook.PositionalSoundBlock;
  *^/
 @Mixin(Entity.class)
 abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanillaExtensions.StepSoundPositions {
-
-    @Shadow
-    @Final
-    private EntityFluidInteraction fluidInteraction;
 
     @Shadow
     public double fallDistance;
@@ -84,11 +82,12 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanilla
     @Nullable
     private BlockPos buildcraft$muffledStepPos;
 
+    //? if >=26.1 {
     @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Entity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
     private boolean buildcraft$eyeInWater(Entity self, TagKey<Fluid> tag, Operation<Boolean> original) {
         return tag == FluidTags.WATER
-                ? ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$eyeInWaterLike()
+                ? FabricFluidPhysics.interaction(self).buildcraft$eyeInWaterLike()
                 : original.call(self, tag);
     }
 
@@ -104,16 +103,43 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanilla
     @Inject(method = "updateFluidInteraction", at = @At("RETURN"))
     private void buildcraft$applyFluidCurrents(CallbackInfoReturnable<Boolean> cir) {
         if (isPushedByFluid()) {
-            ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$applyCurrents((Entity) (Object) this);
+            FabricFluidPhysics.interaction((Entity) (Object) this).buildcraft$applyCurrents((Entity) (Object) this);
         }
     }
+    //?} else {
+    /^// Before 26.1 the eyes-in-water flag is set in updateFluidOnEyes and the in-water flag from the water pass of the
+    // entity's own scan; both answer for a water-like fluid instead of the water tag. Vanilla's (and NeoForge's) eye
+    // flag reads the previous tick's eye test; this one reads this tick's scan, a tick sooner.
+    @WrapOperation(method = "updateFluidOnEyes", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    private boolean buildcraft$eyeInWater(Entity self, TagKey<Fluid> tag, Operation<Boolean> original) {
+        return tag == FluidTags.WATER
+                ? FabricFluidPhysics.interaction(self).buildcraft$eyeInWaterLike()
+                : original.call(self, tag);
+    }
+
+    @WrapOperation(method = "updateInWaterStateAndDoWaterCurrentPushing", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;updateFluidHeightAndDoFluidPushing(Lnet/minecraft/tags/TagKey;D)Z"))
+    private boolean buildcraft$inWater(Entity self, TagKey<Fluid> tag, double motionScale,
+                                       Operation<Boolean> original) {
+        boolean touching = original.call(self, tag, motionScale);
+        return tag == FluidTags.WATER ? FabricFluidPhysics.interaction(self).buildcraft$inWaterLike() : touching;
+    }
+
+    @Inject(method = "updateInWaterStateAndDoFluidPushing", at = @At("RETURN"))
+    private void buildcraft$applyFluidCurrents(CallbackInfoReturnable<Boolean> cir) {
+        if (isPushedByFluid()) {
+            FabricFluidPhysics.interaction((Entity) (Object) this).buildcraft$applyCurrents((Entity) (Object) this);
+        }
+    }
+    ^///?}
 
     /^* NeoForge's {@code fallDistance *= getFallDistanceModifier}, after the lava halving and before the void check. *^/
     @Inject(method = "baseTick", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Entity;checkBelowWorld()V"))
     private void buildcraft$fluidFallDistance(CallbackInfo ci) {
         if (!isInLava() && !isInWater()) {
-            fallDistance *= ((FabricFluidPhysics.Interaction) fluidInteraction).buildcraft$fallDistanceModifier();
+            fallDistance *= FabricFluidPhysics.interaction((Entity) (Object) this).buildcraft$fallDistanceModifier();
         }
     }
 

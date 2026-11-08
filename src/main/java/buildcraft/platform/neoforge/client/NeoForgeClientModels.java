@@ -79,6 +79,13 @@ public final class NeoForgeClientModels implements ClientModels {
     @Override
     public int vertexColour(BakedQuad quad, int vertex) {
         return quad.bakedColors().color(vertex);
+    }
+
+    @Override
+    public void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
+            java.util.List<BakedQuad> quads) {
+        // The quads carry their BakedColors, which NeoForge's item draw multiplies in.
+        layer.prepareQuadList().addAll(quads);
     }*/
     //?}
 

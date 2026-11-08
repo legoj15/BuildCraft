@@ -16,7 +16,11 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
+//? if >=1.21.11 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+//?} else {
+/^import net.minecraft.world.entity.vehicle.AbstractBoat;
+^///?}
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 
@@ -46,12 +50,16 @@ abstract class AbstractBoatMixin {
     }
 
     /^* The boarding test (NeoForge's {@code isEyeInFluidMatching(canBoatInFluid)}): eyes in a fluid boats float on. *^/
+    //? if >=1.21.11 {
     @WrapOperation(method = "canAddPassenger", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/vehicle/boat/AbstractBoat;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    //?} else {
+    /^@WrapOperation(method = "canAddPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/vehicle/AbstractBoat;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    ^///?}
     private boolean buildcraft$eyeInBoatableFluid(AbstractBoat boat, TagKey<Fluid> tag, Operation<Boolean> original) {
         return tag == FluidTags.WATER
-                ? ((FabricFluidPhysics.Interaction) ((EntityAccessor) boat).buildcraft$fluidInteraction())
-                        .buildcraft$eyeInBoatableWater()
+                ? FabricFluidPhysics.interaction(boat).buildcraft$eyeInBoatableWater()
                 : original.call(boat, tag);
     }
 

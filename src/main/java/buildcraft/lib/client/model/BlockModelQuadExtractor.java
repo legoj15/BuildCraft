@@ -134,7 +134,7 @@ public final class BlockModelQuadExtractor {
         List<BakedQuad> result = new ArrayList<>();
         for (BlockModelPart part : parts) {
             if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
-                if (translucent != null && (part.getRenderType(state)
+                if (translucent != null && (buildcraft.platform.client.ClientPlatform.extensions().renderLayer(part, state)
                         == net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT) != translucent) {
                     continue;
                 }

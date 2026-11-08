@@ -17,7 +17,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
 import net.minecraft.client.gui.Font;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/^import net.minecraft.client.gui.GuiGraphics;
+^///?}
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -47,11 +51,20 @@ abstract class AbstractContainerScreenMixin {
         FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style, extraSpace));
     }
-    //?} else {
+    //?} elif >=26.1 {
     /^// Before 26.3 the tooltip request has no extra-space flag.
     @WrapOperation(method = "extractTooltip",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
     private void buildcraft$describeSlotTooltip(GuiGraphicsExtractor graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original) {
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
+                () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?} else {
+    /^// Before 26.1 the screen's tooltip step is renderTooltip, on GuiGraphics.
+    @WrapOperation(method = "renderTooltip",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
+    private void buildcraft$describeSlotTooltip(GuiGraphics graphics, Font font, List<Component> lines,
             Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original) {
         FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style));

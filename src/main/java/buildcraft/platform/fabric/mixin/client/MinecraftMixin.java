@@ -28,7 +28,12 @@ abstract class MinecraftMixin {
     @Shadow
     public ClientLevel level;
 
+    // 1.21.10's disconnect has no third flag (1.21.11 added it, the two-flag one forwarding to it).
+    //? if >=1.21.11 {
     @Inject(method = {"setLevel", "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V", "clearClientLevel"},
+    //?} else {
+    /^@Inject(method = {"setLevel", "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", "clearClientLevel"},
+    ^///?}
             at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;level:Lnet/minecraft/client/multiplayer/ClientLevel;",
                     opcode = Opcodes.PUTFIELD))
     private void buildcraft$levelUnload(CallbackInfo ci) {

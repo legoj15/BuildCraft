@@ -18,8 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 
-import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
-
 import buildcraft.platform.fabric.FabricMenus;
 import buildcraft.platform.menu.MenuOpeningData;
 
@@ -34,7 +32,7 @@ abstract class ServerPlayerMixin {
     @Inject(method = "openMenu(Lnet/minecraft/world/MenuProvider;)Ljava/util/OptionalInt;", at = @At("HEAD"),
             cancellable = true)
     private void buildcraft$openingData(@Nullable MenuProvider provider, CallbackInfoReturnable<OptionalInt> cir) {
-        if (provider instanceof MenuOpeningData data && !(provider instanceof ExtendedMenuProvider<?>)) {
+        if (provider instanceof MenuOpeningData data && !FabricMenus.isExtended(provider)) {
             cir.setReturnValue(((ServerPlayer) (Object) this).openMenu(
                 FabricMenus.withOpeningData(provider, data::writeOpeningData)));
         }

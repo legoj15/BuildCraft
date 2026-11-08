@@ -22,13 +22,21 @@ import net.minecraft.world.entity.EntityTypes;
 //?}
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+//? if >=1.21.11 {
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+//?} else {
+/^import net.minecraft.world.entity.animal.horse.AbstractHorse;
+^///?}
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
+//?} else {
+/^import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+^///?}
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.item.PlayerInventoryStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.base.SingleStackStorage;
@@ -54,7 +62,7 @@ public final class FabricEntityItems {
             Identifier.fromNamespaceAndPath("buildcraftunofficial", "item_storage"), (Class) Storage.class, Void.class);
 
     static {
-        LOOKUP.registerForTypes((entity, context) -> ContainerStorage.of((Container) entity, null),
+        LOOKUP.registerForTypes((entity, context) -> containerStorage((Container) entity),
                 containerEntities());
         //? if >=26.2 {
         LOOKUP.registerForType((player, context) -> PlayerInventoryStorage.of(player), EntityTypes.PLAYER);
@@ -63,7 +71,7 @@ public final class FabricEntityItems {
         ^///?}
         LOOKUP.registerFallback((entity, context) -> {
             if (entity instanceof AbstractHorse horse) {
-                return ContainerStorage.of(horse.inventory, null);
+                return containerStorage(horse.inventory);
             } else if (entity instanceof LivingEntity living) {
                 return equipment(living);
             }
@@ -75,6 +83,16 @@ public final class FabricEntityItems {
     private static final Map<LivingEntity, Storage<ItemVariant>> EQUIPMENT = new MapMaker().weakKeys().weakValues().makeMap();
 
     private FabricEntityItems() {}
+
+    /^* A container's whole storage, no side (Fabric API's {@code ContainerStorage}, {@code InventoryStorage} before
+     *  26.1). *^/
+    private static Storage<ItemVariant> containerStorage(Container container) {
+        //? if >=26.1 {
+        return ContainerStorage.of(container, null);
+        //?} else {
+        /^return InventoryStorage.of(container, null);
+        ^///?}
+    }
 
     private static EntityType<?>[] containerEntities() {
         return new EntityType<?>[] {

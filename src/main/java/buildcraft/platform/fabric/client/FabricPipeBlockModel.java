@@ -9,17 +9,27 @@ package buildcraft.platform.fabric.client;
 /*import java.util.List;
 import java.util.function.Predicate;
 
+//? if >=26.1 {
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/^import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.world.level.BlockAndTintGetter;
+^///?}
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
+//? if >=26.1 {
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+//?} else {
+/^import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+^///?}
 
 import buildcraft.platform.client.PipeModelQuads;
 import buildcraft.platform.render.PipeRenderData;
@@ -64,7 +74,11 @@ final class FabricPipeBlockModel extends WrapperBlockStateModel {
         for (BakedQuad quad : list) {
             // No cull face: pipe geometry is sub-block sized, like NeoForge's addUnculledFace.
             emitter.fromBakedQuad(quad);
+            //? if >=26.1 {
             emitter.chunkLayer(layer);
+            //?} else {
+            /^emitter.renderLayer(layer);
+            ^///?}
             FabricClientModels.applyVertexColours(emitter, quad);
             emitter.emit();
         }

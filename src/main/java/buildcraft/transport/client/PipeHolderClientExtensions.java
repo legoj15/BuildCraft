@@ -89,8 +89,8 @@ public class PipeHolderClientExtensions implements ClientRegistrationSinks.Block
         //?} elif >=1.21.10 {
         /*return buildcraft.platform.client.ClientPlatform.extensions().particleIcon(state);*/
         //?} else {
-        /*return models.getBlockModelShaper().getBlockModel(state)
-                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);*/
+        /*return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(
+                models.getBlockModelShaper().getBlockModel(state));*/
         //?}
     }
 

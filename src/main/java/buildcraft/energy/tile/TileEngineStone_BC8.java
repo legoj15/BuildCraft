@@ -234,13 +234,10 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
                 // mid-26.1.x but the ItemStack call site and descriptor are unchanged.
                 net.minecraft.world.item.ItemStackTemplate containerTemplate = consumed.getCraftingRemainder();
                 ItemStack container = containerTemplate != null ? containerTemplate.create() : ItemStack.EMPTY;
-                //?} elif >=1.21.10 {
-                /*// 1.21.10 / 1.21.11: the loader's stack-sensitive remainder (EMPTY if none), like 1.21.1 below — deliberately
-                // not the deprecated item-level Item#getCraftingRemainder(), which ignores a stack-dependent remainder.
-                ItemStack container = buildcraft.platform.Platform.extensions().craftingRemainder(consumed);*/
                 //?} else {
-                /*// 1.21.1 has no Item.getCraftingRemainder(); use NeoForge's ItemStack-sensitive remainder.
-                ItemStack container = consumed.getCraftingRemainingItem();*/
+                /*// 1.21.x: the loader's stack-sensitive remainder (EMPTY if none) — deliberately not the deprecated
+                // item-level Item#getCraftingRemainder(), which ignores a stack-dependent remainder (1.21.1 has none).
+                ItemStack container = buildcraft.platform.Platform.extensions().craftingRemainder(consumed);*/
                 //?}
                 if (!container.isEmpty()) {
                     if (fuelStack.isEmpty()) {

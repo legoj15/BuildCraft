@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.fabric;
 
-//? if fabric {
+//? if fabric && >=1.21.10 {
 /*import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;

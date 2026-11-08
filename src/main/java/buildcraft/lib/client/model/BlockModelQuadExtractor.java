@@ -151,14 +151,8 @@ public final class BlockModelQuadExtractor {
         if (translucent == null) {
             return model.getQuads(state, side, random);
         }
-        List<BakedQuad> result = new ArrayList<>();
-        net.neoforged.neoforge.model.data.ModelData data = net.neoforged.neoforge.model.data.ModelData.EMPTY;
-        for (net.minecraft.client.renderer.rendertype.RenderType renderType : model.getRenderTypes(state, random, data)) {
-            if ((renderType == net.minecraft.client.renderer.rendertype.RenderTypes.translucent()) == translucent) {
-                result.addAll(model.getQuads(state, side, random, data, renderType));
-            }
-        }
-        return result;*/
+        return buildcraft.platform.client.ClientPlatform.extensions().layerQuads(model, state, side, random,
+                translucent);*/
         //?}
     }
 

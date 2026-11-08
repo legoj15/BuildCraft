@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.fabric;
 
-//? if fabric {
+//? if fabric && >=1.21.10 {
 /*import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

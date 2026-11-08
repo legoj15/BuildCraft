@@ -6,8 +6,12 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import fuzs.forgeconfigapiport.fabric.api.v5.ModConfigEvents;
-import net.neoforged.neoforge.common.ModConfigSpec;
+/*import net.neoforged.neoforge.common.ModConfigSpec;
+//? if >=1.21.10 {
+import fuzs.forgeconfigapiport.fabric.api.v5.ModConfigEvents;
+//?} else {
+/^import fuzs.forgeconfigapiport.fabric.api.neoforge.v4.NeoForgeModConfigEvents;
+^///?}
 
 import buildcraft.platform.config.ConfigHooks;
 
@@ -23,7 +27,11 @@ public final class FabricConfigHooks implements ConfigHooks {
 
     @Override
     public void onLoad(Object spec, Runnable action) {
+        //? if >=1.21.10 {
         ModConfigEvents.loading(FabricConfigRegistrar.MOD_ID).register(config -> {
+        //?} else {
+        /^NeoForgeModConfigEvents.loading(FabricConfigRegistrar.MOD_ID).register(config -> {
+        ^///?}
             if (config.getSpec() == spec) {
                 action.run();
             }
@@ -36,7 +44,11 @@ public final class FabricConfigHooks implements ConfigHooks {
 
     @Override
     public void onReload(Object spec, Runnable action) {
+        //? if >=1.21.10 {
         ModConfigEvents.reloading(FabricConfigRegistrar.MOD_ID).register(config -> {
+        //?} else {
+        /^NeoForgeModConfigEvents.reloading(FabricConfigRegistrar.MOD_ID).register(config -> {
+        ^///?}
             if (config.getSpec() == spec) {
                 action.run();
             }

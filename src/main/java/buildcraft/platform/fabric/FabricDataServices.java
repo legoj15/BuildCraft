@@ -81,10 +81,17 @@ public final class FabricDataServices implements DataServices {
             return type;
         }
 
+        //? if >=1.21.10 {
         @Override
         public boolean test(RegistryOps.RegistryInfoLookup registryInfo) {
             return test.getAsBoolean();
         }
+        //?} else {
+        /^@Override
+        public boolean test(@javax.annotation.Nullable net.minecraft.core.HolderLookup.Provider registryLookup) {
+            return test.getAsBoolean();
+        }
+        ^///?}
     }
 }
 *///?}

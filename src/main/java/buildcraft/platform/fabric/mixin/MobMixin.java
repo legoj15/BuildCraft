@@ -14,7 +14,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.world.DifficultyInstance;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.EntitySpawnReason;
+//?} else {
+/^import net.minecraft.world.entity.MobSpawnType;
+^///?}
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -31,9 +35,17 @@ abstract class MobMixin {
 
     @Inject(method = "finalizeSpawn", at = @At("HEAD"))
     private void buildcraft$finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
+                                          //? if >=1.21.10 {
                                           EntitySpawnReason reason, @Nullable SpawnGroupData groupData,
+                                          //?} else {
+                                          /^MobSpawnType reason, @Nullable SpawnGroupData groupData,
+                                          ^///?}
                                           CallbackInfoReturnable<SpawnGroupData> cir) {
+        //? if >=1.21.10 {
         FabricGameHooks.fireFinalizeSpawn((Mob) (Object) this, reason == EntitySpawnReason.CONVERSION);
+        //?} else {
+        /^FabricGameHooks.fireFinalizeSpawn((Mob) (Object) this, reason == MobSpawnType.CONVERSION);
+        ^///?}
     }
 }
 *///?}

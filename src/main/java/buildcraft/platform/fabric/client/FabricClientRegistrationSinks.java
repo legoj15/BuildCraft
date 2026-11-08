@@ -16,24 +16,26 @@ import com.mojang.serialization.MapCodec;
 //? if >=26.1 {
 import net.minecraft.client.color.block.BlockTintSource;
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.color.item.ItemTintSources;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.texture.atlas.SpriteSource;
+//?}
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /^import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 ^///?}
-import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.resources.Identifier;
@@ -60,18 +62,37 @@ import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.SpriteSourceRegistry;
-//?} else {
+//?} elif >=1.21.10 {
 /^import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
 import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
+^///?} else {
+/^import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.ProfilerFiller;
+
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
+import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceTypeRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.ResourceReloadListenerKeys;
 ^///?}
+//? if >=1.21.10 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.fabricmc.fabric.api.resource.v1.reloader.ResourceReloaderKeys;
+//?}
 
 import buildcraft.platform.client.ClientRegistrationSinks;
 import buildcraft.platform.client.PipeModelQuads;
@@ -92,16 +113,29 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         MenuScreens.register(type.get(), screen);
     }
 
+    //? if >=1.21.10 {
     @Override
     public <T extends BlockEntity, S extends BlockEntityRenderState> void blockEntityRenderer(
             Supplier<? extends BlockEntityType<? extends T>> type, BlockEntityRendererProvider<T, S> provider) {
         BlockEntityRenderers.register(type.get(), provider);
     }
+    //?} else {
+    /^@Override
+    public <T extends BlockEntity> void blockEntityRenderer(Supplier<? extends BlockEntityType<? extends T>> type,
+            BlockEntityRendererProvider<T> provider) {
+        BlockEntityRenderers.register(type.get(), provider);
+    }
+    ^///?}
 
     @Override
     public <T extends Entity> void entityRenderer(Supplier<? extends EntityType<? extends T>> type,
             EntityRendererProvider<T> provider) {
+        //? if >=1.21.10 {
         EntityRenderers.register(type.get(), provider);
+        //?} else {
+        /^// EntityRenderers.register is private on 1.21.1; Fabric API's registry feeds the same map.
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(type.get(), provider);
+        ^///?}
     }
 
     @Override
@@ -116,6 +150,7 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         ^///?}
     }
 
+    //? if >=1.21.10 {
     @Override
     public void guiLayerAboveAll(Identifier id, GuiLayer layer) {
         HudElementRegistry.addLast(id, layer::render);
@@ -134,6 +169,50 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         // Fabric API has no item-tint-source registry; its access wideners open vanilla's id mapper instead.
         ItemTintSources.ID_MAPPER.put(id, codec);
     }
+    //?} else {
+    /^// Fabric API 1.21.1 has one HUD callback, after the whole vanilla HUD (with the depth test off, so on top of it,
+    // and drawn with the HUD hidden too, as NeoForge's mod layers are). The layers anchored on a vanilla one draw
+    // first, then the above-all ones, the order NeoForge stacks them in; an anchored layer is therefore also above
+    // the vanilla layers after its anchor (the hotbar, chat), which it shares no screen space with.
+    private final List<GuiLayer> anchoredLayers = new ArrayList<>();
+    private final List<GuiLayer> topLayers = new ArrayList<>();
+    private boolean hudRegistered;
+
+    private void hudCallback() {
+        if (!hudRegistered) {
+            hudRegistered = true;
+            HudRenderCallback.EVENT.register((graphics, deltaTracker) -> {
+                for (GuiLayer layer : anchoredLayers) {
+                    layer.render(graphics, deltaTracker);
+                }
+                for (GuiLayer layer : topLayers) {
+                    layer.render(graphics, deltaTracker);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void guiLayerAboveAll(Identifier id, GuiLayer layer) {
+        hudCallback();
+        topLayers.add(layer);
+    }
+
+    @Override
+    public void guiLayerAbove(VanillaGuiLayer anchor, Identifier id, GuiLayer layer) {
+        hudCallback();
+        anchoredLayers.add(layer);
+    }
+
+    @Override
+    public void itemColor(net.minecraft.client.color.item.ItemColor color,
+            Supplier<net.minecraft.world.level.ItemLike[]> items) {
+        net.minecraft.world.level.ItemLike[] list = items.get();
+        if (list.length > 0) {
+            ColorProviderRegistry.ITEM.register(color, list);
+        }
+    }
+    ^///?}
 
     //? if >=26.1 {
     @Override
@@ -150,37 +229,108 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     //? if >=26.3 {
     @Override
     public void renderPipeline(Supplier<com.mojang.renderpearl.api.pipeline.RenderPipeline> pipeline) {
-    //?} else {
-    /^@Override
-    public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
-    ^///?}
         RenderPipelines.register(pipeline.get());
     }
+    //?} elif >=1.21.10 {
+    /^@Override
+    public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
+        RenderPipelines.register(pipeline.get());
+    }
+    ^///?}
 
+    //? if >=26.1 {
     @Override
     public void spriteSource(Identifier id, MapCodec<? extends SpriteSource> codec) {
-        //? if >=26.1 {
         SpriteSourceRegistry.register(id, codec);
-        //?} else {
-        /^AtlasSourceRegistry.register(id, codec);
-        ^///?}
     }
+    //?} elif >=1.21.10 {
+    /^@Override
+    public void spriteSource(Identifier id, MapCodec<? extends SpriteSource> codec) {
+        AtlasSourceRegistry.register(id, codec);
+    }
+    ^///?} else {
+    /^@Override
+    public void spriteSourceType(Identifier id, net.minecraft.client.renderer.texture.atlas.SpriteSourceType type) {
+        AtlasSourceTypeRegistry.register(id, type);
+    }
+    ^///?}
 
     @Override
     public void clientReloadListener(Identifier id, PreparableReloadListener listener) {
         //? if >=26.1 {
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(id, listener);
-        //?} else {
+        //?} elif >=1.21.10 {
         /^ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(id, listener);
+        ^///?} else {
+        /^ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new Identified(id, listener, null));
         ^///?}
     }
 
+    //? if >=1.21.10 {
     @Override
     public void onModelsBaking(Runnable listener) {
         // A model loading plugin's initializer runs at the start of every model load, before anything bakes.
         ModelLoadingPlugin.register(context -> listener.run());
     }
+    //?} else {
+    /^// The three bake-time hooks share one queue on this line, run in the order they were added, where NeoForge's
+    // ModifyBakingResult listeners run (FabricBakedModelEdits).
+    @Override
+    public void onModelsBaking(Runnable listener) {
+        FabricBakedModelEdits.add(models -> listener.run());
+    }
 
+    @Override
+    public void editBakedModels(java.util.function.Consumer<java.util.Map<
+            net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel>> editor) {
+        FabricBakedModelEdits.add(editor);
+    }
+
+    @Override
+    public void pipeBlockModel(Supplier<? extends Block> block, PipeModelQuads quads) {
+        // All baked models (block and item) share one map keyed by ModelResourceLocation on this line.
+        FabricBakedModelEdits.add(models -> {
+            for (net.minecraft.world.level.block.state.BlockState state
+                    : block.get().getStateDefinition().getPossibleStates()) {
+                net.minecraft.client.resources.model.ModelResourceLocation key =
+                        net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+                net.minecraft.client.resources.model.BakedModel vanilla = models.get(key);
+                if (vanilla != null) {
+                    models.put(key, new FabricClassicPipeBlockModel(vanilla, quads));
+                }
+            }
+        });
+    }
+
+    // A reload listener under its id (Fabric API 1.21.1 asks every listener for one), ordered after dependsOn.
+    private record Identified(Identifier id, PreparableReloadListener listener, Identifier dependsOn)
+            implements IdentifiableResourceReloadListener {
+        @Override
+        public Identifier getFabricId() {
+            return id;
+        }
+
+        @Override
+        public Collection<Identifier> getFabricDependencies() {
+            return dependsOn == null ? List.of() : List.of(dependsOn);
+        }
+
+        @Override
+        public CompletableFuture<Void> reload(PreparationBarrier barrier, ResourceManager manager,
+                ProfilerFiller prepareProfiler, ProfilerFiller applyProfiler, Executor prepareExecutor,
+                Executor applyExecutor) {
+            return listener.reload(barrier, manager, prepareProfiler, applyProfiler, prepareExecutor, applyExecutor);
+        }
+
+        @Override
+        public String getName() {
+            return listener.getName();
+        }
+    }
+    ^///?}
+
+    //? if >=1.21.10 {
     @Override
     public void editItemModels(ItemModelEditor editor) {
         // A per-item after-bake modifier, registered afresh on every model load; itemId() is the item model's key.
@@ -195,19 +345,24 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
                 (model, modelContext) -> modelContext.state().is(block.get())
                         ? new FabricPipeBlockModel(model, quads) : model));
     }
+    //?}
 
     @Override
     public synchronized void onModelsBaked(HookOrder order, Runnable listener) {
         if (modelsBaked.isEmpty()) {
             // One reload listener, ordered after the model manager's, whose apply step makes the new models live.
             Identifier id = Identifier.fromNamespaceAndPath("buildcraftunofficial", "models_baked");
-            ResourceLoader loader = ResourceLoader.get(PackType.CLIENT_RESOURCES);
             //? if >=26.1 {
+            ResourceLoader loader = ResourceLoader.get(PackType.CLIENT_RESOURCES);
             loader.registerReloadListener(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
             loader.addListenerOrdering(ResourceReloaderKeys.Client.MODELS, id);
-            //?} else {
-            /^loader.registerReloader(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
+            //?} elif >=1.21.10 {
+            /^ResourceLoader loader = ResourceLoader.get(PackType.CLIENT_RESOURCES);
+            loader.registerReloader(id, (ResourceManagerReloadListener) manager -> runModelsBaked());
             loader.addReloaderOrdering(ResourceReloaderKeys.Client.MODELS, id);
+            ^///?} else {
+            /^ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new Identified(id,
+                    (ResourceManagerReloadListener) manager -> runModelsBaked(), ResourceReloadListenerKeys.MODELS));
             ^///?}
         }
         modelsBaked.computeIfAbsent(order, key -> new ArrayList<>()).add(listener);
@@ -237,7 +392,7 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         PictureInPictureRendererRegistry.register(
                 context -> factory.apply(context.minecraft().renderBuffers().bufferSource()));
     }
-    ^///?} else {
+    ^///?} elif >=1.21.10 {
     /^// Fabric API's special GUI element registry hands the renderer the GUI renderer's buffer source.
     @Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,

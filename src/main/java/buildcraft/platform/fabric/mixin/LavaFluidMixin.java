@@ -29,7 +29,11 @@ abstract class LavaFluidMixin {
     @SuppressWarnings("deprecation")
     private void buildcraft$lavaIgnites(LevelReader level, BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         // Vanilla's own guard first: never load a chunk to answer.
+        //? if >=1.21.10 {
         if (level.isInsideBuildHeight(pos.getY()) && !level.hasChunkAt(pos)) {
+        //?} else {
+        /^if (!level.isOutsideBuildHeight(pos.getY()) && !level.hasChunkAt(pos)) {
+        ^///?}
             return;
         }
         BlockState state = level.getBlockState(pos);

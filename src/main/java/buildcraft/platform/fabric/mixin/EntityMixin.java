@@ -54,8 +54,13 @@ import buildcraft.platform.hook.PositionalSoundBlock;
 @Mixin(Entity.class)
 abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanillaExtensions.StepSoundPositions {
 
+    //? if >=1.21.10 {
     @Shadow
     public double fallDistance;
+    //?} else {
+    /^@Shadow
+    public float fallDistance; // a float on 1.21.1
+    ^///?}
 
     @Shadow
     public abstract boolean isInWater();
@@ -154,12 +159,22 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanilla
         }
     }
 
+    //? if >=1.21.10 {
     @WrapOperation(method = "spawnAtLocation(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/entity/item/ItemEntity;",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/server/level/ServerLevel;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean buildcraft$captureDrop(ServerLevel level, Entity drop, Operation<Boolean> original) {
         return FabricGameHooks.captureDrop((Entity) (Object) this, (ItemEntity) drop) || original.call(level, drop);
     }
+    //?} else {
+    /^@WrapOperation(method = "spawnAtLocation(Lnet/minecraft/world/item/ItemStack;F)Lnet/minecraft/world/entity/item/ItemEntity;",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean buildcraft$captureDrop(net.minecraft.world.level.Level level, Entity drop,
+            Operation<Boolean> original) {
+        return FabricGameHooks.captureDrop((Entity) (Object) this, (ItemEntity) drop) || original.call(level, drop);
+    }
+    ^///?}
 
     /^* NeoForge's position-aware step sound ({@code IBlockExtension#playStepSound}). *^/
     @WrapOperation(method = "playStepSound", at = @At(value = "INVOKE",

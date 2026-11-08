@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.fabric.client;
 
-//? if fabric {
+//? if fabric && >=1.21.10 {
 /*import java.util.List;
 import java.util.function.Predicate;
 

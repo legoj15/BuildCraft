@@ -74,7 +74,11 @@ public class GuidePageContents extends GuidePageBase {
         // defaults to textShadow=true. The 1px offset darker copy reads as a
         // double-render of the text and cursor — "guide_" looks like "guide_guide_"
         // at the small font size used here. Disable to match 1.12.2.
+        //? if >=1.21.10 {
         searchText.setTextShadow(false);
+        //?} else {
+        /*buildcraft.platform.client.ClientPlatform.extensions().setTextShadow(searchText, false);*/
+        //?}
         sortButtons = new BCButton[GuiGuide.SORTING_TYPES.length];
         for (int i = 0; i < sortButtons.length; i++) {
             TypeOrder order = GuiGuide.SORTING_TYPES[i];

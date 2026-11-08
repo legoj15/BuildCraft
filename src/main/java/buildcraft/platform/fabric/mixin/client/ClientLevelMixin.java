@@ -51,7 +51,7 @@ abstract class ClientLevelMixin {
     private boolean buildcraft$hitEffects(ClientLevel level, BlockPos pos, Direction face, BlockState state) {
         return !FabricBlockParticles.addHitEffects(state, level, pos, face, minecraft.particleEngine);
     }
-    //?} else {
+    //?} elif >=1.21.10 {
     /^// Before 26.3 the hit particles are the whole method (the sound plays elsewhere), so it is skipped outright.
     @Inject(method = "addBreakingBlockEffect", at = @At("HEAD"), cancellable = true)
     private void buildcraft$hitEffects(BlockPos pos, Direction face, CallbackInfo ci) {
@@ -62,5 +62,7 @@ abstract class ClientLevelMixin {
         }
     }
     ^///?}
+    // 1.21.1 has no ClientLevel hit-effect method: its hit particles are ParticleEngine.crack, called from
+    // Minecraft.continueAttack (MinecraftMixin).
 }
 *///?}

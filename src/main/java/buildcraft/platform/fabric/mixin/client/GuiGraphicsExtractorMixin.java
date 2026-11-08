@@ -38,7 +38,8 @@ import buildcraft.platform.fabric.client.FabricTooltipHooks;
  * The tooltip draw's pre hook ({@link FabricTooltipHooks}): the item-stack tooltip request names its stack, the
  * deferred draw it queues is tagged with it, and the draw fires the listeners before positioning, where NeoForge's
  * patch fires {@code RenderTooltipEvent.Pre}. Before 26.1 the class is {@code GuiGraphics} and the draw is its
- * {@code renderTooltip}.
+ * {@code renderTooltip}. 1.21.1 draws a tooltip at once ({@code renderTooltipInternal}, no deferred draw): the item
+ * request is tagged as it is made.
  *^/
 //? if >=26.1 {
 @Mixin(GuiGraphicsExtractor.class)
@@ -64,13 +65,22 @@ abstract class GuiGraphicsExtractorMixin {
             @Local(argsOnly = true) ItemStack stack) {
         FabricTooltipHooks.describing(stack, () -> original.call(graphics, font, lines, image, x, y, style));
     }
-    ^///?} else {
+    ^///?} elif >=1.21.10 {
     /^@WrapOperation(method = "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
     private void buildcraft$describeItemTooltip(GuiGraphics graphics, Font font, List<Component> lines,
             Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original,
             @Local(argsOnly = true) ItemStack stack) {
         FabricTooltipHooks.describing(stack, () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?} else {
+    /^@WrapOperation(method = "renderTooltip(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V"))
+    private void buildcraft$describeItemTooltip(GuiGraphics graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Operation<Void> original,
+            @Local(argsOnly = true) ItemStack stack) {
+        FabricTooltipHooks.describing(stack,
+                () -> FabricTooltipHooks.tagDeferred(() -> original.call(graphics, font, lines, image, x, y)).run());
     }
     ^///?}
 
@@ -88,7 +98,7 @@ abstract class GuiGraphicsExtractorMixin {
     private void buildcraft$tagDeferredTooltip(GuiGraphicsExtractor graphics, Runnable draw, Operation<Void> original) {
         original.call(graphics, FabricTooltipHooks.tagDeferred(draw));
     }
-    ^///?} else {
+    ^///?} elif >=1.21.10 {
     /^@WrapOperation(method = "setTooltipForNextFrameInternal(Lnet/minecraft/client/gui/Font;Ljava/util/List;IILnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipPositioner;Lnet/minecraft/resources/Identifier;Z)V",
             at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/GuiGraphics;deferredTooltip:Ljava/lang/Runnable;",
                     opcode = Opcodes.PUTFIELD))
@@ -109,10 +119,16 @@ abstract class GuiGraphicsExtractorMixin {
             ClientTooltipPositioner positioner, Identifier style, CallbackInfo ci) {
         FabricTooltipHooks.firePre((GuiGraphicsExtractor) (Object) this, font, lines, x, y, positioner);
     }
-    ^///?} else {
+    ^///?} elif >=1.21.10 {
     /^@Inject(method = "renderTooltip", at = @At("HEAD"))
     private void buildcraft$tooltipPre(Font font, List<ClientTooltipComponent> lines, int x, int y,
             ClientTooltipPositioner positioner, Identifier style, CallbackInfo ci) {
+        FabricTooltipHooks.firePre((GuiGraphics) (Object) this, font, lines, x, y, positioner);
+    }
+    ^///?} else {
+    /^@Inject(method = "renderTooltipInternal", at = @At("HEAD"))
+    private void buildcraft$tooltipPre(Font font, List<ClientTooltipComponent> lines, int x, int y,
+            ClientTooltipPositioner positioner, CallbackInfo ci) {
         FabricTooltipHooks.firePre((GuiGraphics) (Object) this, font, lines, x, y, positioner);
     }
     ^///?}

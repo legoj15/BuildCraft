@@ -18,11 +18,18 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 
+//? if >=1.21.10 {
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
+//?} else {
+/^import net.minecraft.client.renderer.rendertype.RenderType;
+
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+^///?}
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 
@@ -58,11 +65,19 @@ public final class FabricLegacyRenderLayers {
             Set<String> models = new HashSet<>();
             collectModels(blockstate, models);
             for (String model : models) {
+                //? if >=1.21.10 {
                 ChunkSectionLayer layer = layerOf(mod.get(), model, new HashSet<>());
                 if (layer != null) {
                     BlockRenderLayerMap.putBlock(block, layer);
                     break;
                 }
+                //?} else {
+                /^RenderType layer = layerOf(mod.get(), model, new HashSet<>());
+                if (layer != null) {
+                    BlockRenderLayerMap.INSTANCE.putBlock(block, layer);
+                    break;
+                }
+                ^///?}
             }
         }
     }
@@ -83,7 +98,11 @@ public final class FabricLegacyRenderLayers {
     }
 
     // The model's non-solid render_type, following its parents while they stay in BuildCraft's namespace.
+    //? if >=1.21.10 {
     private static ChunkSectionLayer layerOf(ModContainer mod, String model, Set<String> seen) {
+    //?} else {
+    /^private static RenderType layerOf(ModContainer mod, String model, Set<String> seen) {
+    ^///?}
         int colon = model.indexOf(':');
         String ns = colon < 0 ? "minecraft" : model.substring(0, colon);
         String path = model.substring(colon + 1);
@@ -97,12 +116,22 @@ public final class FabricLegacyRenderLayers {
         JsonObject obj = json.getAsJsonObject();
         if (obj.has("render_type")) {
             String type = obj.get("render_type").getAsString();
+            //? if >=1.21.10 {
             return switch (type.substring(type.indexOf(':') + 1)) {
                 // 1.21.11 has no separate mipped cutout layer; no BuildCraft model asks for one.
                 case "cutout", "cutout_mipped" -> ChunkSectionLayer.CUTOUT;
                 case "translucent" -> ChunkSectionLayer.TRANSLUCENT;
                 default -> null;
             };
+            //?} else {
+            /^// 1.21.1 still has its mipped cutout layer, as NeoForge's render_type names it.
+            return switch (type.substring(type.indexOf(':') + 1)) {
+                case "cutout" -> RenderType.cutout();
+                case "cutout_mipped" -> RenderType.cutoutMipped();
+                case "translucent" -> RenderType.translucent();
+                default -> null;
+            };
+            ^///?}
         }
         return obj.has("parent") ? layerOf(mod, obj.get("parent").getAsString(), seen) : null;
     }

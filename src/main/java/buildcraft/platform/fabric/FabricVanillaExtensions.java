@@ -34,7 +34,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.saveddata.SavedData;
+//? if >=26.1 {
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
@@ -169,10 +171,17 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
     }
     ^///?}
 
-    //? if >=1.21.10 && <26.1 {
+    //? if <26.1 {
     /^@Override
     public ItemStack craftingRemainder(ItemStack stack) {
         return stack.getRecipeRemainder();
+    }
+    ^///?}
+
+    //? if <1.21.10 {
+    /^// Vanilla 1.21.1 writes saved data inside DimensionDataStorage.save(): nothing is left to wait for.
+    @Override
+    public void awaitSavedDataWrites() {
     }
     ^///?}
 

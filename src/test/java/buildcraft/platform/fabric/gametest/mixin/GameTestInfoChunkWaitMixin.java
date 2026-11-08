@@ -53,8 +53,14 @@ abstract class GameTestInfoChunkWaitMixin {
     @Shadow
     public abstract boolean isDone();
 
+    //? if >=1.21.10 {
     @Shadow
     public abstract void fail(Component message);
+    //?} else {
+    /^// 1.21.1's GameTestInfo fails with a Throwable.
+    @Shadow
+    public abstract void fail(Throwable error);
+    ^///?}
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void buildcraft$failAStuckChunkWait(GameTestRunner runner, CallbackInfo ci) {
@@ -67,8 +73,13 @@ abstract class GameTestInfoChunkWaitMixin {
         }
         buildcraft$lastWaitTick = now;
         if (buildcraft$waitedNanos > MAX_CHUNK_WAIT_SECONDS * 1_000_000_000L) {
-            fail(Component.literal("the test's structure chunks were not entity-ticking after " + MAX_CHUNK_WAIT_SECONDS
-                    + " s of ticking, so it never started (Fabric run watchdog)"));
+            String message = "the test's structure chunks were not entity-ticking after " + MAX_CHUNK_WAIT_SECONDS
+                    + " s of ticking, so it never started (Fabric run watchdog)";
+            //? if >=1.21.10 {
+            fail(Component.literal(message));
+            //?} else {
+            /^fail(new net.minecraft.gametest.framework.GameTestAssertException(message));
+            ^///?}
         }
     }
 }

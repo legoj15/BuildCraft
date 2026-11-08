@@ -71,7 +71,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+//? if >=1.21.10 {
 import net.fabricmc.fabric.api.recipe.v1.sync.RecipeSynchronization;
+//?}
 
 import buildcraft.platform.Platform;
 import buildcraft.platform.event.GameHooks;
@@ -349,17 +351,20 @@ public final class FabricGameHooks implements GameHooks {
                 throw new IllegalArgumentException("No Fabric recipe-sync serializers mapped for " + type);
             }
         }
+        //? if >=26.1 {
+        List<RecipeSerializer<?>> craftingBase = List.of(ShapedRecipe.SERIALIZER, ShapelessRecipe.SERIALIZER);
+        RecipeSerializer<?> smeltingBase = SmeltingRecipe.SERIALIZER;
+        //?} elif >=1.21.10 {
+        /^List<RecipeSerializer<?>> craftingBase = List.of(RecipeSerializer.SHAPED_RECIPE,
+                RecipeSerializer.SHAPELESS_RECIPE);
+        RecipeSerializer<?> smeltingBase = RecipeSerializer.SMELTING_RECIPE;
+        ^///?}
+        //? if >=1.21.10 {
         boolean crafting = types.contains(RecipeType.CRAFTING);
         boolean smelting = types.contains(RecipeType.SMELTING);
         Platform.lifecycle().onCommonSetup(() -> {
             if (crafting) {
-                //? if >=26.1 {
-                RecipeSynchronization.synchronizeRecipeSerializer(ShapedRecipe.SERIALIZER);
-                RecipeSynchronization.synchronizeRecipeSerializer(ShapelessRecipe.SERIALIZER);
-                //?} else {
-                /^RecipeSynchronization.synchronizeRecipeSerializer(RecipeSerializer.SHAPED_RECIPE);
-                RecipeSynchronization.synchronizeRecipeSerializer(RecipeSerializer.SHAPELESS_RECIPE);
-                ^///?}
+                craftingBase.forEach(RecipeSynchronization::synchronizeRecipeSerializer);
                 for (RecipeSerializer<?> serializer : BuiltInRegistries.RECIPE_SERIALIZER) {
                     Identifier id = BuiltInRegistries.RECIPE_SERIALIZER.getKey(serializer);
                     if (id != null && "buildcraftunofficial".equals(id.getNamespace())) {
@@ -368,13 +373,11 @@ public final class FabricGameHooks implements GameHooks {
                 }
             }
             if (smelting) {
-                //? if >=26.1 {
-                RecipeSynchronization.synchronizeRecipeSerializer(SmeltingRecipe.SERIALIZER);
-                //?} else {
-                /^RecipeSynchronization.synchronizeRecipeSerializer(RecipeSerializer.SMELTING_RECIPE);
-                ^///?}
+                RecipeSynchronization.synchronizeRecipeSerializer(smeltingBase);
             }
         });
+        //?}
+        // 1.21.1 still sends the whole recipe list to every client, as NeoForge's own hook says: nothing to ask for.
     }
 
     // ── Where the mixins post (and the game tests, as NeoForge's tests post its events) ──────────────────────
@@ -548,7 +551,11 @@ public final class FabricGameHooks implements GameHooks {
         if (drops == null) {
             return;
         }
+        //? if >=1.21.10 {
         fireLivingDrops(entity, source, entity.getLastHurtByPlayerMemoryTime() > 0, drops);
+        //?} else {
+        /^fireLivingDrops(entity, source, entity.lastHurtByPlayerTime > 0, drops);
+        ^///?}
         for (ItemEntity drop : drops) {
             entity.level().addFreshEntity(drop);
         }

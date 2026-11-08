@@ -65,12 +65,21 @@ public interface VanillaExtensions {
     int burnTime(ItemStack stack, net.minecraft.world.level.Level level);
     *///?}
 
-    //? if >=1.21.10 && <26.1 {
+    //? if <26.1 {
     /*/^*
      * What crafting with {@code stack} leaves behind (an empty bucket for a lava bucket), EMPTY for nothing: NeoForge's
-     * stack-sensitive {@code getCraftingRemainder}; Fabric API's {@code getRecipeRemainder}, which asks the item too.
+     * stack-sensitive {@code getCraftingRemainder} ({@code getCraftingRemainingItem} on 1.21.1); Fabric API's
+     * {@code getRecipeRemainder}, which asks the item too.
      ^/
     ItemStack craftingRemainder(ItemStack stack);
+    *///?}
+
+    //? if <1.21.10 {
+    /*/^*
+     * Waits until the saved data a {@code DimensionDataStorage.save()} just wrote is on disk: NeoForge 1.21.1 writes it
+     * on its IO worker; vanilla (Fabric) writes it inside the call, so there is nothing to wait for.
+     ^/
+    void awaitSavedDataWrites();
     *///?}
 
     //? if >=26.1 {

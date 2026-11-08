@@ -52,7 +52,7 @@ import buildcraft.silicon.client.model.plug.PlugGateBaker;
 //? if >=1.21.10 {
 public class GateItemModel implements ItemModel {
 //?} else {
-/*public class GateItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
+/*public class GateItemModel implements buildcraft.platform.client.ClassicItemModel {*/
 //?}
 
     /**
@@ -199,12 +199,20 @@ public class GateItemModel implements ItemModel {
                 quads, quads.get(0).getSprite(), true, net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 
+    // Vanilla's quad getter: NeoForge deprecates it for its model-data overload, which falls back here.
     @Override
+    @SuppressWarnings("deprecation")
     public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
-            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand,
-            net.neoforged.neoforge.model.data.ModelData extraData,
-            net.minecraft.client.renderer.rendertype.RenderType renderType) {
+            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand) {
         return List.of();
+    }
+
+    // Nothing to apply: applyTransform answers a model whose quads carry the transform (NeoForge deprecates the
+    // getter; on Fabric it is abstract).
+    @Override
+    @SuppressWarnings("deprecation")
+    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
     }
 
     @Override
@@ -231,8 +239,8 @@ public class GateItemModel implements ItemModel {
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
-                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+        return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(
+                net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel());
     }*/
     //?}
 }

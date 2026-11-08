@@ -15,12 +15,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if <1.21.10 {
+/^import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+
+import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+
+import buildcraft.platform.fabric.client.FabricBlockParticles;
+^///?}
 
 import buildcraft.platform.fabric.FabricGameHooks;
 
 /^*
  * NeoForge's client {@code LevelEvent.Unload} on Fabric ({@code FabricGameHooks#onLevelUnload}): the three places the
- * client lets go of its level (another level set, a disconnect, a cleared level), just before it does.
+ * client lets go of its level (another level set, a disconnect, a cleared level), just before it does. On 1.21.1 also
+ * NeoForge's {@code addHitEffects} check ({@code ParticleEngine.addBlockHitEffects} there): a block registered through
+ * {@code ClientRegistrationSinks#blockParticles} spawns its own hit particles in place of vanilla's {@code crack}.
  *^/
 @Mixin(Minecraft.class)
 abstract class MinecraftMixin {
@@ -41,5 +53,14 @@ abstract class MinecraftMixin {
             FabricGameHooks.fireClientLevelUnload(level);
         }
     }
+
+    //? if <1.21.10 {
+    /^@WrapWithCondition(method = "continueAttack", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/particle/ParticleEngine;crack(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)V"))
+    private boolean buildcraft$hitEffects(ParticleEngine engine, BlockPos pos, Direction face) {
+        BlockState state = level.getBlockState(pos);
+        return state.isAir() || !FabricBlockParticles.addHitEffects(state, level, pos, face, engine);
+    }
+    ^///?}
 }
 *///?}

@@ -31,10 +31,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
-//? if <1.21.10 {
-/*import net.neoforged.neoforge.common.IOUtilities;*/
-//?}
-
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.core.BCLog;
@@ -201,7 +197,7 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
         server.overworld().getDataStorage().saveAndJoin();
         //?} else {
         /*server.overworld().getDataStorage().save();
-        IOUtilities.waitUntilIOWorkerComplete();*/
+        buildcraft.platform.Platform.extensions().awaitSavedDataWrites();*/
         //?}
         return LegacySavedData.readPayload(LegacySavedData.overworldDataFile(server, NAME));
     }

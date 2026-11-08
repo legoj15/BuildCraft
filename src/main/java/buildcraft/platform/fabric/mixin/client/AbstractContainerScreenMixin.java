@@ -60,7 +60,7 @@ abstract class AbstractContainerScreenMixin {
         FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style));
     }
-    ^///?} else {
+    ^///?} elif >=1.21.10 {
     /^// Before 26.1 the screen's tooltip step is renderTooltip, on GuiGraphics.
     @WrapOperation(method = "renderTooltip",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;IILnet/minecraft/resources/Identifier;)V"))
@@ -68,6 +68,15 @@ abstract class AbstractContainerScreenMixin {
             Optional<TooltipComponent> image, int x, int y, Identifier style, Operation<Void> original) {
         FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
                 () -> original.call(graphics, font, lines, image, x, y, style));
+    }
+    ^///?} else {
+    /^// 1.21.1 draws the tooltip at once (no deferred draw), so the request is tagged as it is made.
+    @WrapOperation(method = "renderTooltip",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V"))
+    private void buildcraft$describeSlotTooltip(GuiGraphics graphics, Font font, List<Component> lines,
+            Optional<TooltipComponent> image, int x, int y, Operation<Void> original) {
+        FabricTooltipHooks.describing(hoveredSlot == null ? ItemStack.EMPTY : hoveredSlot.getItem(),
+                () -> FabricTooltipHooks.tagDeferred(() -> original.call(graphics, font, lines, image, x, y)).run());
     }
     ^///?}
 }

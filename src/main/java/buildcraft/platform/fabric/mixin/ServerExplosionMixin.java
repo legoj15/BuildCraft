@@ -18,21 +18,33 @@ import org.spongepowered.asm.mixin.injection.At;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import net.minecraft.core.BlockPos;
+//? if >=1.21.10 {
 import net.minecraft.server.level.ServerLevel;
+//?}
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Explosion;
+//? if >=1.21.10 {
 import net.minecraft.world.level.ServerExplosion;
+//?} else {
+/^import net.minecraft.world.level.Level;
+^///?}
 
 import buildcraft.platform.fabric.FabricGameHooks;
 
 /^*
  * NeoForge's {@code ExplosionEvent.Detonate} on Fabric ({@link FabricGameHooks#onExplosionDetonate}), at the same
  * point: once the blast has its block list and the entities in its reach, before it hurts any of them. The listeners
- * edit the very lists the blast goes on to use.
+ * edit the very lists the blast goes on to use. Before 1.21.10 the blast is {@code Explosion.explode} itself, whose
+ * block list is the explosion's own {@code toBlow}.
  *^/
+//? if >=1.21.10 {
 @Mixin(ServerExplosion.class)
+//?} else {
+/^@Mixin(Explosion.class)
+^///?}
 abstract class ServerExplosionMixin {
 
+    //? if >=1.21.10 {
     @Shadow
     @Final
     private ServerLevel level;
@@ -54,5 +66,19 @@ abstract class ServerExplosionMixin {
         FabricGameHooks.fireExplosionDetonate(level, (Explosion) (Object) this, buildcraft$toBlow, affected);
         return affected;
     }
+    //?} else {
+    /^@Shadow
+    @Final
+    private Level level;
+
+    @ModifyExpressionValue(method = "explode", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/Level;getEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"))
+    private List<Entity> buildcraft$detonate(List<Entity> entities) {
+        List<Entity> affected = entities instanceof ArrayList<Entity> ? entities : new ArrayList<>(entities);
+        Explosion self = (Explosion) (Object) this;
+        FabricGameHooks.fireExplosionDetonate(level, self, self.getToBlow(), affected);
+        return affected;
+    }
+    ^///?}
 }
 *///?}

@@ -112,7 +112,7 @@ public final class FabricEntityItems {
             //?}
             EntityTypes.CHEST_MINECART,
             EntityTypes.HOPPER_MINECART,
-            //?} else {
+            //?} elif >=1.21.10 {
             /^EntityType.ACACIA_CHEST_BOAT,
             EntityType.BIRCH_CHEST_BOAT,
             EntityType.CHERRY_CHEST_BOAT,
@@ -125,13 +125,17 @@ public final class FabricEntityItems {
             EntityType.PALE_OAK_CHEST_BOAT,
             EntityType.CHEST_MINECART,
             EntityType.HOPPER_MINECART,
+            ^///?} else {
+            /^EntityType.CHEST_BOAT,
+            EntityType.CHEST_MINECART,
+            EntityType.HOPPER_MINECART,
             ^///?}
         };
     }
 
     /^*
      * NeoForge's {@code LivingEntityEquipmentWrapper} hands and humanoid-armour handlers, combined: one slot per
-     * {@link EquipmentSlot} of those types in {@link EquipmentSlot#VALUES} order. A slot takes what the entity can
+     * {@link EquipmentSlot} of those types in declaration order. A slot takes what the entity can
      * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}), up to the slot's count limit (one
      * in an armour slot); the stack is set without side
      * effects while the transaction is open and {@code onEquipItem} runs once the outer transaction commits.
@@ -151,7 +155,7 @@ public final class FabricEntityItems {
     private static Storage<ItemVariant> newEquipment(LivingEntity entity) {
         List<SlotStorage> slots = new ArrayList<>();
         for (EquipmentSlot.Type type : List.of(EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR)) {
-            for (EquipmentSlot slot : EquipmentSlot.VALUES) {
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
                 if (slot.getType() == type) {
                     slots.add(new SlotStorage(entity, slot));
                 }
@@ -185,14 +189,24 @@ public final class FabricEntityItems {
 
         @Override
         protected void setStack(ItemStack stack) {
+            //? if >=1.21.10 {
             // Vanilla's setItemSlot is this plus onEquipItem, which waits for the commit (NeoForge's
             // setItemSlot(slot, stack, insideTransaction = true)).
             entity.equipment.set(slot, stack);
+            //?} else {
+            /^// 1.21.1 keeps equipment per entity class, with no setter that skips onEquipItem: setItemSlot, as NeoForge's
+            // 1.21.1 wrapper sets it (each set, a rollback's too, runs onEquipItem; onFinalCommit adds none).
+            entity.setItemSlot(slot, stack);
+            ^///?}
         }
 
         @Override
         protected boolean canInsert(ItemVariant variant) {
+            //? if >=1.21.10 {
             return entity.isEquippableInSlot(variant.toStack(), slot);
+            //?} else {
+            /^return true; // NeoForge's 1.21.1 wrapper takes any item in any slot
+            ^///?}
         }
 
         @Override
@@ -211,9 +225,11 @@ public final class FabricEntityItems {
 
         @Override
         protected void onFinalCommit() {
+            //? if >=1.21.10 {
             if (original != null) {
                 entity.onEquipItem(slot, original, getStack());
             }
+            //?}
         }
 
         @Override

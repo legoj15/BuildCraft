@@ -17,6 +17,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+//? if <1.21.10 {
+/^import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.Level;
+
+import buildcraft.platform.fabric.FabricGameHooks;
+^///?}
 
 import buildcraft.platform.fabric.FabricMenus;
 import buildcraft.platform.menu.MenuOpeningData;
@@ -24,7 +34,9 @@ import buildcraft.platform.menu.MenuOpeningData;
 /^*
  * NeoForge's {@code writeClientSideData} on Fabric: a {@link MenuOpeningData} provider handed straight to
  * {@code openMenu} (vanilla's spectator path) is opened as an extended menu provider writing its own opening data, so
- * the client factory gets the same bytes it gets from {@code BCMenus#open}.
+ * the client factory gets the same bytes it gets from {@code BCMenus#open}. On 1.21.1 also the death-drop capture of
+ * {@code LivingEntityMixin}: a player's dropped stack reaches the level in {@code ServerPlayer.drop} there, not in a
+ * {@code LivingEntity.drop}.
  *^/
 @Mixin(ServerPlayer.class)
 abstract class ServerPlayerMixin {
@@ -37,5 +49,14 @@ abstract class ServerPlayerMixin {
                 FabricMenus.withOpeningData(provider, data::writeOpeningData)));
         }
     }
+
+    //? if <1.21.10 {
+    /^@WrapOperation(method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/Level;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean buildcraft$captureDrop(Level level, Entity drop, Operation<Boolean> original) {
+        return FabricGameHooks.captureDrop((ServerPlayer) (Object) this, (ItemEntity) drop) || original.call(level, drop);
+    }
+    ^///?}
 }
 *///?}

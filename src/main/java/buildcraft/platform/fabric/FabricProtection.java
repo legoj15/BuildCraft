@@ -15,8 +15,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+//? if >=1.21.10 {
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.ProblemReporter;
+//?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -30,7 +32,9 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
@@ -212,7 +216,11 @@ public final class FabricProtection implements PlatformProtection {
     // item right-click listener sees the use: at the player's position).
     @Override
     public boolean canUseItem(Player player, InteractionHand hand) {
+        //? if >=1.21.10 {
         return UseItemCallback.EVENT.invoker().interact(player, player.level(), hand) == InteractionResult.PASS
+        //?} else {
+        /^return UseItemCallback.EVENT.invoker().interact(player, player.level(), hand).getResult() == InteractionResult.PASS
+        ^///?}
             && CommonProtection.canInteractBlock(player.level(), player.blockPosition(), owner(player), player);
     }
 
@@ -393,7 +401,11 @@ public final class FabricProtection implements PlatformProtection {
             if (tag != null) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be != null) {
+                    //? if >=1.21.10 {
                     be.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+                    //?} else {
+                    /^be.loadWithComponents(tag, level.registryAccess());
+                    ^///?}
                     be.setChanged();
                 }
             }

@@ -101,12 +101,8 @@ public final class PreviewBlockModelRenderer {
                 quads, state, light, overlay);
         *///?}
         return true;
-        //?} elif >=1.21.10 {
-        /*buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(state, poseStack, sink, light, overlay);
-        return true;*/
         //?} else {
-        /*Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, sink, light, overlay,
-                net.neoforged.neoforge.model.data.ModelData.EMPTY, null);
+        /*buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(state, poseStack, sink, light, overlay);
         return true;*/
         //?}
     }

@@ -45,103 +45,11 @@ public final class NeoForgeGameTestHooks {
         }
     }
 
-    // 1.21.1 has no dynamic TEST_FUNCTION registry and no test_instance manifests, so it reflects TestFunctions
-    // straight into GameTestRegistry against the buildcraftunofficial:empty arena
-    // (data/buildcraftunofficial/structure/empty.nbt — a 16x16x16 air arena standing in for the 1.21.5+
-    // minecraft:empty structure, with the 1.21.1 DataVersion; the size gives encaseStructure room for the oil-gen
-    // surface scan), from the same BuildCraftGameTests.registerAll.
+    // 1.21.1 has no dynamic TEST_FUNCTION registry: the shared LegacyGameTestRegistry feeds GameTestRegistry from
+    // the same BuildCraftGameTests.registerAll (the Fabric 1.21.1 node's game-test initializer calls it too).
     @SubscribeEvent
     public static void onRegisterGameTests(net.neoforged.neoforge.event.RegisterGameTestsEvent event) {
-        String filter = System.getProperty("buildcraft.gameTestFilter");
-        if (filter == null || filter.isBlank()) {
-            BuildCraftGameTests.registerAll((id, sup) -> addReflectively(id, sup));
-            return;
-        }
-        // `-PbcTests=<glob>` (build.gradle.kts sets the property on this node only). 1.21.1's server Main has
-        // no `--tests` option and its runner takes every TestFunction already in GameTestRegistry, so the
-        // filter has to act here, before the runner reads the list. Same matching as the modern selector
-        // (ResourceSelectorArgument): a pattern without a colon gets "minecraft:", then a case-sensitive
-        // commons-io wildcard match (`*`/`?`) against the full test id.
-        String pattern = filter.strip();
-        if (!pattern.contains(":")) pattern = "minecraft:" + pattern;
-        final String glob = pattern;
-        java.util.concurrent.atomic.AtomicInteger selected = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger total = new java.util.concurrent.atomic.AtomicInteger();
-        BuildCraftGameTests.registerAll((id, sup) -> {
-            total.incrementAndGet();
-            if (org.apache.commons.io.FilenameUtils.wildcardMatch(id, glob)) {
-                selected.incrementAndGet();
-                addReflectively(id, sup);
-            }
-        });
-        // WARN so it clears the quiet game-test console mirror (gameTestServerLog4j2-quiet.xml).
-        org.slf4j.Logger log = com.mojang.logging.LogUtils.getLogger();
-        log.warn("BuildCraft game-test filter '{}' selected {} of {} tests", glob, selected.get(), total.get());
-        if (selected.get() == 0) {
-            log.error("-PbcTests='{}' matched none of the {} BuildCraft game tests; expected a namespace:glob such as "
-                + "buildcraftunofficial:painted_pipe_*", filter, total.get());
-            // Throwing from this listener only reaches server Main, which logs "Failed to start the minecraft
-            // server" and returns normally, so Gradle would report a green run of zero tests for a mistyped
-            // glob. Exit non-zero so the task fails like a failing game test does.
-            System.exit(1);
-        }
-    }
-
-    // 1.21.1 has no dynamic TEST_FUNCTION registry; GameTestRegistry.TEST_FUNCTIONS is a private
-    // mutable list the runner reads via getAllTestFunctions(). We build a TestFunction from the same
-    // (id, supplier) the modern path registers and add it directly (dev/CI-only path).
-    private static void addReflectively(String id, java.util.function.Supplier<java.util.function.Consumer<net.minecraft.gametest.framework.GameTestHelper>> sup) {
-        try {
-            java.lang.reflect.Field f = net.minecraft.gametest.framework.GameTestRegistry.class.getDeclaredField("TEST_FUNCTIONS");
-            f.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            java.util.Collection<net.minecraft.gametest.framework.TestFunction> coll =
-                (java.util.Collection<net.minecraft.gametest.framework.TestFunction>) f.get(null);
-            // skyAccess=true (11th arg) so StructureUtils.encaseStructure omits the BARRIER CEILING
-            // (it always builds walls, but adds a ceiling only when !skyAccess). Without it the oil-gen
-            // surface-scan (findSolidSurfaceTop, top-down) hits the ceiling instead of the test floor,
-            // and spring tests can't place fluid above. Full ctor: batch, name, structure, rotation,
-            // maxTicks, setupTicks, required, manualOnly, maxAttempts, requiredSuccesses, skyAccess, fn.
-            coll.add(new net.minecraft.gametest.framework.TestFunction(
-                readBatch(id), id, "buildcraftunofficial:empty",
-                net.minecraft.world.level.block.Rotation.NONE, readMaxTicks(id, 100), 0L, true, false, 1, 1, true, sup.get()));
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("Failed to register 1.21.1 game test " + id, e);
-        }
-    }
-
-    // 1.21.1 has no test_environment either, but its batch NAME plays the same role (tests of one batch run
-    // concurrently, batches run one after another), so a manifest's "environment" becomes the batch name.
-    // Without this every test, the marker tests included, would share "defaultBatch" and run concurrently
-    // in neighbouring arenas, which is exactly the crosstalk the per-test marker environments exist to prevent
-    // (see MarkerTester). minecraft:default / no environment stay in the shared default batch.
-    private static String readBatch(String id) {
-        String path = id.substring(id.indexOf(':') + 1);
-        try (java.io.InputStream in = NeoForgeGameTestHooks.class.getResourceAsStream(
-                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
-            if (in == null) return buildcraft.GameTestBatchNames.DEFAULT;
-            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
-                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            return buildcraft.GameTestBatchNames.forEnvironment(o.has("environment") ? o.get("environment").getAsString() : null);
-        } catch (Exception e) {
-            return buildcraft.GameTestBatchNames.DEFAULT;
-        }
-    }
-
-    // 1.21.1 has no test_instance manifests, so read each test's declared max_ticks straight from the
-    // same JSON resource the modern nodes consume, keeping the legacy ctor's watchdog in lock-step with
-    // the per-test timeouts (the old hard-coded 100 guillotined longer tests like the overheat hold).
-    private static int readMaxTicks(String id, int fallback) {
-        String path = id.substring(id.indexOf(':') + 1);
-        try (java.io.InputStream in = NeoForgeGameTestHooks.class.getResourceAsStream(
-                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
-            if (in == null) return fallback;
-            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
-                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            return o.has("max_ticks") ? o.get("max_ticks").getAsInt() : fallback;
-        } catch (Exception e) {
-            return fallback;
-        }
+        buildcraft.lib.test.LegacyGameTestRegistry.registerAll();
     }*/
     //?}
 }

@@ -12,7 +12,9 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
 
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
 //? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 
@@ -111,6 +113,23 @@ public final class FabricClientModels implements ClientModels {
     //?} elif >=1.21.11 {
     /^private static void setPlainQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> plain) {
         layer.prepareQuadList().addAll(plain);
+    }
+    ^///?}
+
+    //? if <1.21.10 {
+    /^@Override
+    public net.minecraft.client.resources.model.BakedModel fixedQuadItemModel(List<BakedQuad> quads,
+            net.minecraft.client.renderer.texture.TextureAtlasSprite particle, boolean gui3d,
+            net.minecraft.client.renderer.rendertype.RenderType renderType) {
+        return new FabricQuadItemModel(quads, particle, gui3d, renderType);
+    }
+
+    // The fragile shard's fix is already in the Fabric fluid-container model of this line (FabricClassicModelLoaders):
+    // its fluid layer is a flat masked face with no extrusion walls, on the cull-and-sorted translucent sheet.
+    @Override
+    public net.minecraft.client.resources.model.BakedModel layeredFluidContainerModel(
+            net.minecraft.client.resources.model.BakedModel vanilla) {
+        return vanilla;
     }
     ^///?}
 

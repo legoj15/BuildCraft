@@ -84,6 +84,17 @@ public final class NeoForgeVanillaExtensions implements VanillaExtensions {
     public ItemStack craftingRemainder(ItemStack stack) {
         return stack.getCraftingRemainder();
     }
+    *///?} elif <1.21.10 {
+    /*@Override
+    public ItemStack craftingRemainder(ItemStack stack) {
+        return stack.getCraftingRemainingItem();
+    }
+
+    @Override
+    public void awaitSavedDataWrites() {
+        // NeoForge 1.21.1 hands saved-data writes to its IO worker.
+        net.neoforged.neoforge.common.IOUtilities.waitUntilIOWorkerComplete();
+    }
     *///?}
 
     //? if >=26.1 {

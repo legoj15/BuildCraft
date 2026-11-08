@@ -187,7 +187,11 @@ public final class FabricRegistryServices implements RegistryServices {
 
         @SuppressWarnings("unchecked")
         private Registry<T> registry() {
+            //? if >=1.21.10 {
             Registry<T> registry = (Registry<T>) BuiltInRegistries.REGISTRY.getValue(registryId(registryKey));
+            //?} else {
+            /^Registry<T> registry = (Registry<T>) BuiltInRegistries.REGISTRY.get(registryId(registryKey));
+            ^///?}
             if (registry == null) {
                 throw new IllegalStateException("No built-in registry " + registryId(registryKey));
             }

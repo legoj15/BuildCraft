@@ -371,7 +371,7 @@ public class PipeItemModel implements ItemModel {
 // the ~30%-alpha overlay tint blends instead of rendering opaque — the 1.21.1 ItemRenderer reads the
 // tint alpha and renders the model once per render type, so one render type avoids double-draw.
 // Geometry mirrors the >=1.21.10 ItemModel branch (and pipe_item.json) exactly. 1.21.1-only.
-public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+public class PipeItemModel implements net.minecraft.client.resources.model.BakedModel {
     private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
     private final PipeDefinition definition;
     private final net.minecraft.client.renderer.block.model.ItemOverrides paintOverrides;
@@ -382,13 +382,14 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         this.paintOverrides = new PaintOverrides();
     }
 
-    // Unpainted base rendering — delegate to the vanilla pipe item model.
+    // Unpainted base rendering — delegate to the vanilla pipe item model. Vanilla's quad getter: NeoForge deprecates
+    // it for its model-data overload, which falls back here.
     @Override
+    @SuppressWarnings("deprecation")
     public java.util.List<BakedQuad> getQuads(
             net.minecraft.world.level.block.state.BlockState state, Direction side,
-            net.minecraft.util.RandomSource rand, net.neoforged.neoforge.model.data.ModelData data,
-            net.minecraft.client.renderer.rendertype.RenderType renderType) {
-        return vanillaDelegate.getQuads(state, side, rand, data, renderType);
+            net.minecraft.util.RandomSource rand) {
+        return buildcraft.platform.client.ClientPlatform.extensions().modelQuads(vanillaDelegate, state, side, rand);
     }
 
     @Override public boolean useAmbientOcclusion() { return vanillaDelegate.useAmbientOcclusion(); }
@@ -398,7 +399,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     // Both getters are abstract on 1.21.1's BakedModel yet deprecated there (NeoForge's ModelData/applyTransform
     // hooks are the real ones); getTransforms is still what ItemEntityRenderer reads for the ground bob.
     @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+        return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(vanillaDelegate);
     }
     @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
         return vanillaDelegate.getTransforms();
@@ -439,10 +440,10 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         // Transport/kinesis: vanilla base quads + mask overlay (tintIndex 0), all on the translucent sheet.
         java.util.List<BakedQuad> quads = new ArrayList<>();
         net.minecraft.util.RandomSource rand = net.minecraft.util.RandomSource.create(42L);
-        net.neoforged.neoforge.model.data.ModelData empty = net.neoforged.neoforge.model.data.ModelData.EMPTY;
-        quads.addAll(vanillaDelegate.getQuads(null, null, rand, empty, null));
+        buildcraft.platform.client.ClientVanillaExtensions extensions = buildcraft.platform.client.ClientPlatform.extensions();
+        quads.addAll(extensions.modelQuads(vanillaDelegate, null, null, rand));
         for (Direction d : Direction.values()) {
-            quads.addAll(vanillaDelegate.getQuads(null, d, rand, empty, null));
+            quads.addAll(extensions.modelQuads(vanillaDelegate, null, d, rand));
         }
         TextureAtlasSprite[] maskArray = PipeBaseModelGenStandard.ensureMaskSprites(definition);
         TextureAtlasSprite maskSprite = (maskArray != null && maskArray.length > 0) ? maskArray[0] : null;
@@ -455,7 +456,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     // A fixed-quad BakedModel: serves the painted quads under the null side on a single render type, and
     // delegates transforms / particle / lighting to the vanilla pipe model. Its own overrides are EMPTY
     // (it is already the resolved result, so no further per-stack resolution).
-    private final class PaintedPipeModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+    private final class PaintedPipeModel implements buildcraft.platform.client.ClassicItemRenderType {
         private final java.util.List<BakedQuad> quads;
         private final java.util.List<net.minecraft.client.renderer.rendertype.RenderType> renderTypes;
 
@@ -464,11 +465,12 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
             this.renderTypes = java.util.List.of(renderType);
         }
 
+        // Vanilla's quad getter, as on the outer model.
         @Override
+        @SuppressWarnings("deprecation")
         public java.util.List<BakedQuad> getQuads(
                 net.minecraft.world.level.block.state.BlockState state, Direction side,
-                net.minecraft.util.RandomSource rand, net.neoforged.neoforge.model.data.ModelData data,
-                net.minecraft.client.renderer.rendertype.RenderType renderType) {
+                net.minecraft.util.RandomSource rand) {
             return side == null ? quads : java.util.Collections.emptyList();
         }
 
@@ -483,7 +485,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         @Override public boolean isCustomRenderer() { return false; }
         // Same as the outer model: abstract-yet-deprecated 1.21.1 BakedModel getters.
         @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-            return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
+            return buildcraft.platform.client.ClientPlatform.extensions().modelParticle(vanillaDelegate);
         }
         @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
             return vanillaDelegate.getTransforms();

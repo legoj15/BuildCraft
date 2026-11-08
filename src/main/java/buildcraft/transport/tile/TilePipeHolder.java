@@ -323,12 +323,20 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         super.onDataPacket(net, input);
         onClientUpdate(new BCValueInput(input));
     }
-    //?} elif fabric {
+    //?} elif fabric && >=1.21.10 {
     /*@Override
     public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         if (level != null && level.isClientSide()) {
             onClientUpdate(new BCValueInput(input));
+        }
+    }*/
+    //?} elif fabric {
+    /*@Override
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        if (level != null && level.isClientSide()) {
+            onClientUpdate(new BCValueInput(tag));
         }
     }*/
     //?} elif neoforge {

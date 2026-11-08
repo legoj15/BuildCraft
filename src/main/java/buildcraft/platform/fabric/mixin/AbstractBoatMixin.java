@@ -18,8 +18,10 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 //? if >=1.21.11 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
-//?} else {
+//?} elif >=1.21.10 {
 /^import net.minecraft.world.entity.vehicle.AbstractBoat;
+^///?} else {
+/^import net.minecraft.world.entity.vehicle.Boat;
 ^///?}
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -36,7 +38,11 @@ import buildcraft.platform.fabric.FabricFluidPhysics;
  * water-tag fluid as before. The end of the boat's tick then runs {@link BoatFluidMotion}, the drag of a sticky fluid
  * that NeoForge applies from an entity-tick listener.
  *^/
+//? if >=1.21.10 {
 @Mixin(AbstractBoat.class)
+//?} else {
+/^@Mixin(Boat.class)
+^///?}
 abstract class AbstractBoatMixin {
 
     /^* The four {@code FluidState.is(WATER)} tests (NeoForge's {@code canBoatInFluid(fluidState)}). *^/
@@ -53,11 +59,18 @@ abstract class AbstractBoatMixin {
     //? if >=1.21.11 {
     @WrapOperation(method = "canAddPassenger", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/vehicle/boat/AbstractBoat;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
-    //?} else {
+    //?} elif >=1.21.10 {
     /^@WrapOperation(method = "canAddPassenger", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/vehicle/AbstractBoat;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
+    ^///?} else {
+    /^@WrapOperation(method = "canAddPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/vehicle/Boat;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
     ^///?}
+    //? if >=1.21.10 {
     private boolean buildcraft$eyeInBoatableFluid(AbstractBoat boat, TagKey<Fluid> tag, Operation<Boolean> original) {
+    //?} else {
+    /^private boolean buildcraft$eyeInBoatableFluid(Boat boat, TagKey<Fluid> tag, Operation<Boolean> original) {
+    ^///?}
         return tag == FluidTags.WATER
                 ? FabricFluidPhysics.interaction(boat).buildcraft$eyeInBoatableWater()
                 : original.call(boat, tag);
@@ -66,7 +79,7 @@ abstract class AbstractBoatMixin {
     /^* The end of the boat's tick (NeoForge: {@code EntityTickEvent.Post}), after it has floated and moved. *^/
     @Inject(method = "tick", at = @At("TAIL"))
     private void buildcraft$stickyFluidDrag(CallbackInfo ci) {
-        BoatFluidMotion.tick((AbstractBoat) (Object) this);
+        BoatFluidMotion.tick((net.minecraft.world.entity.Entity) (Object) this);
     }
 }
 *///?}

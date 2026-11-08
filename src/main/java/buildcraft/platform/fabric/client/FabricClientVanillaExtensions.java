@@ -23,8 +23,55 @@ import buildcraft.platform.client.ClientVanillaExtensions;
 public final class FabricClientVanillaExtensions implements ClientVanillaExtensions {
     @Override
     public boolean shouldRenderFace(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
+        //? if >=1.21.10 {
         return Block.shouldRenderFace(state, level.getBlockState(pos.relative(face)), face);
+        //?} else {
+        /^// 1.21.1's vanilla test still reads the neighbour from the level itself.
+        return Block.shouldRenderFace(state, level, pos, face, pos.relative(face));
+        ^///?}
     }
+
+    //? if <1.21.10 {
+    /^@Override
+    public int spritePixel(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite, int frameIndex, int x,
+            int y) {
+        // NeoForge's TextureAtlasSprite.getPixelRGBA, from the class-tweaked original image and frame grid.
+        net.minecraft.client.renderer.texture.SpriteContents contents = sprite.contents();
+        if (contents.animatedTexture != null) {
+            x += contents.animatedTexture.getFrameX(frameIndex) * contents.width();
+            y += contents.animatedTexture.getFrameY(frameIndex) * contents.height();
+        }
+        return contents.originalImage.getPixelRGBA(x, y);
+    }
+
+    @Override
+    public void setTextShadow(net.minecraft.client.gui.components.EditBox box, boolean shadow) {
+        ((buildcraft.platform.fabric.client.FabricEditBoxShadow) box).buildcraft$setTextShadow(shadow);
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> layerQuads(
+            net.minecraft.client.resources.model.BakedModel model, BlockState state, Direction side,
+            net.minecraft.util.RandomSource random, boolean translucent) {
+        // Vanilla tracks one layer per block: all of the model's quads draw on it.
+        boolean onTranslucent = net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(state)
+                == net.minecraft.client.renderer.rendertype.RenderTypes.translucent();
+        return onTranslucent == translucent ? model.getQuads(state, side, random) : java.util.List.of();
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> modelQuads(
+            net.minecraft.client.resources.model.BakedModel model, BlockState state, Direction side,
+            net.minecraft.util.RandomSource random) {
+        return model.getQuads(state, side, random);
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite modelParticle(
+            net.minecraft.client.resources.model.BakedModel model) {
+        return model.getParticleIcon();
+    }
+    ^///?}
 
     //? if >=26.1 {
     @Override
@@ -37,7 +84,7 @@ public final class FabricClientVanillaExtensions implements ClientVanillaExtensi
     public ScreenRectangle peekScissor(net.minecraft.client.gui.GuiGraphicsExtractor graphics) {
         return graphics.scissorStack.peek();
     }
-    //?} else {
+    //?} elif >=1.21.10 {
     /^@Override
     public void submitPictureInPicture(net.minecraft.client.gui.GuiGraphics graphics,
             net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState state) {
@@ -50,7 +97,7 @@ public final class FabricClientVanillaExtensions implements ClientVanillaExtensi
     }
     ^///?}
 
-    //? if >=1.21.10 && <26.1 {
+    //? if <26.1 {
     /^@Override
     public void renderSingleBlock(net.minecraft.world.level.block.state.BlockState state,
             com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffers,
@@ -58,8 +105,10 @@ public final class FabricClientVanillaExtensions implements ClientVanillaExtensi
         net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, buffers,
                 light, overlay);
     }
+    ^///?}
 
-    @Override
+    //? if >=1.21.10 && <26.1 {
+    /^    @Override
     public net.minecraft.client.renderer.texture.TextureAtlasSprite particleIcon(
             net.minecraft.world.level.block.state.BlockState state) {
         return net.minecraft.client.Minecraft.getInstance().getModelManager().getBlockModelShaper()

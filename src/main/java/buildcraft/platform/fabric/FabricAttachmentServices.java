@@ -15,10 +15,12 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
+//?}
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
@@ -72,6 +74,7 @@ public final class FabricAttachmentServices implements AttachmentServices {
     }
 
     private static <T extends BCAttachmentData> Codec<T> codec(Supplier<T> factory) {
+        //? if >=1.21.10 {
         return CompoundTag.CODEC.xmap(tag -> {
             T value = factory.get();
             value.deserialize(TagValueInput.create(ProblemReporter.DISCARDING, registries(), tag));
@@ -81,6 +84,13 @@ public final class FabricAttachmentServices implements AttachmentServices {
             value.serialize(output);
             return output.buildResult();
         });
+        //?} else {
+        /^return CompoundTag.CODEC.xmap(tag -> {
+            T value = factory.get();
+            value.deserializeNBT(registries(), tag);
+            return value;
+        }, value -> value.serializeNBT(registries()));
+        ^///?}
     }
 
     /^* The running server's registries, else none: primitives round-trip, registry-backed fields default. *^/

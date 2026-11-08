@@ -10,6 +10,15 @@ package buildcraft.platform.fabric.client;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import net.minecraft.world.level.block.entity.BlockEntity;
+//? if <1.21.10 {
+/^import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+
+import net.fabricmc.fabric.api.event.client.player.ClientPickBlockGatherCallback;
+
+import buildcraft.platform.hook.PickStackBlock;
+^///?}
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
@@ -37,6 +46,20 @@ public final class FabricClientLoaderHookRoutes {
         });
         ClientTickEvents.START_CLIENT_TICK.register(client -> FabricLoaderHookRoutes.runJoined(CLIENT_JOINED));
         ClientChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> FabricLoaderHookRoutes.chunkUnloading(chunk));
+        //? if <1.21.10 {
+        /^// The pick is the client's before 1.21.10 (NeoForge's player-aware getCloneItemStack runs there too); an
+        // empty stack lets vanilla's own pick run.
+        ClientPickBlockGatherCallback.EVENT.register((player, result) -> {
+            if (result.getType() != HitResult.Type.BLOCK || !(result instanceof BlockHitResult hit)) {
+                return ItemStack.EMPTY;
+            }
+            if (!(player.level().getBlockState(hit.getBlockPos()).getBlock() instanceof PickStackBlock block)) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack picked = block.pickedStack(player.level(), hit.getBlockPos(), player);
+            return picked == null ? ItemStack.EMPTY : picked;
+        });
+        ^///?}
     }
 }
 *///?}

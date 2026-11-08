@@ -17,7 +17,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
+//? if >=1.21.10 {
 import net.minecraft.world.level.redstone.Orientation;
+//?}
 
 import buildcraft.platform.fabric.FabricGameHooks;
 
@@ -38,7 +40,10 @@ abstract class ServerLevelMixin {
 
     @Inject(method = "updateNeighborsAtExceptFromFacing", at = @At("HEAD"))
     private void buildcraft$neighborNotifyExcept(BlockPos pos, Block sourceBlock, Direction skip,
-                                                 @Nullable Orientation orientation, CallbackInfo ci) {
+                                                 //? if >=1.21.10 {
+                                                 @Nullable Orientation orientation,
+                                                 //?}
+                                                 CallbackInfo ci) {
         ServerLevel self = (ServerLevel) (Object) this;
         FabricGameHooks.fireNeighborNotify(self, pos, self.getBlockState(pos));
     }

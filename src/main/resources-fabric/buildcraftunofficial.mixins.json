@@ -39,9 +39,13 @@
   "client": [
     "client.AbstractContainerScreenMixin",
     "client.ClientLevelMixin",
+    "client.ClientPacketListenerMixin",
+    "client.EditBoxMixin",
+    "client.ItemRendererMixin",
     "client.FogRendererMixin",
     "client.GuiGraphicsExtractorMixin",
     "client.LevelEventHandlerMixin",
+    "client.ModelManagerMixin",
     "client.MinecraftMixin",
     "client.MultiPlayerGameModeMixin"
   ],

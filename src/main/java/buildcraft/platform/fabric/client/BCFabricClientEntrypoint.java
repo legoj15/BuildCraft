@@ -21,8 +21,11 @@ public final class BCFabricClientEntrypoint implements ClientModInitializer {
         FabricClientLoaderHookRoutes.register();
         //? if >=26.1 {
         FabricFluidContainerModel.register();
-        //?} else {
+        //?} elif >=1.21.10 {
         /^FabricLegacyFluidContainerModel.register();
+        FabricLegacyRenderLayers.register();
+        ^///?} else {
+        /^FabricClassicModelLoaders.register();
         FabricLegacyRenderLayers.register();
         ^///?}
         BCCoreClient.init();

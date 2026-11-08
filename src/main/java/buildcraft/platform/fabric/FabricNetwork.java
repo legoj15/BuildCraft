@@ -44,7 +44,9 @@ import buildcraft.platform.network.PacketHandler;
  * <p><b>Size.</b> Every payload is registered with {@code registerLarge}, so Fabric splits one above its 1 MiB split
  * threshold (under vanilla's 2 MiB frame limit; a huge blueprint in a snapshot response) and reassembles it, as NeoForge's packet splitter does for every
  * payload; a small payload goes out unsplit. The reassembled cap is {@link #MAX_PAYLOAD_BYTES} towards a client and
- * {@link #MAX_SERVERBOUND_PAYLOAD_BYTES} towards the server.
+ * {@link #MAX_SERVERBOUND_PAYLOAD_BYTES} towards the server. Fabric API for 1.21.1 has no splitting: payloads are
+ * registered plainly there and capped by vanilla's custom-payload limits (1 MiB towards a client, 32 KiB towards the
+ * server), where NeoForge 1.21.1 splits them.
  *^/
 public final class FabricNetwork implements BCNetwork {
 
@@ -62,7 +64,7 @@ public final class FabricNetwork implements BCNetwork {
     public <T extends CustomPacketPayload> void clientbound(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
         versions.record(type, version);
-        clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
+        registerClientbound(type, codec);
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerReceiver(type, handler);
         }
@@ -72,7 +74,7 @@ public final class FabricNetwork implements BCNetwork {
     public <T extends CustomPacketPayload> void serverbound(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
         versions.record(type, version);
-        serverboundPlay().registerLarge(type, codec, MAX_SERVERBOUND_PAYLOAD_BYTES);
+        registerServerbound(type, codec);
         registerServerReceiver(type, handler);
     }
 
@@ -80,12 +82,30 @@ public final class FabricNetwork implements BCNetwork {
     public <T extends CustomPacketPayload> void bidirectional(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf, T> codec, PacketHandler<T> handler, String version) {
         versions.record(type, version);
-        clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
-        serverboundPlay().registerLarge(type, codec, MAX_SERVERBOUND_PAYLOAD_BYTES);
+        registerClientbound(type, codec);
+        registerServerbound(type, codec);
         registerServerReceiver(type, handler);
         if (Platform.loader().isPhysicalClient()) {
             FabricClientNetwork.registerReceiver(type, handler);
         }
+    }
+
+    private static <T extends CustomPacketPayload> void registerClientbound(CustomPacketPayload.Type<T> type,
+            StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
+        //? if >=1.21.10 {
+        clientboundPlay().registerLarge(type, codec, MAX_PAYLOAD_BYTES);
+        //?} else {
+        /^clientboundPlay().register(type, codec);
+        ^///?}
+    }
+
+    private static <T extends CustomPacketPayload> void registerServerbound(CustomPacketPayload.Type<T> type,
+            StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
+        //? if >=1.21.10 {
+        serverboundPlay().registerLarge(type, codec, MAX_SERVERBOUND_PAYLOAD_BYTES);
+        //?} else {
+        /^serverboundPlay().register(type, codec);
+        ^///?}
     }
 
     // Fabric API names its payload registries by direction (clientbound/serverbound) from 26.1, by side before

@@ -6,8 +6,12 @@
 package buildcraft.platform.fabric.client;
 
 //? if fabric {
-/*import fuzs.forgeconfigapiport.fabric.api.v5.client.ConfigScreenFactoryRegistry;
-import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+/*import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+//? if >=1.21.10 {
+import fuzs.forgeconfigapiport.fabric.api.v5.client.ConfigScreenFactoryRegistry;
+//?} else {
+/^import fuzs.forgeconfigapiport.fabric.api.neoforge.v4.client.ConfigScreenFactoryRegistry;
+^///?}
 
 import buildcraft.platform.client.ClientConfigScreens;
 

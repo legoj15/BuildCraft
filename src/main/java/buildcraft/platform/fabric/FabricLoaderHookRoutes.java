@@ -31,7 +31,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 ^///?}
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+//? if >=1.21.10 {
 import net.fabricmc.fabric.api.event.player.PlayerPickItemEvents;
+//?}
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.item.v1.EnchantingContext;
 import net.fabricmc.fabric.api.item.v1.EnchantmentEvents;
@@ -83,8 +85,11 @@ public final class FabricLoaderHookRoutes {
             FabricProtection.isBreakProbe(level, pos, player)
                 || !(state.getBlock() instanceof PlayerBreakGuard guard
                     && guard.keepsBlockOnPlayerBreak(state, level, pos, player)));
+        //? if >=1.21.10 {
         PlayerPickItemEvents.BLOCK.register((player, pos, state, includeData) ->
             state.getBlock() instanceof PickStackBlock block ? block.pickedStack(player.level(), pos, player) : null);
+        //?}
+        // Before 1.21.10 the pick is the client's: FabricClientLoaderHookRoutes asks the block there.
         EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment, stack, context) -> {
             if (!(stack.getItem() instanceof EnchantmentFilterItem item)) {
                 return TriState.DEFAULT;

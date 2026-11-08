@@ -71,7 +71,13 @@ public final class WorkClaimMod implements AutoCloseable {
             for (WorkClaimMod claim : OPEN) {
                 refused |= claim.itemAsk(player.blockPosition());
             }
+            //? if >=1.21.10 {
             return refused ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS;
+            //?} else {
+            /^net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+            return refused ? net.minecraft.world.InteractionResultHolder.fail(held)
+                : net.minecraft.world.InteractionResultHolder.pass(held);
+            ^///?}
         });
     }*/
     //?}

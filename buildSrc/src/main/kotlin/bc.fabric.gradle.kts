@@ -105,8 +105,9 @@ fabricApi {
         createSourceSet = true
         modId = "buildcraftunofficial_gametest"
         enableGameTests = true
-        // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check.
-        enableClientGameTests = true
+        // The client game test (BCFabricClientGameTest, runClientGameTest below): an in-world visual check. Not on
+        // 1.21.1, whose Fabric API has no client game-test module (fabric-client-gametest-api-v1 starts at 1.21.4).
+        enableClientGameTests = !isPre1_21_10
         // EULA accepted (user, 2026-11-06). Loom writes it only into the client game test's run dir (its
         // multiplayer phase starts a real dedicated server, which will not run without it); runGameTest's
         // headless server never asks.
@@ -181,6 +182,8 @@ tasks.named<JavaExec>("runGameTest") {
     // Optional filter, as on NeoForge: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's test selector glob).
     if (bcTests != null) {
         systemProperty("fabric-api.gametest.filter", bcTests)
+        // 1.21.1's Fabric API has no filter: LegacyGameTestRegistry applies this one as it registers.
+        systemProperty("buildcraft.gameTestFilter", bcTests)
     }
     val runDir = project.file("build/run/gameTest")
     val consoleLog = runDir.resolve("console.log")
@@ -218,7 +221,7 @@ tasks.named<JavaExec>("runGameTest") {
 // fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
 // It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
 // hang it on `check`).
-tasks.named<JavaExec>("runClientGameTest") {
+if (!isPre1_21_10) tasks.named<JavaExec>("runClientGameTest") {
     systemProperty("buildcraft.dev", "true")
     val runDir = project.file("build/run/clientGameTest")
     val consoleLog = runDir.resolve("console.log")

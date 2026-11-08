@@ -70,13 +70,23 @@ public class ItemWrench_Neptune extends Item implements IToolWrench, SneakBypass
             ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
     }
 
-    //? if <1.21.10 {
-    /*// 1.21.1 has no enchantable/repairable/weapon components: the item answers those questions itself.
+    //? if neoforge && <1.21.10 {
+    /*// 1.21.1 has no enchantable component: the item answers itself (NeoForge's stack-aware hook; vanilla's own no-arg
+    // one, which Fabric overrides, is deprecated there).
+    @buildcraft.platform.LoaderHook("neoforge:IItemExtension#getEnchantmentValue")
     @Override
     public int getEnchantmentValue(ItemStack stack) {
         return tier.enchantmentValue();
-    }
+    }*/
+    //?} elif fabric && <1.21.10 {
+    /*@Override
+    public int getEnchantmentValue() {
+        return tier.enchantmentValue();
+    }*/
+    //?}
 
+    //? if <1.21.10 {
+    /*// 1.21.1 has no repairable/weapon components: the item answers those questions itself.
     @Override
     public boolean isValidRepairItem(ItemStack stack, ItemStack repairWith) {
         return tier.repairs(repairWith) || super.isValidRepairItem(stack, repairWith);

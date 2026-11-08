@@ -10,92 +10,50 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.inventory.SimpleContainerData;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineIron_BC8;
-import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.engine.EngineMenuData;
 import buildcraft.lib.gui.ContainerBCTile;
+import buildcraft.lib.gui.WideContainerData;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 
 /**
  * Container (menu) for the combustion engine GUI.
- * Syncs engine state + fluid tank levels to the client via ContainerData.
+ * Syncs engine state + fluid tank levels to the client via WideContainerData.
  */
 @SuppressWarnings("this-escape")
 public class ContainerEngineIron extends ContainerBCTile<TileEngineIron_BC8> {
     // The engine tile is the inherited `tile` field (ContainerBCTile). Screens read it via menu.tile.
-    private final ContainerData data;
+    private final EngineMenuData engineData;
+    private final WideContainerData.IntValue fuelAmount;
+    private final WideContainerData.IntValue coolantAmount;
+    private final WideContainerData.IntValue residueAmount;
+    private final WideContainerData.IntValue fuelFluidId;
+    private final WideContainerData.IntValue coolantFluidId;
+    private final WideContainerData.IntValue residueFluidId;
 
     // Widget indices (in registration order) for screen to reference
     public final WidgetFluidTank widgetFuel;
     public final WidgetFluidTank widgetCoolant;
     public final WidgetFluidTank widgetResidue;
 
-    // Data slot indices
-    private static final int DATA_POWER_HI = 0;
-    private static final int DATA_POWER_LO = 1;
-    private static final int DATA_HEAT = 2;
-    private static final int DATA_POWER_STAGE = 3;
-    private static final int DATA_BURNING = 4;
-    private static final int DATA_CURRENT_OUTPUT_HI = 5;
-    private static final int DATA_CURRENT_OUTPUT_LO = 6;
-    private static final int DATA_FUEL_AMOUNT = 7;
-    private static final int DATA_COOLANT_AMOUNT = 8;
-    private static final int DATA_RESIDUE_AMOUNT = 9;
-    private static final int DATA_FUEL_FLUID_ID = 10;
-    private static final int DATA_COOLANT_FLUID_ID = 11;
-    private static final int DATA_RESIDUE_FLUID_ID = 12;
-    private static final int DATA_COUNT = 13;
-
     /** Server constructor */
     public ContainerEngineIron(int containerId, Inventory playerInv, TileEngineIron_BC8 engine) {
         super(BCEnergyMenuTypes.ENGINE_IRON.get(), containerId, playerInv.player, engine);
 
-        // Server side: read live values from the tile entity
-        // Client side: use SimpleContainerData so set() actually stores values
-        if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
-            this.data = new ContainerData() {
-                @Override
-                public int get(int index) {
-                    return switch (index) {
-                        case DATA_POWER_HI -> (int) (engine.getPower() >>> 32);
-                        case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
-                        case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
-                        case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
-                        case DATA_BURNING -> engine.isBurning() ? 1 : 0;
-                        case DATA_CURRENT_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
-                        case DATA_CURRENT_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
-                        case DATA_FUEL_AMOUNT -> engine.tankFuel.getAmountMb(0);
-                        case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getAmountMb(0);
-                        case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getAmountMb(0);
-                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getFluidStack(0));
-                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getFluidStack(0));
-                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getFluidStack(0));
-                        default -> 0;
-                    };
-                }
-
-                @Override
-                public void set(int index, int value) {
-                    // Server-side: no-op (values are read from engine directly)
-                }
-
-                @Override
-                public int getCount() {
-                    return DATA_COUNT;
-                }
-            };
-        } else {
-            // Client-side: SimpleContainerData stores values written by sync packets
-            SimpleContainerData clientData = new SimpleContainerData(DATA_COUNT);
-            clientData.set(DATA_HEAT, Float.floatToIntBits(TileEngineBase_BC8.MIN_HEAT));
-            this.data = clientData;
-        }
-
-        addDataSlots(this.data);
+        // Engine and tank state synced to the client; WideContainerData keeps every value intact through vanilla's
+        // 16-bit menu-data packet (the only one Fabric has).
+        WideContainerData.Builder sync = WideContainerData.builder();
+        engineData = new EngineMenuData(sync, engine, () -> engine.getPower());
+        fuelAmount = sync.addInt(() -> engine.tankFuel.getAmountMb(0));
+        coolantAmount = sync.addInt(() -> engine.tankCoolant.getAmountMb(0));
+        residueAmount = sync.addInt(() -> engine.tankResidue.getAmountMb(0));
+        fuelFluidId = sync.addInt(() -> getFluidRegistryId(engine.tankFuel.getFluidStack(0)));
+        coolantFluidId = sync.addInt(() -> getFluidRegistryId(engine.tankCoolant.getFluidStack(0)));
+        residueFluidId = sync.addInt(() -> getFluidRegistryId(engine.tankResidue.getFluidStack(0)));
+        addDataSlots(sync.buildFor(engine));
 
         // Player inventory — positioned at standard location
         addFullPlayerInventory(8, 95);
@@ -116,49 +74,47 @@ public class ContainerEngineIron extends ContainerBCTile<TileEngineIron_BC8> {
     // --- Data accessors for the screen ---
 
     public long getSyncedPower() {
-        return ((long) data.get(DATA_POWER_HI) << 32) | (data.get(DATA_POWER_LO) & 0xFFFFFFFFL);
+        return engineData.power();
     }
 
     public float getSyncedHeat() {
-        return Float.intBitsToFloat(data.get(DATA_HEAT));
+        return engineData.heat();
     }
 
     public EnumPowerStage getSyncedPowerStage() {
-        int ord = data.get(DATA_POWER_STAGE);
-        EnumPowerStage[] values = EnumPowerStage.VALUES;
-        return values[Math.min(ord, values.length - 1)];
+        return engineData.stage();
     }
 
     public boolean isSyncedBurning() {
-        return data.get(DATA_BURNING) != 0;
+        return engineData.burning();
     }
 
     public long getSyncedCurrentOutput() {
-        return ((long) data.get(DATA_CURRENT_OUTPUT_HI) << 32) | (data.get(DATA_CURRENT_OUTPUT_LO) & 0xFFFFFFFFL);
+        return engineData.output();
     }
 
     public int getSyncedFuelAmount() {
-        return data.get(DATA_FUEL_AMOUNT);
+        return fuelAmount.get();
     }
 
     public int getSyncedCoolantAmount() {
-        return data.get(DATA_COOLANT_AMOUNT);
+        return coolantAmount.get();
     }
 
     public int getSyncedResidueAmount() {
-        return data.get(DATA_RESIDUE_AMOUNT);
+        return residueAmount.get();
     }
 
     public Fluid getSyncedFuelFluid() {
-        return getFluidFromRegistryId(data.get(DATA_FUEL_FLUID_ID));
+        return getFluidFromRegistryId(fuelFluidId.get());
     }
 
     public Fluid getSyncedCoolantFluid() {
-        return getFluidFromRegistryId(data.get(DATA_COOLANT_FLUID_ID));
+        return getFluidFromRegistryId(coolantFluidId.get());
     }
 
     public Fluid getSyncedResidueFluid() {
-        return getFluidFromRegistryId(data.get(DATA_RESIDUE_FLUID_ID));
+        return getFluidFromRegistryId(residueFluidId.get());
     }
 
     private static int getFluidRegistryId(buildcraft.api.fluids.BCFluidStack resource) {

@@ -8,32 +8,21 @@ package buildcraft.energy.container;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.gui.ContainerBCTile;
-import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.engine.EngineMenuData;
+import buildcraft.lib.gui.WideContainerData;
 
 @SuppressWarnings("this-escape")
 public class ContainerEngineStone extends ContainerBCTile<TileEngineStone_BC8> {
     // The engine tile is the inherited `tile` field (ContainerBCTile). Screens read it via menu.tile.
-    private final ContainerData data;
-
-    // Data indices — ContainerData only supports int, so longs are split into hi/lo
-    private static final int DATA_BURN_TIME = 0;
-    private static final int DATA_TOTAL_BURN_TIME = 1;
-    private static final int DATA_POWER_HI = 2;
-    private static final int DATA_POWER_LO = 3;
-    private static final int DATA_HEAT = 4;         // float → Float.floatToIntBits
-    private static final int DATA_OUTPUT_HI = 5;
-    private static final int DATA_OUTPUT_LO = 6;
-    private static final int DATA_POWER_STAGE = 7;  // EnumPowerStage ordinal
-    private static final int DATA_IS_BURNING_ENGINE = 8; // 1 if engine is actively burning
-    private static final int DATA_COUNT = 9;
+    private final WideContainerData.IntValue burnTime;
+    private final WideContainerData.IntValue totalBurnTime;
+    private final EngineMenuData engineData;
 
     // Client-side constructor (from network)
     public ContainerEngineStone(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -44,47 +33,13 @@ public class ContainerEngineStone extends ContainerBCTile<TileEngineStone_BC8> {
     public ContainerEngineStone(int containerId, Inventory playerInv, TileEngineStone_BC8 engine) {
         super(BCEnergyMenuTypes.ENGINE_STONE.get(), containerId, playerInv.player, engine);
 
-        // Create container data for syncing engine state to client
-        if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
-            this.data = new ContainerData() {
-                @Override
-                public int get(int index) {
-                    return switch (index) {
-                        case DATA_BURN_TIME -> engine.burnTime;
-                        case DATA_TOTAL_BURN_TIME -> engine.totalBurnTime;
-                        case DATA_POWER_HI -> (int) (engine.getPower() >>> 32);
-                        case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
-                        case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
-                        case DATA_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
-                        case DATA_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
-                        case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
-                        case DATA_IS_BURNING_ENGINE -> engine.isBurning() ? 1 : 0;
-                        default -> 0;
-                    };
-                }
-
-                @Override
-                public void set(int index, int value) {
-                    switch (index) {
-                        case DATA_BURN_TIME -> engine.burnTime = value;
-                        case DATA_TOTAL_BURN_TIME -> engine.totalBurnTime = value;
-                        // Other fields are read-only on client
-                    }
-                }
-
-                @Override
-                public int getCount() {
-                    return DATA_COUNT;
-                }
-            };
-        } else {
-            SimpleContainerData clientData = new SimpleContainerData(DATA_COUNT);
-            // Pre-seed heat with MIN_HEAT so ledger shows 20°C, not 0°C, before first sync
-            clientData.set(DATA_HEAT, Float.floatToIntBits(TileEngineBase_BC8.MIN_HEAT));
-            this.data = clientData;
-        }
-
-        addDataSlots(this.data);
+        // Engine state synced to the client; WideContainerData keeps every value intact through vanilla's 16-bit
+        // menu-data packet (the only one Fabric has).
+        WideContainerData.Builder sync = WideContainerData.builder();
+        burnTime = sync.addInt(() -> engine.burnTime);
+        totalBurnTime = sync.addInt(() -> engine.totalBurnTime);
+        engineData = new EngineMenuData(sync, engine, () -> engine.getPower());
+        addDataSlots(sync.buildFor(engine));
 
         // Fuel slot at (80, 41) — same as 1.12
         addSlot(new FuelSlot(engine, 0, 80, 41));
@@ -93,14 +48,14 @@ public class ContainerEngineStone extends ContainerBCTile<TileEngineStone_BC8> {
         addFullPlayerInventory(8, 84, playerInv);
     }
 
-    // --- Accessors for the screen (use synced ContainerData, not direct tile access) ---
+    // --- Accessors for the screen (use synced menu data, not direct tile access) ---
 
     public int getBurnTime() {
-        return data.get(DATA_BURN_TIME);
+        return burnTime.get();
     }
 
     public int getTotalBurnTime() {
-        return data.get(DATA_TOTAL_BURN_TIME);
+        return totalBurnTime.get();
     }
 
     public boolean isBurning() {
@@ -113,32 +68,29 @@ public class ContainerEngineStone extends ContainerBCTile<TileEngineStone_BC8> {
         return (float) getBurnTime() / total;
     }
 
-    /** Synced power in micro-MJ (reconstructed from hi/lo ints). */
+    /** Synced power in micro-MJ. */
     public long getSyncedPower() {
-        return ((long) data.get(DATA_POWER_HI) << 32) | (data.get(DATA_POWER_LO) & 0xFFFFFFFFL);
+        return engineData.power();
     }
 
-    /** Synced heat level (reconstructed from float bits). */
+    /** Synced heat in °C. */
     public float getSyncedHeat() {
-        return Float.intBitsToFloat(data.get(DATA_HEAT));
+        return engineData.heat();
     }
 
     /** Synced power stage (for icon display). */
     public buildcraft.api.enums.EnumPowerStage getSyncedPowerStage() {
-        int ordinal = data.get(DATA_POWER_STAGE);
-        buildcraft.api.enums.EnumPowerStage[] values = buildcraft.api.enums.EnumPowerStage.values();
-        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        return buildcraft.api.enums.EnumPowerStage.BLUE;
+        return engineData.stage();
     }
 
     /** Synced engine-on state (for icon display). */
     public boolean isSyncedBurningEngine() {
-        return data.get(DATA_IS_BURNING_ENGINE) != 0;
+        return engineData.burning();
     }
 
-    /** Synced current output in micro-MJ/tick (reconstructed from hi/lo ints). */
+    /** Synced current output in micro-MJ/tick. */
     public long getSyncedCurrentOutput() {
-        return ((long) data.get(DATA_OUTPUT_HI) << 32) | (data.get(DATA_OUTPUT_LO) & 0xFFFFFFFFL);
+        return engineData.output();
     }
 
     // --- Fuel slot that delegates to the tile entity's fuel stack ---

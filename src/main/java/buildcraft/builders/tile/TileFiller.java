@@ -863,7 +863,7 @@ public class TileFiller extends TileBC_Neptune
         return new ContainerFiller(containerId, playerInv, this);
     }
 
-    // ==================== Sync helpers for ContainerData ====================
+    // ==================== Sync helpers for the menu data ====================
 
     public boolean getCanExcavate() {
         return canExcavate;

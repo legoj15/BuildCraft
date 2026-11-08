@@ -16,8 +16,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
@@ -29,6 +27,7 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.BCContainerSupport;
 import buildcraft.lib.gui.ContainerBCTile;
+import buildcraft.lib.gui.WideContainerData;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.NetCodecSanity;
@@ -44,14 +43,6 @@ import buildcraft.platform.network.PacketContext;
 @SuppressWarnings("this-escape")
 public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
-    private static final int DATA_CAN_EXCAVATE = 0;
-    private static final int DATA_SNAPSHOT_TYPE = 1;  // -1 = none, 0 = TEMPLATE, 1 = BLUEPRINT
-    private static final int DATA_LEFT_TO_BREAK = 2;
-    private static final int DATA_LEFT_TO_PLACE = 3;
-    private static final int DATA_FLUID_MODE = 4;     // ordinal of EnumFluidHandlingMode
-    private static final int DATA_CONTENTS_MODE = 5;  // ordinal of EnumContainerContentsMode
-    private static final int DATA_COUNT = 6;
-
     /** The resource panel's display slots, 4 wide x 6 tall. {@link #getDisplay} never reads past them. */
     private static final int DISPLAY_COLUMNS = 4;
     private static final int DISPLAY_ROWS = 6;
@@ -62,7 +53,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     static final int MAX_DISPLAY_ENTRIES = DISPLAY_COLUMNS * DISPLAY_ROWS;
 
     /** Container message: server pushes the current remainingDisplayRequired list to the client
-     *  whenever it changes. {@link SimpleContainerData} only syncs ints, and the display slots
+     *  whenever it changes. Menu data only syncs numbers, and the display slots
      *  need ItemStacks, so we encode (item id, count) pairs over a container message. */
     private static final int NET_DISPLAY_LIST = 10;
     /** Container message: server pushes current tank contents (fluid id + amount per tank) on
@@ -75,7 +66,13 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     /** Client → server: the player clicked the container-contents-mode cycling button. */
     public static final int NET_CONTENTS_MODE_CLICK = 13;
 
-    private final ContainerData data;
+    private final WideContainerData.BooleanValue canExcavate;
+    /** -1 = none, else the snapshot type's ordinal (0 = TEMPLATE, 1 = BLUEPRINT). */
+    private final WideContainerData.IntValue snapshotType;
+    private final WideContainerData.IntValue leftToBreak;
+    private final WideContainerData.IntValue leftToPlace;
+    private final WideContainerData.IntValue fluidMode;
+    private final WideContainerData.IntValue contentsMode;
     public final List<WidgetFluidTank> widgetTanks;
 
     /** Server-side: last-broadcast display list. Used to suppress re-sending identical data. */
@@ -106,36 +103,15 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     public ContainerBuilder(int containerId, Inventory playerInv, TileBuilder tile) {
         super(BCBuildersMenuTypes.BUILDER.get(), containerId, playerInv.player, tile);
 
-        if (tile != null && tile.getLevel() != null && !tile.getLevel().isClientSide()) {
-            this.data = new ContainerData() {
-                @Override
-                public int get(int index) {
-                    return switch (index) {
-                        case DATA_CAN_EXCAVATE -> tile.canExcavate() ? 1 : 0;
-                        case DATA_SNAPSHOT_TYPE -> tile.snapshotType == null ? -1 : tile.snapshotType.ordinal();
-                        case DATA_LEFT_TO_BREAK -> tile.getBuilder() != null ? tile.getBuilder().leftToBreak : 0;
-                        case DATA_LEFT_TO_PLACE -> tile.getBuilder() != null ? tile.getBuilder().leftToPlace : 0;
-                        case DATA_FLUID_MODE -> tile.getFluidMode().ordinal();
-                        case DATA_CONTENTS_MODE -> tile.getContainerContentsMode().ordinal();
-                        default -> 0;
-                    };
-                }
-
-                @Override
-                public void set(int index, int value) {
-                    // Read-only on client
-                }
-
-                @Override
-                public int getCount() {
-                    return DATA_COUNT;
-                }
-            };
-        } else {
-            this.data = new SimpleContainerData(DATA_COUNT);
-        }
-
-        addDataSlots(this.data);
+        // WideContainerData keeps the block counts intact through vanilla's 16-bit menu-data packet (Fabric's only one).
+        WideContainerData.Builder sync = WideContainerData.builder();
+        canExcavate = sync.addBoolean(() -> tile.canExcavate());
+        snapshotType = sync.addInt(() -> tile.snapshotType == null ? -1 : tile.snapshotType.ordinal());
+        leftToBreak = sync.addInt(() -> tile.getBuilder() != null ? tile.getBuilder().leftToBreak : 0);
+        leftToPlace = sync.addInt(() -> tile.getBuilder() != null ? tile.getBuilder().leftToPlace : 0);
+        fluidMode = sync.addInt(() -> tile.getFluidMode().ordinal());
+        contentsMode = sync.addInt(() -> tile.getContainerContentsMode().ordinal());
+        addDataSlots(sync.buildFor(tile));
 
         // Wrapper giving vanilla Slot objects something to read/write. Index 0 routes through
         // setSnapshot (which re-triggers snapshot loading); indices 1..27 map to the 27 resource
@@ -348,27 +324,27 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     }
 
     public boolean getSyncedCanExcavate() {
-        return data.get(DATA_CAN_EXCAVATE) != 0;
+        return canExcavate.get();
     }
 
     public int getSyncedSnapshotType() {
-        return data.get(DATA_SNAPSHOT_TYPE);
+        return snapshotType.get();
     }
 
     public int getSyncedLeftToBreak() {
-        return data.get(DATA_LEFT_TO_BREAK);
+        return leftToBreak.get();
     }
 
     public int getSyncedLeftToPlace() {
-        return data.get(DATA_LEFT_TO_PLACE);
+        return leftToPlace.get();
     }
 
     public EnumFluidHandlingMode getSyncedFluidMode() {
-        return EnumFluidHandlingMode.fromOrdinal(data.get(DATA_FLUID_MODE));
+        return EnumFluidHandlingMode.fromOrdinal(fluidMode.get());
     }
 
     public EnumContainerContentsMode getSyncedContentsMode() {
-        return EnumContainerContentsMode.fromOrdinal(data.get(DATA_CONTENTS_MODE));
+        return EnumContainerContentsMode.fromOrdinal(contentsMode.get());
     }
 
     /** Snapshot slot filter: only accepts used blueprint/template items. Mirrors

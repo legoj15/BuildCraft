@@ -35,9 +35,9 @@ import buildcraft.platform.network.PacketContext;
  * {@link BCContainer} default methods over that support.
  *
  * <p><b>Two container→screen sync mechanisms coexist deliberately — do not collapse them.</b> Vanilla
- * {@link net.minecraft.world.inventory.ContainerData} carries ints (engines hi/lo-split their power
- * because of it); the BC {@link Widget_Neptune}/{@code sendMessage} channel carries fluids, longs and
- * variable payloads that can't ride {@code ContainerData}.
+ * {@link net.minecraft.world.inventory.ContainerData} carries numbers, only 16 bits per slot on Fabric (declare
+ * them through {@link WideContainerData} to keep wider values intact); the BC {@link Widget_Neptune}/
+ * {@code sendMessage} channel carries fluids and variable payloads that can't ride {@code ContainerData}.
  */
 @SuppressWarnings("this-escape")
 public abstract class ContainerBC_Neptune extends AbstractContainerMenu implements BCContainer {

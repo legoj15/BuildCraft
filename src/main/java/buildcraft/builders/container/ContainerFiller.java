@@ -11,8 +11,6 @@ import java.util.List;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -24,6 +22,7 @@ import buildcraft.api.tiles.IControllable;
 
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.gui.WideContainerData;
 import buildcraft.lib.statement.FullStatement;
 import buildcraft.lib.statement.StatementContext;
 
@@ -36,18 +35,14 @@ import buildcraft.platform.network.PacketContext;
 @SuppressWarnings("this-escape")
 public class ContainerFiller extends ContainerBCTile<TileFiller> implements IContainerFilling {
 
-    // ContainerData indices
-    private static final int DATA_CAN_EXCAVATE = 0;
-    private static final int DATA_INVERTED = 1;
-    private static final int DATA_FINISHED = 2;
-    private static final int DATA_LOCKED = 3;
-    private static final int DATA_MODE = 4;
-    private static final int DATA_TO_PLACE = 5;
-    private static final int DATA_TO_BREAK = 6;
-    private static final int DATA_PREVIEW = 7;
-    private static final int DATA_COUNT = 8;
-
-    private final ContainerData data;
+    private final WideContainerData.BooleanValue canExcavate;
+    private final WideContainerData.BooleanValue inverted;
+    private final WideContainerData.BooleanValue finished;
+    private final WideContainerData.BooleanValue locked;
+    private final WideContainerData.IntValue mode;
+    private final WideContainerData.IntValue toPlace;
+    private final WideContainerData.IntValue toBreak;
+    private final WideContainerData.BooleanValue preview;
     private final FullStatement<IFillerPattern> patternStatementClient = new FullStatement<>(
         FillerType.INSTANCE,
         4,
@@ -92,39 +87,17 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     public ContainerFiller(int containerId, Inventory playerInv, TileFiller tile) {
         super(BCBuildersMenuTypes.FILLER.get(), containerId, playerInv.player, tile);
 
-        // Container data for syncing
-        if (tile != null && tile.getLevel() != null && !tile.getLevel().isClientSide()) {
-            this.data = new ContainerData() {
-                @Override
-                public int get(int index) {
-                    return switch (index) {
-                        case DATA_CAN_EXCAVATE -> tile.getCanExcavate() ? 1 : 0;
-                        case DATA_INVERTED -> tile.inverted ? 1 : 0;
-                        case DATA_FINISHED -> tile.getFinished() ? 1 : 0;
-                        case DATA_LOCKED -> tile.getLockedTicks();
-                        case DATA_MODE -> tile.getModeOrdinal();
-                        case DATA_TO_PLACE -> tile.getCountToPlace();
-                        case DATA_TO_BREAK -> tile.getCountToBreak();
-                        case DATA_PREVIEW -> tile.isPreviewEnabled() ? 1 : 0;
-                        default -> 0;
-                    };
-                }
-
-                @Override
-                public void set(int index, int value) {
-                    // Read-only on client
-                }
-
-                @Override
-                public int getCount() {
-                    return DATA_COUNT;
-                }
-            };
-        } else {
-            this.data = new SimpleContainerData(DATA_COUNT);
-        }
-
-        addDataSlots(this.data);
+        // WideContainerData keeps the block counts intact through vanilla's 16-bit menu-data packet (Fabric's only one).
+        WideContainerData.Builder sync = WideContainerData.builder();
+        canExcavate = sync.addBoolean(() -> tile.getCanExcavate());
+        inverted = sync.addBoolean(() -> tile.inverted);
+        finished = sync.addBoolean(() -> tile.getFinished());
+        locked = sync.addBoolean(() -> tile.getLockedTicks() > 0);
+        mode = sync.addInt(() -> tile.getModeOrdinal());
+        toPlace = sync.addInt(() -> tile.getCountToPlace());
+        toBreak = sync.addInt(() -> tile.getCountToBreak());
+        preview = sync.addBoolean(() -> tile.isPreviewEnabled());
+        addDataSlots(sync.buildFor(tile));
 
         // 27 resource slots in a 3x9 grid
         if (tile != null) {
@@ -158,7 +131,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
     @Override
     public boolean isInverted() {
-        return data.get(DATA_INVERTED) != 0;
+        return inverted.get();
     }
 
     public static final int NET_EXCAVATE = 10;
@@ -248,33 +221,33 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     }
 
     public boolean getSyncedCanExcavate() {
-        return data.get(DATA_CAN_EXCAVATE) != 0;
+        return canExcavate.get();
     }
 
     public boolean getSyncedPreview() {
-        return data.get(DATA_PREVIEW) != 0;
+        return preview.get();
     }
 
     public boolean getSyncedFinished() {
-        return data.get(DATA_FINISHED) != 0;
+        return finished.get();
     }
 
     public boolean getSyncedLocked() {
-        return data.get(DATA_LOCKED) > 0;
+        return locked.get();
     }
 
     public IControllable.Mode getSyncedMode() {
-        int ordinal = data.get(DATA_MODE);
+        int ordinal = mode.get();
         IControllable.Mode[] values = IControllable.Mode.values();
         if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
         return IControllable.Mode.ON;
     }
 
     public int getSyncedToPlace() {
-        return data.get(DATA_TO_PLACE);
+        return toPlace.get();
     }
 
     public int getSyncedToBreak() {
-        return data.get(DATA_TO_BREAK);
+        return toBreak.get();
     }
 }

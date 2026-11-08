@@ -27,6 +27,7 @@ import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.gui.ContainerBCCrafting;
 import buildcraft.lib.gui.ContainerBCTile;
+import buildcraft.lib.gui.WideContainerData;
 import buildcraft.lib.gui.recipe.IBCRecipeBookMenu;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
@@ -85,21 +86,13 @@ public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkben
         // Recipe result display slot at (93, 27) — matches 1.12.2
         addSlot(new SlotDisplay(i -> tile.resultClient, 0, 93, 27));
 
-        // Sync powerStored to client for progress bar (long → two int data slots)
-        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
-            @Override public int get() { return (int) (tile.getPowerStored() & 0xFFFFFFFFL); }
-            @Override public void set(int value) {
-                long current = tile.getPowerStored();
-                tile.setPowerStored((current & 0xFFFFFFFF00000000L) | (value & 0xFFFFFFFFL));
-            }
+        // Sync powerStored into the client tile for its progress bar. WideContainerData keeps the long intact through
+        // vanilla's 16-bit menu-data packet (Fabric's only one).
+        WideContainerData.Builder sync = WideContainerData.builder();
+        sync.addLong(() -> tile.getPowerStored(), stored -> {
+            if (tile != null) tile.setPowerStored(stored);
         });
-        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
-            @Override public int get() { return (int) (tile.getPowerStored() >>> 32); }
-            @Override public void set(int value) {
-                long current = tile.getPowerStored();
-                tile.setPowerStored((current & 0x00000000FFFFFFFFL) | ((long) value << 32));
-            }
-        });
+        addDataSlots(sync.buildFor(tile));
 
         // Player inventory at (8, 115)
         // Sync the conflicting-recipe count + selected index for the cycle-output button.

@@ -9,6 +9,7 @@
     "BlockDropsMixin",
     "BlockExperienceMixin",
     "BlockItemMixin",
+    "BoatDispenseItemBehaviorMixin",
     "DiodeBlockMixin",
     "EntityAccessor",
     "EntityEquipmentMixin",

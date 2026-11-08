@@ -239,6 +239,11 @@ tasks.named<JavaExec>("runGameTest") {
 // fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
 // It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
 // hang it on `check`).
+// Fabric API's runner has two start-up/synchronization races that the game-test mod closes with mixins, so the run does
+// not need -Dfabric.client.gametest.disableNetworkSynchronizer (which would also drop its guarantee that a tick's
+// packets are handled before the next one): ClientGameTestThreadStartMixin (#119, a hang at the title screen) and
+// NetworkSynchronizerWakeupMixin (#174, a lost wakeup in NetworkSynchronizer.waitForPacketHandlers that crashed about one
+// run in ten with 'Network synchronizer in invalid state'; Fabric API for 1.21.10, 1.21.11 and 26.1.2 only).
 tasks.named<JavaExec>("runClientGameTest") {
     systemProperty("buildcraft.dev", "true")
     val runDir = project.file("build/run/clientGameTest")

@@ -447,13 +447,34 @@ public class MutableQuad {
         Vector3f n = getCalculatedNormal();
         // Normalise: getCalculatedNormal returns the raw edge cross-product, whose length is the quad's
         // area — well under 1 for small quads. 1.21.11+ ignores baked vertex normals (it bakes with
-        // BakedNormals.UNSPECIFIED and recomputes), but the 1.21.10 int[] vertex path packs this normal
+        // BakedNormals.UNSPECIFIED and lights by the quad's face; see setFaceFromCalculatedNormal), but the 1.21.10 int[] vertex path packs this normal
         // directly, so a sub-unit normal there produces too-dark GUI item diffuse (e.g. gates/lenses).
         // Normalising is correct on every line and inert where the baked normal is ignored.
         if (n.lengthSquared() > 1.0e-6f) {
             n.normalize();
         }
         normalvf(n);
+    }
+
+    /** Points {@link #getFace()} at the axis direction nearest this quad's geometric normal. Moving the vertices
+     * ({@link #rotate}, {@link #rotateX} and friends) never touches the face, yet the 1.21.11+ item draws light a quad
+     * by its face alone (vanilla's {@code putBulkData}; NeoForge too unless the quad carries baked normals, which BC's
+     * do not), while Fabric's item mesh lights it by the geometric normal. A quad turned away from its original face
+     * is therefore lit differently on the two loaders until this realigns it. A degenerate quad keeps its face. */
+    public MutableQuad setFaceFromCalculatedNormal() {
+        Vector3f n = getCalculatedNormal();
+        float ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+        if (ax + ay + az < 1.0e-9f) {
+            return this;
+        }
+        if (ax >= ay && ax >= az) {
+            face = n.x > 0 ? Direction.EAST : Direction.WEST;
+        } else if (ay >= az) {
+            face = n.y > 0 ? Direction.UP : Direction.DOWN;
+        } else {
+            face = n.z > 0 ? Direction.SOUTH : Direction.NORTH;
+        }
+        return this;
     }
 
     public static float diffuseLight(Vector3f normal) {

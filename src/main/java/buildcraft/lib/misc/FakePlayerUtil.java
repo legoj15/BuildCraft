@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -23,6 +24,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -281,6 +283,40 @@ public final class FakePlayerUtil {
             }
         }
         return new Leftovers(remainder, products);
+    }
+
+    /**
+     * Runs {@code ask} with {@code player}'s main hand empty and puts the very same stack back afterwards, even when
+     * {@code ask} throws. For a permission probe: a listener of the break event it posts cannot tell a probe from a
+     * break, and a mod that acts on that event without cancelling it (a tree feller reads the axe in the breaker's
+     * main hand) would act on the probe, so the player that asks must hold nothing while it does. The slot is written
+     * as {@link #scrubItems} writes it, straight into the inventory: no equipment-change hook, game event or
+     * attribute update runs for either swap, the stack is never copied or modified, and a hand that is empty already
+     * is left alone. Server thread only, like the player.
+     *
+     * @return what {@code ask} returned
+     */
+    public static <T> T withEmptyMainHand(Player player, Supplier<T> ask) {
+        ItemStack held = player.getMainHandItem();
+        if (held.isEmpty()) {
+            return ask.get();
+        }
+        Inventory inventory = player.getInventory();
+        setMainHandQuietly(inventory, ItemStack.EMPTY);
+        try {
+            return ask.get();
+        } finally {
+            setMainHandQuietly(inventory, held);
+        }
+    }
+
+    /** The selected hotbar slot, which is the main hand on every node (the 1.21.10+ equipment table reads it too). */
+    private static void setMainHandQuietly(Inventory inventory, ItemStack stack) {
+        //? if >=1.21.10 {
+        inventory.setSelectedItem(stack);
+        //?} else {
+        /*inventory.items.set(inventory.selected, stack);*/
+        //?}
     }
 
     /** The API path: the API's own cached player (never a leased one), reset. */

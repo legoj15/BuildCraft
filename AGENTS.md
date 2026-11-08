@@ -14,8 +14,8 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # client check with screenshots (needs a GL context; not in nodeVerification). 26.x Fabric nodes use Loom without
 # remapping; the 1.21.x ones use fabric-loom-remap (Mojang mappings, mod* configurations, remapJar). No JUnit tests on
 # them (FML-JUnit has no Fabric twin); their compiles are the deprecated-API guard (-Werror, :<node>-fabric:checkDeprecations).
-# `python -I scripts/fabric-mixin-check.py <node>-fabric` checks mixin targets exist by name (not by type) on that
-# node's Minecraft; never run it while Gradle is regenerating sources.
+# `python -I scripts/fabric-mixin-check.py <node>-fabric` checks mixin targets, field and handler parameter types and
+# `ordinal`s against that node's Minecraft (compile the node first; it refuses, exit 2, while Gradle is regenerating sources).
 # Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and each Fabric node's nodeVerification.

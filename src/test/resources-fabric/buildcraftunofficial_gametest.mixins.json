@@ -8,6 +8,7 @@
   ],
   "client": [
     "ClientGameTestThreadStartMixin",
+    "NetworkSynchronizerWakeupMixin",
     "ParticleEngineAccessor"${client_shim_mixins}
   ],
   "injectors": {

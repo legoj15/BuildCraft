@@ -46,6 +46,10 @@ public class BCEnergy {
 
         ContainedFluidDetonation.init();
 
+        // oilIsSticky is COMMON config a remote client never receives, yet the client simulates a ridden boat and the
+        // local player's wading with it: the server sends the flag on login and whenever the COMMON file is reloaded.
+        OilStickySync.register();
+
         // MC 26.1: Register recipes on ServerAboutToStartEvent
         Platform.lifecycle().onServerAboutToStart(server -> BCEnergyRecipes.ensureInitialized());
 

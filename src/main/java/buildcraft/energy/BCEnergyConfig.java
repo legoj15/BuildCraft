@@ -44,6 +44,35 @@ public class BCEnergyConfig {
 
     public static ModConfigSpec.BooleanValue oilIsSticky;
 
+    /**
+     * The remote server's {@code oilIsSticky}, as {@code OilStickySync} last sent it; {@code null} when there is none
+     * (a server JVM, single-player included, or a client outside any world). {@code oilIsSticky} is on the COMMON spec,
+     * which a remote client never receives, yet the client's own prediction of the fluid (a ridden boat's speed, a
+     * current's push) must match the server's or the player rubber-bands.
+     */
+    private static volatile Boolean syncedOilIsSticky;
+
+    /** This JVM's own {@code oilIsSticky}; what a server sends and what the client falls back on. Never overridden. */
+    public static boolean localOilIsSticky() {
+        return oilIsSticky != null && oilIsSticky.get();
+    }
+
+    /** Whether oil slows entities and boats: the connected server's setting if it sent one, else this JVM's own. */
+    public static boolean isOilSticky() {
+        Boolean synced = syncedOilIsSticky;
+        return synced != null ? synced : localOilIsSticky();
+    }
+
+    /** Records the connected server's {@code oilIsSticky} (the client's main thread, on receiving the sync). */
+    public static void setSyncedOilIsSticky(boolean sticky) {
+        syncedOilIsSticky = sticky;
+    }
+
+    /** Forgets the server's setting; the client calls it on leaving the world so the next one starts clean. */
+    public static void clearSyncedOilIsSticky() {
+        syncedOilIsSticky = null;
+    }
+
     public static ModConfigSpec.BooleanValue searingFluidSteam;
 
     public static ModConfigSpec.ConfigValue<List<? extends String>> forceExcessiveOilBiomes;

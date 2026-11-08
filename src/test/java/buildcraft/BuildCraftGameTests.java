@@ -198,6 +198,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
+        reg.accept("buildcraftunofficial:machine_protection_probe_shows_empty_main_hand", () -> buildcraft.lib.misc.MachineProtectionTester::probeShowsListenersAnEmptyMainHand);
         reg.accept("buildcraftunofficial:machine_protection_place_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::placeProbeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:builder_claim_filler_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::fillerAsksLikeAPlayerAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);

@@ -30,8 +30,8 @@ public final class RobotGogglesView {
     private static boolean cachedWorn;
 
     /** How far along the look direction a robot counts as looked at: the same range Goggles keep robots drawn to
-     *  (the robot's 64-block tracking range, also the distance vanilla draws a name tag to), so the ray never picks a
-     *  robot the client does not draw, and every drawn robot can be picked. */
+     *  (the robot's 64-block tracking range, also the distance vanilla draws a name tag to), one constant for both.
+     *  The aiming slack can still pick a robot up to about a block past the drawn range. */
     static final double LOOK_RANGE = EntityRobot.GOGGLES_RENDER_BLOCKS;
     /** Aiming slack around a robot's box: its cube is half a block wide, which at any distance is a few pixels, so the
      *  box is padded by a fixed amount plus 0.75% of the distance (about half a degree of aim at any range). */

@@ -1177,9 +1177,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
         reg.accept("buildcraftunofficial:robot_fetch_item_lock_dies_with_robot", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemLockDiesWithItsRobot);
 
-        // The robot break path (AIRobotBreak -> BlockUtil.breakBlockAndGetDrops) must keep flag-3
-        // semantics: support-driven blocks (vines etc.) pop when their support is broken. Pins the
-        // removal routes used by both the robots and the Quarry/Mining Well.
+        // Every removal route must keep flag-3 semantics: support-driven blocks (vines etc.) pop when their
+        // support is broken. The first three pin the shared helper (BlockUtil.breakBlockAndGetDrops: the
+        // Quarry, Mining Well and Builder, and a robot under minePlayerProtected) and Level.removeBlock; the
+        // two lumberjack E2Es drive a real robot's player-style break (ServerPlayerGameMode.destroyBlock).
         reg.accept("buildcraftunofficial:robot_break_pops_directly_attached_vine", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testBreakPopsDirectlyAttachedVine);
         reg.accept("buildcraftunofficial:robot_break_full_chop_cascades_vine_column", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testFullChopCascadesVineColumn);
         reg.accept("buildcraftunofficial:robot_break_remove_block_pops_attached_vine", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testRemoveBlockPopsAttachedVine);
@@ -1259,6 +1260,8 @@ public class BuildCraftGameTests {
         // The combat boards' entity predicates against REAL entities (no unit test can build one).
         reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
         reg.accept("buildcraftunofficial:robot_butcher_spares_pets_horses_and_named", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::butcherSparesPetsHorsesAndNamedAnimals);
+        // The lumberjack hunts a trunk from its base, so a tree-felling mod brings the whole tree down on the first cut.
+        reg.accept("buildcraftunofficial:robot_lumberjack_hunts_trunk_bases", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::lumberjackHuntsTrunkBases);
 
         // Robotics Ph6 — the gate statements against a LIVE pipe holder + PluggableGate with a real robot:
         // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the
@@ -1442,6 +1445,8 @@ public class BuildCraftGameTests {
         // formula + cadence, search-entity) + wearable acceptance + the rewritten Builder board.
         reg.accept("buildcraftunofficial:robot_board_registry_sweep_ph9", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh9BoardResolvesAndRoundTrips);
         reg.accept("buildcraftunofficial:robot_break_progress_formula", () -> buildcraft.robotics.ai.RobotActionAIsTester::breakProgressFormulaMatchesToolAndHardness);
+        // A robot's break is a player's break: the loader's real break event names its fake player, the tool wears once.
+        reg.accept("buildcraftunofficial:robot_break_posts_real_break_event", () -> buildcraft.robotics.ai.RobotActionAIsTester::breakPostsTheRealBreakEventAndWearsTheToolOnce);
         reg.accept("buildcraftunofficial:robot_harvest_reaps_mature_wheat", () -> buildcraft.robotics.ai.RobotActionAIsTester::harvestReapsMatureWheat);
         reg.accept("buildcraftunofficial:robot_plant_sows_seed_on_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::plantSowsSeedOnFarmland);
         // Sugar cane: the ported 7.1.x reeds crop handler — sand/dirt beside water only, never cane on cane.

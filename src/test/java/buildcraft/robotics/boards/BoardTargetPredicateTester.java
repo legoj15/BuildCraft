@@ -17,11 +17,13 @@ import net.minecraft.world.entity.animal.equine.AbstractHorse;
 //?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.robotics.ai.MockRobotAccess;
 
 /** The two combat boards' entity predicates, pinned against REAL entities — which a unit test cannot
- *  build, since every entity constructor wants a live {@code Level}.
+ *  build, since every entity constructor wants a live {@code Level} — and the lumberjack's tag-backed block
+ *  predicate, which the unit JVM cannot resolve (it loads no tags).
  *
  *  <p>The knight's target set is the load-bearing half: 7.1.x asked {@code entity instanceof IMob}, an
  *  INTERFACE that a good number of hostiles implement without sharing a base class. The modern
@@ -157,6 +159,48 @@ public class BoardTargetPredicateTester {
                 mob.discard();
             }
         }
+        helper.succeed();
+    }
+
+    // ---------- the lumberjack cuts a trunk from its base ----------
+
+    /** Tree-felling mods (FallingTree and its kin) bring the whole tree down when its BOTTOM log is cut, and ignore a
+     *  cut from the middle. So the lumberjack hunts only a wood block with no wood directly below it: a log standing on
+     *  stone, dirt or air, never one standing on another log (of any species). Without such a mod it just chops each
+     *  column bottom-up, since the log above a cut one then has air below it. The state-only predicate stays "is
+     *  wood"; it is the neighbour-aware seam the search and {@code finishAttempt} ask that knows the column. */
+    public static void lumberjackHuntsTrunkBases(GameTestHelper helper) {
+        BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(new MockRobotAccess());
+        net.minecraft.world.level.Level level = helper.getLevel();
+
+        // A trunk of three, two species, standing on stone; and a log floating by itself.
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.STONE);
+        BlockPos base = helper.absolutePos(new BlockPos(2, 2, 2));
+        BlockPos middle = base.above();
+        BlockPos top = middle.above();
+        helper.setBlock(new BlockPos(2, 2, 2), Blocks.OAK_LOG);
+        helper.setBlock(new BlockPos(2, 3, 2), Blocks.OAK_LOG);
+        helper.setBlock(new BlockPos(2, 4, 2), Blocks.SPRUCE_LOG);
+        helper.setBlock(new BlockPos(4, 3, 2), Blocks.OAK_LOG);
+        BlockPos floating = helper.absolutePos(new BlockPos(4, 3, 2));
+        BlockPos stone = helper.absolutePos(new BlockPos(2, 1, 2));
+
+        helper.assertTrue(lumberjack.isExpectedBlock(level, base), "the log standing on stone is a trunk base");
+        helper.assertFalse(lumberjack.isExpectedBlock(level, middle),
+                "a log standing on a log is mid-trunk, not a candidate");
+        helper.assertFalse(lumberjack.isExpectedBlock(level, top),
+                "a log of another species standing on a log is mid-trunk too");
+        helper.assertTrue(lumberjack.isExpectedBlock(level, floating),
+                "a floating log (air below) has nothing under it, so it is a base");
+        helper.assertFalse(lumberjack.isExpectedBlock(level, stone), "stone is not wood");
+        helper.assertTrue(lumberjack.isExpectedBlock(level.getBlockState(middle)),
+                "the state-only predicate still says what the block is: wood");
+
+        // Cut the base: the log above it has air below it now, and is the new base.
+        level.setBlock(base, Blocks.AIR.defaultBlockState(), 3);
+        helper.assertTrue(lumberjack.isExpectedBlock(level, middle),
+                "with the base cut the next log is the bottom of what is left");
+        helper.assertFalse(lumberjack.isExpectedBlock(level, top), "and the one above it is still mid-trunk");
         helper.succeed();
     }
 }

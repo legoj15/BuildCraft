@@ -34,11 +34,12 @@ import buildcraft.robotics.entity.EntityRobot;
 /**
  * Regression coverage for the user-reported "lumberjack robots leave behind unsupported vines" bug.
  * <p>
- * The robot break path is {@link AIRobotBreak} → {@link BlockUtil#breakBlockAndGetDrops} →
- * {@code Level.destroyBlock(pos, false)}. Vines (and every other support-driven block — torches,
- * ladders, rails, redstone...) only pop when the removal reaches them as a neighbour/shape update,
- * so these tests pin that the shared break helper keeps flag-3 semantics: after the tree is chopped,
- * nothing unsupported may be left hanging.
+ * A robot's break is {@link AIRobotBreak} → the leased fake player's {@code ServerPlayerGameMode.destroyBlock}
+ * (the shared {@link BlockUtil#breakBlockAndGetDrops} → {@code Level.destroyBlock(pos, false)} while
+ * {@code minePlayerProtected} is on, and for the Quarry and Mining Well). Vines (and every other
+ * support-driven block — torches, ladders, rails, redstone...) only pop when the removal reaches them as a
+ * neighbour/shape update, so these tests pin that the removal routes keep flag-3 semantics: after the tree is
+ * chopped, nothing unsupported may be left hanging.
  */
 public class RobotBreakBlockUpdateTester {
 

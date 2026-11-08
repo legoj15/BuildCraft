@@ -8,6 +8,9 @@ package buildcraft.robotics.ai;
 import static buildcraft.robotics.RobotArenaUtil.unadded;
 import static buildcraft.robotics.RobotArenaUtil.unaddedRobot;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -31,7 +34,12 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.core.BCCoreConfig;
+import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.IEntityFilter;
 import buildcraft.robotics.ZonePinnedRobot;
@@ -105,6 +113,141 @@ public class RobotActionAIsTester {
         for (Entity e : level.getEntities((Entity) null, new AABB(stonePos).inflate(2),
                 e -> e instanceof net.minecraft.world.entity.item.ItemEntity)) {
             e.discard();
+        }
+        helper.succeed();
+    }
+
+    // ---------- AIRobotBreak: it breaks the way a player does ----------
+
+    /** The work budget of {@link #breakPostsTheRealBreakEventAndWearsTheToolOnce}'s gate: the scenario runs on the
+     *  first tick the cell is entity-ticking, so this only has to cover that one poll (the budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}, and the manifest's {@code max_ticks} stays above the sum). */
+    private static final int BREAK_EVENT_WORK_TICKS = 20;
+
+    /** A robot's break is a PLAYER's break: the loader's block-break event is posted for the robot's fake player, so a
+     *  mod that reacts to a break (a tree chopper felling the rest of a tree, a claim mod, a logger) sees a robot's
+     *  as it sees anyone's. Four stones, one diamond pickaxe:
+     *  <ul>
+     *  <li>an unclaimed one breaks, and a break listener is told exactly once (apart from the up-front permission
+     *  probe, which {@code isProbe} tells from a break) naming the [BuildCraft] player, with the cobblestone dropped
+     *  and the pickaxe charged ONE durability point (vanilla's {@code mineBlock}; the robot's own hurtAndBreak on top
+     *  would be two);</li>
+     *  <li>one whose real event a claim refuses, while the probe lets it through, stays, the AI fails and the tool is
+     *  not charged;</li>
+     *  <li>one whose real event a mod cancels and then takes down itself, as a tree-felling mod does, counts as broken;</li>
+     *  <li>with {@code minePlayerProtected} on (the "ignore protection mods" override) the same claim is never asked:
+     *  the stone breaks silently as it always did.</li>
+     *  </ul>
+     *  The override flip is synchronous and restored in a finally, so no other test's tick sees it. */
+    public static void breakPostsTheRealBreakEventAndWearsTheToolOnce(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        // The stones, the robot and the drops span the cell, whose far half can sit in a chunk that is not ticking yet:
+        // an item added there is invisible to the cleanup sweep until it is.
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BREAK_EVENT_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BREAK_EVENT_WORK_TICKS,
+                        () -> true),
+                () -> breakEventScenario(helper, level),
+                "the arena cell never started ticking",
+                () -> {
+                    for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(
+                            net.minecraft.world.entity.item.ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
+                        drop.discard();
+                    }
+                });
+    }
+
+    private static void breakEventScenario(GameTestHelper helper, ServerLevel level) {
+        BlockPos allowedRel = new BlockPos(2, 1, 2);
+        BlockPos refusedRel = new BlockPos(4, 1, 2);
+        BlockPos fellingRel = new BlockPos(4, 1, 4);
+        BlockPos overriddenRel = new BlockPos(2, 1, 4);
+        for (BlockPos rel : List.of(allowedRel, refusedRel, fellingRel, overriddenRel)) {
+            helper.setBlock(rel, Blocks.STONE);
+        }
+        BlockPos allowed = helper.absolutePos(allowedRel);
+        BlockPos refused = helper.absolutePos(refusedRel);
+        BlockPos felling = helper.absolutePos(fellingRel);
+        BlockPos overridden = helper.absolutePos(overriddenRel);
+
+        EntityRobot robot = unaddedRobot(helper, new BlockPos(3, 2, 3));
+        ItemStack pickaxe = new ItemStack(Items.DIAMOND_PICKAXE);
+        robot.setItemInUse(pickaxe);
+
+        // A claim mod as most are written: the permission probe passes, the break itself is what it refuses.
+        List<BlockPos> realBreaks = new ArrayList<>();
+        List<java.util.UUID> breakers = new ArrayList<>();
+        int[] probes = { 0 };
+        PlatformProtection.Registration claim = Platform.protection().onBreak(event -> {
+            BlockPos at = event.pos();
+            if (!at.equals(allowed) && !at.equals(refused) && !at.equals(felling) && !at.equals(overridden)) {
+                return; // another arena's break
+            }
+            if (event.isProbe()) {
+                probes[0]++;
+                return;
+            }
+            realBreaks.add(at.immutable());
+            breakers.add(event.player().getUUID());
+            if (!at.equals(allowed)) {
+                event.cancel();
+            }
+            if (at.equals(felling)) {
+                // A tree-felling mod: refuses the player's own break, and brings the log down itself.
+                level.removeBlock(at, false);
+            }
+        });
+        boolean overrideBefore = BCCoreConfig.minePlayerProtected.get();
+        try {
+            AIRobotBreak breaker = new AIRobotBreak(robot, allowed);
+            for (int i = 0; i < 20 && !level.getBlockState(allowed).isAir(); i++) {
+                breaker.cycle();
+            }
+            helper.assertTrue(level.getBlockState(allowed).isAir(), "the unclaimed stone breaks");
+            helper.assertTrue(breaker.success(), "a completed break reports success");
+            helper.assertTrue(realBreaks.equals(List.of(allowed)),
+                    "the break posts exactly one real break event, for the stone (a silent removal posts none): "
+                            + realBreaks);
+            helper.assertTrue(breakers.get(0).equals(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE)),
+                    "and it names the robot's fake player, the [BuildCraft] identity of an unowned robot");
+            helper.assertTrue(probes[0] >= 1, "the permission probe ran first and was told apart from the break");
+            helper.assertTrue(pickaxe.getDamageValue() == 1,
+                    "the tool is charged one durability point for the one block, not two, got "
+                            + pickaxe.getDamageValue());
+            helper.assertTrue(!level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    EntityArenaUtil.cellBounds(helper),
+                    drop -> drop.getItem().is(Items.COBBLESTONE)).isEmpty(),
+                    "the stone dropped cobblestone");
+
+            AIRobotBreak refusedBreaker = new AIRobotBreak(robot, refused);
+            for (int i = 0; i < 20 && refusedBreaker.success(); i++) {
+                refusedBreaker.cycle();
+            }
+            helper.assertTrue(realBreaks.contains(refused), "the claim was asked about the real break");
+            helper.assertTrue(level.getBlockState(refused).is(Blocks.STONE),
+                    "a break the real event refuses leaves the block standing");
+            helper.assertTrue(!refusedBreaker.success(), "and the AI reports the failure");
+            helper.assertTrue(pickaxe.getDamageValue() == 1, "a refused break does not wear the tool");
+
+            AIRobotBreak fellingBreaker = new AIRobotBreak(robot, felling);
+            for (int i = 0; i < 20 && !level.getBlockState(felling).isAir(); i++) {
+                fellingBreaker.cycle();
+            }
+            helper.assertTrue(level.getBlockState(felling).isAir() && realBreaks.contains(felling),
+                    "the mod that cancels the real event takes the block down itself");
+            helper.assertTrue(fellingBreaker.success(), "and the break is done: the effect decides, not the answer");
+
+            BCCoreConfig.minePlayerProtected.set(true);
+            AIRobotBreak overrider = new AIRobotBreak(robot, overridden);
+            for (int i = 0; i < 20 && !level.getBlockState(overridden).isAir(); i++) {
+                overrider.cycle();
+            }
+            helper.assertTrue(level.getBlockState(overridden).isAir() && overrider.success(),
+                    "with minePlayerProtected on the claim is overridden and the stone breaks");
+            helper.assertTrue(!realBreaks.contains(overridden), "silently: no break event reached the claim");
+        } finally {
+            BCCoreConfig.minePlayerProtected.set(overrideBefore);
+            claim.close();
         }
         helper.succeed();
     }

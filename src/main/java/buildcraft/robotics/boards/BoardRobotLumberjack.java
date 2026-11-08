@@ -31,7 +31,8 @@ import buildcraft.core.properties.WorldPropertyIsWood;
  *
  *  <p>The log below only counts while this robot's search may pick it ({@link #searchMayPick}): a base the gate's
  *  Filter leaves out, protection refused, the work zone excludes or a search could not reach would otherwise hold the
- *  whole column above it back for good, since nothing ever brings that base down. */
+ *  whole column above it back for good, since nothing ever brings that base down. One case is left: a base walled in
+ *  on every side (no soft neighbour), which the search skips without noting it unreachable, still holds its column. */
 public class BoardRobotLumberjack extends BoardRobotGenericBreakBlock {
 
     public BoardRobotLumberjack(IRobotAccess iRobot) {

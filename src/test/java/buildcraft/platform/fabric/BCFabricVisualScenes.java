@@ -243,6 +243,9 @@ final class BCFabricVisualScenes {
      * A guide entry page with a recipe panel: the Stirling engine's, opened on the open book as a link click would.
      *^/
     private static void guideEntry(ClientGameTestContext ctx, List<String> problems) {
+        // The world join only marks the guide stale (GuideManager.onRecipeDataReceived); the item path pays the rebuild
+        // through ensureLoaded before opening, so a screen made directly has to as well.
+        ctx.runOnClient(mc -> GuideManager.INSTANCE.ensureLoaded());
         ctx.setScreen(GuiGuide::new);
         ctx.waitTicks(10);
         // A click on the cover opens the book (an animation of a few ticks), as in BCFabricClientGameTest.

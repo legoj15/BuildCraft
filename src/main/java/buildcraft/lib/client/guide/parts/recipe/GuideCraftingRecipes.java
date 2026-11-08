@@ -52,6 +52,13 @@ public enum GuideCraftingRecipes implements IStackRecipes {
         List<GuidePartFactory> list = new ArrayList<>();
         for (RecipeHolder<?> holder : getAllRecipes()) {
             if (holder.value() instanceof CraftingRecipe recipe) {
+                // Most recipes make something else: skip them before building their display factory
+                // (resolving every ingredient's tags into item lists). Every <recipes> tag on every guide
+                // page runs this scan, so building the factory for each recipe in the game made up most of
+                // a guide rebuild.
+                if (!GuideCraftingFactory.mayProduce(recipe, target)) {
+                    continue;
+                }
                 // Check output by extracting the result from the factory
                 GuidePartFactory factory = GuideCraftingFactory.getFactory(recipe);
                 if (factory instanceof GuideCraftingFactory gcf && gcf.outputMatches(target)) {

@@ -197,9 +197,9 @@ public enum GuideManager {
         // during Minecraft construction — before BC item Holders have their components
         // bound — and populateDefaultGroups()'s ItemStack constructions throw
         // "Components not bound yet" NPEs at that stage. The first real load happens
-        // through ensureLoaded() when the user opens a guide book (by which point
-        // FMLLoadCompleteEvent has fired and components are bound), and after that
-        // contents is non-empty so subsequent F3+T reloads proceed normally. The
+        // through ensureLoaded() when the user first opens a guide book in a session (by
+        // which point FMLLoadCompleteEvent has fired and components are bound), and after
+        // that contents is non-empty so subsequent F3+T reloads proceed normally. The
         // contents.isEmpty() check is the same predicate ensureLoaded() uses, so
         // "already loaded" and "ready to reload" are the same condition.
         if (contents.isEmpty()) return;
@@ -210,17 +210,19 @@ public enum GuideManager {
         reload(Minecraft.getInstance().getResourceManager());
     }
 
-    /** Set when synced recipe data arrived but the re-parse was deferred (mid-session
-     * datapack /reload with no guide open — see onRecipeDataReceived). Honored by
+    /** Set when synced recipe data arrived but the re-parse was deferred (every world join
+     * and datapack /reload with no guide open — see onRecipeDataReceived). Honored by
      * ensureLoaded(), i.e. paid on the next book open; cleared by every successful
      * reload0() regardless of trigger. */
     private volatile boolean recipeDataDirty = false;
 
-    /** Trigger a reload if the contents tree hasn't been built yet — or if recipe data
-     * arrived since the last build (deferred mid-session re-sync). Belt-and-suspenders
-     * for the guide-book entry path: callers can invoke this before opening a guide screen
-     * to guarantee the registry is populated, even if the resource-manager listener didn't
-     * fire (e.g. tests, dev environments, listener registration regressions). */
+    /** Build the guide if it has never been built, or if recipe data arrived since the
+     * last build (the deferred join / re-sync case). This is the ONLY place the join-time
+     * rebuild is paid, synchronously on the render thread at the book click, so
+     * openGuideScreen() must call it before constructing a GuiGuide. Also the
+     * belt-and-suspenders for any other entry path: callers can invoke it to guarantee the
+     * registry is populated, even if the resource-manager listener didn't fire (e.g.
+     * tests, dev environments, listener registration regressions). */
     public void ensureLoaded() {
         if (contents.isEmpty() || recipeDataDirty) {
             reload();
@@ -229,28 +231,26 @@ public enum GuideManager {
 
     /** Called on the client whenever a fresh batch of server-synced recipe data lands —
      * every world join, datapack {@code /reload}, and server switch (see BCLibClient's
-     * RecipesReceivedEvent/RecipesUpdatedEvent handlers and ClientGuideRecipeCache).
+     * recipe-sync hook and ClientGuideRecipeCache).
      *
-     * <p>The join-time sync ({@code firstSyncOfConnection}) re-parses immediately: it doubles
-     * as the content warm-load that used to hang off LoggingIn, and its ~750ms cost hides
-     * inside the "Joining world" screen. A mid-session re-sync (datapack /reload) only
-     * re-parses immediately when a guide is actually open (so the visible book self-heals
-     * via the reloadGeneration bump GuiGuide polls); otherwise it just marks the content
-     * dirty and the next book open pays the parse — re-parsing eagerly there would freeze
-     * the render thread mid-gameplay for content nobody is looking at.
+     * <p>Lazy by design: the re-parse takes hundreds of milliseconds even now (reload0 logs its
+     * phases), and this runs on the render thread inside the packet handler, where it used to
+     * freeze every world join for over a second. Instead
+     * the content is only marked dirty, and the next book open pays the parse through
+     * {@link #ensureLoaded()}. The one exception is a guide screen that is already open,
+     * which is re-parsed immediately so the visible book self-heals via the
+     * reloadGeneration bump GuiGuide polls. Nothing outside the guide reads the parsed
+     * data, so no one sees stale content in between.
      *
      * <p>Safe here (unlike the constructor-time resource reload this class skips): recipe
      * packets only arrive in-world, long after item components are bound. */
-    public void onRecipeDataReceived(boolean firstSyncOfConnection) {
-        if (isInReload) {
-            // Unreachable today (both paths run on the render thread), but stay lossless:
-            // the running reload may have already consumed stale store contents.
-            recipeDataDirty = true;
-            return;
-        }
-        if (contents.isEmpty() || firstSyncOfConnection || isGuideScreenOpen()) {
+    public void onRecipeDataReceived() {
+        if (!isInReload && isGuideScreenOpen()) {
             reload();
         } else {
+            // Also the isInReload case (unreachable today, both paths run on the render
+            // thread): stay lossless, as the running reload may have already consumed
+            // stale store contents.
             recipeDataDirty = true;
         }
     }
@@ -277,9 +277,12 @@ public enum GuideManager {
 
     private void reload0(ResourceManager resourceManager) {
         Stopwatch watch = Stopwatch.createStarted();
+        // Per-phase split for the timing log below; lap() reads and restarts it.
+        Stopwatch phase = Stopwatch.createStarted();
 
         GuideBookRegistry.INSTANCE.reload();
         GuidePageRegistry.INSTANCE.reload();
+        long registriesMs = lap(phase);
 
         entries.clear();
         GuidePageRegistry manager = GuidePageRegistry.INSTANCE;
@@ -306,6 +309,7 @@ public enum GuideManager {
             entry.getKey().data.generate(entry.getValue());
         }
         pages.clear();
+        long entriesMs = lap(phase);
 
         String currentLanguage = Minecraft.getInstance().getLanguageManager().getSelected();
         String langCode;
@@ -317,21 +321,26 @@ public enum GuideManager {
         }
 
         loadLangInternal(resourceManager, DEFAULT_LANG);
+        long defaultLangMs = lap(phase);
         if (!DEFAULT_LANG.equals(langCode)) {
             loadLangInternal(resourceManager, langCode);
         }
+        long currentLangMs = lap(phase);
 
         // Populate guide-group memberships now that BC modules are loaded and the
         // fuel/coolant/refinery registries are stable. Must happen before
         // generateContentsPage() so any group-derived contents can resolve correctly.
         GuideGroupManager.populateDefaultGroups();
+        long groupsMs = lap(phase);
 
         // Read the category-page bodies from disk while ResourceManager is still in
         // hand. The .md files are parsed into GuidePartFactory lists that the
         // category-page builder will materialize on each page open.
         loadCategoryBodies(resourceManager, langCode);
+        long categoryBodiesMs = lap(phase);
 
-        generateContentsPage();
+        String contentsSplit = generateContentsPage();
+        long contentsMs = lap(phase);
 
         watch.stop();
         long time = watch.elapsed(TimeUnit.MICROSECONDS);
@@ -340,7 +349,10 @@ public enum GuideManager {
         int e = p - a;
         BCLog.logger.info(
             "[lib.guide] Loaded " + p + " possible and " + a + " actual guide pages (" + e + " not found) in "
-                + time / 1000 + "ms."
+                + time / 1000 + "ms: registries " + registriesMs + ", entries " + entriesMs + ", pages " + DEFAULT_LANG
+                + " " + defaultLangMs + (DEFAULT_LANG.equals(langCode) ? "" : ", pages " + langCode + " " + currentLangMs)
+                + ", groups " + groupsMs + ", category bodies " + categoryBodiesMs + ", contents " + contentsMs
+                + " (" + contentsSplit + ")."
         );
 
         // This build consumed the current recipe store, whatever the trigger was.
@@ -350,6 +362,13 @@ public enum GuideManager {
         // GuiGuide keeps using its previous (still-coherent) state instead of thrashing
         // against a half-built registry.
         reloadGeneration++;
+    }
+
+    /** Milliseconds since the last lap (or the start) of {@code phase}, restarting it. */
+    private static long lap(Stopwatch phase) {
+        long ms = phase.elapsed(TimeUnit.MILLISECONDS);
+        phase.reset().start();
+        return ms;
     }
 
     @SuppressWarnings("unchecked")
@@ -438,7 +457,9 @@ public enum GuideManager {
         }
     }
 
-    private void generateContentsPage() {
+    /** Rebuilds the contents tree and search index; returns the per-step timing split for reload0's log line. */
+    private String generateContentsPage() {
+        Stopwatch step = Stopwatch.createStarted();
         objectsAdded.clear();
         contents.clear();
         // Pre-compute the set of statements that category entries will absorb, so the
@@ -452,6 +473,7 @@ public enum GuideManager {
         }
         quickSearcher = new SimpleSuffixArray<>();
         pageLinksAdded.clear();
+        long typeMapsMs = lap(step);
 
         for (Entry<Object, PageEntry<?>> mapEntry : GuidePageRegistry.INSTANCE.getReloadableEntryMap()
             .entrySet()) {
@@ -489,6 +511,8 @@ public enum GuideManager {
             // visibility flag baked into iterateAllDefault) so the leaf still exists.
         }
 
+        long authoredMs = lap(step);
+
         // Auto-iterated categories (Triggers, Actions, ...) are filed per sort order by
         // fileExtraEntry: their own top-level chapter under Sort By Type, nested under their
         // game system under Sort By System, and flat under Alphabetical — mirroring how
@@ -502,6 +526,7 @@ public enum GuideManager {
         for (PageValueType<?> type : GuidePageRegistry.INSTANCE.types.values()) {
             type.iterateAllDefault(adder, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
         }
+        long autoIndexMs = lap(step);
 
         // Consolidated category entries: single TOC links that open a page listing
         // many small entries that would otherwise clutter the index alphabetically.
@@ -509,14 +534,18 @@ public enum GuideManager {
         // entries also de-dup from the auto-iterated leaves above (see e.g.
         // PageEntryStatement#iterateAllDefault skipping IFillerPattern).
         addCategoryEntries();
+        long categoriesMs = lap(step);
 
         quickSearcher.generate(net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+        long searchMs = lap(step);
 
         for (Map<TypeOrder, ContentsNode> map : contents.values()) {
             for (ContentsNode node : map.values()) {
                 node.sort();
             }
         }
+        return "type maps " + typeMapsMs + ", authored entries " + authoredMs + ", auto-index " + autoIndexMs
+            + ", categories " + categoriesMs + ", search index " + searchMs + ", sort " + lap(step);
     }
 
     /** Source-of-truth list of category .md files to load. Each entry is

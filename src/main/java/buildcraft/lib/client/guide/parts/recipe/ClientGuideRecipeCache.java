@@ -29,7 +29,8 @@ import buildcraft.platform.Platform;
  * server sends the serializers {@code FabricGameHooks.syncRecipeTypes} names and fabric-recipe-api's
  * {@code ClientRecipeSynchronizedEvent} feeds this store.
  * Both events fire on every world join and again on datapack {@code /reload}, and the
- * BCLibClient handler follows each refresh with a guide reload, so panels re-bake from
+ * BCLibClient handler follows each refresh by marking the guide content stale (rebuilt at the
+ * next book open, or at once when the book is already open), so panels re-bake from
  * current data and never go stale across server switches.
  *
  * <p>Cleared on {@code ClientPlayerNetworkEvent.LoggingOut}. When the store is empty (e.g. a
@@ -40,7 +41,6 @@ import buildcraft.platform.Platform;
 public class ClientGuideRecipeCache {
 
     private static volatile List<RecipeHolder<?>> synced = ImmutableList.of();
-    private static volatile boolean seenSyncThisConnection = false;
 
     private ClientGuideRecipeCache() {}
 
@@ -48,21 +48,11 @@ public class ClientGuideRecipeCache {
      * recipe-sync event handlers in BCLibClient (render thread) and from game tests. */
     public static void setSynced(Collection<RecipeHolder<?>> holders) {
         synced = ImmutableList.copyOf(holders);
-        seenSyncThisConnection = true;
     }
 
     /** Forgets the previous server's recipes (logout, and game-test cleanup). */
     public static void clear() {
         synced = ImmutableList.of();
-        seenSyncThisConnection = false;
-    }
-
-    /** True once any sync (even an empty one) has arrived on the current connection —
-     * distinguishes the join-time sync (guide warm-load, hidden by the loading screen) from
-     * a mid-session datapack /reload re-sync (deferred re-parse; see
-     * GuideManager.onRecipeDataReceived). Reset by {@link #clear()} on logout. */
-    public static boolean hasSeenSyncThisConnection() {
-        return seenSyncThisConnection;
     }
 
     /** The recipes the server actually sent on this connection, without the singleplayer fallback (which hides a

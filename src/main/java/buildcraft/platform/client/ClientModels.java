@@ -47,13 +47,24 @@ public interface ClientModels {
             net.minecraft.client.renderer.rendertype.RenderType glintSheet,
             net.minecraft.client.renderer.rendertype.RenderType glintSpecialSheet, int tintIndex,
             net.minecraft.core.Direction shadeOverride, int lightEmission);
+    //?} elif >=26.1 {
+    /*/^*
+     * A quad's material on 26.1 and 26.2: vanilla's six components. NeoForge adds an ambient-occlusion flag (in its
+     * patch since 26.1-pre3); BC's quads always take ambient occlusion.
+     ^/
+    BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet, int tintIndex, boolean shade,
+            int lightEmission);
+    *///?}
 
+    //? if >=26.1 {
     /**
      * Gives an item model's layer {@code quads}, each drawn with the per-vertex colours {@link #withVertexColours} gave
-     * it (on this line a layer takes one {@code ItemQuads}, split into its solid and translucent submits). NeoForge:
-     * the quads themselves carry the colours, so this is {@code layer.setQuads(ItemQuads.split(quads))}. Fabric: the
-     * uncoloured quads go that way and the coloured ones through the layer's mesh emitter
-     * ({@code FabricLayerRenderState#emitter}), the one item path in Fabric API that takes a colour per vertex.
+     * it (from 26.3 a layer takes one {@code ItemQuads}, split into its solid and translucent submits; before, its
+     * quad list). NeoForge: the quads themselves carry the colours. Fabric: the uncoloured quads go that way and the
+     * coloured ones through the layer's mesh emitter ({@code FabricLayerRenderState#emitter}), the one item path in
+     * Fabric API that takes a colour per vertex.
      */
     void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
             java.util.List<BakedQuad> quads);

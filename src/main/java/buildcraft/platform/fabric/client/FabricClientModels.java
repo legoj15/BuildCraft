@@ -14,7 +14,6 @@ import com.google.common.collect.MapMaker;
 
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.resources.model.geometry.ItemQuads;
 
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
 
@@ -38,6 +37,7 @@ public final class FabricClientModels implements ClientModels {
      ^/
     private static final ConcurrentMap<BakedQuad, int[]> VERTEX_COLOURS = new MapMaker().weakKeys().makeMap();
 
+    //? if >=26.3 {
     @Override
     public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
             net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
@@ -49,6 +49,15 @@ public final class FabricClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission);
     }
+    //?} elif >=26.1 {
+    /^@Override
+    public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet, int tintIndex, boolean shade,
+            int lightEmission) {
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, tintIndex, shade, lightEmission);
+    }
+    ^///?}
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
@@ -82,7 +91,11 @@ public final class FabricClientModels implements ClientModels {
             applyVertexColours(emitter, quad);
             emitter.emit();
         }
-        layer.setQuads(ItemQuads.split(plain));
+        //? if >=26.3 {
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(plain));
+        //?} else {
+        /^layer.prepareQuadList().addAll(plain);
+        ^///?}
     }
 
     /^*

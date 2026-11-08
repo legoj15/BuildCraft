@@ -35,14 +35,26 @@ public final class NeoForgeClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission, true);
     }
+    //?} else {
+    /*@Override
+    public BakedQuad.MaterialInfo materialInfo(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+            net.minecraft.client.renderer.chunk.ChunkSectionLayer layer,
+            net.minecraft.client.renderer.rendertype.RenderType itemSheet, int tintIndex, boolean shade,
+            int lightEmission) {
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, tintIndex, shade, lightEmission, true);
+    }
+    *///?}
 
     @Override
     public void setItemQuads(net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState layer,
             java.util.List<BakedQuad> quads) {
         // The quads carry their BakedColors, which NeoForge's item draw multiplies in.
+        //? if >=26.3 {
         layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));
+        //?} else {
+        /*layer.prepareQuadList().addAll(quads);
+        *///?}
     }
-    //?}
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {

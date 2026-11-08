@@ -73,7 +73,11 @@ public final class FabricFakePlayers implements FakePlayers {
             deathTime = 0;
             hurtTime = 0;
             hurtDuration = 0;
+            //? if >=26.3 {
             setInvulnerableTime(0);
+            //?} else {
+            /^invulnerableTime = 0;
+            ^///?}
             setTicksFrozen(0);
             setPortalCooldown(0);
             portalProcess = null;

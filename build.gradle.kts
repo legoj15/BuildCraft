@@ -27,8 +27,10 @@ val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
 val isPre1_21_10 = stonecutter.eval(stonecutter.current.version, "<1.21.10")
 // True on every node below 26.3: gates the loot/advancement data down-port (DataDownportPre263).
 val isPre26_3 = stonecutter.eval(stonecutter.current.version, "<26.3")
+// True on the 1.21.x nodes: Minecraft is obfuscated below 26.1, so a Fabric node there needs Loom's remap mode.
+val isPre26_1 = stonecutter.eval(stonecutter.current.version, "<26.1")
 // Handed to the convention plugin, which cannot reach Stonecutter's classes from buildSrc.
-extensions.add(BcNode::class.java, "bcNode", BcNode(isPre1_21_11, isPre1_21_10, isPre26_3))
+extensions.add(BcNode::class.java, "bcNode", BcNode(isPre1_21_11, isPre1_21_10, isPre26_3, isPre26_1))
 
 // ─── Stonecutter source replacements ─────────────────────────────────────────
 // The pre-1.21.11 nodes (1.21.10 and 1.21.1) reverse Mojang's 1.21.11 ResourceLocation->Identifier
@@ -179,6 +181,13 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
+// A Fabric node first picks Loom's mode: both ids apply the same `fabric-loom` plugin (which bc.fabric's own plugins
+// block then names, a no-op that gives it Loom's typed DSL), but the no-remap id must come first on the unobfuscated
+// 26.x lines and the remap id (Mojang mappings, mod* configurations, remapJar) on the obfuscated 1.21.x lines. It has
+// to happen here: a convention plugin's plugins block runs before any of its code could choose.
+if (loader == "fabric") {
+    apply(plugin = if (isPre26_1) "net.fabricmc.fabric-loom-remap" else "net.fabricmc.fabric-loom")
+}
 apply(plugin = "bc.$loader")
 
 // ─── Full pre-release verification ───────────────────────────────────────────

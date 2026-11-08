@@ -255,11 +255,7 @@ public class PipeItemModel implements ItemModel {
      * solid and translucent submits, so the translucent dye overlay now draws as its own submit (through the platform,
      * which keeps any vertex colours on Fabric too). */
     private static void setLayerQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
-        //? if >=26.3 {
         buildcraft.platform.client.ClientPlatform.models().setItemQuads(layer, quads);
-        //?} else {
-        /*layer.prepareQuadList().addAll(quads);
-        *///?}
     }
     //?}
 

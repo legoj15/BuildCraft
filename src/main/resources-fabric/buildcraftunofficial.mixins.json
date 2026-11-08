@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "buildcraft.platform.fabric.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "${mixin_java_level}",
   "mixins": [
     "AbstractBoatMixin",
     "BlockBehaviourMixin",
@@ -27,6 +27,7 @@
     "MobMixin",
     "PlayerChunkSenderMixin",
     "PlayerMixin",
+    "RedStoneWireBlockMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",
     "ServerExplosionMixin",

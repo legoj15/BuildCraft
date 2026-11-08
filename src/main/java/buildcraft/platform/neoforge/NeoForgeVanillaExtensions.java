@@ -65,6 +65,20 @@ public final class NeoForgeVanillaExtensions implements VanillaExtensions {
         return entity.getPersistentData();
     }
 
+    //? if >=1.21.10 && <26.3 {
+    /*@Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        return stack.getBurnTime(null, level.fuelValues());
+    }
+    *///?}
+    //? if <1.21.10 {
+    /*@Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        // 1.21.1 predates the FuelValues lookup (MC 1.21.2); getBurnTime is single-arg.
+        return stack.getBurnTime(null);
+    }
+    *///?}
+
     //? if >=26.1 {
     @Override
     public <T extends net.minecraft.world.level.saveddata.SavedData> net.minecraft.world.level.saveddata.SavedDataType<T>

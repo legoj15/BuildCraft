@@ -79,7 +79,13 @@ public final class AssemblyRecipeCollector {
         // plugin-init time. Tag-based ingredients would; we don't use any in this
         // registry.
         //? if >=1.21.10 {
+        //? if >=26.3 {
         ContextMap displayCtx = ContextMap.EMPTY;
+        //?} else {
+        /*// ContextMap.EMPTY is vanilla only from 26.3 (NeoForge adds it earlier), so build an empty one.
+        ContextMap displayCtx = new ContextMap.Builder()
+                .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        *///?}
         //?}
         for (ItemStack output : recipe.getOutputPreviews()) {
             if (output.isEmpty()) continue;

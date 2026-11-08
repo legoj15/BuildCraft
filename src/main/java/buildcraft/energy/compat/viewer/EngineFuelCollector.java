@@ -87,7 +87,7 @@ public final class EngineFuelCollector {
         FuelValues fuelValues = level.fuelValues();
         for (Item item : fuelValues.fuelItems()) {
             ItemStack stack = new ItemStack(item);
-            int burnTime = stack.getBurnTime(null, fuelValues);
+            int burnTime = buildcraft.platform.Platform.extensions().burnTime(stack, level);
             if (burnTime > 0) {
                 out.add(new StirlingFuel(stack, burnTime));
             }
@@ -95,9 +95,11 @@ public final class EngineFuelCollector {
         return out;
         *///?} else {
         /*List<StirlingFuel> out = new ArrayList<>();
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return out;
         for (Item item : net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity.getFuel().keySet()) {
             ItemStack stack = new ItemStack(item);
-            int burnTime = stack.getBurnTime(null);
+            int burnTime = buildcraft.platform.Platform.extensions().burnTime(stack, level);
             if (burnTime > 0) {
                 out.add(new StirlingFuel(stack, burnTime));
             }

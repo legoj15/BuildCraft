@@ -153,6 +153,22 @@ public final class FabricVanillaExtensions implements VanillaExtensions {
         return ((AttachmentTarget) entity).getAttachedOrCreate(PERSISTENT_DATA);
     }
 
+    //? if >=1.21.10 && <26.3 {
+    /^// Vanilla's fuel table, which Fabric API's FuelRegistryEvents feed.
+    @Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        return level.fuelValues().burnDuration(stack);
+    }
+    ^///?}
+    //? if <1.21.10 {
+    /^// 1.21.1's static fuel map, which Fabric API's FuelRegistry feeds.
+    @Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        return stack.isEmpty() ? 0 : net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity.getFuel()
+                .getOrDefault(stack.getItem(), 0);
+    }
+    ^///?}
+
     @Override
     public <T extends SavedData> SavedDataType<T> levelSavedDataType(Identifier id, Function<ServerLevel, T> factory,
             Function<ServerLevel, Codec<T>> codec, DataFixTypes fixType) {

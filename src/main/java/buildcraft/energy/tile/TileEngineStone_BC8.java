@@ -151,12 +151,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         // through a ServerLevel loot context, so there is no answer off the server.
         if (!(level instanceof ServerLevel serverLevel)) return 0;
         return burnTime(serverLevel, this, stack);
-        //?} elif >=1.21.10 {
-        /*return stack.getBurnTime(null, level.fuelValues());
-        *///?} else {
-        /*// 1.21.1 predates the FuelValues lookup (MC 1.21.2); getBurnTime is single-arg.
-        return stack.getBurnTime(null);*/
-        //?}
+        //?} else {
+        /*return buildcraft.platform.Platform.extensions().burnTime(stack, level);
+        *///?}
     }
 
     //? if >=26.3 {

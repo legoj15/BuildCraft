@@ -59,13 +59,15 @@ import buildcraft.platform.hook.ExplosionArmouredBlock;
 import buildcraft.platform.hook.PickStackBlock;
 import buildcraft.platform.hook.PlayerBreakGuard;
 import buildcraft.platform.hook.PositionalSoundBlock;
+import buildcraft.platform.hook.RedstoneConnectBlock;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
 public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock,
-        PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock, PositionalSoundBlock {
+        PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock, PositionalSoundBlock,
+        RedstoneConnectBlock {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
@@ -913,14 +915,20 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         }
     }
 
+    //? if >=26.3 {
     // NeoForge's canConnectRedstone extension is gone in 26.3: vanilla's shouldRedstoneWireConnectTo takes the same
-    // arguments (the pipe's plug-aware answer is unchanged).
+    // arguments, so it asks the same plug-aware answer.
     @Override
-    //? if <26.3 {
-    /*public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
-    *///?} else {
     protected boolean shouldRedstoneWireConnectTo(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
+        return canConnectRedstone(state, level, pos, direction);
+    }
     //?}
+
+    // Before 26.3 this is NeoForge's canConnectRedstone extension (same name and arguments) and, on Fabric, the
+    // RedstoneConnectBlock hook its redstone-wire mixin asks; from 26.3 the vanilla override above asks it.
+    @Override
+    @LoaderHook("neoforge:IBlockExtension#canConnectRedstone")
+    public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {
             if (direction != null) {

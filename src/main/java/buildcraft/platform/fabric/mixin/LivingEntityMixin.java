@@ -63,8 +63,10 @@ abstract class LivingEntityMixin {
     @Shadow
     protected abstract double getEffectiveGravity();
 
+    //? if >=26.3 {
     @Shadow
     private void floatInLiquidWhileRidden(TagKey<Fluid> fluidTag) {}
+    //?}
 
     /^* The BuildCraft fluid that is not water-like this entity travels in this tick (NeoForge's {@code travel} takes
      *  {@code travelInFluid} for it, which hands it to the type's {@code move}), or null. *^/
@@ -104,7 +106,9 @@ abstract class LivingEntityMixin {
         ThickFluidMotion.travel(self, thick, input, getEffectiveGravity());
         // Vanilla's travelInFluid ends with this lift for a ridden can_float_while_ridden mount in any water-tag
         // fluid, after the type's move on NeoForge 26.3, so a ridden horse floats in crude oil there too (#142).
+        //? if >=26.3 {
         floatInLiquidWhileRidden(FluidTags.ENTITY_FLOATABLE);
+        //?}
         ci.cancel();
     }
 

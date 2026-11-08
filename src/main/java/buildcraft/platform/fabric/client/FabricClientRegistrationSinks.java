@@ -11,7 +11,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.function.Supplier;
 
-import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.client.color.block.BlockTintSource;
@@ -120,8 +119,13 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         BlockColorRegistry.register(sources.get(), block.get());
     }
 
+    //? if >=26.3 {
     @Override
-    public void renderPipeline(Supplier<RenderPipeline> pipeline) {
+    public void renderPipeline(Supplier<com.mojang.renderpearl.api.pipeline.RenderPipeline> pipeline) {
+    //?} else {
+    /^@Override
+    public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
+    ^///?}
         RenderPipelines.register(pipeline.get());
     }
 

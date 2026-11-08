@@ -231,7 +231,13 @@ public class GuideCraftingFactory implements GuidePartFactory {
         if (level != null) {
             return net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level);
         }
+        //? if >=26.3 {
         return net.minecraft.util.context.ContextMap.EMPTY;
+        //?} else {
+        /*// ContextMap.EMPTY is vanilla only from 26.3 (NeoForge adds it earlier), so build an empty one.
+        return new net.minecraft.util.context.ContextMap.Builder()
+                .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        *///?}
     }
     //?}
 

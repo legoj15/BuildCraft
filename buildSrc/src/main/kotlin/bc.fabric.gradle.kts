@@ -1,5 +1,5 @@
 // The Fabric half of the per-node build: applied by build.gradle.kts as `bc.$loader` on every node whose `loader` is
-// fabric (today only 26.3-fabric). Loom's version is pinned in buildSrc/build.gradle.kts.
+// fabric (one `<mc>-fabric` node per MC line). Loom's version is pinned in buildSrc/build.gradle.kts.
 //
 // Phase 2a (#98): the node compiles all of BuildCraft (src/main/java; NeoForge-only code sits in platform/neoforge,
 // whose files are empty on this node) and builds a jar, collected beside the NeoForge ones by buildAndCollect.
@@ -8,15 +8,29 @@
 // resources, the jar and the game tests.
 //
 // Loom on 26.x does not remap: Minecraft ships unobfuscated, so there is no mappings line and the mod dependencies
-// go on the plain Java configurations rather than the mod* remapping ones.
+// go on the plain Java configurations. On the 1.21.x lines (obfuscated) the node uses Loom's remap mode instead:
+// Mojang's official mappings, the mod* remapping configurations (modConfig below), and remapJar as the shipped jar.
+// build.gradle.kts picks the mode before applying this plugin (the `net.fabricmc.fabric-loom[-remap]` id).
 
 import buildcraft.gradle.AppendingLogStream
+import buildcraft.gradle.BcNode
+import buildcraft.gradle.DataDownport1211
+import buildcraft.gradle.DataDownportPre263
 import buildcraft.gradle.DataFabric
 import java.time.Duration
 
 plugins {
-    id("net.fabricmc.fabric-loom")
+    // Already applied by build.gradle.kts in the node's mode; naming it here only gives this script Loom's DSL.
+    id("fabric-loom")
 }
+
+val bcNode = extensions.getByType<BcNode>()
+val isPre26_3 = bcNode.isPre26_3
+val isPre1_21_10 = bcNode.isPre1_21_10
+// Remap mode (the obfuscated 1.21.x lines).
+val remap = bcNode.isPre26_1
+// A mod dependency's configuration: the plain one without remapping, Loom's mod* twin with it (modImplementation...).
+fun modConfig(name: String) = if (remap) "mod" + name.replaceFirstChar { it.uppercase() } else name
 
 // Per-node values, resolved from versions/<node>/gradle.properties (inheriting root gradle.properties).
 val minecraftVersion = property("minecraft_version") as String
@@ -26,6 +40,17 @@ val forgeConfigApiPortVersion = property("forge_config_api_port_version") as Str
 val modMenuVersion = property("mod_menu_version") as String
 val jeiVersion = property("jei_version") as String
 val reiVersion = property("rei_version") as String
+// The REI API's own dependencies (its Fabric POM puts them at runtime scope), the versions that POM pins.
+val reiBasicMathVersion = property("rei_basic_math_version") as String
+val reiArchitecturyVersion = property("rei_architectury_version") as String
+// Team Reborn Energy and Common Protection API: the builds for this MC line.
+val teamRebornEnergyVersion = property("team_reborn_energy_version") as String
+val commonProtectionApiVersion = property("common_protection_api_version") as String
+// The other player-facing floors in fabric.mod.json, per line.
+val forgeConfigApiPortDepRange = property("forge_config_api_port_dep_range") as String
+val commonProtectionApiDepRange = property("common_protection_api_dep_range") as String
+// Mixin's compatibilityLevel for both mixin configs: JAVA_21 on the 1.21.x lines, JAVA_25 on 26.x.
+val mixinJavaLevel = "JAVA_" + (property("java_version") as String)
 // The player-facing minimums fabric.mod.json declares: their own properties, so a routine bump of the dev pins above
 // never raises what a Fabric player must install (the Fabric twins of bc.neoforge's neo_dep_range).
 val fabricLoaderDepRange = property("fabric_loader_dep_range") as String
@@ -110,7 +135,12 @@ dependencies {
     "gametestCompileOnly"("com.electronwill.night-config:core:3.8.4")
     "gametestCompileOnly"("com.electronwill.night-config:toml:3.8.4")
     // Team Reborn Energy at run time, so the FE tests exercise FabricEnergyStorages (it is optional in the jar).
-    "gametestRuntimeOnly"("teamreborn:energy:5.0.0") { isTransitive = false }
+    // (Remap mode: on the main dev runtime instead; the gametest set has no mod* configuration of its own.)
+    if (remap) {
+        "modLocalRuntime"("teamreborn:energy:$teamRebornEnergyVersion") { isTransitive = false }
+    } else {
+        "gametestRuntimeOnly"("teamreborn:energy:$teamRebornEnergyVersion") { isTransitive = false }
+    }
 }
 // The gametest set reads the TEST source set's Stonecutter copy, so it waits for that copy, not its own.
 tasks.named<JavaCompile>("compileGametestJava") {
@@ -124,8 +154,15 @@ tasks.named<ProcessResources>("processGametestResources") {
     // naming a test function this node does not register would fail that test at run time, so it is dropped.
     val registrar = sourceSets["test"].java.srcDirs.map { it.resolve("buildcraft/BuildCraftGameTests.java") }
     inputs.files(registrar).optional()
+    val mixinLevel = mapOf("mixin_java_level" to mixinJavaLevel)
+    inputs.properties(mixinLevel)
+    filesMatching("buildcraftunofficial_gametest.mixins.json") { expand(mixinLevel) }
     doLast {
         buildcraft.gradle.FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
+    }
+    // The test fixture recipes need the same 1.21.1 down-port as the NeoForge node's test resources.
+    if (isPre1_21_10) {
+        doLast { DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe")) }
     }
 }
 // The quiet console of bc.neoforge's gameTestServer: the server's stdout (INFO, and a progress bar line per test
@@ -242,11 +279,16 @@ tasks.named<ProcessResources>("processResources") {
         "minecraft_version" to minecraftVersion,
         "fabric_loader_dep_range" to fabricLoaderDepRange,
         "fabric_api_dep_range" to fabricApiDepRange,
+        "forge_config_api_port_dep_range" to forgeConfigApiPortDepRange,
+        "common_protection_api_dep_range" to commonProtectionApiDepRange,
+        "mixin_java_level" to mixinJavaLevel,
     )
     inputs.properties(replaceProperties)
     // escapeBackslash: the template engine would otherwise turn the JSON escape backslash-n in the
     // description into a raw newline, which is not valid JSON.
-    filesMatching("fabric.mod.json") { expand(replaceProperties) { escapeBackslash = true } }
+    filesMatching(listOf("fabric.mod.json", "buildcraftunofficial.mixins.json")) {
+        expand(replaceProperties) { escapeBackslash = true }
+    }
     // A file present in both resource trees is a mistake, not something to drop silently.
     duplicatesStrategy = DuplicatesStrategy.FAIL
     // The NeoForge -> Fabric data transform (conditions, components ingredients, biome modifiers, fluid_container
@@ -254,6 +296,24 @@ tasks.named<ProcessResources>("processResources") {
     // transform checks the biome features it adds against the biome-modifier JSON it drops.
     val fabricDataCode = rootProject.file("src/main/java/buildcraft/platform/fabric/FabricDataServices.java")
     inputs.file(fabricDataCode)
+    // The loot/advancement down-port every pre-26.3 node applies (26.3 only validates), and the 1.21.1 recipe,
+    // advancement and item-model one: bc.neoforge runs the same two. Before the Fabric transform, which expects them.
+    // (Constant branches, as in bc.neoforge: a doLast must not capture the script-level flag.)
+    if (isPre26_3) {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), true) }
+    } else {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), false) }
+    }
+    if (isPre1_21_10) {
+        doLast {
+            DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
+            DataDownport1211.downportAdvancementBackground1211(destinationDir.resolve("data/buildcraftunofficial/advancement"))
+            DataDownport1211.generateOldItemModels1211(
+                destinationDir.resolve("assets/buildcraftunofficial/items"),
+                destinationDir.resolve("assets/buildcraftunofficial/models/item")
+            )
+        }
+    }
     doLast {
         DataFabric.apply(destinationDir, fabricDataCode)
         DataFabric.verifyNoNeoForgeData(destinationDir)
@@ -290,38 +350,41 @@ repositories {
 
 dependencies {
     "minecraft"("com.mojang:minecraft:$minecraftVersion")
-    implementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
-    implementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    if (remap) {
+        "mappings"(loom.officialMojangMappings())
+    }
+    modConfig("implementation")("net.fabricmc:fabric-loader:$fabricLoaderVersion")
+    modConfig("implementation")("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
     // NeoForge's config API on Fabric (FabricConfigRegistrar). Its night-config libraries ride inside it as nested
     // jars at runtime; the compile needs them directly because ModConfigSpec's signatures name them.
-    implementation("maven.modrinth:forge-config-api-port:$forgeConfigApiPortVersion")
+    modConfig("implementation")("maven.modrinth:forge-config-api-port:$forgeConfigApiPortVersion")
     compileOnly("com.electronwill.night-config:core:3.8.4")
     compileOnly("com.electronwill.night-config:toml:3.8.4")
     // javax.annotation (@Nullable/@Nonnull, used throughout BC): ModDevGradle brings it transitively on NeoForge.
     compileOnly("com.google.code.findbugs:jsr305:3.0.2")
     // Recipe viewers, compile-only like on NeoForge (BC's plugins are found by the viewers' own entrypoints).
-    compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
-    compileOnly("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")
-    compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:$reiVersion")
+    modConfig("compileOnly")("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
+    modConfig("compileOnly")("mezz.jei:jei-$minecraftVersion-fabric-api:$jeiVersion")
+    modConfig("compileOnly")("me.shedaniel:RoughlyEnoughItems-api-fabric:$reiVersion")
     // REI's Fabric api POM puts its own API's dependencies at runtime scope, so the compile names them: its geometry
     // (cloth basic-math: Point, Rectangle) and architectury (CompoundEventResult, the FluidStack its fluid entries
     // carry), the versions that POM pins.
-    compileOnly("me.shedaniel.cloth:basic-math:0.6.1") { isTransitive = false }
-    compileOnly("dev.architectury:architectury-fabric:22.0.3") { isTransitive = false }
+    compileOnly("me.shedaniel.cloth:basic-math:$reiBasicMathVersion") { isTransitive = false }
+    modConfig("compileOnly")("dev.architectury:architectury-fabric:$reiArchitecturyVersion") { isTransitive = false }
     // Team Reborn Energy, Fabric's de-facto FE/RF API, compile-only and optional at runtime (FabricEnergyStorages
     // touches it only when the mod is loaded). 5.0.0 is the newest build; it was compiled against
     // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are
     // unchanged in the 8.x this node has, so its own transitive transfer-api pin is left out.
-    compileOnly("teamreborn:energy:5.0.0") { isTransitive = false }
+    modConfig("compileOnly")("teamreborn:energy:$teamRebornEnergyVersion") { isTransitive = false }
     // Common Protection API, the API Fabric claim mods answer "may this player break, place or use here" through
     // (FabricProtection). MIT, so it ships inside the jar (Loom's jar-in-jar `include`, carrying its own licence
     // file), as Fabric mods conventionally ship it; the loader keeps the newest copy when several mods bundle it.
-    implementation("eu.pb4:common-protection-api:2.0.0") { isTransitive = false }
-    include("eu.pb4:common-protection-api:2.0.0")
+    modConfig("implementation")("eu.pb4:common-protection-api:$commonProtectionApiVersion") { isTransitive = false }
+    include("eu.pb4:common-protection-api:$commonProtectionApiVersion")
     // Mod Menu in the dev client only (Loom's localRuntime: never compiled against, published or shipped), so
     // runClient has the mod list whose config button opens the screen FabricClientConfigScreens registers. Its POM's
     // runtime deps are Fabric Loader and Fabric API modules this node already has; Placeholder API rides inside it.
-    "localRuntime"("com.terraformersmc:modmenu:$modMenuVersion") { isTransitive = false }
+    modConfig("localRuntime")("com.terraformersmc:modmenu:$modMenuVersion") { isTransitive = false }
 }
 
 // Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),
@@ -356,8 +419,14 @@ tasks.named("test") { enabled = false }
 // ─── Distribution JAR ────────────────────────────────────────────────────────
 // The NeoForge jar's name (bc.neoforge) plus the loader: BuildCraftRedux-<mod_version>+mc<mc>-fabric.jar, so both
 // loaders' jars for one MC version sit side by side in build/libs/<mod_version>/. Loom on 26.x does not remap, so
-// `jar` is the shipped jar. The licence texts ride along exactly as in the NeoForge jar.
-tasks.named<Jar>("jar") {
+// `jar` is the shipped jar; in remap mode (1.21.x) remapJar is, and `jar` is its dev (Mojang-named) input.
+// The licence texts ride along exactly as in the NeoForge jar.
+val shippedJar = if (remap) "remapJar" else "jar"
+if (remap) {
+    // The dev jar keeps its own classifier, so it never overwrites the shipped one in build/libs.
+    tasks.named<Jar>("jar") { archiveClassifier = "fabric-dev" }
+}
+tasks.named<Jar>(shippedJar) {
     archiveBaseName = "BuildCraftRedux"
     archiveVersion = "$modVersion+mc$minecraftVersion"
     archiveClassifier = "fabric"
@@ -370,7 +439,7 @@ tasks.named<Jar>("jar") {
 // The twin of bc.neoforge's buildAndCollect: this node's jar into the same build/libs/<mod_version>/.
 tasks.register<Copy>("buildAndCollect") {
     group = "build"
-    from(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+    from(tasks.named<Jar>(shippedJar).flatMap { it.archiveFile })
     into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
     dependsOn("assemble")
 }
@@ -380,6 +449,6 @@ tasks.register<Copy>("buildAndCollect") {
 tasks.register("nodeVerification") {
     group = "verification"
     description = "This Fabric node's share of fullTestSuite: compileJava, the deprecated-API guard, the class-tweaker validation, the Fabric data transform, the collected jar and the game tests."
-    dependsOn("compileJava", "checkDeprecations", "validateAccessWidener", "processResources", "jar", "buildAndCollect",
-        "runGameTest")
+    dependsOn("compileJava", "checkDeprecations", "validateAccessWidener", "processResources", shippedJar,
+        "buildAndCollect", "runGameTest")
 }

@@ -28,6 +28,7 @@ stonecutter {
         // node's `loader=fabric`, never from the name. 26.3-fabric builds all of BuildCraft and its own jar
         // (#98; see buildSrc bc.fabric.gradle.kts and docs/platform-layer.md).
         version("26.3-fabric", "26.3")
+        version("26.2-fabric", "26.2")
         vcsVersion = "26.3"
     }
 }

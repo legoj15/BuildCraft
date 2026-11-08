@@ -56,6 +56,15 @@ public interface VanillaExtensions {
      */
     CompoundTag persistentData(Entity entity);
 
+    //? if <26.3 {
+    /*/^*
+     * The furnace burn time of {@code stack} in {@code level}'s fuel table, 0 when it is no fuel. NeoForge's patched
+     * {@code getBurnTime} also asks the item itself; Fabric reads vanilla's table, which Fabric API's fuel registry
+     * events feed. (26.3 moved fuel onto a datapack component that only the server can resolve.)
+     ^/
+    int burnTime(ItemStack stack, net.minecraft.world.level.Level level);
+    *///?}
+
     //? if >=26.1 {
     /**
      * A saved-data type whose factory and codec are handed the level the storage belongs to (null for a storage with

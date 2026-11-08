@@ -82,7 +82,9 @@ public final class FabricEntityItems {
             EntityTypes.SPRUCE_CHEST_BOAT,
             EntityTypes.BAMBOO_CHEST_RAFT,
             EntityTypes.PALE_OAK_CHEST_BOAT,
+            //? if >=26.3 {
             EntityTypes.POPLAR_CHEST_BOAT,
+            //?}
             EntityTypes.CHEST_MINECART,
             EntityTypes.HOPPER_MINECART,
         };

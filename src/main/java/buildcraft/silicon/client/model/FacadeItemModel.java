@@ -149,9 +149,9 @@ public class FacadeItemModel implements ItemModel {
         renderState.appendModelIdentityElement(key);
 
         var layer = renderState.newLayer();
-        //? if >=26.3 {
-        // 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits. The
-        // platform hands it over so the quads keep their vertex colours on Fabric too.
+        //? if >=26.1 {
+        // Through the platform, so the quads keep their vertex colours on Fabric too (26.3 also dropped
+        // prepareQuadList(): a layer there takes one ItemQuads, pre-split into solid/translucent submits).
         buildcraft.platform.client.ClientPlatform.models().setItemQuads(layer, quads);
         //?} else {
         /*layer.prepareQuadList().addAll(quads);

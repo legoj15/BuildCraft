@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "buildcraft.platform.fabric.gametest.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "${mixin_java_level}",
   "mixins": [
     "GameTestInfoChunkWaitMixin",
     "ServerLevelGameEventMixin"

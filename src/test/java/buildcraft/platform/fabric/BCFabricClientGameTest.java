@@ -248,7 +248,11 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 if (pipe) {
                     // Only a pipe: the tube renders INVISIBLE, which vanilla's hit effects skip anyway.
                     mc.particleEngine.clearParticles();
+                    //? if >=26.3 {
                     level.addBreakingBlockEffects(at, Direction.UP, false);
+                    //?} else {
+                    /^level.addBreakingBlockEffect(at, Direction.UP);
+                    ^///?}
                     out.addAll(particleProblems("hit", state, true, queued));
                 }
             }

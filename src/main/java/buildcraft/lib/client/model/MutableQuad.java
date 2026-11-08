@@ -170,12 +170,11 @@ public class MutableQuad {
             tintIndex, shade ? null : Direction.UP, lightEmission
         );
         //?} else {
-        /*// The 7-arg form has been in NeoForge's patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
-        return new BakedQuad.MaterialInfo(
+        /*return buildcraft.platform.client.ClientPlatform.models().materialInfo(
             sprite, layer,
             translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
-            tintIndex, shade, lightEmission, true
+            tintIndex, shade, lightEmission
         );
         *///?}
     }

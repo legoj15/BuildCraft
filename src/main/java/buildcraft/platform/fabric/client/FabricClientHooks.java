@@ -15,7 +15,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
@@ -135,8 +134,7 @@ public final class FabricClientHooks implements ClientHooks {
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
             context.submitNodeCollector().submitShapeOutline(poseStack, shape,
-                    mc.gameRenderer.useImprovedTransparency()
-                            ? RenderTypes.linesTranslucentNoDepthWrite() : RenderTypes.linesTranslucent(),
+                    buildcraft.lib.client.render.BCLibRenderTypes.blockOutline(),
                     ARGB.black(102), 2.5F, outline.isTranslucent());
             poseStack.popPose();
             return false;

@@ -126,7 +126,7 @@ public class RobotActionAIsTester {
 
     /** A robot's break is a PLAYER's break: the loader's block-break event is posted for the robot's fake player, so a
      *  mod that reacts to a break (a tree chopper felling the rest of a tree, a claim mod, a logger) sees a robot's
-     *  as it sees anyone's. Four stones, one diamond pickaxe:
+     *  as it sees anyone's. Five stones, one diamond pickaxe (and a second, on its last durability point):
      *  <ul>
      *  <li>an unclaimed one breaks, and a break listener is told exactly once (apart from the up-front permission
      *  probe, which {@code isProbe} tells from a break) naming the [BuildCraft] player standing at the block, with the
@@ -136,6 +136,8 @@ public class RobotActionAIsTester {
      *  <li>one whose real event a claim refuses, while the probe lets it through, stays, the AI fails and the tool is
      *  not charged;</li>
      *  <li>one whose real event a mod cancels and then takes down itself, as a tree-felling mod does, counts as broken;</li>
+     *  <li>one broken with a pickaxe on its last durability point still drops its cobblestone, and the pickaxe going
+     *  with the break leaves the robot's hand the empty stack (the husk of the spent tool is not kept in it);</li>
      *  <li>with {@code minePlayerProtected} on (the "ignore protection mods" override) the same claim is never asked:
      *  the stone breaks silently as it always did.</li>
      *  </ul>
@@ -162,13 +164,15 @@ public class RobotActionAIsTester {
         BlockPos allowedRel = new BlockPos(2, 1, 2);
         BlockPos refusedRel = new BlockPos(4, 1, 2);
         BlockPos fellingRel = new BlockPos(4, 1, 4);
+        BlockPos wornRel = new BlockPos(2, 1, 6);
         BlockPos overriddenRel = new BlockPos(2, 1, 4);
-        for (BlockPos rel : List.of(allowedRel, refusedRel, fellingRel, overriddenRel)) {
+        for (BlockPos rel : List.of(allowedRel, refusedRel, fellingRel, wornRel, overriddenRel)) {
             helper.setBlock(rel, Blocks.STONE);
         }
         BlockPos allowed = helper.absolutePos(allowedRel);
         BlockPos refused = helper.absolutePos(refusedRel);
         BlockPos felling = helper.absolutePos(fellingRel);
+        BlockPos worn = helper.absolutePos(wornRel);
         BlockPos overridden = helper.absolutePos(overriddenRel);
 
         EntityRobot robot = unaddedRobot(helper, new BlockPos(3, 2, 3));
@@ -243,6 +247,31 @@ public class RobotActionAIsTester {
                     "the mod that cancels the real event takes the block down itself");
             helper.assertTrue(fellingBreaker.success(), "and the break is done: the effect decides, not the answer");
 
+            // The tool breaks with the block: vanilla's mineBlock spends the last point, the stone still drops (the tier
+            // check ran before the tool went), and the robot's hand is left holding the empty stack, not the spent one.
+            ItemStack lastPoint = new ItemStack(Items.DIAMOND_PICKAXE);
+            lastPoint.setDamageValue(lastPoint.getMaxDamage() - 1);
+            robot.setItemInUse(lastPoint);
+            AIRobotBreak wornBreaker = new AIRobotBreak(robot, worn);
+            for (int i = 0; i < 20 && !level.getBlockState(worn).isAir(); i++) {
+                wornBreaker.cycle();
+            }
+            helper.assertTrue(level.getBlockState(worn).isAir() && wornBreaker.success(),
+                    "the stone breaks with the last point of the pickaxe");
+            helper.assertTrue(lastPoint.isEmpty() && robot.getHeldItem().isEmpty(),
+                    "and the pickaxe went with it: the robot holds nothing");
+            helper.assertTrue(robot.getHeldItem() == ItemStack.EMPTY,
+                    "the hand is reset to the empty stack, not left holding the spent pickaxe's emptied husk");
+            int cobblestone = 0;
+            for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(worn).inflate(1),
+                    drop -> drop.getItem().is(Items.COBBLESTONE))) {
+                cobblestone += drop.getItem().getCount();
+            }
+            helper.assertTrue(cobblestone == 1,
+                    "a break with the tool's last point still drops exactly one cobblestone, got " + cobblestone);
+
+            robot.setItemInUse(pickaxe);
             BCCoreConfig.minePlayerProtected.set(true);
             AIRobotBreak overrider = new AIRobotBreak(robot, overridden);
             for (int i = 0; i < 20 && !level.getBlockState(overridden).isAir(); i++) {

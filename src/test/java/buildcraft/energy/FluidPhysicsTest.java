@@ -24,7 +24,6 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.test.EntityArenaUtil;
-import buildcraft.platform.FluidProperties;
 import buildcraft.platform.Platform;
 
 public class FluidPhysicsTest {
@@ -387,11 +386,11 @@ public class FluidPhysicsTest {
     public static void crudeOilFloatsBoats(GameTestHelper helper) {
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             for (Fluid form : new Fluid[] { entry.source().get(), entry.flowing().get() }) {
-                FluidProperties declared = Platform.fluids().declared(form);
-                if (declared == null || declared.supportsBoating() == entry.gaseous()) {
+                if (Platform.fluids().declared(form) == null) {
+                    helper.fail(entry.name() + " (" + form + "): no declared properties, so no loader asks it about boats");
+                } else if (boating(form) == entry.gaseous()) {
                     helper.fail(entry.name() + " (" + form + "): a boat floats on every energy fluid but a gas, yet"
-                            + " gaseous=" + entry.gaseous() + " and declared boating="
-                            + (declared == null ? "none declared" : declared.supportsBoating()));
+                            + " gaseous=" + entry.gaseous() + " and the loader's boating=" + boating(form));
                 }
             }
         }
@@ -424,7 +423,7 @@ public class FluidPhysicsTest {
                     boat[0] = placeBoat(helper, boat[0]);
                     since[0] = boat[0].tickCount;
                     return false;
-                }), helper::succeed, "a boat on crude oil was never checked", () -> EntityArenaUtil.discard(boat[0]));
+                }), helper::succeed, "a boat was never checked on water, crude oil, light fuel and fuel gas", () -> EntityArenaUtil.discard(boat[0]));
     }
 
     /** The cool tier of the energy fluid {@code baseName}: {@code fuel_light} is a liquid fuel that is water-like,
@@ -610,6 +609,15 @@ public class FluidPhysicsTest {
         return fluid.getFluidType().canSwim(null);
         //?} else {
         /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).canSwim();
+        *///?}
+    }
+
+    /** Whether a boat floats on it: NeoForge's fluid type (what {@code canBoatInFluid} asks), Fabric's boat test. */
+    private static boolean boating(Fluid fluid) {
+        //? if neoforge {
+        return fluid.getFluidType().supportsBoating(null);
+        //?} else {
+        /*return buildcraft.platform.fabric.FabricFluidPhysics.boatsFloatOn(fluid);
         *///?}
     }
 

@@ -11,6 +11,8 @@ package buildcraft.robotics.ai;
 import java.util.List;
 import java.util.Optional;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -18,17 +20,24 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 
 /** Breaks {@code blockToBreak} with the held tool, replicating vanilla's destroy-progress math (hardness,
  *  tool speed, efficiency's squared bonus, the correct-tool 30-vs-100 divisor) a few ticks per cycle, then
- *  finishes the job through the in-tree {@code BlockUtil.breakBlockAndGetDrops} (tier gate + drops).
+ *  finishes the job the way a player's break does: through the leased fake player's own
+ *  {@code ServerPlayerGameMode.destroyBlock}. That posts the loader's block-break event for the fake player (so a
+ *  mod that reacts to a break - a tree-felling mod, a claim mod, a logger - sees a robot's as anyone's, and a
+ *  cancelled event leaves the block and fails the AI), wears the robot's own tool through the item's mine hook
+ *  (one durability point for a tool that takes damage from breaking blocks), applies the tier gate (a tool that is not
+ *  the right one destroys the block without drops, as before) and spawns the drops and experience at the block.
  *  Ported from 7.1.x {@code AIRobotBreak}.
  *
  *  <p>The per-cycle progress is one tick of {@link BlockState#getDestroyProgress} measured for a freshly reset
@@ -42,7 +51,13 @@ import buildcraft.robotics.RobotProtection;
  *  {@code destroyBlockProgress}.
  *
  *  <p>Before the first swing it asks protection mods, for the robot's deployer and its home station's owner alike
- *  ({@link RobotProtection#canBreak}); a refusal fails the AI without touching the block. */
+ *  ({@link RobotProtection#canBreak}); a refusal fails the AI without touching the block. The break then posts the
+ *  event again, for real, and a protection mod may still refuse that one.
+ *
+ *  <p>While {@link BCCoreConfig#minePlayerProtected} is on - the "ignore protection mods" override that
+ *  {@code RobotProtection#canBreak} already honours by asking nobody - the robot breaks silently through
+ *  {@link BlockUtil#breakBlockAndGetDrops} as it did before it broke like a player: the real event would otherwise
+ *  hand the same mods a veto the override is there to remove. */
 public class AIRobotBreak extends AIRobot {
 
     private BlockPos blockToBreak;
@@ -84,9 +99,9 @@ public class AIRobotBreak extends AIRobot {
             return;
         }
 
-        // Ask protection mods once, before the first swing (7.1.x asked through its harvest call's break event;
-        // the port's break goes through breakBlockAndGetDrops, which posts none). Not persisted: a reloaded
-        // break asks again. The answer sticks, so a refused AI stays refused however often it is cycled.
+        // Ask protection mods once, before the first swing (7.1.x asked through its harvest call's break event; here
+        // it is a probe, and the break itself posts the event again for real). Not persisted: a reloaded break asks
+        // again. The answer sticks, so a refused AI stays refused however often it is cycled.
         if (permitted == null) {
             permitted = RobotProtection.canBreak(robot, serverLevel, blockToBreak);
         }
@@ -122,33 +137,71 @@ public class AIRobotBreak extends AIRobot {
 
         if (blockDamage > 1.0F) {
             blockDamage = 0;
-            ItemStack held = robot.getHeldItem();
-            // By the leased player itself (the acting identity's, or the generic one when that has no name).
-            Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(serverLevel, blockToBreak, held, player);
-            if (drops.isPresent()) {
-                for (ItemStack stack : drops.get()) {
-                    // 7.1.x's harvestBlock dropped at the broken block; keep that (the harvester/plant
-                    // AIs drop at the robot instead — each keeps its 7.1.x anchor).
-                    serverLevel.addFreshEntity(new ItemEntity(serverLevel,
-                            blockToBreak.getX() + 0.5, blockToBreak.getY() + 0.5, blockToBreak.getZ() + 0.5, stack));
-                }
-                // 7.1.x's onBlockDestroyed: one durability point, and an empty hand when it breaks.
-                // The no-op break consumer matters: hurtAndBreak invokes it when the tool breaks, and a
-                // robot has no player to notify (the 4-arg overload with a null consumer NPEs there).
-                if (held.isDamageableItem()) {
-                    held.hurtAndBreak(1, serverLevel, null, item -> {
-                    });
-                    if (held.isEmpty()) {
-                        robot.setItemInUse(ItemStack.EMPTY);
-                    }
-                }
+            if (BCCoreConfig.minePlayerProtected.get()) {
+                breakSilently(serverLevel, player);
             } else {
-                setSuccess(false);
+                breakAsPlayer(serverLevel, state, player);
             }
             serverLevel.destroyBlockProgress(robot.getId(), blockToBreak, -1);
             terminate();
         } else {
             serverLevel.destroyBlockProgress(robot.getId(), blockToBreak, (int) (blockDamage * 10.0F) - 1);
+        }
+    }
+
+    /** The player's break: {@code ServerPlayerGameMode.destroyBlock} for the leased fake player, which holds the
+     *  robot's own tool stack (never a copy), so the wear lands on it. Succeeds when the block is no longer the state
+     *  that was there: a cancelled break event, or a block that refused to go (its own removal hook answered no),
+     *  leaves it and fails the AI. The effect decides, not the method's answer: a mod that cancels the event and
+     *  takes the block down itself (a tree-felling mod does, with the rest of the tree) has still done the job. The
+     *  support cascade the removal sets off is re-synced to clients afterwards, as
+     *  {@link BlockUtil#breakBlockAndGetDropsWithXp} does for the machines.
+     *
+     *  <p>The player is stood at the block's centre first, where the permission probe stood it
+     *  ({@link BlockUtil#canMachineBreak} leases at the block): a lease without a position leaves the cached player
+     *  at its construction-time spot, and a claim mod judges a break by where the breaker stands. Only here, after the
+     *  progress maths: the progress is measured for the player as the lease left it. */
+    private void breakAsPlayer(ServerLevel serverLevel, BlockState state, ServerPlayer player) {
+        boolean hadTool = !robot.getHeldItem().isEmpty();
+        FakePlayerUtil.pose(player, Vec3.atCenterOf(blockToBreak), player.getYRot(), player.getXRot());
+        Long2ObjectOpenHashMap<BlockState> supportsBefore = BlockUtil.snapshotSupportsForResync(serverLevel, blockToBreak);
+        player.gameMode.destroyBlock(blockToBreak);
+        BlockUtil.resyncChangedBlocks(serverLevel, supportsBefore);
+        if (serverLevel.getBlockState(blockToBreak) == state) {
+            setSuccess(false);
+        }
+        // The tool broke on this block: the hand was left with the emptied stack, and the robot goes and fetches one.
+        if (hadTool && robot.getHeldItem().isEmpty()) {
+            robot.setItemInUse(ItemStack.EMPTY);
+        }
+    }
+
+    /** The break that asks and tells nobody ({@link BCCoreConfig#minePlayerProtected} on): the block is removed by
+     *  the leased player without its break event, the drops are placed at the block and the tool is charged by hand.
+     *  Kept exactly as the port broke before it broke like a player. */
+    private void breakSilently(ServerLevel serverLevel, ServerPlayer player) {
+        ItemStack held = robot.getHeldItem();
+        // By the leased player itself (the acting identity's, or the generic one when that has no name).
+        Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(serverLevel, blockToBreak, held, player);
+        if (drops.isPresent()) {
+            for (ItemStack stack : drops.get()) {
+                // 7.1.x's harvestBlock dropped at the broken block; keep that (the harvester/plant
+                // AIs drop at the robot instead - each keeps its 7.1.x anchor).
+                serverLevel.addFreshEntity(new ItemEntity(serverLevel,
+                        blockToBreak.getX() + 0.5, blockToBreak.getY() + 0.5, blockToBreak.getZ() + 0.5, stack));
+            }
+            // 7.1.x's onBlockDestroyed: one durability point, and an empty hand when it breaks.
+            // The no-op break consumer matters: hurtAndBreak invokes it when the tool breaks, and a
+            // robot has no player to notify (the 4-arg overload with a null consumer NPEs there).
+            if (held.isDamageableItem()) {
+                held.hurtAndBreak(1, serverLevel, null, item -> {
+                });
+                if (held.isEmpty()) {
+                    robot.setItemInUse(ItemStack.EMPTY);
+                }
+            }
+        } else {
+            setSuccess(false);
         }
     }
 

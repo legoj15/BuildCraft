@@ -13,8 +13,8 @@ import java.util.Locale;
  * version: append, never reorder. Common code only - the label text lives in the lang file, one key per value
  * ({@link #translationKey()}), and is resolved on the client.
  *
- * <p>{@link #SLEEPING} is the one value that carries a second answer: why. That is a {@link RobotSleepReason}, shown
- * instead of the plain "Sleeping" text when the robot knows it.
+ * <p>{@link #SLEEPING} and {@link #RETURNING_HOME} carry a second answer: why. That is a {@link RobotSleepReason}, shown
+ * through the activity's {@code .reason} format key ("Sleeping: no tool") when the robot knows it.
  */
 public enum RobotActivity {
     /** No AI at all, between two cycles of one, or a board between two passes (nothing under it). */
@@ -30,7 +30,7 @@ public enum RobotActivity {
     WAITING_FOR_HOME,
     /** Running a redirect a gate issued (Goto Station). */
     FOLLOWING_GATE,
-    /** Flying home to sleep, or asleep; the reason says why. */
+    /** Asleep; the reason says why. The flight home before it is {@link #RETURNING_HOME}. */
     SLEEPING,
     /** Fetching what the board works with: a tool, a weapon, seeds or an item to use. */
     FETCHING_GEAR,
@@ -48,7 +48,10 @@ public enum RobotActivity {
     DISPOSING,
     PICKING_UP,
     USING_TOOL,
-    USING_ITEM;
+    USING_ITEM,
+    /** Flying home (or to the nearest powered station it can reach) to sleep there; the reason says why. The robot is
+     *  still awake, as its synced sleeping flag says, so the label does not yet say "Sleeping". */
+    RETURNING_HOME;
 
     private static final RobotActivity[] VALUES = values();
 

@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.IStationFilter;
 import buildcraft.api.statements.StatementSlot;
 
 /** {@link AIRobotSearchAndGotoStation}'s {@code tryEveryStation} mode: a failed flight moves on to the next-nearest
@@ -64,6 +65,20 @@ public class AIRobotSearchAndGotoStationTest {
 
         Assertions.assertEquals(List.of(NEAR, MIDDLE, FAR), flights, "each matching station is tried exactly once");
         Assertions.assertFalse(ai.success());
+        Assertions.assertTrue(ai.stationUnavailable(),
+                "stations matched and only the flights failed: a board sleeps for 'station out of reach'");
+    }
+
+    @Test
+    public void withNoStationMatchingItFailsAsNoStationAtAll() {
+        Tracked ai = new Tracked(robot, true, s -> true, s -> false);
+
+        run(ai);
+
+        Assertions.assertEquals(List.of(), flights);
+        Assertions.assertFalse(ai.success());
+        Assertions.assertFalse(ai.stationUnavailable(),
+                "nothing matched: a board sleeps for 'no tool' or 'nothing to load', not for a busy station");
     }
 
     @Test
@@ -106,7 +121,12 @@ public class AIRobotSearchAndGotoStationTest {
         private final Predicate<DockingStation> reachable;
 
         Tracked(IRobotAccess robot, boolean tryEvery, Predicate<DockingStation> reachable) {
-            super(robot, s -> true, null, tryEvery);
+            this(robot, tryEvery, reachable, s -> true);
+        }
+
+        Tracked(IRobotAccess robot, boolean tryEvery, Predicate<DockingStation> reachable,
+                IStationFilter filter) {
+            super(robot, filter, null, tryEvery);
             this.reachable = reachable;
         }
 

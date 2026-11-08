@@ -21,6 +21,7 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotSearchBlock;
 import buildcraft.robotics.ai.AIRobotShutdown;
+import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.ai.AIRobotWaitForHome;
 import buildcraft.robotics.ai.MockRobotAccess;
 import buildcraft.robotics.boards.BoardRobotCarrier;
@@ -90,20 +91,28 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
     }
 
     @Test
-    public void aSleepAnywhereInTheChainNamesItsReasonInsteadOfTheFlightHome() {
-        AIRobotGotoSleep sleep = new AIRobotGotoSleep(robot, RobotSleepReason.TARGET_FULL) {
-            @Override
-            public void start() {}
-        };
+    public void aSleepAnywhereInTheChainNamesItsReasonOnTheFlightHomeAndOnceAsleep() {
         AIRobotGotoBlock flightHome = new AIRobotGotoBlock(robot) {
             @Override
             public void start() {}
         };
+        RobotStatus flying = RobotStatus.derive(chain(board(), goingToSleep(), flightHome), false);
+        Assertions.assertEquals(new RobotStatus(RobotActivity.RETURNING_HOME, RobotSleepReason.TARGET_FULL), flying,
+                "the robot is still awake on the way home: not Travelling, not yet Sleeping");
 
-        RobotStatus status = RobotStatus.derive(chain(board(), sleep, flightHome), false);
+        AIRobotSleep asleep = new AIRobotSleep(robot) {
+            @Override
+            public void start() {}
+        };
+        RobotStatus arrived = RobotStatus.derive(chain(board(), goingToSleep(), asleep), false);
+        Assertions.assertEquals(new RobotStatus(RobotActivity.SLEEPING, RobotSleepReason.TARGET_FULL), arrived);
+    }
 
-        Assertions.assertEquals(RobotActivity.SLEEPING, status.activity());
-        Assertions.assertEquals(RobotSleepReason.TARGET_FULL, status.sleepReason());
+    private AIRobotGotoSleep goingToSleep() {
+        return new AIRobotGotoSleep(robot, RobotSleepReason.TARGET_FULL) {
+            @Override
+            public void start() {}
+        };
     }
 
     @Test
@@ -191,13 +200,14 @@ public class RobotStatusTest extends VanillaSetupBaseTester {
             Assertions.assertEquals(plain, RobotStatus.ofIds(activity.ordinal(), plain.sleepReasonId()));
         }
         for (RobotSleepReason reason : RobotSleepReason.values()) {
-            RobotStatus asleep = new RobotStatus(RobotActivity.SLEEPING, reason);
-            Assertions.assertEquals(asleep,
-                    RobotStatus.ofIds(RobotActivity.SLEEPING.ordinal(), asleep.sleepReasonId()));
+            for (RobotActivity activity : new RobotActivity[] {RobotActivity.SLEEPING, RobotActivity.RETURNING_HOME}) {
+                RobotStatus withReason = new RobotStatus(activity, reason);
+                Assertions.assertEquals(withReason, RobotStatus.ofIds(activity.ordinal(), withReason.sleepReasonId()));
+            }
         }
         Assertions.assertEquals(new RobotStatus(RobotActivity.IDLE, null), RobotStatus.ofIds(999, 999),
                 "an id from a newer server reads as idle with no reason, not as a crash");
         Assertions.assertNull(new RobotStatus(RobotActivity.WORKING, RobotSleepReason.NO_WORK).sleepReason(),
-                "a reason belongs to a sleep only");
+                "a reason belongs to a sleep (or the flight home to one) only");
     }
 }

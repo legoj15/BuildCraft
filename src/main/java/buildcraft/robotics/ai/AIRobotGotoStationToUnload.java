@@ -14,7 +14,9 @@ import buildcraft.robotics.IStationFilter;
 
 /** Finds a station the robot can UNLOAD its cargo into, and flies to it. {@link AIRobotUnload#unload} as a
  *  dry-run predicate makes only a station with a live, injectable output a candidate. */
-public class AIRobotGotoStationToUnload extends AIRobot {
+public class AIRobotGotoStationToUnload extends AIRobot implements StationOutcome {
+
+    private boolean stationUnavailable;
 
     public AIRobotGotoStationToUnload(IRobotAccess iRobot) {
         super(iRobot);
@@ -31,15 +33,26 @@ public class AIRobotGotoStationToUnload extends AIRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoStation) {
+            stationUnavailable = !ai.success() && StationOutcome.unavailable(ai);
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 
     /** What, if anything, the robot may wait for to unload, searched for as this AI searches
      *  ({@link AIRobotSearchStation#unavailableTakers} lists what passes). */
     static AIRobotSearchStation.Hold unavailableTakers(IRobotAccess robot) {
         return AIRobotSearchStation.unavailableTakers(robot, takesCargo(robot), robot.getZoneToLoadUnload(), true);
+    }
+
+    /** Whether any station, busy or not, would take some of the robot's cargo ({@link AIRobotSearchStation#anyTaker}). */
+    static boolean anyTaker(IRobotAccess robot) {
+        return AIRobotSearchStation.anyTaker(robot, takesCargo(robot), robot.getZoneToLoadUnload(), true);
     }
 
     private static IStationFilter takesCargo(IRobotAccess robot) {

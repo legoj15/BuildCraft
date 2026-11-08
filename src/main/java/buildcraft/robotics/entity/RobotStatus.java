@@ -72,8 +72,8 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
     private static final RobotStatus IDLE = new RobotStatus(RobotActivity.IDLE, null);
 
     public RobotStatus {
-        // A reason belongs to a sleep and nothing else; a stray one would only mislead the label.
-        if (activity != RobotActivity.SLEEPING) {
+        // A reason belongs to a sleep (or the flight home to one) and nothing else; a stray one would only mislead.
+        if (!carriesReason(activity)) {
             sleepReason = null;
         }
     }
@@ -88,9 +88,19 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
         return new RobotStatus(RobotActivity.byId(activityId), RobotSleepReason.byId(sleepReasonId));
     }
 
-    /** The label text: "Sleeping: no tool" for a sleep with a reason, the activity's own text otherwise. */
+    /** Whether {@code activity} may carry a {@link RobotSleepReason}. */
+    public static boolean carriesReason(RobotActivity activity) {
+        return activity == RobotActivity.SLEEPING || activity == RobotActivity.RETURNING_HOME;
+    }
+
+    /** The label text: "Sleeping: no tool" or "Returning home: no tool" with a reason (the activity's {@code .reason}
+     *  format key around the reason's phrase), the activity's own text otherwise. */
     public Component label() {
-        return Component.translatable(sleepReason != null ? sleepReason.translationKey() : activity.translationKey());
+        if (sleepReason == null) {
+            return Component.translatable(activity.translationKey());
+        }
+        return Component.translatable(activity.translationKey() + ".reason",
+                Component.translatable(sleepReason.translationKey()));
     }
 
     /**
@@ -122,10 +132,11 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
         }
 
         // Below the board. A sleep anywhere in the chain wins: its reason is the answer, and the flight home it starts
-        // with would otherwise read as "Travelling".
+        // with reads as "Returning home" rather than "Travelling" until the sleep itself begins.
         for (AIRobot ai = top; ai != null; ai = ai.getDelegateAI()) {
             if (ai instanceof AIRobotGotoSleep goingToSleep) {
-                return new RobotStatus(RobotActivity.SLEEPING, goingToSleep.getReason());
+                return new RobotStatus(asleepBelow(goingToSleep) ? RobotActivity.SLEEPING : RobotActivity.RETURNING_HOME,
+                        goingToSleep.getReason());
             }
             if (ai instanceof AIRobotSleep) {
                 return of(RobotActivity.SLEEPING);
@@ -151,6 +162,16 @@ public record RobotStatus(RobotActivity activity, @Nullable RobotSleepReason sle
             leg = activity;
         }
         return of(leg != null ? leg : RobotActivity.WORKING);
+    }
+
+    /** Whether the sleep {@code goingToSleep} started has begun: the robot arrived (or gave up looking) and is asleep. */
+    private static boolean asleepBelow(AIRobotGotoSleep goingToSleep) {
+        for (AIRobot ai = goingToSleep.getDelegateAI(); ai != null; ai = ai.getDelegateAI()) {
+            if (ai instanceof AIRobotSleep) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static RobotStatus of(RobotActivity activity) {

@@ -15,6 +15,7 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 import buildcraft.robotics.entity.RobotSleepReason;
 
@@ -63,8 +64,9 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
         if (ai instanceof AIRobotFetchAndEquipItemStack || ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
                 // No tool to be had, or nowhere to put the broken one.
-                startDelegateAI(new AIRobotGotoSleep(robot, ai instanceof AIRobotFetchAndEquipItemStack
-                        ? RobotSleepReason.NO_TOOL : RobotSleepReason.NOWHERE_TO_UNLOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot, StationOutcome.sleepReason(ai,
+                        ai instanceof AIRobotFetchAndEquipItemStack
+                                ? RobotSleepReason.NO_TOOL : RobotSleepReason.NOWHERE_TO_UNLOAD)));
             }
         } else if (ai instanceof AIRobotBreak) {
             // A break that failed on a block that is still there is remembered (the search skips it from now on), and

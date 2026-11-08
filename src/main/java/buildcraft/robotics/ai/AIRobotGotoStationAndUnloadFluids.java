@@ -13,7 +13,9 @@ import buildcraft.api.robots.IRobotAccess;
 
 /** Goes to the nearest unloadable station and empties the robot's tank through
  *  {@link AIRobotUnloadFluids}. Ported from 7.1.x {@code AIRobotGotoStationAndUnloadFluids}. */
-public class AIRobotGotoStationAndUnloadFluids extends AIRobot {
+public class AIRobotGotoStationAndUnloadFluids extends AIRobot implements StationOutcome {
+
+    private boolean stationUnavailable;
 
     public AIRobotGotoStationAndUnloadFluids(IRobotAccess iRobot) {
         super(iRobot);
@@ -30,6 +32,7 @@ public class AIRobotGotoStationAndUnloadFluids extends AIRobot {
             if (ai.success()) {
                 startDelegateAI(new AIRobotUnloadFluids(robot));
             } else {
+                stationUnavailable = StationOutcome.unavailable(ai);
                 setSuccess(false);
                 terminate();
             }
@@ -37,8 +40,17 @@ public class AIRobotGotoStationAndUnloadFluids extends AIRobot {
             // The unload's own outcome decides the composite's — without this branch the default success
             // (true) was reported even when the robot still carried everything (station output filled
             // between the search dry-run and the arrival). Mirrors AIRobotGotoStationAndUnload.
+            // The station passed the search's dry run. Busy only while some station would still take the fluid.
+            stationUnavailable = !ai.success() && AIRobotSearchStation.anyTaker(robot,
+                    station -> AIRobotUnloadFluids.unload(robot, station, false) > 0,
+                    robot.getZoneToLoadUnload(), true);
             setSuccess(ai.success());
             terminate();
         }
+    }
+
+    @Override
+    public boolean stationUnavailable() {
+        return stationUnavailable;
     }
 }

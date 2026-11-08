@@ -29,6 +29,7 @@ import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.StationOutcome;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotLoad;
 import buildcraft.robotics.ai.AIRobotSearchRandomGroundBlock;
@@ -82,6 +83,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
         if (!robot.containsItems()) {
             startDelegateAI(new AIRobotGotoStationAndLoad(robot, TNT_FILTER, AIRobotLoad.ANY_QUANTITY));
         } else {
+            refusals.startSearch();
             startDelegateAI(new AIRobotSearchRandomGroundBlock(robot, 100, this::isDropTarget, robot.getZoneToWork()));
         }
     }
@@ -105,7 +107,8 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NOTHING_TO_LOAD));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NOTHING_TO_LOAD)));
             }
         } else if (ai instanceof AIRobotSearchRandomGroundBlock aiFind) {
             if (ai.success()) {
@@ -115,7 +118,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
                         aiFind.blockFound.getY() + flyingHeight,
                         aiFind.blockFound.getZ()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotGotoBlock) {
             if (ai.success()) {
@@ -151,7 +154,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
             if (aimed != null && !aimed.equals(landing)) {
                 refusals.remember(level, aimed);
             }
-            if (refusals.failed(level, landing)) {
+            if (refusals.refused(level, landing)) {
                 startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
             }
             return;

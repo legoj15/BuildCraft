@@ -136,7 +136,8 @@ public final class FabricEntityItems {
     /^*
      * NeoForge's {@code LivingEntityEquipmentWrapper} hands and humanoid-armour handlers, combined: one slot per
      * {@link EquipmentSlot} of those types in declaration order. A slot takes what the entity can
-     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}), up to the slot's count limit (one
+     * equip there ({@code isEquippableInSlot}, NeoForge's default {@code canEquip}; on 1.21.1 any item, as NeoForge's
+     * wrapper there), up to the slot's count limit (one
      * in an armour slot); the stack is set without side
      * effects while the transaction is open and {@code onEquipItem} runs once the outer transaction commits.
      *

@@ -68,6 +68,7 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.platform.Platform;
 import buildcraft.platform.client.ClassicItemModel;
+import buildcraft.platform.client.ClassicItemRenderType;
 
 /^*
  * The two NeoForge classic model loaders BuildCraft's 1.21.1 item models name, for Fabric 1.21.1, which has no model
@@ -389,9 +390,16 @@ public final class FabricClassicModelLoaders {
         return quads;
     }
 
-    // One contained fluid's layers, drawn unculled.
+    // One contained fluid's layers, drawn unculled on the translucent item sheet (as NeoForge's 1.21.1 fluid-container
+    // model), so a see-through fluid such as water blends with the frame instead of drawing opaque on vanilla's cutout.
     private record FluidLayersModel(List<BakedQuad> quads, TextureAtlasSprite particle, ItemTransforms transforms)
-            implements BakedModel {
+            implements ClassicItemRenderType {
+        @Override
+        public List<net.minecraft.client.renderer.rendertype.RenderType> getRenderTypes(ItemStack stack,
+                boolean fabulous) {
+            return List.of(BCLibRenderTypes.translucentItemSheet());
+        }
+
         @Override
         public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
             return side == null ? quads : List.of();

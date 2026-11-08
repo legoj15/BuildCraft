@@ -70,7 +70,7 @@ public final class FabricFluids implements FluidServices {
     @Override
     @Nullable
     public FluidProperties declared(Fluid fluid) {
-        return FabricFlowingFluids.declared(fluid);
+        return FabricFlowingFluids.DECLARED.get(fluid);
     }
 
     @Override

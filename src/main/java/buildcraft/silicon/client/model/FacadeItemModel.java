@@ -156,6 +156,7 @@ public class FacadeItemModel implements ItemModel {
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
+        buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
         // 1.21.10/11: the item layer needs one explicit render type (26.1 infers it per quad from its
         // MaterialInfo). Matching vanilla BlockModelWrapper: the cutout block sheet, or the translucent block-item
         // sheet when the facade's block draws translucent (1.21.10 calls it translucentItemSheet).

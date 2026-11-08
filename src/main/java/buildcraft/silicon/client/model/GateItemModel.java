@@ -159,6 +159,7 @@ public class GateItemModel implements ItemModel {
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
+        buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
         //? if <26.1 {
         /*// 1.21.11: the item layer needs an explicit render type (26.1 infers it from the quad's
         // MaterialInfo). Block-textured cutout → cutoutBlockSheet, matching vanilla BlockModelWrapper.

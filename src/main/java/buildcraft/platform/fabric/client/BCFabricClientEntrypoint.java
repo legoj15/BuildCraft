@@ -29,6 +29,9 @@ public final class BCFabricClientEntrypoint implements ClientModInitializer {
         FabricLegacyRenderLayers.register();
         ^///?}
         BCCoreClient.init();
+        //? if <1.21.10 {
+        /^FabricClientRegistrationSinks.flushItemColors();
+        ^///?}
     }
 }
 *///?}

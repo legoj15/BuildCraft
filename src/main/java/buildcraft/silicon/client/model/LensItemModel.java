@@ -213,6 +213,7 @@ public class LensItemModel implements ItemModel {
         //?} else {
         /*layer.prepareQuadList().addAll(quads);
         *///?}
+        buildcraft.lib.client.model.ModelUtil.setItemExtents(layer, quads);
         //? if <26.1 {
         /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
         // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet

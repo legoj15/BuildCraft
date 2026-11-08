@@ -490,6 +490,13 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
                 bad.add("the red lens item draws no red glass: its layers' mesh quads carry colours "
                     + describe(colours));
             }
+            //? if <1.21.10 {
+            /^// 1.21.1 tints a painted pipe item's glaze through a classic ItemColor: without one the glaze draws white.
+            if (net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.ITEM.get(paintedPipe.getItem())
+                    == null) {
+                bad.add("the painted pipe item has no ItemColor for its glaze (tint 0)");
+            }
+            ^///?}
             return bad;
         });
         problems.addAll(found);

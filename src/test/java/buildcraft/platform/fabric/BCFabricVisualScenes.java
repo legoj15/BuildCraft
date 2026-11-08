@@ -570,6 +570,27 @@ final class BCFabricVisualScenes {
             && mc.level.getBlockEntity(FACADE_PIPE) instanceof TilePipeHolder facades
             && facades.getPluggable(Direction.SOUTH) instanceof PluggableFacade,
             "pipe close-up: the client never saw the gate, the wires or the facades", problems);
+        //? if >=1.21.10 {
+        // ItemEntityRenderer lifts a dropped item by its ground model's lowest point, so a model with no extents
+        // draws nowhere on 1.21.10/11 (an inside-out box) and sinks into the ground on 26.x (an empty one).
+        if (awaitClient(ctx, mc -> droppedItems(mc).size() >= 3, "pipe close-up: the client never saw the dropped items",
+                problems)) {
+            problems.addAll(ctx.computeOnClient(mc -> {
+                List<String> unbounded = new ArrayList<>();
+                for (ItemEntity item : droppedItems(mc)) {
+                    var state = new net.minecraft.client.renderer.item.ItemStackRenderState();
+                    mc.getItemModelResolver().updateForNonLiving(state, item.getItem(),
+                        net.minecraft.world.item.ItemDisplayContext.GROUND, item);
+                    net.minecraft.world.phys.AABB box = state.getModelBoundingBox();
+                    if (!Double.isFinite(box.minY) || !Double.isFinite(box.maxY) || box.getYsize() <= 0) {
+                        unbounded.add("pipe close-up: dropped " + item.getItem().getItem() + " has no ground bounds: "
+                            + box);
+                    }
+                }
+                return unbounded;
+            }));
+        }
+        //?}
         BCFabricClientGameTest.setHudHidden(ctx, true);
         if (inFlight) {
             ctx.waitTicks(5);
@@ -804,6 +825,11 @@ final class BCFabricVisualScenes {
     private static void place(TilePipeHolder holder, Direction side,
             java.util.function.Function<TilePipeHolder, buildcraft.api.transport.pluggable.PipePluggable> plug) {
         holder.replacePluggable(side, plug.apply(holder));
+    }
+
+    /^* The pipe close-up's dropped pluggable items, as the client sees them. *^/
+    private static List<ItemEntity> droppedItems(Minecraft mc) {
+        return mc.level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(PIPE_START).inflate(8));
     }
 
     private static void dropItem(ServerLevel level, Vec3 at, ItemStack stack) {

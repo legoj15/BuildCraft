@@ -204,13 +204,33 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
         anchoredLayers.add(layer);
     }
 
+    // BuildCraft's client content is declared during its main init, before FabricRegistryServices builds the items:
+    // an item list read then (every pipe item, say) is empty. The colours wait for the client initializer, which Fabric
+    // runs after every main one, as NeoForge waits for its colour-handler event.
+    private static final List<Runnable> pendingItemColors = new ArrayList<>();
+    private static boolean itemColorsFlushed;
+
     @Override
     public void itemColor(net.minecraft.client.color.item.ItemColor color,
             Supplier<net.minecraft.world.level.ItemLike[]> items) {
-        net.minecraft.world.level.ItemLike[] list = items.get();
-        if (list.length > 0) {
-            ColorProviderRegistry.ITEM.register(color, list);
+        Runnable register = () -> {
+            net.minecraft.world.level.ItemLike[] list = items.get();
+            if (list.length > 0) {
+                ColorProviderRegistry.ITEM.register(color, list);
+            }
+        };
+        if (itemColorsFlushed) {
+            register.run();
+        } else {
+            pendingItemColors.add(register);
         }
+    }
+
+    // Registers the item colours declared before the items existed; BCFabricClientEntrypoint calls it.
+    static void flushItemColors() {
+        itemColorsFlushed = true;
+        pendingItemColors.forEach(Runnable::run);
+        pendingItemColors.clear();
     }
     ^///?}
 

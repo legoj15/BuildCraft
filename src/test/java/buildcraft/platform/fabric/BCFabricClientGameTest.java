@@ -77,7 +77,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  * runner under {@code -Dfabric.client.gametest}): a flat singleplayer world, a rig of BuildCraft content built by
  * commands (a line of pipes of every kind, a powered redstone engine, a tank of oil, a distiller, a heat exchanger,
  * Stirling and combustion engines, a quarry beside a volume marker and frames), the oil bucket and fragile fluid shards
- * in the hotbar, the tank and Stirling engine GUIs and the guide book, each screenshotted into the run's
+ * in the hotbar, the tank and Stirling engine GUIs and the guide book, then ({@code BCFabricVisualScenes}) every other
+ * BuildCraft screen, a guide entry page, an inventory of BuildCraft items with tooltips, fluid fog, particles, the HUD,
+ * third person in goggles, a pipe close-up, markers, a volume box and a laser, each screenshotted into the run's
  * {@code screenshots/} folder for a person to look at. On 1.21.1, whose Fabric API has no client game-test module,
  * {@code gametest.ClientGameTestShim} stands in for the part of it used here.
  * <p>
@@ -102,7 +104,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
 
     static final String NS = "buildcraftunofficial";
     /^* The flat world's surface is grass at y -61. *^/
-    private static final int Y = -60;
+    static final int Y = -60;
     private static final BlockPos ENGINE = new BlockPos(-8, Y, 0);
     private static final BlockPos TANK = new BlockPos(4, Y, 0);
     private static final BlockPos STIRLING = new BlockPos(10, Y, 0);
@@ -194,6 +196,9 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
             ctx.takeScreenshot("bc-guide-contents");
             ctx.setScreen(() -> null);
             ctx.waitTicks(5);
+
+            // Every other BuildCraft screen and the remaining render paths, for comparing across MC lines.
+            BCFabricVisualScenes.run(ctx, server, spConn::waitForChunksRender, problems);
 
             runClientClassGameTests(server, problems);
         }
@@ -812,7 +817,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         ctx.waitTick();
     }
 
-    private static void selectSlot(ClientGameTestContext ctx, int slot) {
+    static void selectSlot(ClientGameTestContext ctx, int slot) {
         ctx.getInput().pressKey(o -> o.keyHotbarSlots[slot]);
     }
 
@@ -851,7 +856,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
         expectScreen(ctx, screenName, problems);
     }
 
-    private static void expectScreen(ClientGameTestContext ctx, String screenName, List<String> problems) {
+    static void expectScreen(ClientGameTestContext ctx, String screenName, List<String> problems) {
         Function<Minecraft, String> current = mc -> {
             Screen screen = currentScreen(mc);
             return screen == null ? "none" : screen.getClass().getSimpleName();
@@ -871,7 +876,7 @@ public final class BCFabricClientGameTest implements FabricClientGameTest {
      * Flags a world or held-item shot in which the missing texture (#F800F8 magenta) covers a visible patch. BC's rig
      * has no magenta of its own, so even a pipe-sized patch at this distance is a missing sprite.
      *^/
-    private static void checkShot(Path file, List<String> problems) {
+    static void checkShot(Path file, List<String> problems) {
         try {
             BufferedImage image = ImageIO.read(file.toFile());
             int magenta = 0;

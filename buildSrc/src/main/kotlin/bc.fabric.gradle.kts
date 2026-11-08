@@ -222,8 +222,8 @@ tasks.named<JavaExec>("runGameTest") {
 // `:26.3-fabric:runClientGameTest`: Fabric API's client game-test runner (fabric-client-gametest-api-v1,
 // `-Dfabric.client.gametest`; on 1.21.1 the game-test mod's ClientGameTestShim, the same entrypoint and screenshot
 // names, without the multiplayer phase) boots the dev client, runs the game-test mod's `fabric-client-gametest` entrypoint
-// (BCFabricClientGameTest: a flat world, a rig of BuildCraft content, the held fluid items, two GUIs and the guide
-// book) and exits. Screenshots land in build/run/clientGameTest/screenshots/ for a person to look at; the test itself
+// (BCFabricClientGameTest: a flat world, a rig of BuildCraft content, the held fluid items, the guide book, then
+// BCFabricVisualScenes: every BuildCraft screen and the other render paths) and exits. Screenshots land in build/run/clientGameTest/screenshots/ for a person to look at; the test itself
 // fails on a BuildCraft ERROR or missing-model/texture log line, a GUI that does not open, or a magenta-heavy shot.
 // It needs a real GL context, which a CI runner may lack, so it is NOT part of nodeVerification (and Loom does not
 // hang it on `check`).

@@ -123,7 +123,8 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
                 blockFound.adopt(searchAI.getBlockFound(), searchAI.holdsReservation());
                 startDelegateAI(new AIRobotStripesHandler(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAI.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (ai.success()) {

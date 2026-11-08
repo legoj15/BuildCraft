@@ -167,7 +167,8 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
             } else {
                 // Nothing found - or nothing but blocks that refused this robot, or that it failed on, lately.
-                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         }
     }

@@ -204,9 +204,8 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
                 // No station could stock this machine's delivery (none holds the item, or none the delivery
-                // flight could leave for it: the load's StationOutcome tells the two apart for the sleep reason,
-                // "station out of reach" rather than "nothing to load"). Keeping the machine chosen would repeat the
-                // same fetch on every
+                // flight could leave for it: the load's StationOutcome tells the two apart for the sleep reason).
+                // Keeping the machine chosen would repeat the same fetch on every
                 // pass, since it still needs the item, and starve every other needy machine (one whose supply
                 // station IS in reach). Bench it like a failed delivery and forget it, so the next pass re-picks.
                 if (builderToSupply != null) {
@@ -223,7 +222,8 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                 // leave this board idle and start the same doomed search again on the very next cycle,
                 // forever. Go home and sleep like every other failure path — AIRobotMain's own recharge
                 // preempt (below SAFETY_POWER) keeps retrying on its 120-tick cooldown meanwhile.
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_CHARGER));
+                startDelegateAI(new AIRobotGotoSleep(robot,
+                        StationOutcome.sleepReason(ai, RobotSleepReason.NO_CHARGER)));
             }
         } else if (ai instanceof AIRobotGotoBlock) {
             if (!ai.success()) {

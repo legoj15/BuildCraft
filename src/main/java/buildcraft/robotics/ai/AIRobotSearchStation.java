@@ -135,7 +135,9 @@ public class AIRobotSearchStation extends AIRobot {
     /** Whether a search with {@code filter} and {@code zone} has any station to hope for: one usable now, or one that
      *  is only unavailable for now in any of the ways {@link #unavailableTakers} lists. False means no such station
      *  exists at all, which is what a robot sleeping for "no tool" or "nothing to load" should mean; a failed search
-     *  for which this is true failed on a station that is busy, forbidding, unloaded or out of the flight's reach. */
+     *  for which this is true failed on a station that is busy, forbidding, unloaded or out of the flight's reach.
+     *  As there, a station in an unloaded chunk counts without the filter being asked (it cannot answer), so with a
+     *  zone set any unloaded station in it reads as one to hope for. */
     public static boolean anyTaker(IRobotAccess robot, IStationFilter filter, IZone zone, boolean homeIgnoresZone) {
         return scanTakers(robot, filter, zone, homeIgnoresZone) != Takers.NONE;
     }

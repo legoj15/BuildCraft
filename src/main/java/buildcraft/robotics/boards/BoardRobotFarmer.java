@@ -120,7 +120,8 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotUseToolOnBlock(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {

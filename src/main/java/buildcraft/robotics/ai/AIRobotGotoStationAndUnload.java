@@ -79,8 +79,9 @@ public class AIRobotGotoStationAndUnload extends AIRobot implements StationOutco
             // (true) was reported even when the robot still carried everything (station output filled
             // between the search dry-run and the arrival), so the boards re-entered fetch/unload instead
             // of sleeping. Mirrors the load twin's propagation in AIRobotGotoStationAndLoad.
-            // The station took the cargo when the search chose it; one that does not on arrival filled meanwhile.
-            stationUnavailable = !ai.success();
+            // The station took some cargo when the search chose it. What is left over is "busy" only while some
+            // station would still take it; one every station refuses is nowhere to unload.
+            stationUnavailable = !ai.success() && AIRobotGotoStationToUnload.anyTaker(robot);
             setSuccess(ai.success());
             terminate();
         }

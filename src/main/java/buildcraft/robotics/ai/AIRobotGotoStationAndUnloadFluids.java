@@ -40,8 +40,10 @@ public class AIRobotGotoStationAndUnloadFluids extends AIRobot implements Statio
             // The unload's own outcome decides the composite's — without this branch the default success
             // (true) was reported even when the robot still carried everything (station output filled
             // between the search dry-run and the arrival). Mirrors AIRobotGotoStationAndUnload.
-            // The station passed the search's dry run; one that fails the real transfer changed meanwhile.
-            stationUnavailable = !ai.success();
+            // The station passed the search's dry run. Busy only while some station would still take the fluid.
+            stationUnavailable = !ai.success() && AIRobotSearchStation.anyTaker(robot,
+                    station -> AIRobotUnloadFluids.unload(robot, station, false) > 0,
+                    robot.getZoneToLoadUnload(), true);
             setSuccess(ai.success());
             terminate();
         }

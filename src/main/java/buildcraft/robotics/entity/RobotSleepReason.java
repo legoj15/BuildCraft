@@ -24,7 +24,8 @@ public enum RobotSleepReason {
     /** The stripes board has no item it can use. */
     NO_ITEM,
     /** The search found nothing to do: no block, entity, item, order or builder that needs it. A search that found
-     *  only blocks that refused this robot says {@link #PROTECTED} or {@link #WORK_FAILING} instead. */
+     *  only blocks that refused this robot says {@link #PROTECTED} or {@link #WORK_FAILING} instead, and one whose
+     *  found block the robot could not fly to says {@link #RETRYING}. */
     NO_WORK,
     /** No station holds what the board loads. One that does but cannot be used now is {@link #STATION_UNAVAILABLE}. */
     NOTHING_TO_LOAD,
@@ -39,7 +40,8 @@ public enum RobotSleepReason {
     TARGET_FULL,
     /** The delivery's requester is in an unloaded chunk; the robot keeps the order and waits for it. */
     AWAITING_REQUESTER,
-    /** The battery needs a charge and no powered station is free. */
+    /** The battery needs a charge and there is no powered station. One that is busy or out of reach is
+     *  {@link #STATION_UNAVAILABLE}. */
     NO_CHARGER,
     /** The robot carries the empty board. */
     NO_PROGRAM,

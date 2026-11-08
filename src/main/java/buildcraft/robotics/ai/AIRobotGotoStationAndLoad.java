@@ -57,8 +57,10 @@ public class AIRobotGotoStationAndLoad extends AIRobot implements StationOutcome
                 terminate();
             }
         } else if (ai instanceof AIRobotLoad) {
-            // The station had the stack when the search chose it; one with none on arrival was emptied meanwhile.
-            stationUnavailable = !ai.success();
+            // The station had the stack when the search chose it. Busy only while some station still has it.
+            stationUnavailable = !ai.success() && AIRobotSearchStation.anyTaker(robot,
+                    station -> AIRobotLoad.load(robot, station, filter, quantity, false),
+                    robot.getZoneToLoadUnload(), false);
             setSuccess(ai.success());
             terminate();
         }

@@ -49,8 +49,10 @@ public class AIRobotGotoStationAndLoadFluids extends AIRobot implements StationO
         } else if (ai instanceof AIRobotLoadFluids) {
             // The load's own outcome decides the composite's — the item twin (AIRobotGotoStationAndLoad)
             // propagates it the same way.
-            // The station passed the search's dry run; one that fails the real transfer changed meanwhile.
-            stationUnavailable = !ai.success();
+            // The station passed the search's dry run. Busy only while some station still has the fluid.
+            stationUnavailable = !ai.success() && AIRobotSearchStation.anyTaker(robot,
+                    station -> AIRobotLoadFluids.load(robot, station, filter, false) > 0,
+                    robot.getZoneToLoadUnload(), false);
             setSuccess(ai.success());
             terminate();
         }

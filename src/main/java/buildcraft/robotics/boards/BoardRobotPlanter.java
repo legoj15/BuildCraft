@@ -104,7 +104,8 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                 blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
                 startDelegateAI(new AIRobotPlant(robot, blockFound.job()));
             } else {
-                startDelegateAI(new AIRobotGotoSleep(robot, refusals.emptySearchReason()));
+                startDelegateAI(new AIRobotGotoSleep(robot, searchAndGoto.foundButUnreached()
+                        ? RobotSleepReason.RETRYING : refusals.emptySearchReason()));
             }
         } else if (ai instanceof AIRobotPlant) {
             // A planting that failed (a claim mod refused the right-click or placement, or the soil changed under the

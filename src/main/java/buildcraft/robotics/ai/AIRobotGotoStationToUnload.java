@@ -50,6 +50,11 @@ public class AIRobotGotoStationToUnload extends AIRobot implements StationOutcom
         return AIRobotSearchStation.unavailableTakers(robot, takesCargo(robot), robot.getZoneToLoadUnload(), true);
     }
 
+    /** Whether any station, busy or not, would take some of the robot's cargo ({@link AIRobotSearchStation#anyTaker}). */
+    static boolean anyTaker(IRobotAccess robot) {
+        return AIRobotSearchStation.anyTaker(robot, takesCargo(robot), robot.getZoneToLoadUnload(), true);
+    }
+
     private static IStationFilter takesCargo(IRobotAccess robot) {
         return station -> AIRobotUnload.unload(robot, station, false);
     }

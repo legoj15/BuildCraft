@@ -7,7 +7,7 @@ package buildcraft.platform.fabric.gametest.mixin;
 
 //? if fabric {
 /*import org.spongepowered.asm.mixin.Mixin;
-//? if >=1.21.10 && <26.2 {
+//? if >=1.21.10 && <26.1 {
 /^import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -41,11 +41,12 @@ import net.fabricmc.fabric.impl.client.gametest.threading.NetworkSynchronizer;
  * and one that finishes later wakes the wait. Nothing else about the synchronizer changes; the ten seconds still apply
  * to a packet that really is lost.
  * <p>
- * The class is in the {@code fabric-client-gametest-api-v1} of Fabric API for 1.21.10, 1.21.11 and 26.1.2. Fabric API
- * for 26.2 and later replaced it with a sync payload (nothing to fix), and 1.21.1 has no client game-test runner (the
- * shim in {@code gametest} stands in): there this is an empty mixin on {@code Minecraft}.
+ * Patched on 1.21.10 and 1.21.11 only. Fabric API for 26.1 still ships the class but leaves it off unless
+ * {@code -Dfabric.client.gametest.disableNetworkSynchronizer=false} (fabric-api PR 5281), and 26.2 removed it (PR 5484);
+ * 1.21.1 has no client game-test runner (the shim in {@code gametest} stands in). On those lines this is an empty mixin
+ * on {@code Minecraft}. Upstream has since dropped the synchronizer, so the race was not reported there (#178).
  *^/
-//? if >=1.21.10 && <26.2 {
+//? if >=1.21.10 && <26.1 {
 /^@Mixin(value = NetworkSynchronizer.class, remap = false)
 abstract class NetworkSynchronizerWakeupMixin {
 

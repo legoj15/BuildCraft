@@ -267,9 +267,20 @@ listOf("runClient", "runServer").forEach { name ->
 
 // The Fabric twin of META-INF/accesstransformer.cfg, in the 26.x class-tweaker format (classTweaker v1 official:
 // 26.x is unobfuscated). It lives outside src/main/resources so the NeoForge jar never carries it, and Loom applies
-// it to the Minecraft jar this node compiles against.
+// it to the Minecraft jar this node compiles against. Unlike the AT, a class tweaker names member descriptors, and
+// the 1.21.x lines are obfuscated (Mojang names, `named` namespace) with different members: a node whose directory
+// holds buildcraftunofficial-named.classtweaker uses that one instead, and its jar carries it in place of the shared.
+val nodeClassTweaker = project.file("buildcraftunofficial-named.classtweaker")
+val classTweakerName = if (nodeClassTweaker.isFile) nodeClassTweaker.name else "buildcraftunofficial.classtweaker"
 loom {
-    accessWidenerPath.set(rootProject.file("src/main/resources-fabric/buildcraftunofficial.classtweaker"))
+    accessWidenerPath.set(if (nodeClassTweaker.isFile) nodeClassTweaker
+        else rootProject.file("src/main/resources-fabric/buildcraftunofficial.classtweaker"))
+}
+if (nodeClassTweaker.isFile) {
+    tasks.named<ProcessResources>("processResources") {
+        exclude("buildcraftunofficial.classtweaker")
+        from(nodeClassTweaker)
+    }
 }
 
 val modVersion = property("mod_version") as String
@@ -282,6 +293,7 @@ tasks.named<ProcessResources>("processResources") {
         "forge_config_api_port_dep_range" to forgeConfigApiPortDepRange,
         "common_protection_api_dep_range" to commonProtectionApiDepRange,
         "mixin_java_level" to mixinJavaLevel,
+        "class_tweaker" to classTweakerName,
     )
     inputs.properties(replaceProperties)
     // escapeBackslash: the template engine would otherwise turn the JSON escape backslash-n in the
@@ -426,10 +438,13 @@ if (remap) {
     // The dev jar keeps its own classifier, so it never overwrites the shipped one in build/libs.
     tasks.named<Jar>("jar") { archiveClassifier = "fabric-dev" }
 }
-tasks.named<Jar>(shippedJar) {
+tasks.named<AbstractArchiveTask>(shippedJar) {
     archiveBaseName = "BuildCraftRedux"
     archiveVersion = "$modVersion+mc$minecraftVersion"
     archiveClassifier = "fabric"
+}
+// On the dev jar, which in remap mode is remapJar's input, so the shipped jar carries them either way.
+tasks.named<Jar>("jar") {
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("LICENSE.API")) { into("META-INF") }
     from(rootProject.file("LICENSE.MMPL")) { into("META-INF") }
@@ -439,7 +454,7 @@ tasks.named<Jar>(shippedJar) {
 // The twin of bc.neoforge's buildAndCollect: this node's jar into the same build/libs/<mod_version>/.
 tasks.register<Copy>("buildAndCollect") {
     group = "build"
-    from(tasks.named<Jar>(shippedJar).flatMap { it.archiveFile })
+    from(tasks.named<AbstractArchiveTask>(shippedJar).flatMap { it.archiveFile })
     into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
     dependsOn("assemble")
 }

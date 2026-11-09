@@ -25,12 +25,6 @@
     "fill {X-5} {Y-1} {Z-6} {X+5} {Y-1} {Z+5} minecraft:stone",
     "fill {X-4} {Y} {Z-5} {X+4} {Y+3} {Z-5} minecraft:white_concrete",
     "?kill @e[type=minecraft:item_display]",
-    "setblock {X-1} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
-    "data merge block {X-1} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_pulsar\",count:1},{Slot:1b,id:\"buildcraftunofficial:plug_timer\",count:1},{Slot:2b,id:\"buildcraftunofficial:plug_light_sensor\",count:1}]}",
-    "setblock {X} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
-    "data merge block {X} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_blocker\",count:1},{Slot:1b,id:\"buildcraftunofficial:plug_power_adaptor\",count:1},{Slot:2b,id:\"buildcraftunofficial:plug_facade\",count:1,components:{\"minecraft:custom_data\":{facade:{isHollow:0b,states:[{state:{Name:\"minecraft:oak_planks\"}}]}}}}]}",
-    "setblock {X+1} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
-    "data merge block {X+1} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_gate\",count:1,components:{\"minecraft:custom_data\":{gate:{logic:0b,material:3b,modifier:3b}}}},{Slot:1b,id:\"buildcraftunofficial:plug_lens\",count:1,components:{\"minecraft:custom_data\":{colour:\"red\",isFilter:0b}}},{Slot:2b,id:\"minecraft:paper\",count:1}]}",
     "summon minecraft:item_display {X+3}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_facade\",count:1,components:{\"minecraft:custom_data\":{facade:{isHollow:0b,states:[{state:{Name:\"minecraft:oak_planks\"}}]}}}}}",
     "summon minecraft:item_display {X-3}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_gate\",count:1,components:{\"minecraft:custom_data\":{gate:{logic:0b,material:3b,modifier:3b}}}}}"
    ],
@@ -39,11 +33,47 @@
   {
    "do": "cmd",
    "run": [
+    "setblock {X-1} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
+    "data merge block {X-1} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_pulsar\",count:1},{Slot:1b,id:\"buildcraftunofficial:plug_timer\",count:1},{Slot:2b,id:\"buildcraftunofficial:plug_light_sensor\",count:1}]}",
+    "setblock {X} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
+    "data merge block {X} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_blocker\",count:1},{Slot:1b,id:\"buildcraftunofficial:plug_power_adaptor\",count:1},{Slot:2b,id:\"buildcraftunofficial:plug_facade\",count:1,components:{\"minecraft:custom_data\":{facade:{isHollow:0b,states:[{state:{Name:\"minecraft:oak_planks\"}}]}}}}]}",
+    "setblock {X+1} {Y+1} {Z-4} minecraft:oak_shelf[facing=south]",
+    "data merge block {X+1} {Y+1} {Z-4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_gate\",count:1,components:{\"minecraft:custom_data\":{gate:{logic:0b,material:3b,modifier:3b}}}},{Slot:1b,id:\"buildcraftunofficial:plug_lens\",count:1,components:{\"minecraft:custom_data\":{colour:\"red\",isFilter:0b}}},{Slot:2b,id:\"minecraft:paper\",count:1}]}"
+   ],
+   "nodes": [
+    "1.21.10",
+    "1.21.11",
+    "26.1.2",
+    "26.2",
+    "26.3",
+    "1.21.10-fabric",
+    "1.21.11-fabric",
+    "26.1.2-fabric",
+    "26.2-fabric",
+    "26.3-fabric"
+   ],
+   "label": "shelves (1.21.10+)"
+  },
+  {
+   "do": "cmd",
+   "run": [
     "data get block {X-1} {Y+1} {Z-4} Items",
     "data get block {X+1} {Y+1} {Z-4} Items"
    ],
    "echo": true,
-   "label": "shelf contents"
+   "label": "shelf contents",
+   "nodes": [
+    "1.21.10",
+    "1.21.11",
+    "26.1.2",
+    "26.2",
+    "26.3",
+    "1.21.10-fabric",
+    "1.21.11-fabric",
+    "26.1.2-fabric",
+    "26.2-fabric",
+    "26.3-fabric"
+   ]
   },
   {
    "do": "hold",
@@ -66,7 +96,19 @@
   {
    "do": "shot",
    "name": "shelves-front",
-   "look": "Shelves L to R: [pulsar,timer,light sensor] [blocker,power adaptor,oak facade] [gate,red lens,paper]. Every plug shows its face (like the inventory icon), none a thin edge. Right display (+X): oak facade face-on; left display: gate face-on."
+   "look": "Shelves L to R: [pulsar,timer,light sensor] [blocker,power adaptor,oak facade] [gate,red lens,paper]. Every plug shows its face (like the inventory icon), none a thin edge.",
+   "nodes": [
+    "1.21.10",
+    "1.21.11",
+    "26.1.2",
+    "26.2",
+    "26.3",
+    "1.21.10-fabric",
+    "1.21.11-fabric",
+    "26.1.2-fabric",
+    "26.2-fabric",
+    "26.3-fabric"
+   ]
   },
   {
    "do": "tp",
@@ -85,7 +127,19 @@
   {
    "do": "shot",
    "name": "shelves-angle",
-   "look": "Same rig from the front-left: plates read as thin slabs seen at an angle, faces toward the shelf front"
+   "look": "Same rig from the front-left: plates read as thin slabs seen at an angle, faces toward the shelf front",
+   "nodes": [
+    "1.21.10",
+    "1.21.11",
+    "26.1.2",
+    "26.2",
+    "26.3",
+    "1.21.10-fabric",
+    "1.21.11-fabric",
+    "26.1.2-fabric",
+    "26.2-fabric",
+    "26.3-fabric"
+   ]
   },
   {
    "do": "cmd",

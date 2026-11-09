@@ -213,3 +213,7 @@ vanilla complaining about the flat world's empty generator settings; the default
 ## Resource reload: `sprite-reload`
 
 `sprite-reload` (hand-written) checks that plugs, gates, the docking station and dyed pipes keep correct textures across a resource reload (issue #81): it shoots the rig, turns vanilla High Contrast on and off through Options → Accessibility (each toggle reloads the resource packs), and shoots it after each. All three shot pairs must match. A pipe's `col` NBT takes the enum name in capitals (`LIME`); lowercase is silently ignored.
+
+## Plugs on a shelf: `plug-shelf`
+
+`plug-shelf` (hand-written) checks issue #180 on 1.21.10 and later (shelves): three shelves hold the pulsar, timer, light sensor, blocker, power adaptor, an oak facade, and a gate, red lens and paper as the reference look; every plug must show its face, not its edge. Two mode-less `item_display`s (the facade and a gate) are then shot from the front and from behind: each must show its panel face-on from both sides.

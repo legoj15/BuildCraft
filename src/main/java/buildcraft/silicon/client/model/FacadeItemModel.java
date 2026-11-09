@@ -117,6 +117,21 @@ public class FacadeItemModel implements ItemModel {
         //?}
     }
 
+    /**
+     * Whether {@code context} draws the face-on NORTH quads of {@link #guiCache} rather than the EAST ones the other
+     * contexts transform: the inventory, an {@code item_display} with no mode and the cargo/preview draws that pass
+     * {@link ItemDisplayContext#NONE}, and (1.21.10+) a shelf. None of them has a transform to turn the EAST plate,
+     * so it would show its 4/16 edge (#180).
+     */
+    private static boolean facesViewer(ItemDisplayContext context) {
+        //? if >=1.21.10 {
+        return context == ItemDisplayContext.GUI || context == ItemDisplayContext.NONE
+            || context == ItemDisplayContext.ON_SHELF;
+        //?} else {
+        /*return context == ItemDisplayContext.GUI || context == ItemDisplayContext.NONE;*/
+        //?}
+    }
+
     public static void onModelBake() {
         cache.invalidateAll();
         guiCache.invalidateAll();
@@ -132,7 +147,7 @@ public class FacadeItemModel implements ItemModel {
 
         FacadeQuads baked;
         KeyPlugFacade key;
-        if (displayContext == ItemDisplayContext.GUI) {
+        if (facesViewer(displayContext)) {
             key = new KeyPlugFacade("cutout", Direction.NORTH, state.stateInfo.state, inst.isHollow());
             baked = guiCache.getUnchecked(key);
         } else {
@@ -173,7 +188,7 @@ public class FacadeItemModel implements ItemModel {
     /*// 1.21.1 has no ItemModel / ItemStackRenderState. Dynamic item rendering uses the classic
     // ItemOverrides + applyTransform path: resolve() reads the facade state per-stack, then
     // applyTransform() returns a fixed-quad item model (ClientPlatform.models().fixedQuadItemModel) of the right cache per ItemDisplayContext
-    // (GUI: NORTH / guiCache; hand & world: EAST / cache). Behaviour matches the modern update().
+    // (GUI and NONE: NORTH / guiCache; hand & world: EAST / cache). Behaviour matches the modern update().
     private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
         new net.minecraft.client.renderer.block.model.ItemOverrides() {
             @Override
@@ -199,7 +214,7 @@ public class FacadeItemModel implements ItemModel {
             return this;
         }
         FacadeQuads baked;
-        if (displayContext == ItemDisplayContext.GUI) {
+        if (facesViewer(displayContext)) {
             baked = guiCache.getUnchecked(new KeyPlugFacade("cutout", Direction.NORTH, resolvedState, resolvedHollow));
         } else {
             baked = cache.getUnchecked(new KeyPlugFacade("cutout", Direction.EAST, resolvedState, resolvedHollow));

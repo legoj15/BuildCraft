@@ -315,7 +315,7 @@
   {
    "do": "shot",
    "name": "pulsar-in-pipe",
-   "look": "pulsars riding the stone pipe run at eye level (#181): each shows its red plate face-on, not a thin vertical edge"
+   "look": "pulsars riding the stone pipe run at eye level (#181): pipe cargo turns to its travel direction (1.12.2), so like the gate, lens, facade and any flat vanilla item, each pulsar shows its plate along the pipe and a slim side to this side-on camera; it must render (not missing), at the same size as before"
   }
  ]
 }

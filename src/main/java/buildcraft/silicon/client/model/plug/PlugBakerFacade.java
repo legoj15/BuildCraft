@@ -372,12 +372,12 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     }
 
     /**
-     * Creates the plug connector quads — a small box matching the blocker model
+     * Creates the plug connector quads — a small box shaped like the blocker plug
      * (from [2,4,4] to [4.01,12,12] in 16ths, west-facing, then rotated to the given side).
      * Texture: buildcrafttransport:pipes/plug
      */
     private static List<BakedQuad> createPlugQuads(Direction side) {
-        // The blocker model is a box from [2,4,4] to [4.01,12,12] facing west.
+        // A box from [2,4,4] to [4.01,12,12] facing west (the blocker item model is the same box turned to face north).
         float x0 = 2 / 16f, x1 = 4.01f / 16f;
         float y0 = 4 / 16f, y1 = 12 / 16f;
         float z0 = 4 / 16f, z1 = 12 / 16f;

@@ -269,7 +269,7 @@
   {
    "do": "shot",
    "name": "pulsar-from-south",
-   "look": "mode-less item_display pulsar (centre, #181): plate face-on with its LEDs and piston, not a thin edge"
+   "look": "mode-less item_display pulsar (centre, #181) from the back: bare plate face-on, not a thin edge"
   },
   {
    "do": "tp",
@@ -288,7 +288,7 @@
   {
    "do": "shot",
    "name": "pulsar-from-north",
-   "look": "mode-less item_display pulsar from behind (#181): plate face-on, not a thin edge"
+   "look": "mode-less item_display pulsar (#181) from the front: plate face-on with its LEDs and piston, not a thin edge"
   },
   {
    "do": "cmd",

@@ -21,14 +21,41 @@
    "run": [
     "gamemode creative @p",
     "time set noon",
-    "fill {X-5} {Y-1} {Z-6} {X+5} {Y+3} {Z+5} minecraft:air",
-    "fill {X-5} {Y-1} {Z-6} {X+5} {Y-1} {Z+5} minecraft:stone",
+    "fill {X-5} {Y-1} {Z-6} {X+5} {Y+3} {Z+7} minecraft:air",
+    "fill {X-5} {Y-1} {Z-6} {X+5} {Y-1} {Z+7} minecraft:stone",
     "fill {X-4} {Y} {Z-5} {X+4} {Y+3} {Z-5} minecraft:white_concrete",
     "?kill @e[type=minecraft:item_display]",
     "summon minecraft:item_display {X+3}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_facade\",count:1,components:{\"minecraft:custom_data\":{facade:{isHollow:0b,states:[{state:{Name:\"minecraft:oak_planks\"}}]}}}}}",
-    "summon minecraft:item_display {X-3}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_gate\",count:1,components:{\"minecraft:custom_data\":{gate:{logic:0b,material:3b,modifier:3b}}}}}"
+    "summon minecraft:item_display {X-3}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_gate\",count:1,components:{\"minecraft:custom_data\":{gate:{logic:0b,material:3b,modifier:3b}}}}}",
+    "summon minecraft:item_display {X}.5 {Y+1}.5 {Z}.5 {item:{id:\"buildcraftunofficial:plug_pulsar\",count:1}}"
    ],
    "echo": false
+  },
+  {
+   "do": "cmd",
+   "label": "pulsar cargo rig (#181)",
+   "echo": false,
+   "run": [
+    "setblock {X-4} {Y+1} {Z+4} minecraft:chest[facing=south]",
+    "data merge block {X-4} {Y+1} {Z+4} {Items:[{Slot:0b,id:\"buildcraftunofficial:plug_pulsar\",count:64}]}",
+    "setblock {X-3} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X-3} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:wood_item\"}}",
+    "setblock {X-3} {Y+3} {Z+4} minecraft:redstone_block",
+    "setblock {X-3} {Y+2} {Z+4} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X-2} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X-2} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X-1} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X-1} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X+1} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X+1} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X+2} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X+2} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X+3} {Y+1} {Z+4} buildcraftunofficial:pipe_holder",
+    "data merge block {X+3} {Y+1} {Z+4} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
+    "setblock {X+4} {Y+1} {Z+4} minecraft:chest[facing=south]"
+   ]
   },
   {
    "do": "cmd",
@@ -224,6 +251,71 @@
    "do": "shot",
    "name": "gate-from-north",
    "look": "mode-less item_display gate-from-north: panel face-on, not missing, not edge-on"
+  },
+  {
+   "do": "tp",
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "yaw": 180,
+   "pitch": 15
+  },
+  {
+   "do": "wait",
+   "ms": 800
+  },
+  {
+   "do": "shot",
+   "name": "pulsar-from-south",
+   "look": "mode-less item_display pulsar (centre, #181): plate face-on with its LEDs and piston, not a thin edge"
+  },
+  {
+   "do": "tp",
+   "at": [
+    0,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "pitch": 15
+  },
+  {
+   "do": "wait",
+   "ms": 800
+  },
+  {
+   "do": "shot",
+   "name": "pulsar-from-north",
+   "look": "mode-less item_display pulsar from behind (#181): plate face-on, not a thin edge"
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "data get block {X+4} {Y+1} {Z+4} Items"
+   ],
+   "echo": true,
+   "label": "pulsars reached the end chest"
+  },
+  {
+   "do": "tp",
+   "at": [
+    0,
+    0,
+    5
+   ],
+   "yaw": 180,
+   "pitch": 5
+  },
+  {
+   "do": "wait",
+   "ms": 2500
+  },
+  {
+   "do": "shot",
+   "name": "pulsar-in-pipe",
+   "look": "pulsars riding the stone pipe run at eye level (#181): each shows its red plate face-on, not a thin vertical edge"
   }
  ]
 }

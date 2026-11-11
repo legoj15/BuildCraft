@@ -14,6 +14,7 @@ import buildcraft.api.mj.MjRfConversion;
 import buildcraft.lib.BCLibConfig.DecimalSeparator;
 import buildcraft.lib.BCLibConfig.FlowDisplay;
 import buildcraft.lib.BCLibConfig.ThousandsSeparator;
+import buildcraft.lib.misc.LocaleUtil.UnitPosition;
 
 /** Exercises every supported (thousands × decimal) combination of {@link LocaleUtil}'s number
  *  formatters via the package-private overloads. The public no-arg overloads route through
@@ -323,7 +324,8 @@ public class LocaleUtilNumberFormatTester {
         // the MJ/RF flow readouts do.
         Assertions.assertEquals("40 millibuckets per tick",
                 LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_TICK, true, false));
-        Assertions.assertEquals("1 millibuckets per tick",
+        // The unit agrees with its number: exactly one is singular (see LocaleUtilPluralUnitTester).
+        Assertions.assertEquals("1 millibucket per tick",
                 LocaleUtil.formatFluidFlow(1, FlowDisplay.PER_TICK, true, false));
     }
 
@@ -438,7 +440,7 @@ public class LocaleUtilNumberFormatTester {
         Assertions.assertEquals("1.1 B", LocaleUtil.formatStaticFluid(1100, false, true));
         Assertions.assertEquals("16 B", LocaleUtil.formatStaticFluid(16_000, false, true));
         // Whole buckets drop the decimal — "1 bucket", not "1.0".
-        Assertions.assertEquals("1 buckets", LocaleUtil.formatStaticFluid(1000, true, true));
+        Assertions.assertEquals("1 bucket", LocaleUtil.formatStaticFluid(1000, true, true));
         Assertions.assertEquals("4 buckets", LocaleUtil.formatStaticFluid(4000, true, true));
     }
 
@@ -457,14 +459,15 @@ public class LocaleUtilNumberFormatTester {
 
     @Test
     public void staticFluid_compoundModifierUsesSingularUnit() {
-        // The "Empty <capacity> Tank" position keeps the unit SINGULAR regardless of count ("4 bucket tank").
-        Assertions.assertEquals("4 bucket", LocaleUtil.formatStaticFluid(4000, true, true, true));
-        Assertions.assertEquals("16 bucket", LocaleUtil.formatStaticFluid(16_000, true, true, true));
-        Assertions.assertEquals("1 bucket", LocaleUtil.formatStaticFluid(1000, true, true, true));
-        Assertions.assertEquals("500 millibucket", LocaleUtil.formatStaticFluid(500, true, false, true));
-        // Symbols don't inflect: the singular flag is a no-op for mB / B.
-        Assertions.assertEquals("4 B", LocaleUtil.formatStaticFluid(4000, false, true, true));
-        Assertions.assertEquals("500 mB", LocaleUtil.formatStaticFluid(500, false, false, true));
+        // The "Empty <capacity> Tank" position keeps the unit SINGULAR regardless of count ("4 bucket tank") under
+        // the English rule (no rule is declared here); LocaleUtilPluralUnitTester covers the other rules.
+        Assertions.assertEquals("4 bucket", LocaleUtil.formatStaticFluid(4000, true, true, UnitPosition.COMPOUND_MODIFIER));
+        Assertions.assertEquals("16 bucket", LocaleUtil.formatStaticFluid(16_000, true, true, UnitPosition.COMPOUND_MODIFIER));
+        Assertions.assertEquals("1 bucket", LocaleUtil.formatStaticFluid(1000, true, true, UnitPosition.COMPOUND_MODIFIER));
+        Assertions.assertEquals("500 millibucket", LocaleUtil.formatStaticFluid(500, true, false, UnitPosition.COMPOUND_MODIFIER));
+        // Symbols don't inflect: the position is a no-op for mB / B.
+        Assertions.assertEquals("4 B", LocaleUtil.formatStaticFluid(4000, false, true, UnitPosition.COMPOUND_MODIFIER));
+        Assertions.assertEquals("500 mB", LocaleUtil.formatStaticFluid(500, false, false, UnitPosition.COMPOUND_MODIFIER));
         // The plural 3-arg overload is unchanged (standalone position).
         Assertions.assertEquals("4 buckets", LocaleUtil.formatStaticFluid(4000, true, true));
         Assertions.assertEquals("500 millibuckets", LocaleUtil.formatStaticFluid(500, true, false));

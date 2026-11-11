@@ -133,11 +133,26 @@ public class LangFileIntegrityTester {
         }
     }
 
+    /** The number-agreement keys of the full fluid unit names are per-language: {@code plural_rule} is the rule a
+     *  language DECLARES (English says {@code english}, Russian {@code east_slavic}; a language that declares nothing
+     *  gets the English rule), and {@code .full.one|few|many} are the extra forms a rule with more than singular and
+     *  plural needs. English has no use for the forms (its singular/plural pair is the fallback), and a language with
+     *  no more than two forms needs neither key, so neither direction of the parity checks below applies. */
+    private static final Pattern PER_LANGUAGE_UNIT_KEY = Pattern.compile(
+            "buildcraft\\.unit\\.plural_rule|buildcraft\\.unit\\.(?:milli)?bucket\\.full\\.(?:one|few|many)");
+
+    private static boolean isPerLanguageUnitKey(String key) {
+        return PER_LANGUAGE_UNIT_KEY.matcher(key).matches();
+    }
+
     @Test
     public void translationHasNoStaleKeys() {
         Map<String, String> en = parse(EN);
         for (String file : TRANSLATIONS) {
-            List<String> stale = parse(file).keySet().stream().filter(k -> !en.containsKey(k)).sorted().toList();
+            List<String> stale = parse(file).keySet().stream()
+                    .filter(k -> !en.containsKey(k) && !isPerLanguageUnitKey(k))
+                    .sorted()
+                    .toList();
             Assertions.assertTrue(stale.isEmpty(),
                     file + " carries keys that no longer exist in en_us.json " + stale
                             + " — a key deleted from en_us must be deleted from every translation in the SAME"
@@ -155,7 +170,7 @@ public class LangFileIntegrityTester {
         for (String file : TRANSLATIONS) {
             Map<String, String> lang = parse(file);
             List<String> missing = parse(EN).keySet().stream()
-                    .filter(k -> !lang.containsKey(k) && !ENGLISH_ONLY.contains(k))
+                    .filter(k -> !lang.containsKey(k) && !ENGLISH_ONLY.contains(k) && !isPerLanguageUnitKey(k))
                     .sorted()
                     .toList();
             Assertions.assertTrue(missing.isEmpty(),
@@ -187,6 +202,28 @@ public class LangFileIntegrityTester {
         Map<String, String> zh = parse(ZH);
         for (String key : List.of("buildcraft.unit.mj.full", "buildcraft.unit.energy.full")) {
             Assertions.assertNotEquals(en.get(key), zh.get(key), key + " is still the English text in zh_cn.json");
+        }
+    }
+
+    /** A rule name the code does not recognise is not an error at runtime, it silently means {@code english} — so a
+     *  typo such as {@code east-slavic} would put Russian back on "4 вёдер" with nothing failing anywhere. English
+     *  declares its rule explicitly, and a language with the extra number forms must declare the rule that reaches them. */
+    @Test
+    public void pluralRulesAreRecognisedNames() {
+        String key = "buildcraft.unit.plural_rule";
+        Assertions.assertEquals("english", parse(EN).get(key), "en_us declares the English rule explicitly");
+        Assertions.assertEquals("east_slavic", parse(RU).get(key),
+                "ru_ru needs its three number forms (1 ведро, 2-4 ведра, 5+ вёдер)");
+        for (String file : ALL_FILES) {
+            String rule = parse(file).get(key);
+            Assertions.assertTrue(rule == null || Set.of("english", "east_slavic").contains(rule),
+                    file + " declares an unknown " + key + " " + rule);
+        }
+        for (String unit : new String[] { "bucket", "millibucket" }) {
+            for (String form : new String[] { "one", "few", "many" }) {
+                String formKey = "buildcraft.unit." + unit + ".full." + form;
+                Assertions.assertTrue(parse(RU).containsKey(formKey), "ru_ru lacks " + formKey);
+            }
         }
     }
 

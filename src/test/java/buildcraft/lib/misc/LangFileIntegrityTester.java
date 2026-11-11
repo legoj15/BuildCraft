@@ -208,8 +208,9 @@ public class LangFileIntegrityTester {
     /** A rule name the code does not recognise is not an error at runtime, it silently means {@code english} — so a
      *  typo such as {@code east-slavic} would put Russian back on "4 вёдер" with nothing failing anywhere. The rule
      *  and the extra number forms only work together, in any language: a file declaring {@code east_slavic} must carry
-     *  all six forms (a missing one silently falls back to the plural), and a file carrying a {@code few} or
-     *  {@code many} form must declare the rule that reaches it (the English rule never asks for them). */
+     *  the {@code few} and {@code many} forms (a missing one of those silently falls back to the plural; a missing
+     *  {@code one} falls back to the singular, which is right), and a file carrying a {@code few} form must declare
+     *  the rule that reaches it (the English rule only ever asks for {@code one} and {@code many}). */
     @Test
     public void pluralRulesAreRecognisedNames() {
         String key = "buildcraft.unit.plural_rule";
@@ -222,14 +223,14 @@ public class LangFileIntegrityTester {
                     file + " declares an unknown " + key + " " + rule);
             boolean slavic = "east_slavic".equals(rule);
             for (String unit : new String[] { "bucket", "millibucket" }) {
-                for (String form : new String[] { "one", "few", "many" }) {
-                    String formKey = "buildcraft.unit." + unit + ".full." + form;
-                    if (slavic) {
-                        Assertions.assertTrue(lang.containsKey(formKey), file + " declares east_slavic but lacks " + formKey);
-                    } else if (!form.equals("one")) {
-                        Assertions.assertFalse(lang.containsKey(formKey),
-                                file + " has " + formKey + " but no " + key + " that ever selects it");
-                    }
+                String few = "buildcraft.unit." + unit + ".full.few";
+                String many = "buildcraft.unit." + unit + ".full.many";
+                if (slavic) {
+                    Assertions.assertTrue(lang.containsKey(few), file + " declares east_slavic but lacks " + few);
+                    Assertions.assertTrue(lang.containsKey(many), file + " declares east_slavic but lacks " + many);
+                } else {
+                    Assertions.assertFalse(lang.containsKey(few),
+                            file + " has " + few + " but no " + key + " that ever selects it");
                 }
             }
         }

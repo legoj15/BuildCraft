@@ -49,6 +49,11 @@ public class LangFileIntegrityTester {
     private static final String LANG_DIR = "/assets/buildcraftunofficial/lang/";
     private static final String EN = "en_us.json";
     private static final String ZH = "zh_cn.json";
+    private static final String RU = "ru_ru.json";
+    /** Every translation that ships. A new locale file is added here, which puts it under every generic check
+     *  below (parse, duplicates, stale and missing keys, placeholders, robotics coverage). */
+    private static final String[] TRANSLATIONS = { ZH, RU };
+    private static final String[] ALL_FILES = { EN, ZH, RU };
 
     /** Matches one {@code "key":} declaration at the start of a line. The lang files are written one
      *  entry per line, which is what lets us count RAW declarations — Gson silently keeps only the last
@@ -100,12 +105,14 @@ public class LangFileIntegrityTester {
     @Test
     public void bothFilesParseAsJson() {
         Assertions.assertFalse(parse(EN).isEmpty(), "en_us.json parsed to zero entries");
-        Assertions.assertFalse(parse(ZH).isEmpty(), "zh_cn.json parsed to zero entries");
+        for (String file : TRANSLATIONS) {
+            Assertions.assertFalse(parse(file).isEmpty(), file + " parsed to zero entries");
+        }
     }
 
     @Test
     public void noDuplicateKeys() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             List<String> raw = rawKeys(file);
             Set<String> seen = new HashSet<>();
             List<String> dupes = new ArrayList<>();
@@ -129,11 +136,13 @@ public class LangFileIntegrityTester {
     @Test
     public void translationHasNoStaleKeys() {
         Map<String, String> en = parse(EN);
-        List<String> stale = parse(ZH).keySet().stream().filter(k -> !en.containsKey(k)).sorted().toList();
-        Assertions.assertTrue(stale.isEmpty(),
-                "zh_cn.json carries keys that no longer exist in en_us.json " + stale
-                        + " — a key deleted from en_us must be deleted from every translation in the SAME"
-                        + " change, or the translation silently accumulates dead weight.");
+        for (String file : TRANSLATIONS) {
+            List<String> stale = parse(file).keySet().stream().filter(k -> !en.containsKey(k)).sorted().toList();
+            Assertions.assertTrue(stale.isEmpty(),
+                    file + " carries keys that no longer exist in en_us.json " + stale
+                            + " — a key deleted from en_us must be deleted from every translation in the SAME"
+                            + " change, or the translation silently accumulates dead weight.");
+        }
     }
 
     /** en_us keys that are deliberately NOT translated into zh_cn. Keep this tiny: it is for text no player ever
@@ -143,24 +152,26 @@ public class LangFileIntegrityTester {
 
     @Test
     public void translationCoversEveryEnglishKey() {
-        Map<String, String> zh = parse(ZH);
-        List<String> missing = parse(EN).keySet().stream()
-                .filter(k -> !zh.containsKey(k) && !ENGLISH_ONLY.contains(k))
-                .sorted()
-                .toList();
-        Assertions.assertTrue(missing.isEmpty(),
-                "zh_cn.json lacks " + missing.size() + " key(s) that en_us.json has " + missing
-                        + " — a Chinese player sees the raw English fallback for each. Translate the key (matching"
-                        + " the terminology already in zh_cn.json), or, if it is genuinely never shown to a"
-                        + " player, list it in ENGLISH_ONLY with the reason.");
+        for (String file : TRANSLATIONS) {
+            Map<String, String> lang = parse(file);
+            List<String> missing = parse(EN).keySet().stream()
+                    .filter(k -> !lang.containsKey(k) && !ENGLISH_ONLY.contains(k))
+                    .sorted()
+                    .toList();
+            Assertions.assertTrue(missing.isEmpty(),
+                    file + " lacks " + missing.size() + " key(s) that en_us.json has " + missing
+                            + " — a player in that language sees the raw English fallback for each. Translate the"
+                            + " key (matching the terminology already in the file), or, if it is genuinely never"
+                            + " shown to a player, list it in ENGLISH_ONLY with the reason.");
+        }
     }
 
     @Test
     public void englishOnlyAllowlistHasNoStaleEntries() {
         Map<String, String> en = parse(EN);
-        Map<String, String> zh = parse(ZH);
         List<String> stale = ENGLISH_ONLY.stream()
-                .filter(k -> !en.containsKey(k) || zh.containsKey(k))
+                .filter(k -> !en.containsKey(k)
+                        || java.util.Arrays.stream(TRANSLATIONS).anyMatch(f -> parse(f).containsKey(k)))
                 .sorted()
                 .toList();
         Assertions.assertTrue(stale.isEmpty(),
@@ -217,9 +228,8 @@ public class LangFileIntegrityTester {
     private static final Pattern ROBOTICS_KEY = Pattern.compile("(?i)robot|board|station");
 
     @Test
-    public void roboticsKeysAreTranslatedInChinese() {
+    public void roboticsKeysAreTranslated() {
         Map<String, String> en = parse(EN);
-        Map<String, String> zh = parse(ZH);
         List<String> roboticsKeys = en.keySet().stream().filter(k -> ROBOTICS_KEY.matcher(k).find()).sorted().toList();
 
         // Liveness: the filter must actually see the robotics block, or the checks below pass vacuously.
@@ -227,7 +237,7 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker"), "filter lost the board names");
         Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker.desc"), "filter lost the board descs");
 
-        assertTranslatedInChinese(en, zh, roboticsKeys, "robotics keys (matched by name)");
+        assertTranslated(en, roboticsKeys, "robotics keys (matched by name)");
     }
 
     /** A string literal of the form {@code "..."} in Java source, escapes included. */
@@ -238,9 +248,8 @@ public class LangFileIntegrityTester {
      *  both shipped English-only in zh_cn that way. So the robotics CODE is the second source of truth: every
      *  en_us key a {@code buildcraft/robotics/**} file names as a string literal must be translated too. */
     @Test
-    public void langKeysNamedByRoboticsCodeAreTranslatedInChinese() {
+    public void langKeysNamedByRoboticsCodeAreTranslated() {
         Map<String, String> en = parse(EN);
-        Map<String, String> zh = parse(ZH);
         Set<String> referenced = new HashSet<>();
         for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
             if (!file.relativePath().startsWith("buildcraft/robotics/")) {
@@ -259,11 +268,11 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(keys.contains("tip.charge.fullcharge"), "scan lost ItemRobot's charge readout");
         Assertions.assertTrue(keys.contains("buildcraft.help.zone_planner.map.title"), "scan lost GuiZonePlanner");
 
-        assertTranslatedInChinese(en, zh, keys, "lang keys named by robotics code");
+        assertTranslated(en, keys, "lang keys named by robotics code");
     }
 
     /** The robot status label builds its keys from enum names, which no literal scan sees: every value needs
-     *  English text (and Chinese, as robotics text), or the Goggles label shows a raw key. */
+     *  English text (and every translation, as robotics text), or the Goggles label shows a raw key. */
     @Test
     public void robotStatusKeysExist() {
         Map<String, String> en = parse(EN);
@@ -281,17 +290,23 @@ public class LangFileIntegrityTester {
         for (String key : keys) {
             Assertions.assertTrue(en.containsKey(key), "en_us lacks " + key);
         }
-        assertTranslatedInChinese(en, parse(ZH), keys, "robot status labels");
+        assertTranslated(en, keys, "robot status labels");
     }
 
     /** Fails on any of {@code keys} that zh_cn lacks, leaves blank, or copies verbatim from English. A value with no
      *  letters at all (a pure format string such as {@code "%s %s"}) is language-neutral and may match exactly. */
-    private static void assertTranslatedInChinese(Map<String, String> en, Map<String, String> zh, List<String> keys,
-            String what) {
+    private static void assertTranslated(Map<String, String> en, List<String> keys, String what) {
+        for (String file : TRANSLATIONS) {
+            assertTranslated(en, file, parse(file), keys, what);
+        }
+    }
+
+    private static void assertTranslated(Map<String, String> en, String file, Map<String, String> zh,
+            List<String> keys, String what) {
         List<String> missing = keys.stream().filter(k -> !zh.containsKey(k)).toList();
         Assertions.assertTrue(missing.isEmpty(),
-                "zh_cn.json lacks " + missing.size() + " " + what + " that en_us.json has " + missing
-                        + " — a Chinese player sees the English text (or the raw key) for these. The robotics"
+                file + " lacks " + missing.size() + " " + what + " that en_us.json has " + missing
+                        + " — a player in that language sees the English text (or the raw key). The robotics"
                         + " strings were added after the 'zh_cn at 100%' sweep and nothing enforced coverage.");
 
         List<String> untranslated = keys.stream()
@@ -300,7 +315,7 @@ public class LangFileIntegrityTester {
                                 .chars().anyMatch(Character::isLetter))))
                 .toList();
         Assertions.assertTrue(untranslated.isEmpty(),
-                "zh_cn.json carries these " + what + " blank or copied verbatim from English " + untranslated);
+                file + " carries these " + what + " blank or copied verbatim from English " + untranslated);
     }
 
     /** A whole {@code "chat.…"} translation key written as a string literal. A key assembled at runtime
@@ -324,7 +339,7 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(referenced.contains("chat.gateCopier.gateCopied"), "scan lost the gate copier messages");
         Assertions.assertTrue(referenced.contains("chat.engine.creative.mode"), "scan lost the creative engine message");
 
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             Map<String, String> lang = parse(file);
             List<String> missing = referenced.stream().filter(k -> !lang.containsKey(k)).sorted().toList();
             Assertions.assertTrue(missing.isEmpty(),
@@ -338,7 +353,7 @@ public class LangFileIntegrityTester {
      *  item name) so each language owns the word order; see {@code ColouredItemNameTest} for the Java side. */
     @Test
     public void colouredItemNameFormatKeysExistInBothLanguages() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             Map<String, String> lang = parse(file);
             for (String key : new String[] { "item.buildcraftunofficial.pipe.coloured",
                     "item.buildcraftunofficial.paintbrush.coloured" }) {
@@ -354,7 +369,7 @@ public class LangFileIntegrityTester {
      *  places the number itself instead of the code gluing {@code "50% "} in front of a translated word. */
     @Test
     public void chargePercentFormatKeyExistsInBothLanguages() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             String value = parse(file).get("tip.charge.percent");
             Assertions.assertNotNull(value, file + " is missing the charge-percentage format key");
             Assertions.assertEquals(1, countFormatSpecs(value),
@@ -371,7 +386,7 @@ public class LangFileIntegrityTester {
      *  and a rename done on only one of them silently splits the block's item name from its screen title. */
     @Test
     public void noLegacyTileNameKeys() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             List<String> legacy = parse(file).keySet().stream().filter(k -> k.startsWith("tile.")).sorted().toList();
             Assertions.assertTrue(legacy.isEmpty(),
                     file + " still declares legacy tile.* keys " + legacy
@@ -381,7 +396,7 @@ public class LangFileIntegrityTester {
 
     @Test
     public void blockKeysThatReplacedTheLegacyTileKeysExistInBothLanguages() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             Map<String, String> lang = parse(file);
             for (String key : new String[] { "block.buildcraftunofficial.autoworkbench_item",
                     "block.buildcraftunofficial.engine_stone", "block.buildcraftunofficial.engine_iron",
@@ -408,17 +423,19 @@ public class LangFileIntegrityTester {
     public void translationPreservesFormatPlaceholders() {
         Map<String, String> en = parse(EN);
         List<String> bad = new ArrayList<>();
-        parse(ZH).forEach((key, zhValue) -> {
-            String enValue = en.get(key);
-            if (enValue == null) {
-                return; // reported by translationHasNoStaleKeys
-            }
-            int expected = countFormatSpecs(enValue);
-            int actual = countFormatSpecs(zhValue);
-            if (expected != actual) {
-                bad.add(key + " (en=" + expected + ", zh=" + actual + ")");
-            }
-        });
+        for (String file : TRANSLATIONS) {
+            parse(file).forEach((key, value) -> {
+                String enValue = en.get(key);
+                if (enValue == null) {
+                    return; // reported by translationHasNoStaleKeys
+                }
+                int expected = countFormatSpecs(enValue);
+                int actual = countFormatSpecs(value);
+                if (expected != actual) {
+                    bad.add(file + ": " + key + " (en=" + expected + ", translated=" + actual + ")");
+                }
+            });
+        }
         Assertions.assertTrue(bad.isEmpty(),
                 "Translated values disagree with English on placeholder count " + bad
                         + " — placeholders are substituted at runtime, so dropping one hardcodes whatever"
@@ -428,7 +445,7 @@ public class LangFileIntegrityTester {
 
     @Test
     public void noDoubleEscapedNewlines() {
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             List<String> bad = parse(file).entrySet().stream()
                     // After JSON parsing a real newline escape is an actual '\n' character. A backslash
                     // followed by 'n' surviving here means the source wrote \\n, which renders literally.
@@ -449,7 +466,7 @@ public class LangFileIntegrityTester {
         // attribute reader stops at the first '"'. A translation containing one truncates the chapter
         // heading, and the failure surfaces as a broken guide page rather than as a lang typo.
         String key = "buildcraft.guide.page.wip.title";
-        for (String file : new String[] { EN, ZH }) {
+        for (String file : ALL_FILES) {
             String value = parse(file).get(key);
             if (value != null) {
                 Assertions.assertFalse(value.contains("\""),

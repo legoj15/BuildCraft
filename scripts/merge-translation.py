@@ -129,7 +129,10 @@ def write_ordered(path, english, merged):
         lines.append(f"    {json.dumps(key, ensure_ascii=False)}: "
                      f"{json.dumps(merged[key], ensure_ascii=False)}{comma}")
     lines.append("}")
-    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    # newline="" writes the bytes as given. Text mode on Windows would translate the "\n" of each "\r\n"
+    # again and leave "\r\r\n" on every line, which the first ru_ru.json merge shipped to a reviewer.
+    with path.open("w", encoding="utf-8", newline="") as out:
+        out.write("\r\n".join(lines) + "\r\n")
     return len(ordered)
 
 

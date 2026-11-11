@@ -206,23 +206,31 @@ public class LangFileIntegrityTester {
     }
 
     /** A rule name the code does not recognise is not an error at runtime, it silently means {@code english} — so a
-     *  typo such as {@code east-slavic} would put Russian back on "4 вёдер" with nothing failing anywhere. English
-     *  declares its rule explicitly, and a language with the extra number forms must declare the rule that reaches them. */
+     *  typo such as {@code east-slavic} would put Russian back on "4 вёдер" with nothing failing anywhere. The rule
+     *  and the extra number forms only work together, in any language: a file declaring {@code east_slavic} must carry
+     *  all six forms (a missing one silently falls back to the plural), and a file carrying a {@code few} or
+     *  {@code many} form must declare the rule that reaches it (the English rule never asks for them). */
     @Test
     public void pluralRulesAreRecognisedNames() {
         String key = "buildcraft.unit.plural_rule";
-        Assertions.assertEquals("english", parse(EN).get(key), "en_us declares the English rule explicitly");
         Assertions.assertEquals("east_slavic", parse(RU).get(key),
                 "ru_ru needs its three number forms (1 ведро, 2-4 ведра, 5+ вёдер)");
         for (String file : ALL_FILES) {
-            String rule = parse(file).get(key);
+            Map<String, String> lang = parse(file);
+            String rule = lang.get(key);
             Assertions.assertTrue(rule == null || Set.of("english", "east_slavic").contains(rule),
                     file + " declares an unknown " + key + " " + rule);
-        }
-        for (String unit : new String[] { "bucket", "millibucket" }) {
-            for (String form : new String[] { "one", "few", "many" }) {
-                String formKey = "buildcraft.unit." + unit + ".full." + form;
-                Assertions.assertTrue(parse(RU).containsKey(formKey), "ru_ru lacks " + formKey);
+            boolean slavic = "east_slavic".equals(rule);
+            for (String unit : new String[] { "bucket", "millibucket" }) {
+                for (String form : new String[] { "one", "few", "many" }) {
+                    String formKey = "buildcraft.unit." + unit + ".full." + form;
+                    if (slavic) {
+                        Assertions.assertTrue(lang.containsKey(formKey), file + " declares east_slavic but lacks " + formKey);
+                    } else if (!form.equals("one")) {
+                        Assertions.assertFalse(lang.containsKey(formKey),
+                                file + " has " + formKey + " but no " + key + " that ever selects it");
+                    }
+                }
             }
         }
     }

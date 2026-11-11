@@ -166,8 +166,9 @@ public class GuiElementFluidTank implements IInteractionElement {
      * Builds the standard BC tank tooltip lines. For a tank with fluid: line 1 is the fluid's name and
      * line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;" in grey, both sides sharing one unit. For
      * an empty tank: a single "Empty &lt;capacity&gt; &lt;unit&gt; Tank" line — no "0 / &lt;capacity&gt;"
-     * line, since that line already states the capacity — with the unit kept SINGULAR ("Empty 4 bucket
-     * Tank") because it modifies the noun "Tank". The unit follows {@code useFullUnitNames} (mB /
+     * line, since that line already states the capacity — with the unit kept SINGULAR in English ("Empty
+     * 4 bucket Tank") because it modifies the noun "Tank"; a language that declares its own plural rule agrees
+     * with the count instead. The unit follows {@code useFullUnitNames} (mB /
      * millibuckets); when {@code abbreviateLargeNumbers} is on a bucket-scale tank (capacity ≥ 1000 mB)
      * shows the whole readout in buckets — including a sub-bucket amount ("0.2 / 4 buckets"), never a mixed
      * "174 mB / 4 buckets". Shared by the per-screen tank-tooltip renderers and {@link #addToolTips}.

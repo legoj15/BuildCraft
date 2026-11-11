@@ -196,15 +196,14 @@ public class LocaleUtil {
     /** {@code "<value> <unit>"} — under abbreviation switches the unit from mB to B (1000 mB = 1 B)
      *  and applies k/M/G/T on top of buckets only if it crosses the next tier (a 50,000 mB/s pipe
      *  would read as "50 buckets per second", not "50k mB" or "5.0E1 buckets"). The bucket count carries
-     *  an optional single decimal, same as the tank readout: 2 buckets is "2", 1.6 is "1.6". */
+     *  an optional single decimal, same as the tank readout: 2 buckets is "2", 1.6 is "1.6". The unit's
+     *  number form agrees with that value as shown (see {@link PluralRule}). */
     private static String formatFluidAmount(long mb, boolean fullSuffix, boolean abbreviate) {
-        if (abbreviate && Math.abs(mb) >= 1000L) {
-            double buckets = mb / 1000.0;
-            return formatBucketFlowValue(buckets, currentThousandsSep(), currentDecimalSep())
-                    + " " + bucketsUnit(fullSuffix, false);
-        }
-        return formatLong(mb, currentThousandsSep(), currentDecimalSep(), false)
-                + " " + fluidUnit(fullSuffix, false);
+        boolean buckets = abbreviate && Math.abs(mb) >= 1000L;
+        ShownNumber n = buckets
+                ? shownBucketFlowValue(mb / 1000.0, currentThousandsSep(), currentDecimalSep())
+                : shownMillibuckets(mb);
+        return n.text() + " " + unitFor(buckets, fullSuffix, n, UnitPosition.AFTER_NUMBER);
     }
 
     /** The numeric part of a bucket-scale flow readout: the k/M/G/T tiers of {@link #formatAbbreviated} with
@@ -214,7 +213,13 @@ public class LocaleUtil {
      *  one-decimal form ("10.0k"). */
     static String formatBucketFlowValue(double buckets, BCLibConfig.ThousandsSeparator t,
                                         BCLibConfig.DecimalSeparator d) {
-        return formatAbbreviated(buckets, t, d, false);
+        return shownBucketFlowValue(buckets, t, d).text();
+    }
+
+    private static ShownNumber shownBucketFlowValue(double buckets, BCLibConfig.ThousandsSeparator t,
+                                                    BCLibConfig.DecimalSeparator d) {
+        Scaled scaled = scaleToTier(buckets);
+        return shownDecimal(formatScaled(scaled, t, d, false), scaled.value(), scaled.tier() > 0);
     }
 
     /** Buckets with an OPTIONAL single decimal — "1" for a whole bucket, "1.1" for a fraction, "16" for
@@ -224,39 +229,50 @@ public class LocaleUtil {
         return numberFormat(t, d, 1, false).format(mb / 1000.0);
     }
 
-    /** The numeric part only (no unit) of a fluid volume, in either mB or buckets. */
-    private static String formatFluidValue(long mb, boolean buckets) {
-        return buckets
-                ? formatBuckets(mb, currentThousandsSep(), currentDecimalSep())
-                : formatLong(mb, currentThousandsSep(), currentDecimalSep(), false);
+    /** A whole-millibucket figure, never abbreviated (so never tiered, never fractional). */
+    private static ShownNumber shownMillibuckets(long mb) {
+        return new ShownNumber(formatLong(mb, currentThousandsSep(), currentDecimalSep(), false), Math.abs(mb), false,
+                false);
+    }
+
+    /** A bucket figure with the optional single decimal and no tier letters (tank and static volumes). */
+    private static ShownNumber shownBuckets(long mb) {
+        return shownDecimal(formatBuckets(mb, currentThousandsSep(), currentDecimalSep()), mb / 1000.0, false);
+    }
+
+    /** A fluid volume as printed, in either mB or buckets. */
+    private static ShownNumber shownFluid(long mb, boolean buckets) {
+        return buckets ? shownBuckets(mb) : shownMillibuckets(mb);
     }
 
     /** {@code "<value> <unit>"} for a single standalone fluid volume — e.g. {@code "4000 mB"},
-     *  {@code "4 buckets"}, {@code "1.1 B"}. Standalone position, so the unit is PLURAL. The unit follows
-     *  {@link BCEnergyConfig#useFullUnitNames}; under {@link BCLibConfig#abbreviateLargeNumbers} a value
+     *  {@code "4 buckets"}, {@code "1.1 B"}. The unit follows {@link BCEnergyConfig#useFullUnitNames}, and
+     *  its number form agrees with the value shown; under {@link BCLibConfig#abbreviateLargeNumbers} a value
      *  ≥ 1000 mB is shown in buckets. */
     static String formatStaticFluid(long mb, boolean full, boolean abbreviate) {
-        return formatStaticFluid(mb, full, abbreviate, false);
+        return formatStaticFluid(mb, full, abbreviate, UnitPosition.AFTER_NUMBER);
     }
 
-    /** As {@link #formatStaticFluid(long, boolean, boolean)} but {@code singular} forces the SINGULAR
-     *  unit name ("bucket"/"millibucket") for the compound-modifier position — the "Empty 4 bucket Tank"
-     *  capacity readout, where a number+unit modifies the following noun and English keeps the unit
-     *  singular regardless of count ("a 4-bucket tank", like "a 5-gallon drum"). The mB/B symbols don't
-     *  inflect, so {@code singular} only affects the spelled-out full names. */
-    static String formatStaticFluid(long mb, boolean full, boolean abbreviate, boolean singular) {
+    /** As {@link #formatStaticFluid(long, boolean, boolean)} but with the unit's {@link UnitPosition}:
+     *  {@code COMPOUND_MODIFIER} is the "Empty 4 bucket Tank" capacity readout, where a number+unit modifies
+     *  the following noun and English keeps the unit singular regardless of count ("a 4-bucket tank", like
+     *  "a 5-gallon drum"); a language whose declared rule is not English agrees with the count there as
+     *  everywhere else. The mB/B symbols don't inflect, so the position only affects the spelled-out names. */
+    static String formatStaticFluid(long mb, boolean full, boolean abbreviate, UnitPosition position) {
         boolean buckets = abbreviate && Math.abs(mb) >= 1000L;
-        return formatFluidValue(mb, buckets) + " " + unitFor(buckets, full, singular);
+        ShownNumber n = shownFluid(mb, buckets);
+        return n.text() + " " + unitFor(buckets, full, n, position);
     }
 
-    /** A standalone single fluid volume with the PLURAL unit (e.g. "4 buckets"). */
+    /** A standalone single fluid volume, its unit agreeing with the number (e.g. "4 buckets"). */
     public static String localizeFluidStatic(long mb) {
-        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), false);
+        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), UnitPosition.AFTER_NUMBER);
     }
 
-    /** A tank CAPACITY for the "Empty &lt;capacity&gt; Tank" line — SINGULAR unit (compound modifier). */
+    /** A tank CAPACITY for the "Empty &lt;capacity&gt; Tank" line — the compound-modifier position: always
+     *  SINGULAR under the English rule, agreeing with the count under any other declared rule. */
     public static String localizeFluidCapacity(long mb) {
-        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), true);
+        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), UnitPosition.COMPOUND_MODIFIER);
     }
 
     /** {@code "<amount> / <capacity> <unit>"} for a tank readout — see {@link #formatFluidTank}. */
@@ -267,38 +283,140 @@ public class LocaleUtil {
     /** Package-visible explicit-flag variant for unit tests (mirrors {@link #formatFluidFlow}). ONE shared
      *  unit, chosen by the CAPACITY's scale: when abbreviation is on and the capacity is ≥ 1000 mB the whole
      *  readout is in buckets — a near-empty bucket-scale tank reads {@code "0.2 / 4 buckets"}, never a mixed
-     *  {@code "174 mB / 4 buckets"} — otherwise both sides stay in mB ({@code "174 / 500 mB"}). The unit is
-     *  PLURAL (standalone "x / y unit" position, no trailing noun). */
+     *  {@code "174 mB / 4 buckets"} — otherwise both sides stay in mB ({@code "174 / 500 mB"}). The unit
+     *  agrees with the CAPACITY, the number printed next to it ("x / y unit", no trailing noun). */
     static String formatFluidTank(long amount, long capacity, boolean full, boolean abbreviate) {
         boolean buckets = abbreviate && Math.abs(capacity) >= 1000L;
-        return formatFluidValue(amount, buckets) + " / " + formatFluidValue(capacity, buckets)
-                + " " + unitFor(buckets, full, false);
+        ShownNumber shownCapacity = shownFluid(capacity, buckets);
+        return shownFluid(amount, buckets).text() + " / " + shownCapacity.text()
+                + " " + unitFor(buckets, full, shownCapacity, UnitPosition.AFTER_NUMBER);
     }
 
     /** Selects the fluid-volume unit label: buckets vs millibuckets, full name vs symbol, and (for the
-     *  full names only) singular vs plural. The mB/B symbols never inflect. */
-    private static String unitFor(boolean buckets, boolean full, boolean singular) {
-        return buckets ? bucketsUnit(full, singular) : fluidUnit(full, singular);
+     *  full names only) the number form for {@code number}, the figure printed beside the unit. The mB/B
+     *  symbols never inflect. */
+    private static String unitFor(boolean buckets, boolean full, ShownNumber number, UnitPosition position) {
+        PluralForm form = full ? formFor(number, position) : PluralForm.MANY;
+        return buckets ? bucketsUnit(full, form) : fluidUnit(full, form);
     }
 
-    private static String fluidUnit(boolean fullSuffix, boolean singular) {
+    private static String fluidUnit(boolean fullSuffix, PluralForm form) {
         if (!fullSuffix) return unitText("buildcraft.unit.millibucket", "mB");
-        return singular
-                ? unitText("buildcraft.unit.millibucket.full.singular", "millibucket")
-                : unitText("buildcraft.unit.millibucket.full.plural", "millibuckets");
+        return unitName("buildcraft.unit.millibucket.full", form, "millibucket", "millibuckets");
     }
 
-    /** The fluid-volume unit label (plural) for the user's display preferences: "millibuckets" when
-     *  {@link BCEnergyConfig#useFullUnitNames} is on (default), else "mB". */
+    /** The fluid-volume unit label for the user's display preferences, with no number beside it: the PLURAL
+     *  "millibuckets" when {@link BCEnergyConfig#useFullUnitNames} is on (default), else "mB". A caller that
+     *  prints a number next to the unit must use a {@code localizeFluid*} method instead, so the unit agrees
+     *  with it. */
     public static String fluidUnit() {
-        return fluidUnit(shouldUseFullNames(), false);
+        return fluidUnit(shouldUseFullNames(), PluralForm.MANY);
     }
 
-    private static String bucketsUnit(boolean fullSuffix, boolean singular) {
+    private static String bucketsUnit(boolean fullSuffix, PluralForm form) {
         if (!fullSuffix) return unitText("buildcraft.unit.bucket", "B");
-        return singular
-                ? unitText("buildcraft.unit.bucket.full.singular", "bucket")
-                : unitText("buildcraft.unit.bucket.full.plural", "buckets");
+        return unitName("buildcraft.unit.bucket.full", form, "bucket", "buckets");
+    }
+
+    // -- Number agreement of the full unit names ---------------------------------------------------------------
+
+    /** The number form a unit name takes: the lang key suffix its own key carries ({@code .full.one} /
+     *  {@code .full.few} / {@code .full.many}) and the older two-key pair it falls back to, so a language that
+     *  only has singular and plural keeps working. {@code ONE} falls back to {@code .full.singular}; {@code FEW}
+     *  and {@code MANY} to {@code .full.plural}. */
+    enum PluralForm {
+        ONE("one", "singular"),
+        FEW("few", "plural"),
+        MANY("many", "plural");
+
+        final String formKey;
+        final String pairKey;
+
+        PluralForm(String formKey, String pairKey) {
+            this.formKey = formKey;
+            this.pairKey = pairKey;
+        }
+    }
+
+    /** Where a unit sits relative to its number. {@code AFTER_NUMBER} is the plain "x unit" reading; the unit
+     *  agrees with the number. {@code COMPOUND_MODIFIER} is "a 4-bucket tank": English keeps the unit singular
+     *  whatever the count, other rules agree with the number as usual. */
+    enum UnitPosition {
+        AFTER_NUMBER,
+        COMPOUND_MODIFIER
+    }
+
+    /** A number as printed beside a unit, reduced to what agreement reads: the integer part of the figure AS
+     *  DISPLAYED (after rounding: 1040 mB shows "1" bucket, so 1), whether a fractional part is printed, and
+     *  whether a k/M/G/T tier letter is. The sign never changes the noun, so {@code whole} is absolute. */
+    record ShownNumber(String text, long whole, boolean fraction, boolean tiered) {}
+
+    /** How a language picks a {@link PluralForm} for a number, DECLARED by that language's own lang file under
+     *  {@code buildcraft.unit.plural_rule} ({@link Language} carries no locale, so the lang file is the only
+     *  place the rule can come from). A missing or unrecognised value is {@code ENGLISH}, so a language that
+     *  declares nothing behaves as before.
+     *  <ul>
+     *  <li>{@code english}: {@code ONE} only for a displayed 1 with no fraction and no tier letter; else
+     *      {@code MANY} (English, Chinese and every language whose singular/plural keys are enough).</li>
+     *  <li>{@code east_slavic} (Russian): an integer n is {@code ONE} when n%10 is 1 and n%100 is not 11,
+     *      {@code FEW} when n%10 is 2-4 and n%100 is not 12-14, else {@code MANY}; a fractional figure is
+     *      {@code FEW} (the genitive singular, "1,5 ведра"); a tiered figure ("2k") is {@code MANY}.</li>
+     *  </ul> */
+    enum PluralRule {
+        ENGLISH,
+        EAST_SLAVIC;
+
+        static PluralRule parse(String declared) {
+            return "east_slavic".equals(declared.strip().toLowerCase(Locale.ROOT)) ? EAST_SLAVIC : ENGLISH;
+        }
+
+        /** The rule the currently loaded language declares. */
+        static PluralRule current() {
+            return parse(unitText("buildcraft.unit.plural_rule", "english"));
+        }
+
+        PluralForm formFor(ShownNumber n) {
+            return switch (this) {
+                case EAST_SLAVIC -> {
+                    if (n.tiered()) yield PluralForm.MANY;
+                    if (n.fraction()) yield PluralForm.FEW;
+                    long lastTwo = n.whole() % 100;
+                    long last = n.whole() % 10;
+                    if (last == 1 && lastTwo != 11) yield PluralForm.ONE;
+                    if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) yield PluralForm.FEW;
+                    yield PluralForm.MANY;
+                }
+                case ENGLISH -> !n.fraction() && !n.tiered() && n.whole() == 1 ? PluralForm.ONE : PluralForm.MANY;
+            };
+        }
+    }
+
+    /** The form the loaded language's rule picks for {@code number} in {@code position}. */
+    private static PluralForm formFor(ShownNumber number, UnitPosition position) {
+        PluralRule rule = PluralRule.current();
+        if (position == UnitPosition.COMPOUND_MODIFIER && rule == PluralRule.ENGLISH) {
+            return PluralForm.ONE;
+        }
+        return rule.formFor(number);
+    }
+
+    /** One full unit name: the per-form key ({@code <base>.one|few|many}) when the language has it, else the
+     *  {@code <base>.singular} / {@code <base>.plural} pair, else the built-in English. */
+    private static String unitName(String base, PluralForm form, String singularFallback, String pluralFallback) {
+        Language lang = Language.getInstance();
+        String formKey = base + "." + form.formKey;
+        if (lang.has(formKey)) return lang.getOrDefault(formKey);
+        return unitText(base + "." + form.pairKey, form == PluralForm.ONE ? singularFallback : pluralFallback);
+    }
+
+    /** A figure with at most one decimal (the display's rounding, probed through the same {@link DecimalFormat}
+     *  engine so the two cannot disagree), reduced to what {@link PluralRule} reads. {@code text} is what the
+     *  player sees; the probe only classifies it, so the player's separator settings never matter here. */
+    private static ShownNumber shownDecimal(String text, double value, boolean tiered) {
+        String probe = new DecimalFormat("0.#", new DecimalFormatSymbols(Locale.US)).format(Math.abs(value));
+        int dot = probe.indexOf('.');
+        long whole = Long.parseLong(dot < 0 ? probe : probe.substring(0, dot));
+        return new ShownNumber(text, whole, dot >= 0, tiered);
     }
 
     /** Format a long with the configured thousands grouping separator. When
@@ -457,29 +575,39 @@ public class LocaleUtil {
      *  followed by the matching k/M/G/T suffix. Handles the tier-crossing rounding edge — a value
      *  like 999,950 divides to 999.95, which would format as "1000.0k" at one-decimal precision;
      *  the second loop iteration bumps it to the next tier so the output reads "1.0M" instead. The
-     *  decimal is always present ("2.0k"); see the four-argument overload for the trimmed form. */
+     *  decimal is always present ("2.0k"); the fluid flow bucket branch shows it only when it is not zero
+     *  ({@link #formatBucketFlowValue}). */
     private static String formatAbbreviated(double value, BCLibConfig.ThousandsSeparator t,
                                             BCLibConfig.DecimalSeparator d) {
-        return formatAbbreviated(value, t, d, true);
+        return formatScaled(scaleToTier(value), t, d, true);
     }
 
-    /** As {@link #formatAbbreviated(double, BCLibConfig.ThousandsSeparator, BCLibConfig.DecimalSeparator)}, but
-     *  with {@code forceDecimal == false} the single decimal is optional, so a whole number reads "2k" rather
-     *  than "2.0k" (the tier suffix follows the number either way). */
-    private static String formatAbbreviated(double value, BCLibConfig.ThousandsSeparator t,
-                                            BCLibConfig.DecimalSeparator d, boolean forceDecimal) {
-        String[] suffixes = { "", "k", "M", "G", "T" };
+    private static final String[] TIER_SUFFIXES = { "", "k", "M", "G", "T" };
+
+    /** A value walked down through powers of 1000: the reduced figure and the number of steps taken (the index
+     *  of its k/M/G/T letter). */
+    private record Scaled(double value, int tier) {}
+
+    private static Scaled scaleToTier(double value) {
         double v = value;
         int tier = 0;
-        while (Math.abs(v) >= 1000.0 && tier < suffixes.length - 1) {
+        while (Math.abs(v) >= 1000.0 && tier < TIER_SUFFIXES.length - 1) {
             v /= 1000.0;
             tier++;
         }
-        if (Math.abs(v) >= 999.95 && tier < suffixes.length - 1) {
+        if (Math.abs(v) >= 999.95 && tier < TIER_SUFFIXES.length - 1) {
             v /= 1000.0;
             tier++;
         }
-        return numberFormat(t, d, 1, forceDecimal).format(v) + suffixes[tier];
+        return new Scaled(v, tier);
+    }
+
+    /** The one-decimal figure plus its tier letter. With {@code forceDecimal == false} the single decimal is
+     *  optional, so a whole number reads "2k" rather than "2.0k" (the tier suffix follows the number either
+     *  way). */
+    private static String formatScaled(Scaled scaled, BCLibConfig.ThousandsSeparator t,
+                                       BCLibConfig.DecimalSeparator d, boolean forceDecimal) {
+        return numberFormat(t, d, 1, forceDecimal).format(scaled.value()) + TIER_SUFFIXES[scaled.tier()];
     }
 
     private static BCLibConfig.ThousandsSeparator currentThousandsSep() {

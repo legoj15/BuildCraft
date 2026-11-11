@@ -1135,6 +1135,7 @@
     "buildcraft.unit.energy.rf": "RF",
     "buildcraft.unit.energy.full": "Forge Energy",
     "buildcraft.unit.energy.full.rf": "Redstone Flux",
+    "buildcraft.unit.plural_rule": "english",
     "buildcraft.unit.millibucket": "mB",
     "buildcraft.unit.millibucket.full.singular": "millibucket",
     "buildcraft.unit.millibucket.full.plural": "millibuckets",

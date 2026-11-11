@@ -221,7 +221,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
             } else {
                 // Empty: only "Empty <capacity> Tank" — the capacity is already shown, no 0/x line.
-                // localizeFluidCapacity uses the singular unit ("Empty 4 bucket Tank") for the modifier.
+                // localizeFluidCapacity keeps the unit singular in English ("Empty 4 bucket Tank"); a language
+                // that declares its own plural rule agrees with the count instead.
                 lines.add(Component.translatable("buildcraft.tank.empty",
                     buildcraft.lib.misc.LocaleUtil.localizeFluidCapacity(maxAmount)));
             }

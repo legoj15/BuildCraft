@@ -56,6 +56,18 @@ POSITIONAL_INDEX = re.compile(r"%(\d+)\$[sd]")
 KEY_LINE = re.compile(r'(?m)^\s*"((?:[^"\\]|\\.)+)"\s*:')
 # Values spliced into the guide book's XML; XmlPageLoader's attribute reader stops at the first quote.
 XML_SPLICED_KEYS = {"buildcraft.guide.page.wip.title"}
+# The language's own counting rule for fluid unit names (#183). An incoming file made by copying en_us
+# carries English's value for it, which must not replace the one the locale already declares.
+PLURAL_RULE_KEY = "buildcraft.unit.plural_rule"
+# Number forms of a unit name that only a language with more than two forms carries (Russian: one / few /
+# many). English never has them, so they are legitimate keys that en_us.json lacks; LocaleUtil reads them
+# before the .full.singular / .full.plural pair. LangFileIntegrityTester has the matching exemption.
+PER_LANGUAGE_KEY = re.compile(r"buildcraft\.unit\.(?:milli)?bucket\.full\.(?:one|few|many)")
+PER_LANGUAGE_FORMS = ("one", "few", "many")
+
+
+def is_per_language(key):
+    return PER_LANGUAGE_KEY.fullmatch(key) is not None
 
 
 def load(path):
@@ -85,6 +97,10 @@ def validate(incoming, incoming_text, english):
     for key, value in incoming.items():
         if not isinstance(value, str):
             problems.append(f"{key}: value is {type(value).__name__}, expected a string")
+            continue
+        if is_per_language(key):
+            if FORMAT_SPEC.search(value) or not value.strip():
+                problems.append(f"{key}: a unit name form must be a plain, non-empty word")
             continue
         if key not in english:
             problems.append(f"{key}: not present in en_us.json — typo, or a key that has been removed")
@@ -121,9 +137,16 @@ def validate(incoming, incoming_text, english):
 
 
 def write_ordered(path, english, merged):
-    """Rewrite `path` following en_us.json's key order, keeping only keys English still has."""
+    """Rewrite `path` following en_us.json's key order, keeping only keys English still has plus the
+    per-language unit forms, each group placed right after its unit's .full.plural key."""
     lines = ["{"]
-    ordered = [k for k in english if k in merged]
+    ordered = []
+    for k in english:
+        if k in merged:
+            ordered.append(k)
+        if k.endswith(".full.plural"):
+            base = k[: -len("plural")]
+            ordered.extend(base + f for f in PER_LANGUAGE_FORMS if is_per_language(base + f) and base + f in merged)
     for i, key in enumerate(ordered):
         comma = "," if i < len(ordered) - 1 else ""
         lines.append(f"    {json.dumps(key, ensure_ascii=False)}: "
@@ -137,10 +160,13 @@ def write_ordered(path, english, merged):
 
 
 def report(english, target_data, locale):
-    missing = [k for k in english if k not in target_data]
-    stale = [k for k in target_data if k not in english]
+    # The plural rule is optional: a language that omits it counts the English way.
+    missing = [k for k in english if k not in target_data and k != PLURAL_RULE_KEY]
+    stale = [k for k in target_data if k not in english and not is_per_language(k)]
+    own = sum(1 for k in target_data if is_per_language(k))
     pct = 100.0 * (len(english) - len(missing)) / len(english) if english else 0.0
-    print(f"{locale}: {len(target_data)} / {len(english)} keys ({pct:.1f}% translated)")
+    print(f"{locale}: {len(target_data) - own} / {len(english)} keys ({pct:.1f}% translated)"
+          + (f", plus {own} unit number form(s) of its own" if own else ""))
     if missing:
         print(f"  untranslated : {len(missing)}")
     if stale:
@@ -163,6 +189,10 @@ def main():
     _, english = load(EN)
     target = LANG_DIR / f"{args.locale}.json"
 
+    if args.report_only and args.incoming and not Path(args.incoming).exists():
+        # "--report-only ru_ru": the lone positional is the locale, not an incoming file.
+        args.locale = args.incoming
+        target = LANG_DIR / f"{args.locale}.json"
     if args.report_only or not args.incoming:
         if not target.exists():
             sys.exit(f"error: {target} does not exist")
@@ -187,6 +217,12 @@ def main():
 
     overwritten = sorted(k for k in incoming if k in existing and existing[k] != incoming[k])
     merged = {**existing, **incoming}
+    # A copy of en_us sends English's rule; the locale's own declaration wins over that, never over a real one.
+    if (PLURAL_RULE_KEY in existing and incoming.get(PLURAL_RULE_KEY) == english.get(PLURAL_RULE_KEY)
+            and existing[PLURAL_RULE_KEY] != incoming[PLURAL_RULE_KEY]):
+        merged[PLURAL_RULE_KEY] = existing[PLURAL_RULE_KEY]
+        overwritten.remove(PLURAL_RULE_KEY)
+        print(f"  kept {PLURAL_RULE_KEY} = {existing[PLURAL_RULE_KEY]!r} (the incoming file carries English's)")
 
     print(f"{incoming_path.name}: {len(incoming)} entries, all valid.")
     if overwritten:
@@ -200,7 +236,7 @@ def main():
 
     if args.dry_run:
         print("\n--dry-run: nothing written.")
-        after = {k: v for k, v in merged.items() if k in english}
+        after = {k: v for k, v in merged.items() if k in english or is_per_language(k)}
         report(english, after, args.locale)
         return 0
 
@@ -208,7 +244,7 @@ def main():
     print(f"\nwrote {written} keys to {target.relative_to(REPO)}")
     _, after = load(target)
     report(english, after, args.locale)
-    print("\nNow run:  ./gradlew :26.1.2:test   (LangFileIntegrityTester re-checks the merged file)")
+    print("\nNow run:  ./gradlew :26.3:test --tests buildcraft.lib.misc.LangFileIntegrityTester   (LangFileIntegrityTester re-checks the merged file)")
     return 0
 
 

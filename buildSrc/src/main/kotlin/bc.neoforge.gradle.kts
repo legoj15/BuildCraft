@@ -299,6 +299,19 @@ tasks.test {
     inputs.file(rootProject.file("NOTICE.md"))
         .withPropertyName("licenceNotice").withPathSensitivity(PathSensitivity.NONE)
 
+    // GuideMeExportStalenessTest and GuideTranslationStalenessTest hash these generator scripts and
+    // stamps off disk. They live outside src/, so a scripts- or stamp-only edit would leave `test`
+    // UP-TO-DATE and both guards silent. (The guide sources, lang files, recipes and generated trees
+    // they also hash sit under src/main/resources and already reach the task via processResources.)
+    // gen_io.py is imported by the exporters, so an edit to it changes what the export would produce.
+    inputs.files(
+        rootProject.files(
+            "scripts/guide_model.py", "scripts/gen_io.py", "scripts/guide-to-guideme.py",
+            "scripts/guide-translation-validate.py", "scripts/guide-to-guideme.stamp",
+            "scripts/guide-translation.stamp"
+        )
+    ).withPropertyName("guideGuards").withPathSensitivity(PathSensitivity.NONE)
+
     // StonecutterDirectiveGuardTester decides which directive arms are live from the `stonecutter active` line.
     inputs.file(rootProject.file("stonecutter.gradle.kts"))
         .withPropertyName("activeNode").withPathSensitivity(PathSensitivity.NONE)

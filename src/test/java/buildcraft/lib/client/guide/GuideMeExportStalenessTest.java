@@ -19,6 +19,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
@@ -60,11 +62,16 @@ class GuideMeExportStalenessTest {
 
         String stampInputs = null;
         String stampOutputs = null;
-        TreeSet<String> langKeys = new TreeSet<>();
+        Map<String, TreeSet<String>> langKeys = new TreeMap<>();
         for (String line : Files.readAllLines(stampFile, StandardCharsets.UTF_8)) {
             if (line.startsWith("inputs ")) stampInputs = line.substring(7);
             else if (line.startsWith("outputs ")) stampOutputs = line.substring(8);
-            else if (line.startsWith("lang ")) langKeys.add(line.substring(5));
+            else if (line.startsWith("lang ")) {
+                // "lang <locale> <key>": the lang keys that locale's export read
+                String[] parts = line.split(" ", 3);
+                assertEquals(3, parts.length, STAMP + " has a malformed lang line: " + line);
+                langKeys.computeIfAbsent(parts[1], k -> new TreeSet<>()).add(parts[2]);
+            }
         }
 
         String hint = " Run python scripts/guide-to-guideme.py and commit the result.";
@@ -150,17 +157,26 @@ class GuideMeExportStalenessTest {
         return files;
     }
 
-    private static String inputHash(Path root, TreeSet<String> langKeys) throws IOException {
+    private static String inputHash(Path root, Map<String, TreeSet<String>> langKeys) throws IOException {
         MessageDigest h = digest(root, inputFiles(root));
         for (String line : recipeFacts(root)) {
             h.update((line + "\n").getBytes(StandardCharsets.UTF_8));
         }
-        JsonObject lang = JsonParser.parseString(Files.readString(root.resolve(LANG), StandardCharsets.UTF_8))
-            .getAsJsonObject();
-        for (String key : langKeys) {
-            JsonElement v = lang.get(key);
-            String value = v == null || v.isJsonNull() ? "\0" : v.getAsString();
-            h.update((key + "=" + value + "\n").getBytes(StandardCharsets.UTF_8));
+        for (String locale : langKeys.keySet()) {
+            JsonObject merged = JsonParser.parseString(Files.readString(root.resolve(LANG), StandardCharsets.UTF_8))
+                .getAsJsonObject().deepCopy();
+            if (!"en_us".equals(locale)) {
+                Path own = root.resolve(LANG).resolveSibling(locale + ".json");
+                for (var e : JsonParser.parseString(Files.readString(own, StandardCharsets.UTF_8))
+                    .getAsJsonObject().entrySet()) {
+                    merged.add(e.getKey(), e.getValue());
+                }
+            }
+            for (String key : langKeys.get(locale)) {
+                JsonElement v = merged.get(key);
+                String value = v == null || v.isJsonNull() ? "\0" : v.getAsString();
+                h.update((locale + "\u001f" + key + "=" + value + "\n").getBytes(StandardCharsets.UTF_8));
+            }
         }
         return hex(h);
     }

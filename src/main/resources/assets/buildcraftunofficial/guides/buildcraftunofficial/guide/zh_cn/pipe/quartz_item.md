@@ -1,0 +1,37 @@
+---
+navigation:
+  title: "石英运输管道"
+  parent: contents/transport/pipe_item.md
+  position: 46
+  icon: buildcraftunofficial:pipe_quartz_item
+item_ids:
+  - buildcraftunofficial:pipe_quartz_item
+---
+
+# 石英运输管道
+
+<ItemImage id="buildcraftunofficial:pipe_quartz_item" scale="2" float="right" />
+
+以更快的速度，把你的物品运往你想让它们去的地方。
+
+<Row>
+<RecipesFor id="buildcraftunofficial:pipe_quartz_item" fallbackText="" />
+</Row>
+
+## 管道机制
+
+石英运输管道会给输送中的物品施加少量的阻力，因此能减慢已加速物品的速度。
+
+石英运输管道不会与圆石运输管道或石头运输管道连接。
+
+如果管道有多个连接面，物品会随机选择一个方向前进。
+
+物品不会沿来路返回，只会朝其他方向前进。
+
+如果输送中的物品无处可去，就会从管道中掉落到地上。
+
+某些机器可以自动将物品直接输出到石英运输管道中，无需再经由供能的提取管道输送。
+
+使用管塞或给管道刷上不同的颜色，都可以阻止管道相互连接。
+
+**用于合成:** <ItemLink id="buildcraftunofficial:pipe_quartz_fluid" />, <ItemLink id="buildcraftunofficial:pipe_quartz_power" />

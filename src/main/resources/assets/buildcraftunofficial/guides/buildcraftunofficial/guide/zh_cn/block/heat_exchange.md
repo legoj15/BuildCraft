@@ -1,0 +1,27 @@
+---
+navigation:
+  title: "热交换器"
+  parent: contents/mining_fluids/refining.md
+  position: 15
+  icon: buildcraftunofficial:heat_exchange
+item_ids:
+  - buildcraftunofficial:heat_exchange
+---
+
+# 热交换器
+
+<ItemImage id="buildcraftunofficial:heat_exchange" scale="2" float="right" />
+
+在你尝试充分利用可燃燃料时，仅仅使用冷流体已经不够了，你需要将流体加热和冷却到各种不同的温度。
+
+## 信息
+
+热交换器用于冷却/加热流体，由 3 个部分组成：起始段、中段和末端，它们组装在一起形成一个多方块结构。
+
+最多可以使用 3 个中段来加快这一过程。
+
+<Row>
+<RecipesFor id="buildcraftunofficial:heat_exchange" fallbackText="" />
+</Row>
+
+将冷燃料加热到热的程度，可以让它在燃油引擎中燃烧得更好。在下界找到的原油已经是灼热的，所以要先把它冷却。

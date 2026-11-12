@@ -32,6 +32,9 @@ import re
 import sys
 from pathlib import Path
 
+# Runs under `python -I` too (isolated mode drops the script's own directory from sys.path).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import gen_io
 from guide_model import (ASSETS, CATEGORY_GROUPS, COLOUR_TAGS, CONFIG, MODELS, OTHER, REPO, Guide, drop_block, grouped,
                          ing_ids, keep_block, lang_name, prettify, split_id, strip_comment_lines,

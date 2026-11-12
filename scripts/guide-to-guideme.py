@@ -11,7 +11,10 @@ Without GuideME installed the files are inert.
 
 The output is GENERATED and committed: edit the guide sources under compat/buildcraft/ (or this script)
 and re-run it. The entries, titles and contents order come from guide_model.py, shared with
-guide-to-wiki.py. What the conversion does with the parts GuideME has no equivalent for:
+guide-to-wiki.py. Translated guide pages are exported too: GuideME serves a language's pages from a
+<langcode>/ folder beside the default ones (falling back per page), so every locale dir under
+compat/buildcraft/guide/ becomes guides/buildcraftunofficial/guide/<langcode>/ with titles from that
+locale's lang file. What the conversion does with the parts GuideME has no equivalent for:
   * lore / hints / details follow the in-game defaults (lore shown, hints and details hidden);
   * `<usages>` becomes a static "Used to craft" list built from the recipe JSONs;
   * recipes registered in code (assembly table) and BC's special recipe types are left out, since
@@ -33,9 +36,13 @@ import json
 import posixpath
 import re
 import sys
+from pathlib import Path
+
+# Runs under `python -I` too (isolated mode drops the script's own directory from sys.path).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import gen_io
-from guide_model import (ASSETS, GUIDE_DIR, LANG, LANG_FILE, RECIPE_DIR, REPO, Guide, attrs_of, drop_block,
+from guide_model import (ASSETS, GUIDE_DIR, LANG_FILE, RECIPE_DIR, REPO, Guide, attrs_of, drop_block,
                          grouped, keep_block, lang_name, recipe_ingredient_ids, recipe_result_id, split_id,
                          strip_comment_lines, subtype_name, system_name, warn, warnings)
 
@@ -76,6 +83,7 @@ def included(e):
 class Export:
     def __init__(self, guide):
         self.guide = guide
+        self.lang = guide.lang
         self.entries = [e for e in guide.entries if included(e)]
         self.pages = {e.path: f"{e.path}.md" for e in self.entries}
         # The first entry for a stack is its page for <ItemLink>, recipe slots and GuideME's
@@ -102,16 +110,16 @@ class Export:
     def tree(self):
         """[(system key, system page, title, [(subtype page or None, title, [entries])])]."""
         out = []
-        for key, subs in grouped(self.entries):
+        for key, subs in grouped(self.entries, self.lang):
             sys_page = f"contents/{key.lstrip('_')}.md"
-            named = [s for s, _ in subs if subtype_name(s)]
+            named = [s for s, _ in subs if subtype_name(s, self.lang)]
             groups = []
             for sub, es in subs:
-                sn = subtype_name(sub)
+                sn = subtype_name(sub, self.lang)
                 # A lone or unnamed subtype sits directly under its system, as in the wiki sidebar.
                 page = f"contents/{key.lstrip('_')}/{sub}.md" if sn and len(named) > 1 else None
                 groups.append((page, sn, es))
-            out.append((key, sys_page, system_name(key), groups))
+            out.append((key, sys_page, system_name(key, self.lang), groups))
         return out
 
 
@@ -312,7 +320,7 @@ def item_link(item_id, ex):
     # One of our items no page claims is named in plain text: an <ItemLink> to it logs a "no page"
     # warning on GuideME's 1.21.1 line, `optional` or not.
     if split_id(item_id)[0] == NS and item_id not in ex.item_page:
-        return escape_text(lang_name(item_id))
+        return escape_text(lang_name(item_id, lang=ex.lang))
     return f'<ItemLink id="{attr(item_id)}" />'
 
 def link(a, page, ex):
@@ -353,7 +361,8 @@ def recipe_tags(name, a, ex):
         if outs:
             links = ", ".join(item_link(o, ex) for o in outs[:USAGES_CAP])
             more = f" and {len(outs) - USAGES_CAP} more" if len(outs) > USAGES_CAP else ""
-            parts.append(f"**Used to craft:** {links}{more}")
+            used = ex.lang.get("buildcraft.guide.export.used_to_craft", "Used to craft")
+            parts.append(f"**{used}:** {links}{more}")
     return "\n" + "\n\n".join(parts) + "\n" if parts else ""
 
 def single_recipe(rid, ex, kind=None):
@@ -395,12 +404,14 @@ def write_pages(ex):
     files = {}
     tree = ex.tree()
 
-    intro = ("Everything in BuildCraft's own Guide Book, arranged the same way: pick a section below or "
-             "in the sidebar, or search for an item.")
-    title = LANG.get(f"buildcraft.guide.book.{NS}_main", "BuildCraft Guide Book")
+    intro = ex.lang.get("buildcraft.guide.export.intro",
+                        "Everything in BuildCraft's own Guide Book, arranged the same way: pick a section below or "
+                        "in the sidebar, or search for an item.")
+    contents = ex.lang.get("buildcraft.guide.export.contents", "Contents")
+    title = ex.lang.get(f"buildcraft.guide.book.{NS}_main", "BuildCraft Guide Book")
     toc = "\n".join(f"- [{escape_text(name)}]({rel_link('index.md', sys_page)})" for _, sys_page, name, _ in tree)
     files["index.md"] = "\n\n".join([frontmatter(title, position=0, icon=f"{NS}:guide"),
-                                     f"# {escape_text(title)}", intro, "## Contents", toc])
+                                     f"# {escape_text(title)}", intro, f"## {contents}", toc])
 
     for pos, (key, sys_page, sys_title, groups) in enumerate(tree, start=1):
         sys_icon = next((entry_icon(e) for _, _, es in groups for e in es if entry_icon(e)), None)
@@ -431,7 +442,7 @@ def entry_page(e, parent, position, ex):
         parts.append(f'<ItemImage id="{attr(e.stack)}" scale="2" float="right" />')
     parts.append(convert_body(e.md, page, ex))
     if e.creative:
-        parts.append("*Creative-only: there is no survival recipe.*")
+        parts.append(f"*{ex.lang.get('buildcraft.guide.export.creative_only', 'Creative-only: there is no survival recipe.')}*")
     return "\n\n".join(p for p in parts if p)
 
 def guide_definition():
@@ -477,34 +488,51 @@ def recipe_facts():
 def output_files():
     return [p for p in GUIDE_OUT.rglob("*") if p.is_file()] + [GUIDE_DEF]
 
-def input_hash(lang_keys):
+def input_hash(langs, keys):
+    """langs: locale -> plain dict of the values that locale's export reads (en_us overlaid with
+    the locale's own); keys: locale -> the keys a run read. Hashing the locale's own value means
+    an en_us.json edit for a key zh_cn.json overrides correctly leaves the export current."""
     h = _digest(input_files())
     for ln in recipe_facts():
         h.update(f"{ln}\n".encode("utf-8"))
-    lang = json.loads(LANG_FILE.read_text(encoding="utf-8"))
-    for k in sorted(lang_keys):
-        v = lang.get(k)
-        h.update(f"{k}={v if v is not None else chr(0)}\n".encode("utf-8"))
+    for loc in sorted(keys):
+        for k in sorted(keys[loc]):
+            v = langs.get(loc, {}).get(k)
+            h.update(f"{loc}\x1f{k}={v if v is not None else chr(0)}\n".encode("utf-8"))
     return h.hexdigest()
 
 def read_stamp():
     if not STAMP.exists():
-        return None, None, set()
+        return None, None, {}
     inputs = outputs = None
-    keys = set()
+    keys: dict[str, set[str]] = {}
     for ln in STAMP.read_text(encoding="utf-8").splitlines():
         if ln.startswith("inputs "):
             inputs = ln[7:]
         elif ln.startswith("outputs "):
             outputs = ln[8:]
         elif ln.startswith("lang "):
-            keys.add(ln[5:])
+            _, loc, key = ln.split(" ", 2)
+            keys.setdefault(loc, set()).add(key)
     return inputs, outputs, keys
+
+
+def exported_locales():
+    """en_us (the default pages at the guide root) plus every translated page dir that exists."""
+    return ["en_us"] + sorted(
+        d.name for d in GUIDE_DIR.iterdir()
+        if d.is_dir() and d.name != "en_us" and any(d.glob("**/*.md")))
 
 
 def check():
     inputs, outputs, keys = read_stamp()
-    ok = inputs == input_hash(keys) and outputs == _digest(output_files()).hexdigest()
+    langs = {"en_us": json.loads(LANG_FILE.read_text(encoding="utf-8"))}
+    for loc in keys:
+        if loc != "en_us":
+            merged = dict(langs["en_us"])
+            merged.update(json.loads((ASSETS / "lang" / f"{loc}.json").read_text(encoding="utf-8")))
+            langs[loc] = merged
+    ok = inputs == input_hash(langs, keys) and outputs == _digest(output_files()).hexdigest()
     print("GuideME export is current." if ok else
           "GuideME export is STALE: run python scripts/guide-to-guideme.py and commit the result.")
     return 0 if ok else 1
@@ -513,26 +541,39 @@ def main():
     if "--check" in sys.argv[1:]:
         return check()
 
-    ex = Export(Guide())
-    files = write_pages(ex)
+    changed = removed = 0
+    keep = []
+    langs: dict[str, dict] = {}
+    lang_keys: dict[str, set] = {}
+    for loc in exported_locales():
+        guide = Guide(md_locale=None if loc == "en_us" else loc)
+        ex = Export(guide)
+        files = write_pages(ex)
 
-    for path in files:
-        if not VALID_PAGE.fullmatch(path):
-            warn(f"page id '{path}' is not a valid resource path")
-    changed = sum(gen_io.write_text(GUIDE_OUT / path, text.rstrip() + "\n") for path, text in files.items())
-    removed = gen_io.prune(GUIDE_OUT, [GUIDE_OUT / path for path in files])
+        for path in files:
+            if not VALID_PAGE.fullmatch(path):
+                warn(f"[{loc}] page id '{path}' is not a valid resource path")
+        # GuideME serves the default pages from the guide root and a language's pages from a
+        # <langcode>/ folder beside them, falling back per page — same overlay as the in-game book.
+        target = GUIDE_OUT if loc == "en_us" else GUIDE_OUT / loc
+        changed += sum(gen_io.write_text(target / path, text.rstrip() + "\n") for path, text in files.items())
+        keep += [target / path for path in files]
+        langs[loc] = dict(guide.lang)
+        lang_keys[loc] = set(guide.lang.read)
+        print(f"[{loc}] {len(files)} pages, {len(ex.entries)} entries"
+              + (f", {ex.dropped_recipes} code-registered recipes left out" if ex.dropped_recipes else ""))
+    removed = gen_io.prune(GUIDE_OUT, keep)
     changed += gen_io.write_text(GUIDE_DEF, guide_definition())
 
-    keys = set(LANG.read)
     stamp = ["# Written by scripts/guide-to-guideme.py; GuideMeExportStalenessTest checks it. Do not edit.",
-             f"inputs {input_hash(keys)}",
+             f"inputs {input_hash(langs, lang_keys)}",
              f"outputs {_digest(output_files()).hexdigest()}"]
-    stamp += [f"lang {k}" for k in sorted(keys)]
+    for loc in sorted(lang_keys):
+        stamp += [f"lang {loc} {k}" for k in sorted(lang_keys[loc])]
     gen_io.write_text(STAMP, "\n".join(stamp) + "\n")
 
-    print(f"Exported {len(files)} GuideME pages ({len(ex.entries)} entries) to {GUIDE_OUT.relative_to(REPO)}: "
+    print(f"Exported {len(exported_locales())} language(s) to {GUIDE_OUT.relative_to(REPO)}: "
           f"{changed} file(s) changed, {removed} removed")
-    print(f"Code-registered recipes left out: {ex.dropped_recipes}")
     if warnings:
         print(f"\n{len(warnings)} warning(s):")
         for w in warnings:

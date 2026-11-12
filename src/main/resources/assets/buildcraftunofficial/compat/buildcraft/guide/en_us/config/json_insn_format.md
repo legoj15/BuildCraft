@@ -3,7 +3,7 @@ On the very first line should be
 <json_insn>
 ~{buildcraft/json/insn}
 </json_insn>
-Everything else must be a function call or a comment. There are 6 different builtin functions: debug, add, remove, replace, overwrite, modify, and alias.
+Everything else must be a function call or a comment. There are 4 builtin functions: add, remove, replace, and modify. The alias and import statements, described below, define and load extra functions.
 
 <new_page/>
 ## Function arguments
@@ -26,7 +26,6 @@ For example:
 <json_insn>
 remove "buildcraftunofficial:chipset_diamond"
 </json_insn>
-It is probably easiest to find out the name of entries by turning on debugging with debug "all".
 
 <new_page/>
 ## The add function

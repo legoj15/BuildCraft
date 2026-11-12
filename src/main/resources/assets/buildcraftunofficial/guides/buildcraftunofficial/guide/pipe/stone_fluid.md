@@ -20,7 +20,7 @@ Transporting your fluids to where you want them to go at a reasonable speed.
 
 ## Pipe Mechanics
 
-Stone Fluid pipes transports fluids at an average speed.
+Stone Fluid pipes transport fluids at an average speed.
 
 Stone Fluid pipes will not connect to Cobblestone Fluid Pipes or Quartz Fluid Pipes.
 
@@ -32,7 +32,7 @@ Some machines can output fluids directly into it without being fed through a pow
 
 Using Pipe Plugs or painting pipes a different colour can stop pipes connecting.
 
-The Cobblestone Fluid pipe transports fluids to adjacent pipes and tanks at 0.4 buckets per second.
+The Stone Fluid pipe transports fluids to adjacent pipes and tanks at 0.4 buckets per second.
 
 Fluid pipes have an internal fluid tank which can hold 1 bucket per side and 1 Bucket in the centre.
 

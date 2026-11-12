@@ -8,7 +8,7 @@ A Stone Fluid Pipe is used to transport fluids from a pipe into connecting pipes
 <recipes stack="buildcraftunofficial:pipe_stone_fluid"/>
 
 <chapter name="Pipe Mechanics"/>
-Stone Fluid pipes transports fluids at an average speed.
+Stone Fluid pipes transport fluids at an average speed.
 
 Stone Fluid pipes will not connect to Cobblestone Fluid Pipes or Quartz Fluid Pipes.
 
@@ -19,7 +19,7 @@ Some machines can output fluids directly into it without being fed through a pow
 Using Pipe Plugs or painting pipes a different colour can stop pipes connecting.
 
 <no_detail>
-The Cobblestone Fluid pipe transports fluids to adjacent pipes and tanks at 0.4 buckets per second.
+The Stone Fluid pipe transports fluids to adjacent pipes and tanks at 0.4 buckets per second.
 Fluid pipes have an internal fluid tank which can hold 1 bucket per side and 1 Bucket in the centre.
 </no_detail>
 

@@ -47,6 +47,14 @@ class TrackingDict(dict):
 
 LANG = TrackingDict(json.loads(LANG_FILE.read_text(encoding="utf-8")))
 
+def locale_lang(locale):
+    """en_us overlaid with the locale's own values — what a player on that locale sees for every
+    key, since the game falls back per key. Reads are tracked per instance, so the guideme stamp
+    hashes only the keys that locale's export actually used."""
+    merged = json.loads(LANG_FILE.read_text(encoding="utf-8"))
+    merged.update(json.loads((ASSETS / "lang" / f"{locale}.json").read_text(encoding="utf-8")))
+    return TrackingDict(merged)
+
 warnings = []
 def warn(m):
     warnings.append(m)
@@ -81,13 +89,13 @@ def split_id(rid):
         d, p = "minecraft", rid
     return d, p
 
-def lang_name(stack_id, is_block=False):
-    """Display name for an item/block stack from lang/en_us.json, with fallbacks."""
+def lang_name(stack_id, is_block=False, lang=LANG):
+    """Display name for an item/block stack from the given lang mapping, with fallbacks."""
     d, p = split_id(stack_id)
     dd = d.replace(":", ".")
     order = (["block", "item"] if is_block else ["item", "block"])
     for kind in order:
-        v = LANG.get(f"{kind}.{dd}.{p}")
+        v = lang.get(f"{kind}.{dd}.{p}")
         if v:
             return v
     return prettify(p.split("/")[-1])
@@ -342,24 +350,27 @@ STATEMENT_TITLE_OVERRIDE = {
     "buildcraft:robot.work_filter": "Robot Filter",
     "buildcraft:robot.work_filter_tool": "Robot Filter Tool",
     # These two pages describe the whole family (every colour), not the one statement registered.
-    "buildcraft:pipe.color.black": LANG.get("buildcraft.guide.group.to.buildcraft.paint_pipe_colour", "Paint Passing Items"),
+    # A (key, fallback) pair resolves per language; the plain strings above are English-only page
+    # titles with no lang equivalent (their statement descriptions read badly as titles).
+    "buildcraft:pipe.color.black": ("buildcraft.guide.group.to.buildcraft.paint_pipe_colour", "Paint Passing Items"),
     "buildcraft:extraction.preset.red": "Extraction Preset",
 }
 
-def statement_title(sid):
+def statement_title(sid, lang=LANG):
     if sid in STATEMENT_TITLE_OVERRIDE:
-        return STATEMENT_TITLE_OVERRIDE[sid]
+        override = STATEMENT_TITLE_OVERRIDE[sid]
+        return lang.get(override[0], override[1]) if isinstance(override, tuple) else override
     spec = STATEMENT_LANG.get(sid)
     if spec is None:
         warn(f"statement '{sid}' has no name mapping; add it to STATEMENT_LANG")
         return None
     key, arg = (spec, None) if isinstance(spec, str) else spec
-    if key not in LANG:
+    if key not in lang:
         warn(f"statement '{sid}': lang key '{key}' missing")
         return None
-    text = LANG[key]
+    text = lang[key]
     if arg is not None:
-        text = text.replace("%s", LANG.get(arg, arg)).replace("%d", LANG.get(arg, arg))
+        text = text.replace("%s", lang.get(arg, arg)).replace("%d", lang.get(arg, arg))
     return text
 
 # --------------------------------------------------------------------------- #
@@ -392,17 +403,17 @@ SYSTEM_ORDER = ["getting_started", "power", "transport", "logic", "building", "m
                 "silicon", "robots"]
 OTHER, CONFIG = "_other", "_config"
 
-def system_name(sys_key):
+def system_name(sys_key, lang=LANG):
     if sys_key == OTHER:
         return "Other Pages"
     if sys_key == CONFIG:
         return "Configuration"
-    return LANG.get(f"buildcraft.guide.chapter.system.{sys_key}", prettify(sys_key))
+    return lang.get(f"buildcraft.guide.chapter.system.{sys_key}", prettify(sys_key))
 
-def subtype_name(sub):
-    return LANG.get(f"buildcraft.guide.chapter.subtype.{sub}", prettify(sub) if sub else "")
+def subtype_name(sub, lang=LANG):
+    return lang.get(f"buildcraft.guide.chapter.subtype.{sub}", prettify(sub) if sub else "")
 
-def grouped(entries):
+def grouped(entries, lang=LANG):
     """[(system, [(subtype, [entries])])] in contents-page order. As in the book, a subtype
     inherits its lowest member's sort weight; equal weights fall back to the subtype's name."""
     tree = {}
@@ -416,7 +427,7 @@ def grouped(entries):
         subs = tree[key]
         for es in subs.values():
             es.sort(key=lambda e: (e.sort, e.title.lower()))
-        order = sorted(subs, key=lambda s: (min(e.sort for e in subs[s]), subtype_name(s).lower()))
+        order = sorted(subs, key=lambda s: (min(e.sort for e in subs[s]), subtype_name(s, lang).lower()))
         out.append((key, [(s, subs[s]) for s in order]))
     return out
 
@@ -426,7 +437,12 @@ def grouped(entries):
 class Guide:
     """Every entry with its body and resolved title, plus the link maps the exporters share."""
 
-    def __init__(self):
+    def __init__(self, md_locale=None):
+        """md_locale: overlay `guide/<locale>/<page>.md` on the en_us bodies (a missing page
+        keeps its English text, exactly like the in-game loader). Titles resolve through that
+        locale's lang values (en_us overlaid), so a Guide built per locale names everything
+        the way a player on that locale sees it."""
+        self.lang = LANG if md_locale is None else locale_lang(md_locale)
         entries = parse_guide()
 
         # Synthesise entries for any .md not registered (concept/*, stray pages).
@@ -445,6 +461,10 @@ class Guide:
 
         for e in entries:
             f = EN / (e.path + ".md")
+            if md_locale is not None:
+                overlay = GUIDE_DIR / md_locale / (e.path + ".md")
+                if overlay.exists():
+                    f = overlay
             if f.exists():
                 e.md = f.read_text(encoding="utf-8")
             e.title = self._title(e)
@@ -472,18 +492,17 @@ class Guide:
 
         self.by_result, self.by_id, self.uses, self.all_recipes = load_recipes()
 
-    @staticmethod
-    def _title(e):
+    def _title(self, e):
         if e.title_key and e.title_key in TITLE_OVERRIDE:
             return TITLE_OVERRIDE[e.title_key]
-        if e.title_key and f"buildcraft.guide.page.{e.title_key}" in LANG:
-            return LANG[f"buildcraft.guide.page.{e.title_key}"]
+        if e.title_key and f"buildcraft.guide.page.{e.title_key}" in self.lang:
+            return self.lang[f"buildcraft.guide.page.{e.title_key}"]
         if e.title_key:
             return prettify(e.title_key)
-        if e.statement and statement_title(e.statement):
-            return statement_title(e.statement)
+        if e.statement and statement_title(e.statement, self.lang):
+            return statement_title(e.statement, self.lang)
         if e.stack:
-            return lang_name(e.stack, is_block=(e.ptype == "block"))
+            return lang_name(e.stack, is_block=(e.ptype == "block"), lang=self.lang)
         leaf = e.path.split("/")[-1]
         return TITLE_OVERRIDE.get(leaf, prettify(leaf))
 

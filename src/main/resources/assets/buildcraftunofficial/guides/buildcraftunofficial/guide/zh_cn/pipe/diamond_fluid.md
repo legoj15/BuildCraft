@@ -1,0 +1,45 @@
+---
+navigation:
+  title: "钻石流体管道"
+  parent: contents/transport/pipe_fluid.md
+  position: 24
+  icon: buildcraftunofficial:pipe_diamond_fluid
+item_ids:
+  - buildcraftunofficial:pipe_diamond_fluid
+---
+
+# 钻石流体管道
+
+<ItemImage id="buildcraftunofficial:pipe_diamond_fluid" scale="2" float="right" />
+
+对流体进行分拣，让它们得以跨越管线？简直是疯狂。
+
+<Row>
+<RecipesFor id="buildcraftunofficial:pipe_diamond_fluid" fallbackText="" />
+</Row>
+
+## 过滤
+
+钻石流体管道的各个面以不同的颜色区分。
+
+打开钻石流体管道的 GUI 即可设置过滤器。
+
+将装有目标流体的桶（或其他流体容器）放入某个颜色的槽位中，即可控制哪种流体能够流向哪个方向。
+
+在同一颜色中放入多份相同流体，可以为流体的去向增加“权重”。
+
+## 管道机制
+
+任何未设置过滤器的有效方向都允许任意流体通过，但已过滤的方向会被优先处理。
+
+流体不会沿来路返回。
+
+某些机器可以直接将流体输出到钻石流体管道中，无需再经由供能的提取管道输送。
+
+使用管塞或给管道刷上不同的颜色，都可以阻止管道相互连接。
+
+钻石流体管道会以每秒 1.6 桶的速度将流体输送到相邻的管道和储罐。
+
+流体管道带有一个内部流体储罐，每一面可容纳 1 桶，中心也可容纳 1 桶。
+
+**用于合成:** <ItemLink id="buildcraftunofficial:pipe_diamond_item" />

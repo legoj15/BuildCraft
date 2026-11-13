@@ -240,6 +240,16 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 graphics, snapshot,
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H
             );
+        } else if (menu.tile != null && menu.tile.isLivePreviewTooLarge()) {
+            // The server sends no live preview of an area this large (it would rescan it every two seconds), and a
+            // blank panel reads as a broken screen: say why, and that the panel fills once a scan has been made.
+            String tooLarge = net.minecraft.network.chat.Component.translatable("gui.architect.preview.tooLarge").getString();
+            String waiting = net.minecraft.network.chat.Component.translatable("gui.architect.preview.waiting").getString();
+            int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
+            int lineGap = font.lineHeight + 2;
+            int firstY = topPos + PREVIEW_Y + (PREVIEW_H - (lineGap + font.lineHeight)) / 2;
+            graphics.text(font, tooLarge, centreX - font.width(tooLarge) / 2, firstY, 0xFFE0E0E0, false);
+            graphics.text(font, waiting, centreX - font.width(waiting) / 2, firstY + lineGap, 0xFFE0E0E0, false);
         }
     }
 

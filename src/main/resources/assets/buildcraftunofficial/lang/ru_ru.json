@@ -191,6 +191,8 @@
     "chat.schematicSingle.invalid": "Недействительная схема: %s",
     "chat.architect.scanTooLarge": "Эта область слишком велика для сканирования столом архитектора (%s × %s × %s блоков). Он может сохранить максимум %s блоков в сумме, поэтому разметьте меньшую область.",
     "chat.architect.scanTooDetailed": "Эта область (%s × %s × %s блоков) содержит слишком много для сохранения столом архитектора. Разметьте меньшую область.",
+    "gui.architect.preview.tooLarge": "Область слишком велика",
+    "gui.architect.preview.waiting": "Ожидание сканирования",
     "item.buildcraftunofficial.gear_wood": "Деревянная шестерня",
     "item.buildcraftunofficial.gear_stone": "Каменная шестерня",
     "item.buildcraftunofficial.gear_iron": "Железная шестерня",

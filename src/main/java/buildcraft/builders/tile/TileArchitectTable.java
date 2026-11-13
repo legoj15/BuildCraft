@@ -512,6 +512,16 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     }
 
     /**
+     * Whether the area holds more cells than {@link #LIVE_PREVIEW_MAX_VOLUME}, so the server sends no live preview of
+     * it. Safe on the client (the box is synced): the screen says so instead of leaving the preview panel blank.
+     */
+    public boolean isLivePreviewTooLarge() {
+        if (!box.isInitialized()) return false;
+        BlockPos size = box.size();
+        return (long) size.getX() * size.getY() * size.getZ() > LIVE_PREVIEW_MAX_VOLUME;
+    }
+
+    /**
      * Produces a transient {@link Blueprint} snapshot of the current scan-area contents without
      * consuming an input item or persisting to {@link GlobalSavedDataSnapshots}. Used by the GUI
      * to show a 3D preview of what the Architect would scan right now, before a blueprint is
@@ -528,7 +538,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
         BlockPos size = box.size();
         long volume = (long) size.getX() * size.getY() * size.getZ();
-        if (volume <= 0 || volume > LIVE_PREVIEW_MAX_VOLUME) return null;
+        if (volume <= 0 || isLivePreviewTooLarge()) return null;
 
         long now = level.getGameTime();
         if (cachedLivePreview != null && now - livePreviewGeneratedTick < LIVE_PREVIEW_TTL_TICKS) {

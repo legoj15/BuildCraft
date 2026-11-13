@@ -37,6 +37,8 @@ public enum ClientArchitectPreviews {
 
     private final Map<BlockPos, Blueprint> previews = new HashMap<>();
     private final Set<BlockPos> pending = new HashSet<>();
+    /** Positions the server last answered with "nothing to show"; get() leaves them to the periodic refresh. */
+    private final Set<BlockPos> answeredEmpty = new HashSet<>();
 
     /**
      * Returns the cached preview for the given tile position, or {@code null} if none is
@@ -46,7 +48,7 @@ public enum ClientArchitectPreviews {
     @Nullable
     public Blueprint get(BlockPos pos) {
         Blueprint cached = previews.get(pos);
-        if (cached == null && !pending.contains(pos)) {
+        if (cached == null && !pending.contains(pos) && !answeredEmpty.contains(pos)) {
             pending.add(pos);
             Platform.network().sendToServer(new ArchitectPreviewRequestPayload(pos.immutable()));
         }
@@ -77,8 +79,11 @@ public enum ClientArchitectPreviews {
         pending.remove(key);
         if (blueprint == null) {
             previews.remove(key);
+            // Without this a null reply clears pending and the next frame's get() asks again, every round trip.
+            answeredEmpty.add(key);
             return;
         }
+        answeredEmpty.remove(key);
         Blueprint existing = previews.get(key);
         if (existing != null && sameContent(existing, blueprint)) {
             // Content unchanged; keep the cached instance to preserve identity.
@@ -92,6 +97,7 @@ public enum ClientArchitectPreviews {
         BlockPos key = pos.immutable();
         previews.remove(key);
         pending.remove(key);
+        answeredEmpty.remove(key);
     }
 
     /**

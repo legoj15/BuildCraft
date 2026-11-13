@@ -193,6 +193,7 @@
     "chat.architect.scanTooDetailed": "This area (%s × %s × %s blocks) has too much in it for an Architect Table to save. Mark out a smaller area.",
     "gui.architect.preview.tooLarge": "Volume preview too large",
     "gui.architect.preview.waiting": "Waiting for scan",
+    "gui.architect.preview.noArea": "No area to scan",
     "item.buildcraftunofficial.gear_wood": "Wood Gear",
     "item.buildcraftunofficial.gear_stone": "Stone Gear",
     "item.buildcraftunofficial.gear_iron": "Iron Gear",

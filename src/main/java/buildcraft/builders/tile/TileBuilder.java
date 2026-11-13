@@ -636,6 +636,9 @@ public class TileBuilder extends TileBC_Neptune
             currentBox.reset();
             currentBox.setMin(new BlockPos(minX, minY, minZ));
             currentBox.setMax(new BlockPos(maxX, maxY, maxZ));
+        } else {
+            // A client copy must drop a box the server has cleared, or it keeps drawing the old area.
+            currentBox.reset();
         }
         // Inventory
         invSnapshot = StackNbt.read(input, "invSnapshot", "invSnapshotCount");

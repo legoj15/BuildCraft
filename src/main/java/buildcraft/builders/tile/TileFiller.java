@@ -528,6 +528,9 @@ public class TileFiller extends TileBC_Neptune
             box.reset();
             box.setMin(new BlockPos(minX, minY, minZ));
             box.setMax(new BlockPos(maxX, maxY, maxZ));
+        } else {
+            // A client copy must drop a box the server has cleared, or it keeps drawing the old area.
+            box.reset();
         }
 
         // Pattern statement

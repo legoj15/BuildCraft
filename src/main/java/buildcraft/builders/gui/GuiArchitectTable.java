@@ -229,7 +229,10 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 snapshot = buildcraft.builders.snapshot.ClientSnapshots.INSTANCE.getSnapshot(header.key);
             }
         }
-        if (snapshot == null && menu.tile != null) {
+        // Above the live-preview cap the server answers every request with "nothing to show", and an unanswered
+        // cache asks again on the next frame: don't ask at all while the synced box says the answer is no.
+        boolean tooLargeForLivePreview = menu.tile != null && menu.tile.isLivePreviewTooLarge();
+        if (snapshot == null && menu.tile != null && !tooLargeForLivePreview) {
             snapshot = buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE.get(menu.tile.getBlockPos());
         }
         if (snapshot != null) {
@@ -240,6 +243,16 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 graphics, snapshot,
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H
             );
+        } else if (tooLargeForLivePreview) {
+            // No live preview is made of an area over the cap (scanning it for every open screen would stall the
+            // server), and a blank panel reads as a broken screen: say why. A finished scan's snapshot still draws.
+            Component tooLarge = Component.translatable("gui.architect.preview.tooLarge");
+            Component waiting = Component.translatable("gui.architect.preview.waiting");
+            int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
+            int lineGap = font.lineHeight + 2;
+            int firstY = topPos + PREVIEW_Y + (PREVIEW_H - (lineGap + font.lineHeight)) / 2;
+            graphics.text(font, tooLarge, centreX - font.width(tooLarge) / 2, firstY, 0xFFE0E0E0, false);
+            graphics.text(font, waiting, centreX - font.width(waiting) / 2, firstY + lineGap, 0xFFE0E0E0, false);
         }
     }
 
@@ -248,7 +261,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (menu.tile != null) {
+        if (menu.tile != null && !menu.tile.isLivePreviewTooLarge()) {
             previewRefreshCounter++;
             if (previewRefreshCounter >= 40) {
                 previewRefreshCounter = 0;

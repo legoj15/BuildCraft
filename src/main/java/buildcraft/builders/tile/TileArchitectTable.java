@@ -522,6 +522,14 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     }
 
     /**
+     * Whether the server would answer a live-preview request with a blueprint: the table has an area, under the cap.
+     * Safe on the client (isValid and the box are synced), so the screen asks only when an answer can come back.
+     */
+    public boolean canHaveLivePreview() {
+        return isValid && box.isInitialized() && !isLivePreviewTooLarge();
+    }
+
+    /**
      * Produces a transient {@link Blueprint} snapshot of the current scan-area contents without
      * consuming an input item or persisting to {@link GlobalSavedDataSnapshots}. Used by the GUI
      * to show a 3D preview of what the Architect would scan right now, before a blueprint is
@@ -736,6 +744,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             box.reset();
             box.setMin(new BlockPos(minX, minY, minZ));
             box.setMax(new BlockPos(maxX, maxY, maxZ));
+        } else {
+            box.reset();
         }
         markerBox = input.getBooleanOr("markerBox", false);
         scanning = input.getBooleanOr("scanning", false);

@@ -234,7 +234,7 @@ dependencies {
         runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
     }
 
-    // Accessory-slot mods, so Robot Goggles worn in a Curios or Accessories slot count (buildcraft.lib.compat.AccessorySlots).
+    // Accessory-slot mods, so Robot Goggles worn in a Curios or Accessories slot count (platform.neoforge.NeoForgeAccessorySlots).
     // Compile-only: BC names their API only behind ModList checks. Accessories has no build past 1.21.10, so it is
     // pinned only on those nodes; only its AccessoriesCapability is used, so its owo-lib dependency stays off the path.
     compileOnly("top.theillusivec4.curios:curios-neoforge:${property("curios_version")}:api")

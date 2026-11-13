@@ -193,6 +193,7 @@
     "chat.architect.scanTooDetailed": "Эта область (%s × %s × %s блоков) содержит слишком много для сохранения столом архитектора. Разметьте меньшую область.",
     "gui.architect.preview.tooLarge": "Область слишком велика",
     "gui.architect.preview.waiting": "Ожидание сканирования",
+    "gui.architect.preview.noArea": "Нет области для сканирования",
     "item.buildcraftunofficial.gear_wood": "Деревянная шестерня",
     "item.buildcraftunofficial.gear_stone": "Каменная шестерня",
     "item.buildcraftunofficial.gear_iron": "Железная шестерня",

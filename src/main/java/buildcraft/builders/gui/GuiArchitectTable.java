@@ -229,10 +229,11 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 snapshot = buildcraft.builders.snapshot.ClientSnapshots.INSTANCE.getSnapshot(header.key);
             }
         }
-        // Above the live-preview cap the server answers every request with "nothing to show", and an unanswered
-        // cache asks again on the next frame: don't ask at all while the synced box says the answer is no.
+        // With no area, or one over the live-preview cap, the server answers every request with "nothing to show", and
+        // an unanswered cache asks again on the next frame: don't ask at all while the synced state says the answer is no.
         boolean tooLargeForLivePreview = menu.tile != null && menu.tile.isLivePreviewTooLarge();
-        if (snapshot == null && menu.tile != null && !tooLargeForLivePreview) {
+        boolean noArea = menu.tile != null && !menu.tile.getIsValid();
+        if (snapshot == null && menu.tile != null && menu.tile.canHaveLivePreview()) {
             snapshot = buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE.get(menu.tile.getBlockPos());
         }
         if (snapshot != null) {
@@ -243,6 +244,12 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 graphics, snapshot,
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H
             );
+        } else if (noArea) {
+            // A table placed without markers or a volume box beside it has nothing to scan: say so, not a blank panel.
+            Component none = Component.translatable("gui.architect.preview.noArea");
+            int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
+            graphics.text(font, none, centreX - font.width(none) / 2,
+                topPos + PREVIEW_Y + (PREVIEW_H - font.lineHeight) / 2, 0xFFE0E0E0, false);
         } else if (tooLargeForLivePreview) {
             // No live preview is made of an area over the cap (scanning it for every open screen would stall the
             // server), and a blank panel reads as a broken screen: say why. A finished scan's snapshot still draws.
@@ -261,7 +268,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (menu.tile != null && !menu.tile.isLivePreviewTooLarge()) {
+        if (menu.tile != null && menu.tile.canHaveLivePreview()) {
             previewRefreshCounter++;
             if (previewRefreshCounter >= 40) {
                 previewRefreshCounter = 0;

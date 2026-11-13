@@ -15,11 +15,19 @@ import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
@@ -76,6 +84,39 @@ public class MarkerTester {
             // group's faces span z 1..3 and the path group's z 4..6, all inside the 6x7 cell.
             BlockPos centerVolume = new BlockPos(2, 2, 2);
             BlockPos centerPath = new BlockPos(2, 2, 5);
+
+            // A marker placed by clicking the side of a grass tuft takes the tuft's space, where that side has
+            // nothing behind it; it must attach to the ground the player is looking at, not hang sideways in air.
+            BlockPos tuft = new BlockPos(5, 2, 2);
+            arena.place(tuft.below(), Blocks.GRASS_BLOCK);
+            arena.place(tuft, Blocks.SHORT_GRASS);
+            Player placer = helper.makeMockPlayer(GameType.SURVIVAL);
+            placer.setXRot(90f); // looking straight down
+            BlockPos tuftAbs = arena.abs(tuft);
+            ((BlockItem) BCCoreBlocks.MARKER_VOLUME.get().asItem()).place(new BlockPlaceContext(helper.getLevel(), placer,
+                    InteractionHand.MAIN_HAND, new ItemStack(BCCoreBlocks.MARKER_VOLUME.get()),
+                    new BlockHitResult(Vec3.atCenterOf(tuftAbs), Direction.NORTH, tuftAbs, false)));
+            BlockState onTuft = helper.getBlockState(tuft);
+            if (!onTuft.is(BCCoreBlocks.MARKER_VOLUME.get())
+                    || onTuft.getValue(BuildCraftProperties.BLOCK_FACING_6) != Direction.UP) {
+                throw new IllegalStateException("Marker placed on a grass tuft's side should stand on the ground, got "
+                        + onTuft);
+            }
+            // An ordinary click on a solid block's side still faces the clicked side.
+            BlockPos wall = new BlockPos(5, 2, 5);
+            BlockPos onWall = wall.west();
+            arena.place(wall, Blocks.STONE);
+            arena.place(onWall, Blocks.AIR); // registers the cell for cleanup
+            BlockPos wallAbs = arena.abs(wall);
+            ((BlockItem) BCCoreBlocks.MARKER_VOLUME.get().asItem()).place(new BlockPlaceContext(helper.getLevel(), placer,
+                    InteractionHand.MAIN_HAND, new ItemStack(BCCoreBlocks.MARKER_VOLUME.get()),
+                    new BlockHitResult(Vec3.atCenterOf(wallAbs), Direction.WEST, wallAbs, false)));
+            BlockState wallMarker = helper.getBlockState(onWall);
+            if (!wallMarker.is(BCCoreBlocks.MARKER_VOLUME.get())
+                    || wallMarker.getValue(BuildCraftProperties.BLOCK_FACING_6) != Direction.WEST) {
+                throw new IllegalStateException("Marker placed on a stone block's west side should face west, got "
+                        + wallMarker);
+            }
             arena.place(centerVolume, Blocks.STONE);
             arena.place(centerPath, Blocks.STONE);
 

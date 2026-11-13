@@ -21,9 +21,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.core.BlockPos;
@@ -32,12 +30,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.Blocks;
 //? if >=1.21.10 {
 import net.minecraft.world.level.ScheduledTickAccess;
 //?}
@@ -119,8 +115,31 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock, Simp
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        Direction facing = ctx.getClickedFace();
-        return BCWaterlogging.placementState(defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, facing), ctx);
+        // Placement always needs a sturdy face behind the marker (1.12.2 canPlaceBlockOnSide), even for the volume
+        // marker, which only keeps floating once its anchor is later removed. Clicking a replaceable block (a grass
+        // tuft) puts the marker in that block's space, where the clicked face can have nothing behind it, so, like a
+        // torch, try the directions the player is looking along. Vanilla puts the clicked face first when the
+        // clicked block is not replaced. A placement without a player (a dispenser) only tries the clicked face.
+        Direction[] candidates = ctx.getPlayer() == null ? new Direction[] { ctx.getClickedFace().getOpposite() }
+                : ctx.getNearestLookingDirections();
+        for (Direction looking : candidates) {
+            BlockState candidate = facing(looking.getOpposite());
+            if (hasAnchor(candidate, ctx.getLevel(), ctx.getClickedPos())) {
+                return BCWaterlogging.placementState(candidate, ctx);
+            }
+        }
+        return null;
+    }
+
+    private BlockState facing(Direction facing) {
+        return defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, facing);
+    }
+
+    /** True when the block the marker is set against offers a sturdy face to it. */
+    protected static boolean hasAnchor(BlockState state, LevelReader level, BlockPos pos) {
+        Direction sideOn = state.getValue(BuildCraftProperties.BLOCK_FACING_6);
+        BlockPos neighborPos = pos.relative(sideOn.getOpposite());
+        return level.getBlockState(neighborPos).isFaceSturdy(level, neighborPos, sideOn);
     }
 
     // canPlaceBlockOnSide removed in MC 1.18+
@@ -130,9 +149,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock, Simp
 
     @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        Direction sideOn = state.getValue(BuildCraftProperties.BLOCK_FACING_6);
-        BlockPos neighborPos = pos.relative(sideOn.getOpposite());
-        return level.getBlockState(neighborPos).isFaceSturdy(level, neighborPos, sideOn);
+        return hasAnchor(state, level, pos);
     }
 
     @Override

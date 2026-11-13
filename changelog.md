@@ -8,6 +8,7 @@
 - {26.1.2/26.2/26.3} Fixed entities being completely stuck in oil on 26.x
 - Fixed edge cases with invalid pluggables like lenses without color or "blank" facades being peaceable on pipes.
 - Fixed the facade de-duplicator causing invisible facades on servers.
+- Fixed markers placed against the side of grass, flowers and other replaceable plants hanging sideways in mid-air; they now attach to a solid block beside them. Markers also need a full solid face to stand on when placed.
 - {1.21.10/1.21.11/26.1.2/26.2/26.3} Fixed pipes and engines showing no breaking progress texture while being mined on Minecraft 1.21.10 and later.
 - {1.21.10/1.21.11} Fixed dropped pluggables being invisible on Minecraft 1.21.10 and 1.21.11. 
 - {26.1.2/26.2/26.3} Fixed dropped pluggables and sinking halfway into the ground on 26.1.2 and later.

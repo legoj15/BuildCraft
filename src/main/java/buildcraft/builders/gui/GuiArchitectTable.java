@@ -232,7 +232,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         // With no area, or one over the live-preview cap, the server answers every request with "nothing to show", and
         // an unanswered cache asks again on the next frame: don't ask at all while the synced state says the answer is no.
         boolean tooLargeForLivePreview = menu.tile != null && menu.tile.isLivePreviewTooLarge();
-        boolean noArea = menu.tile != null && !menu.tile.getIsValid();
+        boolean noArea = menu.tile != null && !menu.tile.canHaveLivePreview() && !tooLargeForLivePreview;
         if (snapshot == null && menu.tile != null && menu.tile.canHaveLivePreview()) {
             snapshot = buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE.get(menu.tile.getBlockPos());
         }

@@ -5,6 +5,7 @@
 import buildcraft.gradle.BcNode
 import buildcraft.gradle.DataDownport1211
 import buildcraft.gradle.DataDownportPre263
+import buildcraft.gradle.WithMods
 
 plugins {
     id("net.neoforged.moddev")
@@ -49,6 +50,10 @@ val fallingTreeVersion: String? = if (hasProperty("withFallingTree")) {
         if (it == null) logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
     }
 } else null
+// Third-party mods for dev runs, opt-in: `-PwithMods=alias[,alias...]` puts the coordinates this node defines for each
+// alias (`withmod.<alias>` in versions/<node>/gradle.properties; see buildcraft.gradle.WithMods) on the runtime
+// classpath. Empty without the property, so nothing extra is resolved.
+val withMods = WithMods.coordinates(project)
 val gameTestRunDir = file("run-gameTestServer")
 val quietGameTestLog4j = rootProject.file("gradle/gameTestServerLog4j2-quiet.xml").absolutePath
 
@@ -71,10 +76,15 @@ repositories {
         forRepository { maven("https://maven.wispforest.io/releases/") }
         filter { includeModule("io.wispforest", "accessories-neoforge") }
     }
-    // Modrinth's maven, for the opt-in FallingTree dev runtime alone (-PwithFallingTree, below).
+    // Modrinth's maven, for the opt-in dev-runtime mods alone (-PwithFallingTree and -PwithMods, below).
     exclusiveContent {
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
+    }
+    // FTB's maven, for the opt-in FTB Chunks dev runtime alone (-PwithMods=ftbchunks).
+    exclusiveContent {
+        forRepository { maven("https://maven.ftb.dev/releases") }
+        filter { includeGroup("dev.ftb.mods") }
     }
     mavenCentral()
 }
@@ -252,6 +262,11 @@ dependencies {
     if (fallingTreeVersion != null) {
         runtimeOnly("maven.modrinth:fallingtree:$fallingTreeVersion") { isTransitive = false }
     }
+
+    // -PwithMods: the requested third-party mods and the libraries their aliases name, on every NeoForge run (client,
+    // server, game tests) like FallingTree. Not transitive: Modrinth's maven carries no dependency metadata, so each
+    // alias lists what its mod needs, and the same holds for the other mavens.
+    withMods.forEach { coordinate -> runtimeOnly(coordinate) { isTransitive = false } }
 
     // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the
     // 21.10.x line does not put it on the compile classpath — add it explicitly for that node.

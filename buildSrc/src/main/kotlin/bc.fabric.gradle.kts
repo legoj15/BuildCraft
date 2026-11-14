@@ -17,6 +17,7 @@ import buildcraft.gradle.BcNode
 import buildcraft.gradle.DataDownport1211
 import buildcraft.gradle.DataDownportPre263
 import buildcraft.gradle.DataFabric
+import buildcraft.gradle.WithMods
 import java.time.Duration
 
 plugins {
@@ -75,6 +76,10 @@ val fallingTreeVersion: String? = if (hasProperty("withFallingTree")) {
         if (it == null) logger.lifecycle("-PwithFallingTree ignored on ${project.name}: this node pins no fallingtree_version")
     }
 } else null
+// Third-party mods for dev runs, opt-in: `-PwithMods=alias[,alias...]` puts the coordinates this node defines for each
+// alias (`withmod.<alias>` in versions/<node>/gradle.properties; see buildcraft.gradle.WithMods) on the dev runtime,
+// as on the NeoForge nodes. Empty without the property, so nothing extra is resolved.
+val withMods = WithMods.coordinates(project)
 
 sourceSets {
     named("main") {
@@ -292,7 +297,9 @@ tasks.named<JavaExec>("runClientGameTest") {
 // `-PbcRunDir=<node-relative dir>` (client only) is the smoke runner's own game folder, as on NeoForge. Loom sets the
 // working directory itself at launch (its only setter, runDir(), is deprecated), so the folder is handed to the game as
 // `--gameDir` instead: mods, config, saves and options.txt then live there, and only logs/latest.log (written relative
-// to the working directory) stays in run/.
+// to the working directory) stays in run/. runServer cannot take it cleanly: the dedicated server keeps its world,
+// server.properties and eula.txt in that fixed working directory, and Fabric Loader strips --gameDir before the server
+// sees it, so the flag would move only mods/ and config/ and leave the rest in run/. The server run says it ignores it.
 listOf("runClient", "runServer").forEach { name ->
     tasks.named<JavaExec>(name) {
         systemProperty("buildcraft.dev", "true")
@@ -308,6 +315,9 @@ listOf("runClient", "runServer").forEach { name ->
             args("--gameDir", gameDir.absolutePath)
             // Fabric Loader creates <gameDir>/mods but not its parent, and dies when the folder is new.
             doFirst { gameDir.mkdirs() }
+        }
+        if (name == "runServer" && bcRunDir != null) {
+            doFirst { logger.lifecycle("-PbcRunDir is ignored by $path: the dedicated server runs in Loom's fixed run/ directory") }
         }
     }
 }
@@ -385,7 +395,7 @@ repositories {
     // The recipe viewers' own mavens (JEI; REI and its architectury/cloth-config).
     maven("https://maven.blamejared.com")
     maven("https://maven.shedaniel.me/")
-    // Modrinth's maven, for Forge Config API Port alone.
+    // Modrinth's maven, for Forge Config API Port and the opt-in dev-runtime mods (-PwithFallingTree and -PwithMods).
     exclusiveContent {
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
@@ -464,6 +474,26 @@ dependencies {
     // BC has no code dependency on it.
     if (fallingTreeVersion != null) {
         modConfig("localRuntime")("maven.modrinth:fallingtree:$fallingTreeVersion") { isTransitive = false }
+    }
+
+    // -PwithMods: the requested third-party mods and the libraries their aliases name, on the dev runtime like
+    // FallingTree. Not transitive: Modrinth's maven carries no dependency metadata, so each alias lists what its mod needs.
+    withMods.forEach { coordinate -> modConfig("localRuntime")(coordinate) { isTransitive = false } }
+}
+
+// -PwithMods on a remap node (the 1.21.x lines): Loom's remapped copy of a mod loses its jar-in-jar list, so what the
+// withMods mods nest (WithMods.nestedJars) would never load. Unpack it and hand it over itself: nested mods through
+// Loom's remapper like any mod, plain libraries as they are. The 26.x nodes do not remap, and Fabric Loader loads
+// nested jars there on its own.
+if (remap && withMods.isNotEmpty()) {
+    val nested = WithMods.nestedJars(project, withMods, layout.buildDirectory.dir("withmods-nested").get().asFile) { id ->
+        // What this runtime already has: Fabric API's modules, Fabric Loader's bundled MixinExtras, Team Reborn Energy (above).
+        id.startsWith("fabric-") || id == "fabricloader" || id == "mixinextras" || id == "team_reborn_energy"
+    }
+    dependencies {
+        nested.forEach { jar ->
+            if (jar.isMod) "modLocalRuntime"(files(jar.file)) else "localRuntime"(files(jar.file))
+        }
     }
 }
 

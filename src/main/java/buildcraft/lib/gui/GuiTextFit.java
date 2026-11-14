@@ -68,7 +68,10 @@ public final class GuiTextFit {
         float originX = centred ? anchor + boxWidth / 2.0F : anchor;
         float x = centred ? originX - font.width(text) / 2.0F : anchor;
         graphics.pushScale(scale, originX, y + font.lineHeight / 2.0F);
-        graphics.text(font, text, Math.round(x), y, colour, false);
-        graphics.popScale();
+        try {
+            graphics.text(font, text, Math.round(x), y, colour, false);
+        } finally {
+            graphics.popScale();
+        }
     }
 }

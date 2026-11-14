@@ -323,12 +323,9 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     // Same signature on every node, so no directive: the wheel over the list panel or the scrollbar scrolls the list.
+    // GuiBC8 has already offered the wheel to the ledgers (a long one scrolls its text first), once, before this runs.
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        // A ledger that scrolls its own text over the mouse takes the wheel first.
-        if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
-            return true;
-        }
+    protected boolean mouseScrolledBelowLedgers(double mouseX, double mouseY, double scrollX, double scrollY) {
         double x = mouseX - leftPos, y = mouseY - topPos;
         if (x >= LIST_HELP_X && x < SCROLL_X + SCROLL_W && y >= SCROLL_Y && y < SCROLL_Y + SCROLL_H) {
             refreshList();
@@ -337,7 +334,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 return true;
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolledBelowLedgers(mouseX, mouseY, scrollX, scrollY);
     }
 
     //? if >=1.21.10 {

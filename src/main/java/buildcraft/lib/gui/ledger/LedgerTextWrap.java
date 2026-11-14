@@ -247,40 +247,80 @@ public final class LedgerTextWrap {
         /** Puts a unit at the start of an empty line, splitting it over several lines when it is too wide. The last
          * part stays open so the next unit can join it. */
         private void place(List<Cell> cells) {
+            int size = cells.size();
             int from = 0;
             while (true) {
-                int count = cells.size() - from;
-                if (count == 1 || fits(text(cells, from, cells.size()))) {
-                    for (int i = from; i < cells.size(); i++) append(cells.get(i));
+                int fit = size - from == 1 ? size : longestFit(cells, from);
+                if (fit == size) {
+                    for (int i = from; i < size; i++) append(cells.get(i));
                     return;
                 }
-                int cut = chooseCut(cells, from);
+                int cut = chooseCut(cells, from, fit);
                 boolean hyphen = cut < 0;
                 if (hyphen) cut = -cut;
-                for (int i = from; i < cut; i++) append(cells.get(i));
+                // A space kept inside the unit (before a closing mark, after an opening one) is no place to break, but
+                // a forced cut can still land beside one. It goes like any space at a break, so no line begins or ends
+                // with it; a stretch of nothing but spaces (an indent) is left alone.
+                int end = cut;
+                while (end > from && cells.get(end - 1).cp() == ' ') end--;
+                if (end == from) end = cut;
+                int next = cut;
+                while (next < size && cells.get(next).cp() == ' ') next++;
+                if (next == size) next = cut;
+                for (int i = from; i < end; i++) append(cells.get(i));
                 if (hyphen) body.append('-');
-                endLine(null, "");
-                from = cut;
+                List<Cell> dropped = end == cut && next == cut ? null : new ArrayList<>(cells.subList(end, next));
+                endLine(dropped, "");
+                from = next;
             }
         }
 
-        /** The index at which to cut {@code cells[from..]}, negated when the cut takes a hyphen. */
-        private int chooseCut(List<Cell> cells, int from) {
+        /** The largest {@code p} (up to the unit's size) for which {@code cells[from..p)} fits on a line, or
+         * {@code from} when not even one cell does. A part never gets narrower by gaining a cell, so this gallops out
+         * from {@code from} and then bisects: every measurement is about a column long, however long the word, which
+         * keeps splitting a very long unbroken word from going quadratic. */
+        private int longestFit(List<Cell> cells, int from) {
+            int lo = from;                 // fits (an empty part)
+            int hi = cells.size() + 1;     // does not fit (past the end)
+            int step = 1;
+            while (hi - lo > 1) {
+                int probe = Math.min(lo + step, hi - 1);
+                if (!fits(text(cells, from, probe))) {
+                    hi = probe;
+                    break;
+                }
+                lo = probe;
+                step *= 2;
+            }
+            while (hi - lo > 1) {
+                int mid = (lo + hi) >>> 1;
+                if (fits(text(cells, from, mid))) lo = mid;
+                else hi = mid;
+            }
+            return lo;
+        }
+
+        /** The index at which to cut {@code cells[from..]}, negated when the cut takes a hyphen. {@code fit} is
+         * {@link #longestFit}: no first part longer than that fits, so the search starts there. */
+        private int chooseCut(List<Cell> cells, int from, int fit) {
             int size = cells.size();
             int count = size - from;
+            int top = Math.min(fit, size - 1);
             // The preferred cut: the longest first part that obeys every rule.
-            for (int p = size - 1; p > from; p--) {
+            for (int p = top; p > from; p--) {
                 boolean hyphen = isHyphenLetter(cells.get(p - 1).cp()) && isHyphenLetter(cells.get(p).cp());
                 if (hyphen) {
                     if (count >= 4 && (p - from < 2 || size - p < 2)) continue;
                     if (fits(text(cells, from, p) + "-")) return -p;
                 } else {
                     if (isClosing(cells.get(p).cp()) || isOpening(cells.get(p - 1).cp())) continue;
+                    // A space here was kept inside the unit on purpose: not a break.
+                    if (cells.get(p - 1).cp() == ' ' || cells.get(p).cp() == ' ') continue;
                     if (fits(text(cells, from, p))) return p;
                 }
             }
             // No allowed cut fits: break anyway, still hyphenating a word when the hyphen fits.
-            for (int p = size - 1; p > from; p--) {
+            for (int p = top; p > from; p--) {
                 boolean hyphen = isHyphenLetter(cells.get(p - 1).cp()) && isHyphenLetter(cells.get(p).cp());
                 if (hyphen && fits(text(cells, from, p) + "-")) return -p;
                 if (fits(text(cells, from, p))) return p;

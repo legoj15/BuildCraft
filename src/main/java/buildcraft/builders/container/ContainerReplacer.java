@@ -50,7 +50,8 @@ public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
      * Current blueprint name as stored on the slot-0 item stack. Works on both sides because
      * slot-0's {@link ItemStack} is automatically synced by the menu machinery. Empty slot or
      * non-snapshot item returns {@code ""} so the EditBox stays empty rather than showing a
-     * "<unnamed>" placeholder the user would have to clear.
+     * "<unnamed>" placeholder the user would have to clear. A snapshot saved with the legacy literal
+     * {@code "<unnamed>"} name reads as empty too, and so does one with no name.
      */
     public String getBlueprintName() {
         if (this.slots.isEmpty()) {
@@ -61,10 +62,10 @@ public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
             return "";
         }
         Snapshot.Header header = ItemSnapshot.getHeader(stack);
-        if (header == null || header.name == null) {
+        if (header == null) {
             return "";
         }
-        return header.name;
+        return Snapshot.Header.editableName(header.name);
     }
 
     @Override

@@ -92,7 +92,7 @@ public class LedgerHelp extends Ledger_Neptune {
         if (super.onMouseScrolled(amountY)) {
             return true;
         }
-        if (selectedArea != null && canScroll() && selectedArea.contains(gui.mouse)) {
+        if (amountY != 0 && selectedArea != null && canScroll() && selectedArea.contains(gui.mouse)) {
             scrollByWheel(amountY);
             return true;
         }

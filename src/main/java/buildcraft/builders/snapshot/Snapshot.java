@@ -371,6 +371,13 @@ public abstract class Snapshot {
                 : name;
         }
 
+        /** The name to put in an editable name field: the stored name, but empty for none and for the legacy
+         *  {@link #LEGACY_UNNAMED} default, which is no name. Unlike {@link #displayInGui} it never yields the
+         *  translated placeholder, which the player would have to delete before typing. */
+        public static String editableName(String name) {
+            return name == null || name.isBlank() || LEGACY_UNNAMED.equals(name) ? "" : name;
+        }
+
         @Override
         public boolean equals(Object o) {
             return this == o ||

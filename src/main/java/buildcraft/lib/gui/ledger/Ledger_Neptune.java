@@ -195,9 +195,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     }
 
     /** Clear all text entries. Used by LedgerHelp to dynamically swap content on hover. The new content starts at
-     *  its top, so the scroll position is dropped too. */
+     *  its top, so the scroll position is dropped too, and so is the cached layout: its lines point at the old entries,
+     *  so entries added again with the same text but another colour or shadow must not be drawn from it. */
     protected void clearTextEntries() {
         textEntries.clear();
+        layout = null;
         scrollOffset = 0;
     }
 
@@ -253,10 +255,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     }
 
     /** GUI pixels of screen height this ledger may use: all of it, less the strip a recipe viewer keeps at the
-     *  bottom of the left side (see {@link LedgerViewport}). Right-side ledgers reserve nothing. */
+     *  bottom of the left side (see {@link LedgerViewport}). Right-side ledgers reserve nothing.
+     *
+     *  <p>The viewer is asked with the left edge the ledger has at its FULL width, not the animated one: the width is
+     *  fixed by the text (see {@link #calculateMaxSize()}, which sets it before the height), so the answer cannot flip
+     *  while the panel opens and closes and drag the height back and forth. */
     private int availableHeight() {
         int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        return Math.max(0, screenHeight - (expandPositive ? 0 : LedgerViewport.leftBottomReserve()));
+        if (expandPositive) return Math.max(0, screenHeight);
+        int fullWidthLeftX = (int) Math.floor(positionAnchor.getX() - maxWidth);
+        return Math.max(0, screenHeight - LedgerViewport.leftBottomReserve(fullWidthLeftX));
     }
 
     /** Lowers {@link #maxHeight} to {@link #availableHeight()} (never below the closed height); the content past it
@@ -408,9 +416,6 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             }
         }
 
-        // The wrapped text, shared with calculateMaxSize(); sizes the panel again first if a dynamic entry changed.
-        Layout content = currentLayout();
-
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
@@ -475,6 +480,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         double iconX = positionLedgerIconStart.getX();
         double iconY = positionLedgerIconStart.getY() - currentShift;
         drawIcon(iconX, iconY, graphics);
+
+        // The wrapped text, shared with calculateMaxSize(); sizes the panel again first if a dynamic entry changed.
+        // Taken after drawIcon on purpose: a subclass may swap its title and body there (LedgerHelp does on its first
+        // icon draw), and the first frame of a ledger restored open must draw the new text, not the one it started with.
+        Layout content = currentLayout();
 
         // Draw text content if expanded enough
         if (interpWidth > CLOSED_WIDTH + 10) {
@@ -541,10 +551,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         scrollOffset = Mth.clamp(scrollOffset + ScrollWindow.wheelRows(amountY) * LINES_PER_NOTCH * step, 0, scrollMax());
     }
 
-    /** The wheel scrolls an open ledger whose content is taller than its viewport while the mouse is over it. */
+    /** The wheel scrolls an open ledger whose content is taller than its viewport while the mouse is over it. A wheel
+     *  event with no vertical movement scrolls nothing, so it is left for whatever sits beneath. */
     @Override
     public boolean onMouseScrolled(double amountY) {
-        if (!canScroll() || !contains(gui.mouse)) return false;
+        if (amountY == 0 || !canScroll() || !contains(gui.mouse)) return false;
         scrollByWheel(amountY);
         return true;
     }

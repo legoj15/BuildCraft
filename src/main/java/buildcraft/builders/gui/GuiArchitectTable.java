@@ -267,6 +267,8 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
      * panel's line gap, each centred horizontally, the whole block centred vertically — so the widest translation
      * stays inside the 160 px panel instead of sitting on its borders. Every current English string is a single
      * line, so it lands exactly where the old fixed arithmetic put it (one-line block at +53, two-line at +48/+59).
+     * A line still wider than the panel after wrapping is shrunk to it by {@link GuiTextFit}, and a block taller than
+     * the panel starts at the panel's top instead of rising above it.
      */
     private void drawPreviewMessage(BCGraphics graphics, String... langKeys) {
         List<FormattedCharSequence> lines = new ArrayList<>();
@@ -274,12 +276,28 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
             lines.addAll(font.split(Component.translatable(key), PREVIEW_W - 8));
         }
         int lineGap = font.lineHeight + 2;
-        int lineY = topPos + PREVIEW_Y + (PREVIEW_H - (lines.size() - 1) * lineGap - font.lineHeight) / 2;
+        int top = topPos + PREVIEW_Y;
+        int lineY = Math.max(top, top + (PREVIEW_H - (lines.size() - 1) * lineGap - font.lineHeight) / 2);
         int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
         for (FormattedCharSequence line : lines) {
-            graphics.text(font, line, centreX - font.width(line) / 2, lineY, 0xFFE0E0E0, false);
+            int width = font.width(line);
+            if (width > PREVIEW_W) {
+                GuiTextFit.drawCentred(graphics, font, plainText(line), leftPos + PREVIEW_X, lineY, PREVIEW_W, 0xFFE0E0E0);
+            } else {
+                graphics.text(font, line, centreX - width / 2, lineY, 0xFFE0E0E0, false);
+            }
             lineY += lineGap;
         }
+    }
+
+    /** The characters of a wrapped line without their styles, for {@link GuiTextFit}'s string-based drawing. */
+    private static String plainText(FormattedCharSequence line) {
+        StringBuilder text = new StringBuilder();
+        line.accept((index, style, codePoint) -> {
+            text.appendCodePoint(codePoint);
+            return true;
+        });
+        return text.toString();
     }
 
     private int previewRefreshCounter = 0;

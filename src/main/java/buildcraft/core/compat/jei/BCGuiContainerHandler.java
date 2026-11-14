@@ -43,12 +43,19 @@ public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
         List<Rect2i> areas = new ArrayList<>();
         for (IGuiElement element : screen.mainGui.shownElements) {
             if (element instanceof Ledger_Neptune ledger) {
-                int x = (int) ledger.getX();
-                int y = (int) ledger.getY();
-                int w = (int) Math.ceil(ledger.getWidth());
-                int h = (int) Math.ceil(ledger.getHeight());
+                // Left edges floor and right edges ceil, so the rectangle always covers the whole drawn panel.
+                int left = (int) Math.floor(ledger.getX());
+                int top = (int) Math.floor(ledger.getY());
+                int right = (int) Math.ceil(ledger.getX() + ledger.getWidth());
+                int bottom = (int) Math.ceil(ledger.getY() + ledger.getHeight());
+                // JEI 26.2 and 26.3 count an exclusion area only when 0 < x, and a ledger at its width cap starts
+                // at x = 0, so it would be ignored. Start at 1 instead; the right edge, which is what pushes the
+                // ingredient list, stays where it is.
+                left = Math.max(1, left);
+                int w = right - left;
+                int h = bottom - top;
                 if (w > 0 && h > 0) {
-                    areas.add(new Rect2i(x, y, w, h));
+                    areas.add(new Rect2i(left, top, w, h));
                 }
             }
         }

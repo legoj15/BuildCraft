@@ -158,6 +158,39 @@ public class LedgerTextWrapTester {
     }
 
     @Test
+    public void aSpaceKeptInsideAUnitNeverLandsOnALineEdge() {
+        // The dot closes the clause, so the word and the dot are one unit and no break may fall on the space between
+        // them. At 54 px the unit (60 px) does not fit, so the word is split instead of leaving " ." on its own line.
+        Assertions.assertEquals(List.of("Redston-", "e ."), wrap("Redstone .", 54));
+        // The same at every width, for a space before a closing mark and one after an opening mark.
+        for (String sample : new String[] {"Redstone .", "a ( bcdefgh", "Hello , world !", "Zwei Stufen ( mehr ) bitte ."}) {
+            for (int px = 12; px <= 150; px += 6) {
+                List<String> lines = wrap(sample, px);
+                assertWellFormed(sample, lines, px);
+                for (String line : lines) {
+                    Assertions.assertEquals(line.strip(), line,
+                        "no leading or trailing space on \"" + line + "\" at " + px + " px in " + lines);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void splittingOneLongWordMeasuresAboutAsMuchAsItsLength() {
+        // Each cut once re-measured most of the rest of the word: a 1,000-letter word took about 19 million measured
+        // characters (half a second in the real font). Now every measurement is about a column long.
+        String word = "abcdefghij".repeat(100);
+        long[] measured = {0};
+        List<String> lines = LedgerTextWrap.wrap(word, 60, s -> {
+            measured[0] += s.length();
+            return width(s);
+        });
+        assertWellFormed(word, lines, 60);
+        Assertions.assertTrue(measured[0] < 50L * word.length(),
+            "measured " + measured[0] + " characters to split a " + word.length() + "-letter word");
+    }
+
+    @Test
     public void lineFeedsForceBreaksAndEmptyLinesSurvive() {
         Assertions.assertEquals(List.of("ab", "", "cd"), wrap("ab\n\ncd", 600));
         Assertions.assertEquals(List.of(""), wrap("", 60));

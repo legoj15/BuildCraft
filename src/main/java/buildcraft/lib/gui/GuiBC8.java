@@ -240,6 +240,13 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
+        return mouseScrolledBelowLedgers(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /** What the wheel does once no ledger took it: vanilla's handling. A screen with a wheel of its own overrides THIS
+     *  and calls {@code super} for the rest, never {@link #mouseScrolled}, so the ledgers are offered the event once
+     *  and always first. */
+    protected boolean mouseScrolledBelowLedgers(double mouseX, double mouseY, double scrollX, double scrollY) {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 

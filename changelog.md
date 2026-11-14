@@ -35,6 +35,8 @@
 - Long help ledger entries no longer run off the bottom of the screen: a ledger now stops at the screen edge (and above JEI's bottom-left buttons) and scrolls with the mouse wheel.
 - The help ledger for the FE Engine and MJ Dynamo now keeps its conversion rate up to date while you hover the battery, instead of showing the rate from when you first pointed at it.
 - Ledger text wraps at word boundaries with a hyphen for over-long words, and Chinese lines no longer start with closing punctuation.
+- Ledgers beside a window with little room next to it now open over the window so their text stays readable.
+- The List's match ledger can now be scrolled with the mouse wheel while you hover the list slot that opened it.
 - Window titles and ledger titles that are too long for their box in a translation now shrink or wrap instead of overflowing.
 - The MJ Dynamo's power ledger now shows its stored energy in Forge Energy, from the buffer its output comes from, and the gear upgrade list of the FE engine and dynamo follows the short/full unit name setting.
 - Chinese: the full unit name for MJ is now "Minecraft Joules", as in every other language.

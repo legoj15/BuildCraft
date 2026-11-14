@@ -55,10 +55,6 @@ public class ContainerDynamoMJ extends ContainerBCTile<TileDynamoMJ> {
         addFullPlayerInventory(8, 95, playerInv);
     }
 
-    public long getSyncedPower() {
-        return engineData.power();
-    }
-
     public float getSyncedHeat() {
         return engineData.heat();
     }

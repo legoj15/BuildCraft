@@ -1029,8 +1029,6 @@
     "buildcraft.help.rf_engine.battery.title.rf": "RF-энергия",
     "buildcraft.help.rf_engine.battery": "Конвертирует %s\nв %s",
     "buildcraft.help.rf_engine.battery.rf": "Конвертирует %s\nв %s",
-    "buildcraft.gui.rf_engine.upgrade_rate_unit": "Forge Energy в секунду",
-    "buildcraft.gui.rf_engine.upgrade_rate_unit.rf": "Redstone Flux в секунду",
     "gui.filling.resources": "Ресурсы для заполнения",
     "gui.progress": "Прогресс",
     "gui.leftToBreak": "Осталось сломать",

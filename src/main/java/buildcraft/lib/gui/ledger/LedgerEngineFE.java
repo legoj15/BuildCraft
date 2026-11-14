@@ -7,7 +7,6 @@
 package buildcraft.lib.gui.ledger;
 
 import java.util.function.IntSupplier;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import buildcraft.lib.gui.BCGraphics;
@@ -23,9 +22,8 @@ import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.misc.LocaleUtil;
 
 /**
- * Ledger variant for FE-producing/consuming engines (MJ Dynamo, FE Engine).
- * Displays current output and stored energy in Redstone Flux (FE) units
- * instead of MJ, matching the 1.12.2 behaviour for these converter machines.
+ * Ledger variant for the MJ Dynamo, which turns MJ into FE: shows its current output and the
+ * energy in its FE output buffer in FE/RF units instead of MJ.
  */
 @SuppressWarnings("this-escape")
 public class LedgerEngineFE extends Ledger_Neptune {
@@ -46,9 +44,10 @@ public class LedgerEngineFE extends Ledger_Neptune {
 
     /**
      * @param currentOutputFe  FE/tick output supplier
-     * @param storedMj         stored MJ (microjoules) in the internal buffer
+     * @param storedFe         FE in the output buffer
+     * @param maxFe            the output buffer's capacity
      */
-    public LedgerEngineFE(BuildCraftGui gui, IntSupplier currentOutputFe, LongSupplier storedMj,
+    public LedgerEngineFE(BuildCraftGui gui, IntSupplier currentOutputFe, IntSupplier storedFe, int maxFe,
                            Supplier<Float> heatLevel,
                            Supplier<EnumPowerStage> powerStage,
                            Supplier<Boolean> engineOn, boolean expandPositive) {
@@ -60,7 +59,7 @@ public class LedgerEngineFE extends Ledger_Neptune {
         appendText(LocaleUtil.localize("gui.currentOutput") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
         appendText(() -> LocaleUtil.localizeRfFlow(currentOutputFe.getAsInt()), TEXT_COLOUR);
         appendText(LocaleUtil.localize("gui.stored") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
-        appendText(() -> LocaleUtil.localizeMj(storedMj.getAsLong()), TEXT_COLOUR);
+        appendText(() -> LocaleUtil.localizeRf(storedFe.getAsInt(), maxFe), TEXT_COLOUR);
         appendText(LocaleUtil.localize("gui.heat") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
         appendText(() -> LocaleUtil.localizeHeat(heatLevel.get()), TEXT_COLOUR);
 

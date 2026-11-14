@@ -100,6 +100,12 @@ $SaveName = 'bc-smoke'
 # scenario without a seed needs its save copied in by hand first, e.g. a world carried over from another node).
 $PlaySave = if ($Save) { $Save } elseif ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
 $PlaySeed = if ($SaveSeed) { $SaveSeed } elseif ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } elseif ($Save) { $SaveName } else { $null }
+# A save name is one folder under saves/: a separator or ".." would point the fresh-save delete somewhere else.
+foreach ($candidate in @($PlaySave, $PlaySeed) | Where-Object { $_ }) {
+    if ($candidate.IndexOfAny([char[]]'\/:') -ge 0 -or $candidate -in '.', '..') { throw "'$candidate' is not a save name (one folder name, no path)" }
+}
+$WantFresh = $FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)
+if ($WantFresh -and $PlaySave -eq $SaveName) { Write-Host "note: a fresh save applies to a named save only; this run plays '$SaveName' as it is" }
 # Optional dev-runtime mods: the scenario's "mods" aliases plus -Mods, in that order, each once. Empty = no -PwithMods.
 $ModAliases = @(@(if ($ScenarioData.PSObject.Properties['mods']) { $ScenarioData.mods }) + $Mods |
         ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
@@ -541,7 +547,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...", and for
                 # a named marker "Clock ... is already at time marker minecraft:noon").
                 # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language.
-                $idempotent = $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)'
+                $idempotent = $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)\b'
                 $benign = $stepBenign -or $idempotent -or ($Lang -eq 'en_us' -and
                     (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker')
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {
@@ -830,8 +836,11 @@ try {
             $haveSave = Test-Path $savePath
             if ($PlaySave -ne $SaveName) {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
-                if (($FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)) -and (Test-Path $playPath)) {
+                # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
+                if ($WantFresh -and (Test-Path $playPath) -and $PlaySeed -and (Test-Path (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
                     Remove-Item -Recurse -Force -LiteralPath $playPath
+                } elseif ($WantFresh -and (Test-Path $playPath)) {
+                    throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
                 }
                 if (-not (Test-Path $playPath)) {
                     $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }

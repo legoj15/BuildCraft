@@ -115,6 +115,19 @@ def tab_clicks(size, right, left):
     return out
 
 
+# Screen-fraction hover points for the help-entry shot, where the default point (0.5, 0.3) lands between outlines.
+HELP_HOVER = {
+    "filler": (0.47, 0.20),             # pattern parameters
+    "builder": (0.40, 0.45),            # resource grid
+    "engine-rf": (0.52, 0.34),          # gear slots
+    "dynamo": (0.52, 0.34),
+    "requester": (0.37, 0.33),          # request grid (left)
+    "integration-table": (0.42, 0.33),  # input ring
+    "emzuli-pipe": (0.43, 0.27),        # a filter's paint button
+    "list": (0.41, 0.265),              # first line's slots
+}
+
+
 def look_at_screen(name, cls, size, right, left, hover=True):
     steps = [{"do": "expectScreen", "contains": cls},
              {"do": "wait", "ms": 400},
@@ -126,8 +139,10 @@ def look_at_screen(name, cls, size, right, left, hover=True):
                    "look": "the %s ledger is open; its title and lines fit inside it" % ledger}]
         if ledger == "help":
             # An open help ledger describes the outlined element under the cursor: sample the one a third of the way
-            # down the window, which is a machine's own controls on most screens.
-            steps += [{"label": "point at an outlined element", "do": "hover", "fx": 0.5, "fy": 0.3, "allowMiss": True},
+            # down the window, which is a machine's own controls on most screens. The screens with nothing outlined
+            # there name their own point (HELP_HOVER); an open help ledger with nothing under the cursor is a title only.
+            fx, fy = HELP_HOVER.get(name, (0.5, 0.3))
+            steps += [{"label": "point at an outlined element", "do": "hover", "fx": fx, "fy": fy, "allowMiss": True},
                       # A long entry makes the ledger grow for a second or more: shoot it at its full height.
                       {"do": "wait", "ms": 1800},
                       {"name": "%s-help-entry" % name, "do": "shot",

@@ -207,8 +207,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.47,
+   "fy": 0.2,
    "allowMiss": true
   },
   {
@@ -293,8 +293,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.4,
+   "fy": 0.45,
    "allowMiss": true
   },
   {
@@ -1052,8 +1052,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.52,
+   "fy": 0.34,
    "allowMiss": true
   },
   {
@@ -1192,8 +1192,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.52,
+   "fy": 0.34,
    "allowMiss": true
   },
   {
@@ -1800,8 +1800,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.37,
+   "fy": 0.33,
    "allowMiss": true
   },
   {
@@ -2139,8 +2139,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.42,
+   "fy": 0.33,
    "allowMiss": true
   },
   {
@@ -2607,8 +2607,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.43,
+   "fy": 0.27,
    "allowMiss": true
   },
   {
@@ -2894,8 +2894,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.41,
+   "fy": 0.265,
    "allowMiss": true
   },
   {

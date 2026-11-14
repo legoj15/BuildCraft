@@ -145,8 +145,12 @@ public class GuiElementStatement<S extends IStatement> extends GuiElementSimple
             if (ctx != null) {
                 possible.removeIf(f -> {
                     for (StatementGroup<?> group : ctx.getAllPossible()) {
-                        if (group.getValues().contains(f)) {
-                            return false;
+                        // Not contains(f): f is null for the "nothing" entry added above, and an immutable
+                        // list (List.of, List.copyOf) throws on contains(null) instead of answering false.
+                        for (Object value : group.getValues()) {
+                            if (java.util.Objects.equals(value, f)) {
+                                return false;
+                            }
                         }
                     }
                     return true;

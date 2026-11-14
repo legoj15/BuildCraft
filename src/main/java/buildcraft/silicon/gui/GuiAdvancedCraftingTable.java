@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.button.ButtonSprite;
 import buildcraft.lib.gui.button.CycleOutputButton;
@@ -208,7 +209,8 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.advanced_crafting_table");
-        graphics.text(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
+        // Boxed to x 14..162: still centred on the window, but a wide title stops before the progress bar at x164.
+        GuiTextFit.drawCentred(graphics, font, title, 14, 5, 148, 0xFF404040);
     }
 
     //? if >=1.21.10 {

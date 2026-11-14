@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
@@ -89,8 +90,6 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String titleStr = title.getString();
-        int titleWidth = font.width(titleStr);
-        int titleX = (imageWidth - titleWidth) / 2;
-        graphics.text(font, titleStr, titleX, 10, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 10, imageWidth - 12, 0xFF404040);
     }
 }

@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.elem.GuiElementScrollbar;
 import buildcraft.lib.gui.elem.ScrollWindow;
 import buildcraft.lib.gui.elem.ScrolledList;
@@ -300,7 +301,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         // stratum via drawMenuOverlayLayer), consistent with the snapshot list above that already
         // draws unconditionally.
         String titleStr = Component.translatable("block.buildcraftunofficial.library").getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 6, imageWidth - 12, 0xFF404040);
     }
 
     /** Selects the snapshot under the cursor (left button only). @return true if a list row was clicked. */

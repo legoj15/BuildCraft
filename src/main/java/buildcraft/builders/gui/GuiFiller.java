@@ -15,6 +15,7 @@ import buildcraft.builders.container.ContainerFiller;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.button.ButtonIcon;
 import buildcraft.lib.gui.button.ButtonSprite;
@@ -210,7 +211,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         // Always draw the labels: the full-override pattern popup renders at a higher stratum
         // (drawMenuOverlayLayer) and dims this text on top, matching 1.12.2's layered look.
         String titleStr = Component.translatable("block.buildcraftunofficial.filler").getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 10, imageWidth - 12, 0xFF404040);
         graphics.text(font, Component.translatable("gui.filling.resources").getString(), 7, 74, 0xFF404040, false);
         graphics.text(font, Component.translatable("container.inventory").getString(), 7, 141, 0xFF404040, false);
     }

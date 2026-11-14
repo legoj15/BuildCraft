@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
@@ -165,7 +166,7 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.programming_table");
-        graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, title, 6, 15, imageWidth - 12, 0xFF404040);
 
         int pages = menu.getOptionPageCount();
         if (pages > 1) {

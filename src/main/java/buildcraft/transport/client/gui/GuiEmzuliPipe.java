@@ -17,6 +17,7 @@ import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.button.ButtonIcon;
 import buildcraft.lib.gui.button.ButtonSprite;
@@ -123,8 +124,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
 
         String titleStr = Component.translatable("gui.pipes.emzuli.title").getString();
-        int titleX = (imageWidth - font.width(titleStr)) / 2;
-        graphics.text(font, titleStr, titleX, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 6, imageWidth - 12, 0xFF404040);
 
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 93, 0xFF404040, false);
 

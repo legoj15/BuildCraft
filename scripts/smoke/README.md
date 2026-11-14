@@ -2,14 +2,21 @@
 
 `Invoke-InClientSmoke.ps1` boots each Stonecutter node's dev client, drives a scenario through the
 [McDevBridge](../../../McDevBridge) HTTP bridge, and writes screenshots plus a pass/fail report. It exists so a round
-of visual changes can be checked on all six nodes with one command and a screenshot review, instead of a manual
+of visual changes can be checked on every node with one command and a screenshot review, instead of a manual
 session per node.
 
 ```powershell
-pwsh scripts/smoke/Invoke-InClientSmoke.ps1                          # all nodes, scenarios/line8.json
-pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.2,1.21.1       # a subset
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1                          # all twelve nodes, scenarios/line8.json
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric           # the six Fabric nodes (or -Loader neoforge)
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.2,1.21.1-fabric   # a subset
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Scenario scripts/smoke/scenarios/<other>.json
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Lang ru_ru -Scenario scripts/smoke/scenarios/lang-overflow.json
+pwsh scripts/smoke/Invoke-SmokeBatch.ps1 -Node 26.3-fabric -Scenarios guide-robot,quarry-pit   # several scenarios, one node, one table
 ```
+
+A node is a Stonecutter node name: `26.3` is the NeoForge node, `26.3-fabric` its Fabric twin. Both loaders run the
+same scenarios; each node needs the McDevBridge jar built for it (`gradlew :<node>:build` in McDevBridge, the same node
+name there).
 
 Output: `build/smoke/<timestamp>/summary.md` (one table per node, screenshot links) and `<node>/report.json`,
 `<node>/NN-<name>.png`, `<node>/NN-<name>.widgets.json`. Exit code 1 when any step failed, any node hit a fatal
@@ -18,11 +25,13 @@ error, or BuildCraft logged an ERROR.
 ## What it does per node
 
 1. **Own game folder.** `versions/<node>/run-smoke/` via `-PbcRunDir=run-smoke` (gitignored). The hand-used `run/`
-   with its extra mods and saves is never read or written. The node's newest McDevBridge jar is copied into
+   with its extra mods and saves is never read or written (on Fabric the folder is passed as `--gameDir`, so
+   `run/logs/latest.log` is still the log file: Loom fixes the working directory). The node's newest McDevBridge jar is copied into
    `run-smoke/mods` (searched in McDevBridge's `versions/<node>/build/libs` and its worktrees; `-BuildBridge` builds
    one if none exists). `options.txt` is written once: no pause on focus loss, no accessibility onboarding, sound
    off. The GUI scale is re-applied every run: the scenario's `guiScale`, else 2 (so screenshots line up across runs),
-   and so is `particles:0` (All), so a scenario that lowers particles in Video Settings cannot thin the next run.
+   and so is `particles:0` (All), so a scenario that lowers particles in Video Settings cannot thin the next run, and
+   the language (`-Lang`, else `en_us`).
 2. **World.** The first run on a node creates one through the menus (Singleplayer → Create New World) and renames the
    save to `bc-smoke` after the client closes; every later run quick-plays it (`-PbcQuickPlay=bc-smoke`). The rig is
    rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/` to start over. (A lone save of any name is adopted as `bc-smoke`, so an interrupted first run heals itself.)
@@ -53,6 +62,53 @@ both in `SmokeGuard.ps1` (`multiplayer/mp.py` speaks the same lock file):
   client is still the one that gets saved and closed, never whatever bridge.json names by then. A missing or half-written
   bridge.json is not a violation (a client exiting deletes it).
 
+## Running on Server1 (nothing heavy runs on the workstation)
+
+The workstation does not boot Minecraft or run Gradle for these checks. `E:/GitHub/McDevBridge/tools/remote/` (its README
+has the full story) sends a commit to Server1, runs a command in Server1's logged-on desktop session (the client needs a
+GL context, so a plain ssh session will not do) and copies results back. Server1-side paths are under `C:\Dev`.
+
+```powershell
+$r = 'E:/GitHub/McDevBridge/tools/remote'
+# 1. This branch and McDevBridge, each under a name of its own (another session owns C:\Dev\McDevBridge; never sync over it).
+pwsh $r/Sync-ToServer1.ps1 -Repo <this worktree> -Ref <branch> -Name BuildCraft-<tag>
+pwsh $r/Sync-ToServer1.ps1 -Repo E:/GitHub/McDevBridge -Ref master -Name McDevBridge-bc
+# 2. The node's bridge jar (23 s once the Gradle cache is warm) and a warm compile (6 min warm; allow an hour cold).
+pwsh $r/Invoke-OnServer1.ps1 -NoDesktop -Name McDevBridge-bc -TimeoutMinutes 60 -Command './gradlew.bat :26.3-fabric:build --console=plain'
+pwsh $r/Invoke-OnServer1.ps1 -NoDesktop -Name BuildCraft-<tag> -TimeoutMinutes 150 -Command './gradlew.bat :26.3-fabric:classes --console=plain'
+# 3. The smoke itself: desktop mode (no -NoDesktop), the bridge checkout named by MCDEVBRIDGE_ROOT, and -NoDaemon.
+pwsh $r/Invoke-OnServer1.ps1 -Name BuildCraft-<tag> -TimeoutMinutes 300 -PollSeconds 120 -EnvVars 'MCDEVBRIDGE_ROOT=C:/Dev/McDevBridge-bc' `
+  -Command 'pwsh scripts/smoke/Invoke-SmokeBatch.ps1 -Node 26.3-fabric -OutDir build/smoke/<name> -BootMinutes 30 -NoDaemon'
+# 4. What came back: batch-summary.md first, then the folders of the scenarios that failed.
+pwsh $r/Receive-FromServer1.ps1 -Path BuildCraft-<tag>/build/smoke/<name> -Destination build/remote/fetched
+```
+
+Start long runs with `run_in_background` and redirect the console to a file; the poller only sleeps. `Invoke-SmokeBatch.ps1`
+runs the scenarios of one node one after the other (`-Scenarios a,b`, `-Skip`, `-Lang ru_ru,zh_cn`) and writes
+`batch-summary.md` and `batch-summary.json`; a pass over 34 scenarios of `26.3-fabric` took 47 minutes with no lock wait. The default list leaves out `zone-planner-drag`, `library-scrollbar-drag` and `pipe-sounds`: they only wait and take shots while a real-mouse driver or a listener does the work, so name them in `-Scenarios` when that company is there.
+
+Traps (each one cost a run):
+- **`-NoDaemon` is not optional there.** A client is a child of the Gradle daemon that serves the build. An idle daemon from
+  an earlier `-NoDesktop` build (session 0, no desktop) is reused by the next `runClient`, the window opens in session 0 and
+  Minecraft 26.3 aborts in `GlCommandEncoder` with "No context is current or a function that is not available in the
+  current context was called". Same checkout, same node, only the daemon's session differs. Never `gradlew --stop` to cure
+  it: that stops other sessions' daemons of the same Gradle version too.
+- **The smoke lock is shared with McDevBridge's `Invoke-EndpointSweep`**, which takes it node after node with seconds in
+  between. The batch driver looks at the lock every 3 s (`-LockWaitMinutes`, default 240) and boots a runner only when it is
+  free; a runner retried once a minute can starve for hours.
+- **Do not sync over a checkout a run is using** (the sync rewrites tracked files in place), and do not start two runs in one
+  checkout: the real-mouse driver below is the one exception, a second desktop run that only moves the mouse.
+- Server1 is Windows Server 2019 with an NVIDIA GTX TITAN X. Its console display is 1024x1280, but a client window larger
+  than the screen is fine (`window` steps up to 2560x1440 pass). There is no audio device (the client logs "Failed to open
+  OpenAL device" and goes silent), so sound-only checks (`pipe-sounds`) cannot be done there.
+- `C:` is shared with other work: a node's first build and first boot take a few GB, so look at the free space first (keep
+  15 GB) and delete `build/smoke/<name>` folders you have read.
+- A whole run folder is 100 MB for 34 scenarios; fetch single scenario folders when only a failure matters.
+- The McDevBridge copy is yours to patch for a diagnosis (the bridge reports a screen handler's exception only as
+  `ReportedException: mouseClicked event handler`; logging `t` in `BridgeServer.dispatch` puts the cause in the client log),
+  but re-sync it with `-Force` and rebuild the jar afterwards.
+- The real-mouse scenario `zone-planner-drag` can be played there: see "Real-mouse checks" below.
+
 ## Scenario format
 
 ```json
@@ -60,7 +116,10 @@ both in `SmokeGuard.ps1` (`multiplayer/mp.py` speaks the same lock file):
 ```
 
 Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset); `at` arrays are offsets from `base`.
-Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run only there).
+Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
+covers the NeoForge node and its Fabric twin, `"26.2-fabric"` only the twin) and `"loaders": ["neoforge"]` (run only on
+that loader). A top-level `"loaders"` skips the whole scenario on the other loader's nodes (reported as skipped, not as a
+failure): use it when a scenario needs a mod only one loader's dev runtime has.
 
 | `do` | Fields | Effect |
 |---|---|---|
@@ -87,7 +146,22 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed on GLFW nodes). 26.3 runs SDL3, which drops key messages for an unfocused window: when the post does not open the menu within 4 s, the runner brings the game window to the front (an Alt tap lifts Windows' foreground lock) and presses a real Esc, and the step's Detail says so. Follow with `click` "Save and Quit to Title" to leave the world |
 | `inWorld` | `timeoutSec` (default 300) | waits until the player is in a world with no screen open: after `click` "Play Selected World" |
 
+`-Lang <code>` (e.g. `ru_ru`, `zh_cn`) runs the scenario in that language, for a text-overflow look: screenshots
+and tooltips come out translated. Two things read English and so behave differently:
+- `click`/`hover` by `widgetText` match the English text, so a scenario meant for `-Lang` targets widgets by position
+  or slot (`scenarios/lang-overflow.json`).
+- The game answers commands in the run's language, so the runner cannot tell an "already so" reply from a failure.
+  Under `-Lang` a failing `cmd` command no longer ends its step: the step's Detail counts the replies it could not
+  classify, and a rig that really is missing shows in the steps that use it. `waitCmd`'s `match` still reads the
+  translated reply.
+The node's `bc-smoke` world must already exist (the first run creates it through the English menus).
+
+A top-level `"options": {"renderDistance": 4}` pins keys of the run's `options.txt` (`zone-planner-far-map` does); `renderDistance` goes
+back to 6 on every run that names none, so a pinned value never reaches the next scenario.
+
 A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`-Precipe_viewer=rei`); see `scenarios/rei-parity.json`.
+A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
+runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
 
 A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise.
 
@@ -104,6 +178,15 @@ zones, tools in chests) from commands and read the outcome back with `echo` step
 edit `generators/gen_boards.py` / `generators/gen_logistics.py` (shared helpers in `generators/robotrig.py`) and
 re-run them with `python`, never hand-edit their JSON. Each echo step's label says the expected reply (`expect pass` /
 `expect fail` / a count); the report's Detail column carries the actual reply.
+
+## Text overflow in other languages
+
+`lang-overflow` (generated by `generators/gen_lang_overflow.py`) opens every BuildCraft screen, each ledger in turn and
+every widget tooltip, clicking by position only, so it runs under `-Lang ru_ru` and `-Lang zh_cn`. Run it in English
+too and compare same-named shots: a title wider than its window, a ledger title cut at the ledger's edge, a help entry
+that runs off the bottom of the screen. Ledger tabs are not vanilla widgets; the generator computes their positions
+from each screen's size at the runner's 854x480 window and GUI scale 2 (its docstring has the rule), and the runner
+deletes `config/buildcraft/gui_state.json` before each boot so every ledger starts closed.
 
 ## Facade shading
 
@@ -174,7 +257,17 @@ for an empty-hand pan and then 90 s for a brush stroke, echoing the red layer be
 `library-scrollbar-drag` gives 45 s to drag the Electronic Library's scrollbar and needs 14 or more blueprints in the
 node's `run-smoke/snapshots-client` first (copy some from its `run-gameTestServer/snapshots-server`).
 
-An agent driving them: a warm client reaches the first wait about 30 s after launch, so block on the shot that opens
+On a machine nobody sits at (Server1) `Drive-RealMouse.ps1` plays both: a second desktop run beside the runner that waits for
+the shot that opens each window, brings the game window to the front and sends the real input (SetCursorPos and
+mouse_event, so the window system sees held buttons). `zone-planner-drag`: the pan, then the stroke with a right tap while
+left is held (the log line says whether left stayed down); `-Scenario library-scrollbar-drag`: the scrollbar thumb to the
+bottom. Its positions are framebuffer pixels of the scenario's 1600x900 window; judge the result from the runner's shots.
+Start the stroke on flat ground, not on a hill: the stroke's corners are picked from the terrain under the cursor, and a
+press on a slope paints a rectangle that reaches past it on screen (a first run on 26.3-fabric did, and looked like a bug;
+`-StrokeFrom`/`-StrokeTo` and `-NoRightTap` take the same drag from flat ground and without the tap, and both gave the
+rectangle from press to release).
+
+An agent driving them by hand: a warm client reaches the first wait about 30 s after launch, so block on the shot that opens
 each window (`10-zp-start.png` for the pan, `17-zp-before.png` for the stroke, `lib-before` for the library) in the
 run's folder rather than starting late. The game window may come up behind others: grant computer use the node's own
 `java.exe` path (the 1.21.x nodes run a different JDK from the 26.x ones) and bring it to the front before the first
@@ -193,7 +286,7 @@ button, which ends the stroke where right was tapped, the very symptom the scena
 
 ## Zone Planner far map: `zone-planner-far-map`
 
-Lower the node's `run-smoke/options.txt` `renderDistance` to 4 first (the runner keeps that file). The scenario tours a
+The scenario pins render distance 4 itself (`"options": {"renderDistance": 4}`; the runner puts it back to 6 on every other scenario). It tours a
 cross and a ring across the survey square so the server samples those chunks, returns to spawn and opens the planner:
 at survey zoom the toured strips must show past the small loaded patch, joined to it without a seam.
 

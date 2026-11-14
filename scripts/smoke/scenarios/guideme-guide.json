@@ -1,5 +1,6 @@
 {
   "name": "guideme-guide",
+  "loaders": ["neoforge"],
   "description": "The generated GuideME guide (scripts/guide-to-guideme.py): open it with GuideME's generic book, then jump to representative pages by command. Every page must render without GuideME's red compile-error boxes; recipes draw as crafting grids; links and item links show as link text.",
   "gradleProperties": ["withGuideMe"],
   "base": [0, 150, 0],

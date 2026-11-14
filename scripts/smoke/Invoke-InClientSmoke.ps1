@@ -10,6 +10,9 @@
   url, token and pid read at boot are pinned and must belong to the client this run spawned: a step fails, and the node
   ends fatal, when bridge.json later names another client or the pinned client is gone.
 
+  Nodes are the Stonecutter node names: "26.3" is the NeoForge node, "26.3-fabric" its Fabric twin. The default is all
+  twelve; -Loader narrows it to one loader.
+
   Per node, one client at a time:
     1. Prepares versions/<node>/run-smoke/ — a game directory of its own (-PbcRunDir), so the hand-used run/ with its
        extra mods and saves is never touched: installs the node's McDevBridge jar, writes quiet/unpausing options.
@@ -26,20 +29,38 @@
   synthetic cursor and breaks hovers/clicks.
 
 .EXAMPLE
-  pwsh scripts/smoke/Invoke-InClientSmoke.ps1                       # every node, default scenario
-  pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.2,1.21.1    # just these
+  pwsh scripts/smoke/Invoke-InClientSmoke.ps1                       # every node (both loaders), default scenario
+  pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric        # the six Fabric nodes
+  pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.2,1.21.1-fabric   # just these
+  pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Lang ru_ru -Scenario scripts/smoke/scenarios/lang-overflow.json
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.1.2 -Scenario scripts/smoke/scenarios/line8.json
 #>
 [CmdletBinding()]
 param(
-    [string[]]$Nodes = @('26.3', '26.2', '26.1.2', '1.21.11', '1.21.10', '1.21.1'),
+    [string[]]$Nodes = @('26.3', '26.2', '26.1.2', '1.21.11', '1.21.10', '1.21.1',
+        '26.3-fabric', '26.2-fabric', '26.1.2-fabric', '1.21.11-fabric', '1.21.10-fabric', '1.21.1-fabric'),
+    # Keep only this loader's nodes of -Nodes (a bare node name is NeoForge, "<mc>-fabric" is Fabric).
+    [ValidateSet('', 'neoforge', 'fabric')]
+    [string]$Loader = '',
+    # Game language for the run (options.txt `lang`), e.g. ru_ru or zh_cn for a text-overflow look. Re-applied every
+    # run, so a run without it is back in English. Steps that click by `widgetText` only work in English.
+    [ValidatePattern('^[a-z]{2,3}_[a-z]{2,3}$')]
+    [string]$Lang = 'en_us',
     [string]$Scenario,
     [string]$OutDir,
-    [string]$McDevBridgeRoot = 'E:/GitHub/McDevBridge',
+    # The McDevBridge checkout whose build/libs holds the node jars. $env:MCDEVBRIDGE_ROOT overrides the default, for a
+    # machine where it lives elsewhere (Server1: C:/Dev/McDevBridge-bc).
+    [string]$McDevBridgeRoot = $(if ($env:MCDEVBRIDGE_ROOT) { $env:MCDEVBRIDGE_ROOT } else { 'E:/GitHub/McDevBridge' }),
     # Build the node's McDevBridge jar (gradlew :<node>:build in McDevBridgeRoot) when none is found.
     [switch]$BuildBridge,
     # Minutes to wait for a client to boot (the first run on a node also compiles and downloads assets).
-    [int]$BootMinutes = 10
+    [int]$BootMinutes = 10,
+    # Run Gradle with --no-daemon. The client is a child of the Gradle daemon that serves the build, so it lives in that
+    # daemon's Windows session: when an idle daemon started from another session (an ssh login, session 0) is reused,
+    # the window opens in a session with no desktop and the game dies creating its GL context ("No context is current"
+    # in GlCommandEncoder). With the switch the client is always a child of this run. Needed for runs over ssh/scheduled
+    # tasks (Server1); harmless, only slower, on a normal desktop.
+    [switch]$NoDaemon
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,6 +70,12 @@ Set-StrictMode -Version 3.0
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 # `pwsh -File ... -Nodes a,b` hands the list over as ONE string; accept both forms.
 $Nodes = @($Nodes | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+
+# A node's loader and Minecraft line come from its name: "26.3" is NeoForge on 26.3, "26.3-fabric" Fabric on 26.3.
+function Get-NodeLoader([string]$Node) { if ($Node -like '*-fabric') { 'fabric' } else { 'neoforge' } }
+function Get-NodeMcVersion([string]$Node) { $Node -replace '-fabric$', '' }
+if ($Loader) { $Nodes = @($Nodes | Where-Object { (Get-NodeLoader $_) -eq $Loader }) }
+if (-not $Nodes.Count) { throw 'no nodes to run (check -Nodes and -Loader)' }
 if (-not $Scenario) { $Scenario = Join-Path $PSScriptRoot 'scenarios/line8.json' }
 $ScenarioData = Get-Content -Raw -LiteralPath $Scenario | ConvertFrom-Json
 if (-not $OutDir) { $OutDir = Join-Path $Repo ("build/smoke/" + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
@@ -188,18 +215,32 @@ function Initialize-RunDir([string]$Node) {
     # big scale only takes effect after a `window` step grows the client area), else 2. Particles go back to All every
     # run, so a scenario that lowers them in Video Settings and fails before restoring them can't thin the next one.
     $scale = if ($ScenarioData.PSObject.Properties['guiScale']) { [int]$ScenarioData.guiScale } else { 2 }
-    $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch '^(guiScale|particles):' }) +
-        "guiScale:$scale" + 'particles:0'
+    # The language is re-applied too (-Lang, else English), so a translated run never leaks into the next one.
+    # A scenario may pin more keys ("options": {"renderDistance": 4}). renderDistance goes back to 6 on a run that names
+    # none, so one scenario's value never reaches the next; any other key it pins stays in the file until changed.
+    $extra = [ordered]@{ renderDistance = 6 }
+    if ($ScenarioData.PSObject.Properties['options']) {
+        foreach ($p in $ScenarioData.options.PSObject.Properties) { $extra[$p.Name] = $p.Value }
+    }
+    $managed = @('guiScale', 'particles', 'lang') + @($extra.Keys)
+    $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch "^($($managed -join '|')):" }) +
+        "guiScale:$scale" + 'particles:0' + "lang:$Lang" +
+        @($extra.Keys | ForEach-Object { "${_}:$(if ($extra[$_] -is [bool]) { "$($extra[$_])".ToLower() } else { $extra[$_] })" })
     $lines | Set-Content -LiteralPath $options -Encoding utf8
-    # NeoForge's "mods loaded with warnings" screen blocks quick-play (REI trips it on 26.3 with @OnlyIn). The log
-    # keeps the warnings; NeoForge fills in the rest of a file that only holds this key.
-    $neoClient = Join-Path $runDir 'config/neoforge-client.toml'
-    if (Test-Path $neoClient) {
-        (Get-Content -LiteralPath $neoClient) -replace '^showLoadWarnings\s*=.*', 'showLoadWarnings = false' |
-            Set-Content -LiteralPath $neoClient -Encoding utf8
-    } else {
-        New-Item -ItemType Directory -Force -Path (Split-Path $neoClient) | Out-Null
-        'showLoadWarnings = false' | Set-Content -LiteralPath $neoClient -Encoding utf8
+    # Ledgers remember open/closed per screen in this file: start every run with all of them closed, so a screenshot
+    # (or a click on a ledger tab) never depends on what an earlier run left open.
+    Remove-Item -LiteralPath (Join-Path $runDir 'config/buildcraft/gui_state.json') -ErrorAction SilentlyContinue
+    if ((Get-NodeLoader $Node) -eq 'neoforge') {
+        # NeoForge's "mods loaded with warnings" screen blocks quick-play (REI trips it on 26.3 with @OnlyIn). The log
+        # keeps the warnings; NeoForge fills in the rest of a file that only holds this key. Fabric has no such screen.
+        $neoClient = Join-Path $runDir 'config/neoforge-client.toml'
+        if (Test-Path $neoClient) {
+            (Get-Content -LiteralPath $neoClient) -replace '^showLoadWarnings\s*=.*', 'showLoadWarnings = false' |
+                Set-Content -LiteralPath $neoClient -Encoding utf8
+        } else {
+            New-Item -ItemType Directory -Force -Path (Split-Path $neoClient) | Out-Null
+            'showLoadWarnings = false' | Set-Content -LiteralPath $neoClient -Encoding utf8
+        }
     }
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
@@ -229,13 +270,16 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     # Every java process already running: a bridge.json naming one of them is not the client about to be spawned.
     $javaBefore = @(Get-Process java, javaw -ErrorAction SilentlyContinue | ForEach-Object Id)
     $gradleArgs = @(":${Node}:runClient", '-PbcRunDir=run-smoke', '--console=plain')
+    if ($NoDaemon) { $gradleArgs += '--no-daemon' }
     if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$PlaySave" }
     # A scenario's "gradleProperties" (e.g. ["withGuideMe"]) become -P flags: optional dev-runtime mods it needs.
     if ($ScenarioData.PSObject.Properties['gradleProperties']) {
         $gradleArgs += @($ScenarioData.gradleProperties | ForEach-Object { "-P$_" })
     }
-    # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI.
+    # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI. A NeoForge dev client has JEI
+    # without being asked; a Fabric one loads a viewer only when told to, so it is always named there.
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
+    elseif ((Get-NodeLoader $Node) -eq 'fabric') { $gradleArgs += '-Precipe_viewer=jei' }
     $proc = Start-Process -FilePath (Join-Path $Repo 'gradlew.bat') -ArgumentList $gradleArgs -WorkingDirectory $Repo `
         -RedirectStandardOutput (Join-Path $LogDir 'gradle.out.log') -RedirectStandardError (Join-Path $LogDir 'gradle.err.log') `
         -WindowStyle Hidden -PassThru
@@ -390,7 +434,7 @@ function Invoke-MenuClick([string]$Text) {
     # bounded wait, so the call reports a TimeoutException although the click happened. The callers poll the screen
     # afterwards, which is the real check.
     try { Invoke-Bridge POST '/screenclick' @{ widgetText = $Text } 120 | Out-Null }
-    catch { if ($_.Exception.Message -notmatch 'TimeoutException|timed out') { throw } }
+    catch { if ($_.Exception.Message -notmatch 'TimeoutException|timed out|HttpClient\.Timeout') { throw } }
 }
 
 function New-SmokeWorld {
@@ -422,9 +466,18 @@ function Expand-Coords([string]$Text) {
         })
 }
 
+function Test-LoaderFilter($Item, [string]$Node) {
+    # "loaders": ["neoforge"] on a step, or on the scenario itself, keeps it off the other loader's nodes.
+    if (-not $Item.PSObject.Properties['loaders']) { return $true }
+    return @($Item.loaders) -contains (Get-NodeLoader $Node)
+}
+
 function Test-NodeFilter($Step, [string]$Node) {
+    if (-not (Test-LoaderFilter $Step $Node)) { return $false }
     if (-not $Step.PSObject.Properties['nodes']) { return $true }
-    return @($Step.nodes) -contains $Node
+    # A step's "nodes" names Minecraft lines: "26.3" covers both the NeoForge node and its Fabric twin. Naming the
+    # twin itself ("26.3-fabric") covers that node only.
+    return (@($Step.nodes) -contains $Node) -or (@($Step.nodes) -contains (Get-NodeMcVersion $Node))
 }
 
 function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
@@ -432,19 +485,25 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
     $shot = $null
     switch ($Step.do) {
         'cmd' {
+            $unclassified = 0
             foreach ($c in @($Step.run)) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
                 $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
                 # The world persists between runs, so "already so" replies are success for a rig builder.
-                # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...").
-                $benign = (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to'
+                # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...", and for
+                # a named marker "Clock ... is already at time marker minecraft:noon").
+                $benign = (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker'
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {
+                    # Under -Lang the game answers in that language, so an "already so" reply cannot be told from a real
+                    # failure by its text. The step goes on and says how many replies it could not classify; a rig that
+                    # really is missing shows in the steps that use it.
+                    if ($Lang -ne 'en_us') { $unclassified++; continue }
                     throw "command failed: $(Expand-Coords $c) -> $(@($r.output) -join ' | ')"
                 }
             }
-            $detail = "$(@($Step.run).Count) command(s)"
+            $detail = "$(@($Step.run).Count) command(s)$(if ($unclassified) { ", $unclassified failure repl$(if ($unclassified -eq 1) { 'y' } else { 'ies' }) not classified (translated)" })"
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
         }
@@ -529,6 +588,13 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             try {
                 $r = Invoke-Bridge POST "/screen$($Step.do)" $body
             } catch {
+                # Leaving a world blocks the game thread while it saves and unloads, longer than the bridge's bounded wait
+                # (slow on Server1's disk): the call reports a TimeoutException although the click happened, as with
+                # Invoke-MenuClick. The step after it (expectScreen) is the real check.
+                if ($Step.do -eq 'click' -and $Step.PSObject.Properties['widgetText'] -and $Step.widgetText -match '^Save and Quit to Title$' -and
+                        $_.Exception.Message -match 'TimeoutException|timed out|HttpClient\.Timeout') {
+                    return [pscustomobject]@{ detail = 'bridge timed out while the world saved (the click still reached the game)'; shot = $null }
+                }
                 # allowMiss also covers a target that isn't on screen at all (a hidden widget, a closed screen).
                 if ($Step.PSObject.Properties['allowMiss']) { return [pscustomobject]@{ detail = "missed (allowed): $($_.Exception.Message)"; shot = $null } }
                 throw
@@ -605,7 +671,10 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
         'expectScreen' {
             $want = $Step.contains
             $timeout = if ($Step.PSObject.Properties['timeoutSec']) { $Step.timeoutSec } else { 5 }
-            $got = Wait-Until { $c = Get-ScreenClass; if (($want -eq '' -and $c -eq '') -or ($want -ne '' -and $c -match $want)) { if ($c) { $c } else { '(none)' } } } $timeout "screen matching '$want' (open: '$(Get-ScreenClass)')"
+            # The open screen is named only after the wait failed: a game thread still busy (a world saving) answers /state
+            # with a timeout, which Wait-Until retries but a message built beforehand would not.
+            $got = try { Wait-Until { $c = Get-ScreenClass; if (($want -eq '' -and $c -eq '') -or ($want -ne '' -and $c -match $want)) { if ($c) { $c } else { '(none)' } } } $timeout "screen matching '$want'" }
+            catch { throw "$($_.Exception.Message) (open: '$(try { Get-ScreenClass } catch { '?' })')" }
             $detail = $got
         }
         # Esc into the game window: opens the pause menu from the world (see Send-GameEscape). Follow with
@@ -663,7 +732,7 @@ function Invoke-Scenario([string]$Node, [string]$NodeOut) {
 # One run per machine (SmokeGuard.ps1): taken before the first boot, held to the end of the last node, released in the
 # finally below. A refusal is exit 3, so a caller can tell "someone else is running" from "a step failed" (exit 1).
 try {
-    $lock = Enter-SmokeLock -Owner 'Invoke-InClientSmoke.ps1' -Repo $Repo -Detail "nodes $($Nodes -join ','), scenario $($ScenarioData.name)"
+    $lock = Enter-SmokeLock -Owner 'Invoke-InClientSmoke.ps1' -Repo $Repo -Detail "nodes $($Nodes -join ','), scenario $($ScenarioData.name)$(if ($Lang -ne 'en_us') { ", lang $Lang" })"
 } catch {
     [Console]::Error.WriteLine("smoke lock: $($_.Exception.Message)")
     Remove-Item -LiteralPath $OutDir -ErrorAction SilentlyContinue   # still empty
@@ -674,10 +743,17 @@ if ($lock.Recovered) { Write-Host "[smoke lock] took over a stale lock: its pid 
 $summary = @()
 try {
     foreach ($node in $Nodes) {
+        if (-not (Test-LoaderFilter $ScenarioData $node)) {
+            # Not a failure: the scenario needs something only the other loader's dev runtime has.
+            $why = "runs on $(@($ScenarioData.loaders) -join ', ') only"
+            Write-Host "[$node] skipped: scenario '$($ScenarioData.name)' $why"
+            $summary += [pscustomobject]@{ node = $node; steps = 0; failed = 0; bcErrors = 0; fatal = $null; skipped = $why; report = $null }
+            continue
+        }
         $nodeOut = Join-Path $OutDir $node
         New-Item -ItemType Directory -Force -Path $nodeOut | Out-Null
         Write-Host "[$node] preparing"
-        $report = [ordered]@{ node = $node; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
+        $report = [ordered]@{ node = $node; loader = (Get-NodeLoader $node); lang = $Lang; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
         $client = $null
         $prep = $null
         try {
@@ -700,6 +776,8 @@ try {
                 }
             }
             $quickPlay = $haveSave -or ($PlaySave -ne $SaveName)
+            # The first run creates the world by clicking the English menu buttons.
+            if (-not $quickPlay -and $Lang -ne 'en_us') { throw "$node has no '$SaveName' save yet: run once without -Lang to create it" }
             # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
             # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
             if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
@@ -737,7 +815,7 @@ try {
         $report.finished = (Get-Date).ToString('s')
         $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $nodeOut 'report.json') -Encoding utf8
         $failed = @($report.steps | Where-Object { -not $_.ok }).Count
-        $summary += [pscustomobject]@{ node = $node; steps = @($report.steps).Count; failed = $failed; bcErrors = @($report.buildcraftErrors).Count; fatal = $report.fatal; report = $report }
+        $summary += [pscustomobject]@{ node = $node; steps = @($report.steps).Count; failed = $failed; bcErrors = @($report.buildcraftErrors).Count; fatal = $report.fatal; skipped = $null; report = $report }
         Write-Host "[$node] done: $(@($report.steps).Count) steps, $failed failed, $(@($report.buildcraftErrors).Count) BuildCraft log errors$(if ($report.fatal) { ", FATAL: $($report.fatal)" })"
     }
 } finally {
@@ -745,9 +823,10 @@ try {
 }
 
 # summary.md: one table per node, screenshots linked relative to the run folder.
-$md = @("# In-client smoke: $($ScenarioData.name)", '', "Run folder: ``$OutDir``", '', '| Node | Steps | Failed | BuildCraft log errors | Fatal |', '|---|---|---|---|---|')
-foreach ($s in $summary) { $md += "| $($s.node) | $($s.steps) | $($s.failed) | $($s.bcErrors) | $($s.fatal) |" }
+$md = @("# In-client smoke: $($ScenarioData.name)$(if ($Lang -ne 'en_us') { " ($Lang)" })", '', "Run folder: ``$OutDir``", '', '| Node | Steps | Failed | BuildCraft log errors | Fatal |', '|---|---|---|---|---|')
+foreach ($s in $summary) { $md += "| $($s.node) | $($s.steps) | $($s.failed) | $($s.bcErrors) | $(if ($s.skipped) { "skipped: $($s.skipped)" } else { $s.fatal }) |" }
 foreach ($s in $summary) {
+    if ($s.skipped) { continue }
     $md += @('', "## $($s.node)", '', '| # | Step | OK | Detail | Screenshot |', '|---|---|---|---|---|')
     foreach ($st in $s.report.steps) {
         $d = ([string]$st.detail) -replace '\|', '\|' -replace "`r?`n", ' '

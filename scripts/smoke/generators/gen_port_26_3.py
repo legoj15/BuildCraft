@@ -393,7 +393,8 @@ step(label="next page", do="click", widgetText="Next Page", allowMiss=True)
 wait(500)
 shot("guide-link-page", "the page with the 'GitHub issue tracker' link")
 step(name="guide-link-page", do="widgets")
-step(label="click the GitHub link", do="click", x=318, y=96, allowMiss=True)
+# The link's first word on the page since the rename to BuildCraft Redux (854x480 window, GUI scale 2): the page text moved it.
+step(label="click the GitHub link", do="click", x=365, y=96, allowMiss=True)
 wait(800)
 step(label="vanilla ConfirmLinkScreen opened", do="expectScreen", contains="ConfirmLinkScreen", timeoutSec=5)
 shot("guide-confirm-link", "vanilla link confirmation (Yes / Copy to Clipboard / No) with the untrusted-link warning")
@@ -444,7 +445,8 @@ echo("control: smooth stone counts", "execute positioned %s 0 %s positioned over
      "minecraft:smooth_stone" % (o('X', 12), o('Z', -6)))
 
 # ── oil feature ────────────────────────────────────────────────────────────────────────────────────────────
-cmd("go somewhere unexplored for the oil deposit", "spreadplayers 400 400 0 1 false @p")
+# A range of 48, not 1: a fresh world's seed can put open water or trees right at 400,400, where a 1-block search finds no safe spot.
+cmd("go somewhere unexplored for the oil deposit", "spreadplayers 400 400 0 48 false @p")
 wait(4000)
 cmd("place BuildCraft's oil feature on a 3x3 chunk grid (fails unless the config raises mediumOilGenProb)",
     "?execute at @p run place feature buildcraftunofficial:oil ~ ~ ~",

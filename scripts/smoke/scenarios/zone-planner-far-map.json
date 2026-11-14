@@ -1,6 +1,9 @@
 {
   "name": "zone-planner-far-map",
   "description": "Zone Planner far map: with render distance 4, tour a cross and a ring across the planner's survey square so the server samples those chunks (as they load and unload), return to spawn, and check the planner draws the toured terrain past the client's loaded chunks at survey zoom.",
+  "options": {
+    "renderDistance": 4
+  },
   "base": [
     0,
     150,

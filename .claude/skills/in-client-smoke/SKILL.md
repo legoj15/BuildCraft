@@ -14,7 +14,8 @@ read it first. This skill is the procedure around it.
   `InteractionResult` a click returns, a JEI key) belongs in a unit or game test (`add-game-test` skill). The smoke
   run is for what only eyes can judge: textures, models, layout, tooltips, animations.
 - **McDevBridge jars**: the runner copies the newest `mcdevbridge-*+mc<node>.jar` from `E:/GitHub/McDevBridge`
-  (`versions/<node>/build/libs`, or a McDevBridge worktree). None → `-BuildBridge`, or build it there.
+  (`versions/<node>/build/libs`, or a McDevBridge worktree). None → `-BuildBridge`, or build it there. McDevBridge
+  uses the same node names: `26.3` is the NeoForge jar, `26.3-fabric` the Fabric one.
   `/screenclick` + `/screenhover` need McDevBridge `4f0b536` or later.
 - **Free disk**: each first boot of a node downloads assets and writes a world. A full C: drive fails the boot.
 - **One run per machine.** The runner holds `~/.mcdevbridge/smoke.lock` for the whole run. When another session's run
@@ -29,11 +30,32 @@ read it first. This skill is the procedure around it.
 
 ```powershell
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.1.2          # one node while authoring
-pwsh scripts/smoke/Invoke-InClientSmoke.ps1                        # all five, sequentially (~3-5 min each once warm)
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3,26.3-fabric # a line on both loaders
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1                        # all twelve, sequentially (~3-5 min each once warm)
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric         # the six Fabric twins only
 ```
+
+A visual change is checked on both loaders: the Fabric nodes have their own render and screen glue, so a NeoForge-only
+run does not cover them. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
+its box (`scenarios/lang-overflow.json` tours the GUIs without clicking by English text).
 
 Run it with `run_in_background` — a node's first boot compiles and can take several minutes. It exits 1 on any
 failed step, fatal error or BuildCraft ERROR log line, and 3 when another run holds the smoke lock.
+
+## On Server1 (the default for anything long)
+
+The workstation must not run Minecraft or Gradle for a pass. [scripts/smoke/README.md](../../../scripts/smoke/README.md)
+("Running on Server1") has the commands: sync the branch and McDevBridge under names of their own with
+`E:/GitHub/McDevBridge/tools/remote/Sync-ToServer1.ps1`, run `scripts/smoke/Invoke-SmokeBatch.ps1` through
+`Invoke-OnServer1.ps1` in desktop mode with `-EnvVars 'MCDEVBRIDGE_ROOT=C:/Dev/McDevBridge-bc'`, fetch the folder back with
+`Receive-FromServer1.ps1`. Three traps:
+- Always `-NoDaemon`. A client is a child of the Gradle daemon; a reused idle session-0 daemon opens its window with no
+  desktop and Minecraft 26.3 dies in `GlCommandEncoder` ("No context is current"). Never `gradlew --stop` (other sessions'
+  daemons).
+- The smoke lock is shared with McDevBridge's endpoint sweeps; the batch driver waits for it (it polls every 3 s).
+- A screen handler's exception reaches the report only as `ReportedException: mouseClicked event handler`; the cause
+  is in the client log only if the bridge logs it (patch `BridgeServer.dispatch` in YOUR McDevBridge copy, see the README).
+`scripts/smoke/Drive-RealMouse.ps1` plays the two real-mouse scenarios there.
 
 ## Reviewing
 

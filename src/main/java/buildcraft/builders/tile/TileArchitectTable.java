@@ -97,7 +97,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
      *  and tell them, every tick. Saved: a refusal that came after a whole scan must not have the next load run the
      *  scan again. */
     private boolean scanRefused = false;
-    public String name = "<unnamed>";
+    /** The name written into scanned snapshots; empty until the player names the table (the GUI shows the
+     *  translated "unnamed" placeholder for an empty name rather than storing a literal). */
+    public String name = "";
 
     // Inline scan position tracking (replaces BoxIterator which is a stub)
     private int scanX, scanY, scanZ;
@@ -754,7 +756,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         EnumSnapshotType[] stValues = EnumSnapshotType.values();
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
         isValid = input.getBooleanOr("isValid", false);
-        name = input.getStringOr("name", "<unnamed>");
+        name = input.getStringOr("name", "");
+        if (Header.LEGACY_UNNAMED.equals(name)) {
+            // A save from before the name defaulted to empty: the old literal placeholder is not a name.
+            name = "";
+        }
         // A scan interrupted by chunk unload/reload can't truly resume — the partial scan buffers
         // (palette + one int/bit per cell, megabytes for a large volume) aren't persisted, so the scan
         // restarts on the next tick (scanInitialized defaults false). scanTotal isn't persisted either,

@@ -102,6 +102,9 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         nameField = new EditBox(this.font, leftPos + NAME_X, topPos + NAME_Y, NAME_W, NAME_H,
                 Component.empty());
         nameField.setValue(menu.getTileName());
+        // An unnamed table has an empty name; the hint says so (in the player's language) instead of the box
+        // sitting blank, and disappears the moment a name is typed.
+        nameField.setHint(Component.translatable("gui.buildcraftunofficial.snapshot.unnamed"));
         nameField.setFocused(false);
         nameField.setResponder(newText -> {
             // Send name update to server

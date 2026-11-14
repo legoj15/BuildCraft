@@ -291,7 +291,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                         LIST_X + LIST_W, rowY + LIST_ROW_H, 0x80_55_55_55);
             }
             int colour = isSelected ? 0xFF_FF_FA_A0 : 0xFF_E0_E0_E0;
-            String text = key.header == null ? key.toString() : key.header.name;
+            String text = key.header == null ? key.toString() : Snapshot.Header.displayInGui(key.header.name);
             // Clip to the row so a long name can't run over the scrollbar (1.7.10 trimmed the same way).
             graphics.text(font, font.plainSubstrByWidth(text, LIST_W), LIST_X, rowY, colour, false);
             rowY += LIST_ROW_H;

@@ -286,6 +286,15 @@ public class LangFileIntegrityTester {
         assertTranslated(en, roboticsKeys, "robotics keys (matched by name)");
     }
 
+    /** en_us keys whose correct text in another language is legitimately the same characters as English, so
+     *  "identical to English" is not evidence of a missed translation. Keep this tiny: add a key with a
+     *  one-line reason on its entry. */
+    private static final Set<String> IDENTICAL_IN_EVERY_LANGUAGE = Set.of(
+            // "X: %s Y: %s Z: %s" — Latin axis letters and separators, which ru_ru keeps as-is (zh_cn swaps
+            // in full-width colons, so it differs on its own).
+            "gui.buildcraftunofficial.zone_planner.pointer"
+    );
+
     /** A string literal of the form {@code "..."} in Java source, escapes included. */
     private static final Pattern JAVA_STRING_LITERAL = Pattern.compile("\"((?:[^\"\\\\\\n]|\\\\.)*)\"");
 
@@ -357,8 +366,9 @@ public class LangFileIntegrityTester {
 
         List<String> untranslated = keys.stream()
                 .filter(k -> zh.containsKey(k) && (zh.get(k).isBlank()
-                        || (zh.get(k).equals(en.get(k)) && FORMAT_SPEC.matcher(en.get(k)).replaceAll("")
-                                .chars().anyMatch(Character::isLetter))))
+                        || (zh.get(k).equals(en.get(k)) && !IDENTICAL_IN_EVERY_LANGUAGE.contains(k)
+                                && FORMAT_SPEC.matcher(en.get(k)).replaceAll("")
+                                        .chars().anyMatch(Character::isLetter))))
                 .toList();
         Assertions.assertTrue(untranslated.isEmpty(),
                 file + " carries these " + what + " blank or copied verbatim from English " + untranslated);

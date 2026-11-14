@@ -35,7 +35,7 @@ public class GuiList extends GuiBC8<ContainerList> {
     private static final GuiIcon ICON_HIGHLIGHT = new GuiIcon(TEXTURE_BASE, 176, 0, 16, 16);
 
     // Per-line toggle buttons for the three match modes (Precise / By-Type / By-Material): vanilla-faced
-    // BCButtons with the mode's first letter (P / T / M) as the label, readable at 14px.
+    // BCButtons with the mode's short localized label (P / T / M in English) as the text, readable at 14px.
     private static final int BTN_W = 14, BTN_H = 14;
     private static final int BUTTON_COUNT = 3;
     /** Promoted to a field so {@link #keyPressed} / {@link #mouseClicked} can ask the field
@@ -142,11 +142,12 @@ public class GuiList extends GuiBC8<ContainerList> {
             for (int btn = 0; btn < BUTTON_COUNT; btn++) {
                 final int lineIdx = line;
                 final int btnIdx = btn;
-                String letter = btn == 0 ? "P" : (btn == 1 ? "T" : "M");
+                String letterKey = btn == 0 ? "gui.list.nbt.short"
+                        : (btn == 1 ? "gui.list.metadata.short" : "gui.list.oredict.short");
                 String tooltipKey = btn == 0 ? "gui.list.nbt" : (btn == 1 ? "gui.list.metadata" : "gui.list.oredict");
 
                 addRenderableWidget(BCButton.builder(bOffX + btn * BTN_W, bOffY, BTN_W, BTN_H)
-                        .label(Component.literal(letter))
+                        .label(Component.translatable(letterKey))
                         .latched(() -> menu.lines[lineIdx].getOption(btnIdx))
                         .tooltip(Component.translatable(tooltipKey))
                         .onPress(() -> menu.switchButton(lineIdx, btnIdx))

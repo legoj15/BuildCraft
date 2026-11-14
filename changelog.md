@@ -30,3 +30,4 @@
 - Fixed pluggables not facing the correct directing in pipes and item frames.
 - Improved world loading time by moving the Guide Book loading to when you first open it (and reduced the stutter that would occur when that used to happen).
 - Finally fixed plurals on numbers.
+- The Requester's help ledger now explains its two slot grids instead of saying help is unavailable.

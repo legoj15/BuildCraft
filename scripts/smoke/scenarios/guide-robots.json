@@ -133,8 +133,8 @@
     {
       "label": "open chapters overlay",
       "do": "click",
-      "x": 250,
-      "y": 3,
+      "x": 232,
+      "y": 4,
       "allowMiss": true
     },
     {

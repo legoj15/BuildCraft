@@ -20,6 +20,7 @@
 - Fixed the blueprint and snapshot 3D preview drawing dyed lenses and filters white/untinted.
 - The Architect Table now says why its preview panel is empty (no area to scan, or an area too large for a live preview) instead of showing a blank panel.
 - Made the act of brushing a pipe in multiplayer look less jank.
+- Wood pipes are no longer noticeably louder than every other pipe when walked on, placed or broken.
 - Robot Goggles now show the current state of the robot you are aimed at so you can see what's going on in their tiny cube brains.
 - Wearing the Robot Goggles now keeps the outline and the robot rendering out to 64 blocks.
 - Fixed a robot with a nametag having that name render twice.

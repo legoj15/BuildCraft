@@ -109,7 +109,9 @@ public class BCTransportPipes {
         // Each material sounds like its nearest modern vanilla block; the builder carries the sound into every
         // pipe defined after it until the next material sets its own. Diamond-family, lapis and quartz pipes
         // keep the classic metal sound.
-        SoundType woodSound = SoundUtil.pitched(SoundType.SCAFFOLDING, 0.8f);
+        // The scaffolding samples are mastered hotter than stone/metal (ffmpeg volumedetect: steps ~5 dB, place ~2 dB);
+        // volume 0.6 scales steps by 0.6x (-4.4 dB) and place/break by (v+1)/2 = 0.8x (-1.9 dB), roughly level (#202).
+        SoundType woodSound = SoundUtil.scaled(SoundType.SCAFFOLDING, 0.6f, 0.8f);
         SoundType grateSound = SoundType.COPPER_GRATE;
         SoundType classicSound = SoundType.METAL;
         SoundType stoneSound = SoundType.STONE;

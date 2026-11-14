@@ -23,8 +23,13 @@ import buildcraft.platform.Platform;
 public class SoundUtil {
     /** A copy of {@code base} with its pitch scaled by {@code factor} (above 1 is higher). */
     public static SoundType pitched(SoundType base, float factor) {
-        return Platform.sounds().deferredSoundType(base.getVolume(), base.getPitch() * factor, base::getBreakSound, base::getStepSound,
-                base::getPlaceSound, base::getHitSound, base::getFallSound);
+        return scaled(base, 1.0f, factor);
+    }
+
+    /** A copy of {@code base} with its volume and pitch scaled by the given factors. */
+    public static SoundType scaled(SoundType base, float volumeFactor, float pitchFactor) {
+        return Platform.sounds().deferredSoundType(base.getVolume() * volumeFactor, base.getPitch() * pitchFactor, base::getBreakSound,
+                base::getStepSound, base::getPlaceSound, base::getHitSound, base::getFallSound);
     }
 
     public static void playBlockPlace(Level world, BlockPos pos) {

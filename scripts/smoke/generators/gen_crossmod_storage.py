@@ -38,6 +38,8 @@ from xmod import BC, Scenario, at, pipe  # noqa: E402
 BASE = [0, 150, 0]
 DROPLETS = 81
 WATER = "minecraft:water"
+# where the camera stands for each shot (feet; yaw 90 looks west at the lanes)
+VIEWS = {"items": (13, 9, 13), "fluids": (13, 9, 41), "pump": (21, 8, 57), "iron": (13, 9, 76)}
 TR_NODES = ["1.21.1", "26.1.2", "26.2", "26.3"]      # the lines with a techreborn alias
 IRON_NODES = ["26.1.2", "26.2"]                       # the lines with an irontanks alias on Fabric
 
@@ -161,7 +163,10 @@ def build():
     S.wait(3000)
     S.cmd("a fresh rig: stone floor, air above, everything of an earlier run gone",
           "fill {X-4} {Y-8} {Z-8} {X+16} {Y-1} {Z+96} minecraft:stone",
-          "fill {X-4} {Y} {Z-8} {X+16} {Y+8} {Z+96} minecraft:air")
+          "fill {X-4} {Y} {Z-8} {X+26} {Y+14} {Z+48} minecraft:air",
+          "fill {X-4} {Y} {Z+49} {X+26} {Y+14} {Z+96} minecraft:air",
+          # barriers for the camera to stand on (a creative player falls), east of the lanes looking west
+          *["setblock %s minecraft:barrier" % at(x, y - 1, z) for x, y, z in VIEWS.values()])
 
     # 1. Tom's Simple Storage
     z = 6
@@ -173,7 +178,7 @@ def build():
     z = 20
     item_lane(S, 2, z, "Extended Drawers", ["setblock %s extended_drawers:single_drawer[facing=east]" % at(5, 0, z)],
               ("data get block %s items" % at(5, 0, z), r"amount: 64L", 60))
-    S.tp(10, 6, 12, 0, 40)
+    S.tp(*VIEWS["items"], 90, 38)
     S.wait(1500)
     S.shot("items", "two item lanes seen from above: source chest, wooden pipe with a creative engine, stone pipes, the "
                     "Tom's interface or the drawer, then a wooden pipe and the end chest")
@@ -183,7 +188,7 @@ def build():
         fluid_lane(S, 3, 34, 1000, "one bucket, 1000 mB")
         fluid_lane(S, 4, 40, 1234, "1234 mB, not a whole number of buckets")
         fluid_lane(S, 5, 46, 0, "a tank unit holding 100000 droplets (1234 mB and 46 droplets)", foreign_start=100000)
-        S.tp(8, 6, 38, 0, 45)
+        S.tp(*VIEWS["fluids"], 90, 38)
         S.wait(1500)
         S.shot("fluids", "three fluid lanes: BuildCraft tank, wooden fluid pipe with a creative engine, cobblestone fluid pipe, a "
                          "Tech Reborn tank unit, and a second wooden fluid pipe with an engine leading to a BuildCraft tank "
@@ -213,7 +218,7 @@ def build():
                    "data get block %s TankStorage.amount" % at(12, 0, z), r"value: 0L", 60)
         S.wait(3000)
         water_near(S, "7: the Flood Gate placed water around itself", 15, -1, z - 3, 20, 2, z + 3)
-        S.tp(10, 6, 54, 0, 40)
+        S.tp(*VIEWS["pump"], 90, 32)
         S.wait(1500)
         S.shot("pump-and-gate", "left: a Pump over a pool with a tank unit on top holding water; right: a tank unit, a wooden "
                                 "fluid pipe and a Flood Gate with water flooded around the gate")
@@ -243,7 +248,7 @@ def build():
                    r"block data: 0L", 60)
         S.wait(3000)
         water_near(S, "11: the Flood Gate placed water around itself", 15, -1, z - 3, 20, 2, z + 3)
-        S.tp(10, 6, 76, 0, 40)
+        S.tp(*VIEWS["iron"], 90, 38)
         S.wait(1500)
         S.shot("iron-tanks", "Iron Tanks lanes: round trips through an Iron Tank, a Pump with an Iron Tank on top of it, an Iron "
                              "Tank behind a wooden fluid pipe and a Flood Gate with water around the gate")

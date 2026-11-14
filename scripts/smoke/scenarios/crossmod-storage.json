@@ -49,7 +49,12 @@
    "do": "cmd",
    "run": [
     "fill {X-4} {Y-8} {Z-8} {X+16} {Y-1} {Z+96} minecraft:stone",
-    "fill {X-4} {Y} {Z-8} {X+16} {Y+8} {Z+96} minecraft:air"
+    "fill {X-4} {Y} {Z-8} {X+26} {Y+14} {Z+48} minecraft:air",
+    "fill {X-4} {Y} {Z+49} {X+26} {Y+14} {Z+96} minecraft:air",
+    "setblock {X+13} {Y+8} {Z+13} minecraft:barrier",
+    "setblock {X+13} {Y+8} {Z+41} minecraft:barrier",
+    "setblock {X+21} {Y+7} {Z+57} minecraft:barrier",
+    "setblock {X+13} {Y+8} {Z+76} minecraft:barrier"
    ]
   },
   {
@@ -191,12 +196,12 @@
   {
    "do": "tp",
    "at": [
-    10,
-    6,
-    12
+    13,
+    9,
+    13
    ],
-   "yaw": 0,
-   "pitch": 40
+   "yaw": 90,
+   "pitch": 38
   },
   {
    "do": "wait",
@@ -592,12 +597,12 @@
   {
    "do": "tp",
    "at": [
-    8,
-    6,
-    38
+    13,
+    9,
+    41
    ],
-   "yaw": 0,
-   "pitch": 45,
+   "yaw": 90,
+   "pitch": 38,
    "nodes": [
     "1.21.1",
     "26.1.2",
@@ -730,12 +735,12 @@
   {
    "do": "tp",
    "at": [
-    10,
-    6,
-    54
+    21,
+    8,
+    57
    ],
-   "yaw": 0,
-   "pitch": 40,
+   "yaw": 90,
+   "pitch": 32,
    "nodes": [
     "1.21.1",
     "26.1.2",
@@ -1072,12 +1077,12 @@
   {
    "do": "tp",
    "at": [
-    10,
-    6,
+    13,
+    9,
     76
    ],
-   "yaw": 0,
-   "pitch": 40,
+   "yaw": 90,
+   "pitch": 38,
    "nodes": [
     "26.1.2",
     "26.2"

@@ -110,7 +110,8 @@ public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
             newBlueprint.computeKey();
             GlobalSavedDataSnapshots.get(level).addSnapshot(newBlueprint);
 
-            String resolvedName = (newName != null && !newName.isBlank()) ? newName.trim() : Snapshot.Header.editableName(header.name);
+            String resolvedName = (newName != null && !newName.isBlank())
+                    ? newName.trim() : Snapshot.Header.editableName(header.name);
             ItemSnapshot usedItem = BCBuildersItems.BLUEPRINT_USED.get();
             Snapshot.Header newHeader = new Snapshot.Header(
                     newBlueprint.key,

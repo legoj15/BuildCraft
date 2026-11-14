@@ -529,6 +529,23 @@ function Test-NodeFilter($Step, [string]$Node) {
     return (@($Step.nodes) -contains $Node) -or (@($Step.nodes) -contains (Get-NodeMcVersion $Node))
 }
 
+# True when a reply line is vanilla's parse-error context (Commands.performCommand): the input itself when the error sits
+# in its first ten characters, else "..." and the input from ten characters before the error, in both cases running to
+# the end of the input and then a translated "<--[HERE]". Anchored on that shape, so a run-time refusal that merely ends
+# with the command's last words ("already peaceful") does not count.
+function Test-ParseErrorEcho([string]$Command, $Lines) {
+    foreach ($line in $Lines) {
+        $l = [string]$line
+        if ($l.StartsWith($Command)) { return $true }
+        if (-not $l.StartsWith('...')) { continue }
+        $rest = $l.Substring(3)
+        for ($p = 1; $p -le $Command.Length - 10; $p++) {
+            if ($rest.StartsWith($Command.Substring($p))) { return $true }
+        }
+    }
+    return $false
+}
+
 function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
     $detail = ''
     $shot = $null
@@ -550,11 +567,8 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # a named marker "Clock ... is already at time marker minecraft:noon").
                 # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language,
                 # unless the command never parsed (an unknown gamerule, a bad coordinate): vanilla then echoes the input up to
-                # the error and everything after it, so a reply line holds the command's last characters verbatim. A
-                # refusal at run time ("already set") does not echo the input.
-                $expanded = (Expand-Coords $c).TrimStart('/')
-                $tail = $expanded.Substring($expanded.Length - [Math]::Min($expanded.Length, 10))
-                $parseError = @($r.output | Where-Object { ([string]$_).Contains($tail) }).Count -gt 0
+                # the error and everything after it (see Test-ParseErrorEcho). A refusal at run time ("already set") does not.
+                $parseError = Test-ParseErrorEcho (Expand-Coords $c).TrimStart('/') @($r.output)
                 $idempotent = -not $parseError -and $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)\b'
                 $benign = $stepBenign -or $idempotent -or ($Lang -eq 'en_us' -and
                     (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker')

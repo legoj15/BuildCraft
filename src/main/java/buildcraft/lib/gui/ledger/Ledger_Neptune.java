@@ -14,9 +14,7 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import buildcraft.lib.gui.BCGraphics;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 import buildcraft.api.core.render.ISprite;
@@ -26,6 +24,7 @@ import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IGuiElement;
 import buildcraft.lib.gui.IInteractionElement;
+import buildcraft.lib.gui.elem.ScrollWindow;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 /** Base class for collapsible side panels (ledgers) in the GUI.
@@ -35,6 +34,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     public static final int LEDGER_GAP = 4;
     public static final int CLOSED_WIDTH = 2 + 16 + LEDGER_GAP;   // 22
     public static final int CLOSED_HEIGHT = LEDGER_GAP + 16 + LEDGER_GAP; // 24
+
+    /** Width the panel spends on everything but the text column: border (2) + icon (16) + gap + text + gap + border (2). */
+    private static final int OVERHEAD = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2; // 28
+
+    /** Wrapped lines one wheel notch moves a scrolling ledger by. */
+    private static final int LINES_PER_NOTCH = 3;
+    private static final int SCROLLBAR_WIDTH = 2;
+    private static final int SCROLLBAR_MIN_THUMB = 8;
+    private static final int SCROLLBAR_TRACK_COLOUR = 0x66000000;
+    private static final int SCROLLBAR_THUMB_COLOUR = 0xDDFFFFFF;
 
     // 16x16 nine-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT).
     // Scale = 16.0 so the 4/16 = 0.25 normalized border maps to 4 actual pixels.
@@ -82,6 +91,23 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     /** Persisted open/closed flag for this ledger. State survives GUI close/reopen and MC restarts.
      *  Key is {@code (parentScreenClass, ledgerClass)}, mirroring 1.12.2's per-GUI per-ledger scoping. */
     private final buildcraft.lib.gui.config.GuiPropertyBoolean openProperty;
+    /** One wrapped line of the open panel: the title's lines first, then each entry's lines. {@code entry} is null
+     *  for a title line, so the colour and shadow are read live (an entry's colour may be dynamic). */
+    private record LayoutLine(String text, TextEntry entry) {}
+
+    /** The wrapped text for one set of texts at one text-column width. Kept until either changes, so sizing and
+     *  drawing share one result and nothing is re-split every frame. */
+    private record Layout(List<String> texts, int textWidth, List<LayoutLine> lines) {}
+
+    private Layout layout;
+
+    /** Pixels the content is scrolled up inside the panel, 0 to {@link #scrollMax()}. */
+    private int scrollOffset;
+
+    /** The room under the viewport the last sizing was made for; when it changes (a recipe viewer put buttons where
+     *  the ledger was) the next frame sizes the panel again. */
+    private int sizedForAvailable = -1;
+
     /** True iff the persisted value was open at construction time. Applied on first
      *  {@link #drawBackground} — deferred so subclass {@code appendText} calls land first
      *  and {@link #calculateMaxSize()} sees the full content. */
@@ -101,6 +127,8 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         this.lastHeight = other.lastHeight;
         this.interpWidth = other.interpWidth;
         this.interpHeight = other.interpHeight;
+        // Clamped against this instance's own content the next time it draws.
+        this.scrollOffset = other.scrollOffset;
         // Recalculate max size for this instance's text content,
         // then clamp current values so they don't exceed the new max
         this.calculateMaxSize();
@@ -166,9 +194,13 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return entry;
     }
 
-    /** Clear all text entries. Used by LedgerHelp to dynamically swap content on hover. */
+    /** Clear all text entries. Used by LedgerHelp to dynamically swap content on hover. The new content starts at
+     *  its top, so the scroll position is dropped too, and so is the cached layout: its lines point at the old entries,
+     *  so entries added again with the same text but another colour or shadow must not be drawn from it. */
     protected void clearTextEntries() {
         textEntries.clear();
+        layout = null;
+        scrollOffset = 0;
     }
 
     public String getTitle() {
@@ -179,21 +211,113 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return 0xFF_E1_C9_2F;
     }
 
-    /** Recalculate the maximum size based on text entries and title, with word wrapping. */
+    /** The title followed by every entry's current text: what the layout is built from, and how a change in a
+     *  dynamic entry is noticed. */
+    private List<String> snapshotTexts() {
+        List<String> texts = new ArrayList<>(textEntries.size() + 1);
+        texts.add(getTitle());
+        for (TextEntry entry : textEntries) {
+            String text = entry.getText();
+            texts.add(text == null ? "" : text);
+        }
+        return texts;
+    }
+
+    /** Pixel width of the column the text wraps to at the current {@link #maxWidth}. */
+    private int textColumnWidth() {
+        return Math.max(1, (int) maxWidth - OVERHEAD);
+    }
+
+    private static int lineStep(Font font) {
+        return font.lineHeight + 3;
+    }
+
+    /** Wraps the title, then each entry, to {@code textWidth} with {@link LedgerTextWrap}. Cached: a call with the
+     *  same texts and width returns the earlier result. */
+    private Layout layoutFor(List<String> texts, int textWidth) {
+        Layout cached = layout;
+        if (cached != null && cached.textWidth() == textWidth && cached.texts().equals(texts)) return cached;
+
+        Font font = Minecraft.getInstance().font;
+        List<LayoutLine> lines = new ArrayList<>();
+        for (String line : LedgerTextWrap.wrap(texts.get(0), textWidth, font::width)) {
+            lines.add(new LayoutLine(line, null));
+        }
+        int entries = Math.min(textEntries.size(), texts.size() - 1);
+        for (int i = 0; i < entries; i++) {
+            TextEntry entry = textEntries.get(i);
+            for (String line : LedgerTextWrap.wrap(texts.get(i + 1), textWidth, font::width)) {
+                lines.add(new LayoutLine(line, entry));
+            }
+        }
+        layout = new Layout(texts, textWidth, lines);
+        return layout;
+    }
+
+    /** GUI pixels of screen height this ledger may use: all of it, less the strip a recipe viewer keeps at the
+     *  bottom of the left side (see {@link LedgerViewport}). Right-side ledgers reserve nothing.
+     *
+     *  <p>The viewer is asked with the left edge the ledger has at its FULL width, not the animated one: the width is
+     *  fixed by the text (see {@link #calculateMaxSize()}, which sets it before the height), so the answer cannot flip
+     *  while the panel opens and closes and drag the height back and forth. */
+    private int availableHeight() {
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        if (expandPositive) return Math.max(0, screenHeight);
+        int fullWidthLeftX = (int) Math.floor(positionAnchor.getX() - maxWidth);
+        return Math.max(0, screenHeight - LedgerViewport.leftBottomReserve(fullWidthLeftX));
+    }
+
+    /** Lowers {@link #maxHeight} to {@link #availableHeight()} (never below the closed height); the content past it
+     *  scrolls. Called by {@link #calculateMaxSize()}; a subclass that sizes itself may call it after its own sizing. */
+    protected final void applyHeightCap() {
+        int available = availableHeight();
+        sizedForAvailable = available;
+        maxHeight = Math.max(CLOSED_HEIGHT, Math.min(maxHeight, available));
+    }
+
+    /** How far the content can scroll: its wrapped height less the viewport the open panel leaves for it. */
+    private int scrollMax() {
+        Layout current = layout;
+        if (current == null) return 0;
+        int contentHeight = current.lines().size() * lineStep(Minecraft.getInstance().font);
+        return Math.max(0, contentHeight - viewportHeight());
+    }
+
+    /** Height of the part of the open panel that shows text: the panel less the gap above and below. */
+    private int viewportHeight() {
+        return (int) maxHeight - LEDGER_GAP * 2;
+    }
+
+    /** The layout for the current texts. Sizes the panel again first when the texts, or the room under the viewport,
+     *  changed since the last sizing, so a dynamic entry that grows while open still fits. */
+    private Layout currentLayout() {
+        List<String> texts = snapshotTexts();
+        int available = availableHeight();
+        Layout cached = layout;
+        if (cached == null || available != sizedForAvailable || !cached.texts().equals(texts)) {
+            sizedForAvailable = available;
+            calculateMaxSize();
+        }
+        return layoutFor(texts, textColumnWidth());
+    }
+
+    /** Recalculate the maximum size from the title and text entries: the width that fits the longest line (up to the
+     *  gap beside the window), then the height of the text wrapped to that width (up to the screen height; the
+     *  rest scrolls). */
     protected void calculateMaxSize() {
         Font font = Minecraft.getInstance().font;
         int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
 
-        // Non-text overhead: 2 (border) + 16 (icon) + 4 (gap) ... text ... + 4 (gap) + 2 (border)
-        int overhead = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2;
+        List<String> texts = snapshotTexts();
 
-        // Compute the natural (unwrapped) ledger width from the widest text entry
-        int naturalMaxTextWidth = font.width(getTitle());
-        for (TextEntry entry : textEntries) {
-            int w = font.width(entry.getText());
-            if (w > naturalMaxTextWidth) naturalMaxTextWidth = w;
+        // Compute the natural (unwrapped) ledger width from the widest line of the title and the entries
+        int naturalMaxTextWidth = 0;
+        for (String text : texts) {
+            for (String line : text.split("\n", -1)) {
+                naturalMaxTextWidth = Math.max(naturalMaxTextWidth, font.width(line));
+            }
         }
-        int naturalWidth = overhead + naturalMaxTextWidth;
+        int naturalWidth = OVERHEAD + naturalMaxTextWidth;
 
         // Cap the total ledger width so it doesn't extend past the screen edge.
         // Use the stable anchor position (not affected by -getWidth() offset).
@@ -209,17 +333,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         maxWidth = Math.min(naturalWidth, maxAllowedWidth);
         maxWidth = Math.max(CLOSED_WIDTH, maxWidth);
 
-        // Derive the text area width from the capped maxWidth for wrapping
-        int textAreaWidth = Math.max(40, (int) maxWidth - overhead);
-
-        // Height: title (always 1 line) + wrapped text entries
-        int textHeight = font.lineHeight + 3; // title
-        for (TextEntry entry : textEntries) {
-            List<FormattedCharSequence> wrapped = font.split(Component.literal(entry.getText()), textAreaWidth);
-            int lineCount = Math.max(1, wrapped.size());
-            textHeight += (font.lineHeight + 3) * lineCount;
-        }
-        maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + textHeight + LEDGER_GAP);
+        // Height: the title and entries wrapped to the text column this width leaves. drawBackground draws from the
+        // same layout, so what is measured here is exactly what is drawn.
+        Layout wrapped = layoutFor(texts, textColumnWidth());
+        maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + wrapped.lines().size() * lineStep(font) + LEDGER_GAP);
+        applyHeightCap();
         // The on-screen shift is no longer derived here (from the static max height) — it is
         // recomputed every frame from the live drawn height in drawBackground(), via
         // computeUpShift(), so it stays correct throughout the open/collapse animation.
@@ -303,13 +421,13 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
         // Keep an overflowing ledger on screen by shifting the WHOLE ledger up by one shared
         // amount, derived from the height we're actually drawing this frame (interpHeight) and
-        // the live screen height. Background, icon, text, scissor and the getY() hit-box all
+        // the height available to this side (the screen less any reserved strip; maxHeight is
+        // already capped to it, so a capped ledger sits exactly between y=0 and that height).
+        // Background, icon, text, scissor and the getY() hit-box all
         // subtract this same value, so they move rigidly together; and because it tracks the
         // animated height it relaxes to 0 as the ledger collapses. anchorY is the raw, unshifted
         // anchor (positionLedgerStart never routes through our shifted getY()).
-        currentShift = computeUpShift(
-            positionLedgerStart.getY(), interpHeight,
-            Minecraft.getInstance().getWindow().getGuiScaledHeight());
+        currentShift = computeUpShift(positionLedgerStart.getY(), interpHeight, availableHeight());
 
         // Compute draw X directly from interpWidth (not via getX()→getWidth()) to
         // guarantee both rawX and w use the same interpolation value.
@@ -363,28 +481,14 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         double iconY = positionLedgerIconStart.getY() - currentShift;
         drawIcon(iconX, iconY, graphics);
 
+        // The wrapped text, shared with calculateMaxSize(); sizes the panel again first if a dynamic entry changed.
+        // Taken after drawIcon on purpose: a subclass may swap its title and body there (LedgerHelp does on its first
+        // icon draw), and the first frame of a ledger restored open must draw the new text, not the one it started with.
+        Layout content = currentLayout();
+
         // Draw text content if expanded enough
         if (interpWidth > CLOSED_WIDTH + 10) {
-            Font font = Minecraft.getInstance().font;
-            int textAreaWidth = (int) maxWidth - 2 - 16 - LEDGER_GAP - LEDGER_GAP - 2;
-            // Text starts after the icon: icon(16) + gap(4)
-            int textX = (int) iconX + 16 + LEDGER_GAP;
-            int textY = (int) iconY + 1;
-
-            // Draw title (not wrapped — titles are always short)
-            graphics.text(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
-            textY += font.lineHeight + 3;
-
-            // Draw text entries with word wrapping
-            for (TextEntry entry : textEntries) {
-                int entryColour = entry.getColour() | 0xFF000000;
-                List<FormattedCharSequence> wrapped = font.split(
-                    Component.literal(entry.getText()), textAreaWidth);
-                for (FormattedCharSequence line : wrapped) {
-                    graphics.text(font, line, textX, textY, entryColour, entry.dropShadow);
-                    textY += font.lineHeight + 3;
-                }
-            }
+            drawContent(graphics, content, (int) iconX, (int) iconY, scissorY, scissorY + scissorH);
         }
 
         graphics.disableScissor();
@@ -397,6 +501,64 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         }
     }
 
+    /** Draws the wrapped title and entries, shifted up by the scroll offset, inside the caller's scissor, and the
+     *  scroll bar when the content is taller than the viewport. {@code iconX}/{@code iconY} are the icon's
+     *  top-left (the text column starts beside it); {@code viewTop}/{@code viewBottom} bound the visible rows so
+     *  lines scrolled out of sight are not submitted at all. */
+    private void drawContent(BCGraphics graphics, Layout content, int iconX, int iconY, int viewTop, int viewBottom) {
+        Font font = Minecraft.getInstance().font;
+        int step = lineStep(font);
+        // Text starts after the icon: icon(16) + gap(4)
+        int textX = iconX + 16 + LEDGER_GAP;
+
+        int scrollMax = scrollMax();
+        scrollOffset = Mth.clamp(scrollOffset, 0, scrollMax);
+
+        int textY = iconY + 1 - scrollOffset;
+        for (LayoutLine line : content.lines()) {
+            if (textY + font.lineHeight > viewTop && textY < viewBottom) {
+                TextEntry entry = line.entry();
+                if (entry == null) {
+                    graphics.text(font, line.text(), textX, textY, getTitleColour() | 0xFF000000, true);
+                } else {
+                    graphics.text(font, line.text(), textX, textY, entry.getColour() | 0xFF000000, entry.dropShadow);
+                }
+            }
+            textY += step;
+        }
+
+        if (scrollMax > 0) {
+            // Along the inner edge of the text column, in the margin the panel keeps there anyway.
+            int barX = textX + textColumnWidth() + 1;
+            int trackHeight = viewportHeight();
+            graphics.fill(barX, iconY, barX + SCROLLBAR_WIDTH, iconY + trackHeight, SCROLLBAR_TRACK_COLOUR);
+            int contentHeight = trackHeight + scrollMax;
+            int thumbHeight = Math.max(SCROLLBAR_MIN_THUMB, Math.min(trackHeight, trackHeight * trackHeight / contentHeight));
+            int thumbTop = iconY + (trackHeight - thumbHeight) * scrollOffset / scrollMax;
+            graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, SCROLLBAR_THUMB_COLOUR);
+        }
+    }
+
+    /** True while the panel is open far enough to show text and its content is taller than its viewport. */
+    protected final boolean canScroll() {
+        return currentDifference == 1 && interpWidth > CLOSED_WIDTH + 10 && scrollMax() > 0;
+    }
+
+    /** Scrolls the content by {@value #LINES_PER_NOTCH} lines per wheel notch; positive {@code amountY} (wheel up)
+     *  moves toward the top. */
+    protected final void scrollByWheel(double amountY) {
+        int step = lineStep(Minecraft.getInstance().font);
+        scrollOffset = Mth.clamp(scrollOffset + ScrollWindow.wheelRows(amountY) * LINES_PER_NOTCH * step, 0, scrollMax());
+    }
+
+    /** The wheel scrolls an open ledger whose content is taller than its viewport while the mouse is over it. A wheel
+     *  event with no vertical movement scrolls nothing, so it is left for whatever sits beneath. */
+    @Override
+    public boolean onMouseScrolled(double amountY) {
+        if (amountY == 0 || !canScroll() || !contains(gui.mouse)) return false;
+        scrollByWheel(amountY);
+        return true;
+    }
 
     /** Override in subclasses to draw a 16x16 icon. */
     protected void drawIcon(double x, double y, BCGraphics graphics) {
@@ -411,6 +573,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             boolean nowOpen;
             if (currentDifference == 1) {
                 currentDifference = -1;
+                scrollOffset = 0;
                 nowOpen = false;
             } else {
                 currentDifference = 1;

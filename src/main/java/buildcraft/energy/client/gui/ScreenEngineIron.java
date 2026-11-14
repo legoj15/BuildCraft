@@ -21,6 +21,7 @@ import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerEngine;
@@ -184,9 +185,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String str = LocaleUtil.localize("block.buildcraftunofficial.engine_iron");
-        int strWidth = font.width(str);
-        int titleX = (imageWidth - strWidth) / 2;
-        graphics.text(font, str, titleX, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, str, 6, 6, imageWidth - 12, 0xFF404040);
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 

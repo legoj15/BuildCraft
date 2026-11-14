@@ -7,6 +7,28 @@
  ],
  "steps": [
   {
+   "label": "load the rig's chunks",
+   "do": "cmd",
+   "run": [
+    "gamemode creative @p",
+    "?forceload add {X-16} {Z-12} {X+16} {Z+8}"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    0,
+    1,
+    3
+   ],
+   "yaw": 180,
+   "pitch": 12
+  },
+  {
+   "do": "wait",
+   "ms": 3000
+  },
+  {
    "label": "clear the area, noon, clear weather",
    "do": "cmd",
    "run": [

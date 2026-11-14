@@ -1,5 +1,6 @@
 {
   "name": "replacer-remove",
+  "englishOnly": true,
   "description": "Replacer Remove (issue #38). An Architect scans a 3x3 stone pad with five grass tufts into a blueprint; the Replacer gets the blueprint, then a captured short-grass schematic with the 'to' slot empty. Shots: blueprint only (button reads Replace, greyed), grass in 'from' (button reads Remove, preview without tufts, summary '5 x Short Grass removed'), after clicking Remove (blueprint item swapped for the new one, echoed).",
   "base": [0, 150, 0],
   "steps": [

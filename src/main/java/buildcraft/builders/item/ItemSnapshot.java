@@ -107,7 +107,7 @@ public class ItemSnapshot extends Item {
         if (header == null) {
             tooltip.accept(Component.translatable("item.blueprint.blank").withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.accept(Component.literal(header.name).withStyle(ChatFormatting.GRAY));
+            tooltip.accept(Component.literal(Header.displayInGui(header.name)).withStyle(ChatFormatting.GRAY));
             if (flag.isAdvanced()) {
                 // Advanced-only (F3+H) diagnostic lines. The values are raw identifiers, so only the
                 // labels are translatable — each key carries its own separator so locales that want a

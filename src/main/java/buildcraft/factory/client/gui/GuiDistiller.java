@@ -19,6 +19,7 @@ import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
@@ -131,7 +132,8 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String titleStr = title.getString();
-        graphics.text(font, titleStr, 8, 6, 0xFF404040, false);
+        // Left-aligned as ever, but boxed to the 90 px clear of the gas tank (x 8..98).
+        GuiTextFit.drawLeft(graphics, font, titleStr, 8, 6, 90, 0xFF404040);
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 

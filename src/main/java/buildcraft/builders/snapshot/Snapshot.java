@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
@@ -309,6 +310,10 @@ public abstract class Snapshot {
     }
 
     public static class Header {
+        /** The literal the Architect Table's name field defaulted to before it defaulted to empty. Saves from
+         *  that era carry it in stored names, so display code maps it back to the "unnamed" placeholder. */
+        public static final String LEGACY_UNNAMED = "<unnamed>";
+
         public final Key key;
         public final UUID owner;
         public final Date created;
@@ -355,6 +360,22 @@ public abstract class Snapshot {
 
         public Player getOwnerPlayer(Level level) {
             return level.getPlayerByUUID(owner);
+        }
+
+        /** The name to show a player for a stored snapshot name: a blank name, or the legacy
+         *  {@link #LEGACY_UNNAMED} default older tables wrote, reads as the translated "unnamed" placeholder.
+         *  Anything else is the name itself. Stored data and sorting keep the raw name. */
+        public static String displayInGui(String name) {
+            return name == null || name.isBlank() || LEGACY_UNNAMED.equals(name)
+                ? Component.translatable("gui.buildcraftunofficial.snapshot.unnamed").getString()
+                : name;
+        }
+
+        /** The name to put in an editable name field: the stored name, but empty for none and for the legacy
+         *  {@link #LEGACY_UNNAMED} default, which is no name. Unlike {@link #displayInGui} it never yields the
+         *  translated placeholder, which the player would have to delete before typing. */
+        public static String editableName(String name) {
+            return name == null || name.isBlank() || LEGACY_UNNAMED.equals(name) ? "" : name;
         }
 
         @Override

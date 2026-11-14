@@ -127,12 +127,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     /** Shows the world coordinates of the column under the cursor, at the 1.12.2 position — GUI-local
-     *  (130, 130), dark grey, no drop shadow — matching BC8's {@code GuiZonePlanner}. */
+     *  (130, 130), dark grey, no drop shadow — matching BC8's {@code GuiZonePlanner}. The one format key
+     *  lets each language own the separators (zh_cn uses full-width colons). */
     @Override
     protected void drawForegroundLayer() {
         if (hoverPos != null) {
             BCGraphics g = GuiIcon.getGuiGraphics();
-            String txt = "X: " + hoverPos.getX() + " Y: " + hoverPos.getY() + " Z: " + hoverPos.getZ();
+            Component txt = Component.translatable("gui.buildcraftunofficial.zone_planner.pointer",
+                    hoverPos.getX(), hoverPos.getY(), hoverPos.getZ());
             g.text(font, txt, 130, 130, 0xFF_40_40_40, false);
         }
     }
@@ -378,14 +380,16 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         //?}
     }
 
+    // GuiBC8 has already offered the wheel to the ledgers, once, so a ledger that scrolls its own text over the mouse
+    // took it before the map zoom does.
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    protected boolean mouseScrolledBelowLedgers(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (inMap(mouseX, mouseY) && scrollY != 0) {
             double step = scrollY > 0 ? ZOOM_STEP_IN : 1.0 / ZOOM_STEP_OUT;
             camera.zoomBy(step);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolledBelowLedgers(mouseX, mouseY, scrollX, scrollY);
     }
 
     //? if >=1.21.10 {

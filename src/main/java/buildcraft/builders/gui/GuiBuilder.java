@@ -17,6 +17,7 @@ import net.minecraft.world.item.Items;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
@@ -188,10 +189,10 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
 
-        // Title — centered over the main section.
+        // Title — centered over the main section. Boxed to x 7..169 so the centre stays at 88 (the
+        // middle of the 176 px main panel) while a wide title stops before the blueprint overlay.
         String titleStr = title.getString();
-        int titleWidth = font.width(titleStr);
-        graphics.text(font, titleStr, (SIZE_X - titleWidth) / 2, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 7, 6, 162, 0xFF404040);
 
         // Progress readout — visible only while something is actively being broken/placed.
         // gui.leftToBreak / gui.leftToPlace are bare labels that already ship translated, so we

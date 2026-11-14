@@ -2,6 +2,12 @@
   "name": "underwater-laser",
   "base": [0, 150, 0],
   "steps": [
+    { "label": "load the rig's chunks and stand in them (a run that starts away from the base would fail the first fill)", "do": "cmd", "run": [
+      "gamemode creative @p",
+      "?forceload add {X-12} {Z-12} {X+12} {Z+12}"
+    ] },
+    { "do": "tp", "at": [0, 1, 8], "yaw": 180, "pitch": 12 },
+    { "do": "wait", "ms": 3000 },
     { "label": "clear the area and build a glass tank full of water", "do": "cmd", "run": [
       "fill {X-6} {Y-1} {Z-7} {X+6} {Y+6} {Z+6} minecraft:air",
       "fill {X-3} {Y-1} {Z-3} {X+3} {Y+5} {Z+3} minecraft:glass hollow",

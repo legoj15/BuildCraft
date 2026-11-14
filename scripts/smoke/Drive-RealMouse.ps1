@@ -11,7 +11,7 @@
   zone-planner-drag sets the Zone Planner up and then waits 45 s (pan) and 90 s (paint stroke) for a real drag, which the
   bridge cannot make (README, "Real-mouse checks"). This script is the "agent with desktop control": run it in the same
   interactive Windows session as the runner, beside it, pointing at the run's output folder. It waits for the shot that
-  opens each window (10-zp-start.png for the pan, 17-zp-before.png for the stroke), brings the game window to the front
+  opens each window (the zp-start shot for the pan, zp-before for the stroke), brings the game window to the front
   and sends real input (SetCursorPos + mouse_event, so the window system sees held buttons):
 
     pan     left down on the map, drag right, left up.
@@ -20,7 +20,11 @@
 
   Positions are framebuffer pixels of the scenario's 1600x900 window at GUI scale 3, mapped through the window's client
   origin. The window can be larger than the screen (Server1's is 1024 wide): the drags stay inside the part that shows.
-  What the drag DID is judged from the runner's shots (13-zp-panned, 19-zp-after) and the layer echo, not here.
+  What the drag DID is judged from the runner's shots (zp-panned, zp-after) and the layer check, not here.
+
+  Each finished gesture leaves a marker file in -OutDir (real-mouse-zp-pan.done, real-mouse-zp-stroke.done,
+  real-mouse-lib-scrollbar.done: the scenario's name and the UTC time). The scenarios' `expectFile` steps wait for it, so a
+  run nobody drove fails instead of passing on its screenshots alone. A gesture that threw writes no marker.
 
 .EXAMPLE
   pwsh scripts/smoke/Drive-RealMouse.ps1 -OutDir build/smoke/zpd/zone-planner-drag/26.3-fabric
@@ -63,15 +67,26 @@ public static class BcRealMouse {
 
 $notBefore = (Get-Date).AddSeconds(-60)
 $LEFT_DOWN = 0x0002; $LEFT_UP = 0x0004; $RIGHT_DOWN = 0x0008; $RIGHT_UP = 0x0010
+# $Name is the shot's name without its step number ('zp-before'): the runner prefixes every shot with its step index,
+# which moves whenever a step is added to the scenario, so the cue is matched as NN-<name>.png.
 function Wait-ForFile([string]$Name) {
-    $path = Join-Path $OutDir $Name
     $deadline = (Get-Date).AddMinutes($WaitMinutes)
     while ((Get-Date) -lt $deadline) {
         # A shot from an earlier run into the same folder is not the cue: only one written around or after this start.
-        if ((Test-Path -LiteralPath $path) -and (Get-Item -LiteralPath $path).Length -gt 0 -and (Get-Item -LiteralPath $path).LastWriteTime -ge $notBefore) { Start-Sleep -Milliseconds 400; return }
+        $hit = Get-ChildItem -LiteralPath $OutDir -Filter "*-$Name.png" -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match "^\d+-$([regex]::Escape($Name))\.png$" -and $_.Length -gt 0 -and $_.LastWriteTime -ge $notBefore }
+        if ($hit) { Start-Sleep -Milliseconds 400; return }
         Start-Sleep -Milliseconds 500
     }
-    throw "timed out waiting for $path"
+    throw "timed out waiting for a <step>-$Name.png shot in $OutDir"
+}
+
+function Write-DoneMarker([string]$Gesture) {
+    # The runner's `expectFile` step waits for this file: the proof, for a check with no server-side state (a scrollbar),
+    # that this script really sent its input. Written only after the gesture finished (never from a `finally`).
+    $path = Join-Path $OutDir "real-mouse-$Gesture.done"
+    "$Scenario $Gesture $([datetime]::UtcNow.ToString('o'))" | Set-Content -LiteralPath $path -Encoding utf8
+    Write-Host "marker: $path"
 }
 
 function Get-GameWindow {
@@ -113,8 +128,8 @@ $rect = New-Object BcRealMouse+RECT
 if ($Scenario -eq 'library-scrollbar-drag') {
     # The Library's list (framebuffer x 456-923, y 183-512 at the 1600x900 window, GUI scale 3) has its scrollbar in the
     # strip at the right edge; its thumb starts at the top. Hold left on the thumb, drag to the bottom, release.
-    Write-Host "waiting for 10-lib-before.png in $OutDir"
-    Wait-ForFile '10-lib-before.png'
+    Write-Host "waiting for the lib-before shot in $OutDir"
+    Wait-ForFile 'lib-before'
     $h = Get-GameWindow
     $origin = New-Object BcRealMouse+POINT
     [BcRealMouse]::ClientToScreen($h, [ref]$origin) | Out-Null
@@ -129,11 +144,12 @@ if ($Scenario -eq 'library-scrollbar-drag') {
     } finally {
         if ([BcRealMouse]::GetAsyncKeyState(0x01) -band 0x8000) { [BcRealMouse]::mouse_event($LEFT_UP, 0, 0, 0, [UIntPtr]::Zero) }
     }
+    Write-DoneMarker 'lib-scrollbar'
     return
 }
 
-Write-Host "waiting for 10-zp-start.png in $OutDir"
-Wait-ForFile '10-zp-start.png'
+Write-Host "waiting for the zp-start shot in $OutDir"
+Wait-ForFile 'zp-start'
 $h = Get-GameWindow
 [BcRealMouse]::GetClientRect($h, [ref]$rect) | Out-Null
 $origin = New-Object BcRealMouse+POINT
@@ -150,9 +166,10 @@ try {
 } finally {
     if ([BcRealMouse]::GetAsyncKeyState(0x01) -band 0x8000) { [BcRealMouse]::mouse_event($LEFT_UP, 0, 0, 0, [UIntPtr]::Zero) }
 }
+Write-DoneMarker 'zp-pan'
 
-Write-Host 'waiting for 17-zp-before.png'
-Wait-ForFile '17-zp-before.png'
+Write-Host 'waiting for the zp-before shot'
+Wait-ForFile 'zp-before'
 $h = Get-GameWindow
 Write-Host "stroke: $(Set-GameFront $h)"
 try {
@@ -180,4 +197,5 @@ try {
     if ([BcRealMouse]::GetAsyncKeyState(0x01) -band 0x8000) { [BcRealMouse]::mouse_event($LEFT_UP, 0, 0, 0, [UIntPtr]::Zero) }
     if ([BcRealMouse]::GetAsyncKeyState(0x02) -band 0x8000) { [BcRealMouse]::mouse_event($RIGHT_UP, 0, 0, 0, [UIntPtr]::Zero) }
 }
+Write-DoneMarker 'zp-stroke'
 Write-Host 'done'

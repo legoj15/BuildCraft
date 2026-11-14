@@ -20,6 +20,7 @@ import net.minecraft.world.level.material.Fluids;
 import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
@@ -70,9 +71,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         // Draw "Tank" title centered at the top
         String titleStr = title.getString();
-        int titleWidth = font.width(titleStr);
-        int titleX = (imageWidth - titleWidth) / 2;
-        graphics.text(font, titleStr, titleX, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 6, imageWidth - 12, 0xFF404040);
 
         // Draw "Inventory" label above the player inventory
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);

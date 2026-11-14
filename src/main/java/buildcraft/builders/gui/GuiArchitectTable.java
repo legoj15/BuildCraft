@@ -4,14 +4,19 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders.gui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import net.minecraft.client.gui.components.EditBox;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 //? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
@@ -97,6 +102,9 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         nameField = new EditBox(this.font, leftPos + NAME_X, topPos + NAME_Y, NAME_W, NAME_H,
                 Component.empty());
         nameField.setValue(menu.getTileName());
+        // An unnamed table has an empty name; the hint says so (in the player's language) instead of the box
+        // sitting blank, and disappears the moment a name is typed.
+        nameField.setHint(Component.translatable("gui.buildcraftunofficial.snapshot.unnamed"));
         nameField.setFocused(false);
         nameField.setResponder(newText -> {
             // Send name update to server
@@ -246,21 +254,50 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
             );
         } else if (noArea) {
             // A table placed without markers or a volume box beside it has nothing to scan: say so, not a blank panel.
-            Component none = Component.translatable("gui.architect.preview.noArea");
-            int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
-            graphics.text(font, none, centreX - font.width(none) / 2,
-                topPos + PREVIEW_Y + (PREVIEW_H - font.lineHeight) / 2, 0xFFE0E0E0, false);
+            drawPreviewMessage(graphics, "gui.architect.preview.noArea");
         } else if (tooLargeForLivePreview) {
             // No live preview is made of an area over the cap (scanning it for every open screen would stall the
             // server), and a blank panel reads as a broken screen: say why. A finished scan's snapshot still draws.
-            Component tooLarge = Component.translatable("gui.architect.preview.tooLarge");
-            Component waiting = Component.translatable("gui.architect.preview.waiting");
-            int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
-            int lineGap = font.lineHeight + 2;
-            int firstY = topPos + PREVIEW_Y + (PREVIEW_H - (lineGap + font.lineHeight)) / 2;
-            graphics.text(font, tooLarge, centreX - font.width(tooLarge) / 2, firstY, 0xFFE0E0E0, false);
-            graphics.text(font, waiting, centreX - font.width(waiting) / 2, firstY + lineGap, 0xFFE0E0E0, false);
+            drawPreviewMessage(graphics, "gui.architect.preview.tooLarge", "gui.architect.preview.waiting");
         }
+    }
+
+    /**
+     * Draws a preview-panel message: each string wraps on its own to {@code PREVIEW_W - 8}, then all lines share the
+     * panel's line gap, each centred horizontally, the whole block centred vertically — so the widest translation
+     * stays inside the 160 px panel instead of sitting on its borders. Every current English string is a single
+     * line, so it lands exactly where the old fixed arithmetic put it (one-line block at +53, two-line at +48/+59).
+     * A line still wider than the panel after wrapping is shrunk to it by {@link GuiTextFit}, and a block taller than
+     * the panel starts at the panel's top instead of rising above it.
+     */
+    private void drawPreviewMessage(BCGraphics graphics, String... langKeys) {
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        for (String key : langKeys) {
+            lines.addAll(font.split(Component.translatable(key), PREVIEW_W - 8));
+        }
+        int lineGap = font.lineHeight + 2;
+        int top = topPos + PREVIEW_Y;
+        int lineY = Math.max(top, top + (PREVIEW_H - (lines.size() - 1) * lineGap - font.lineHeight) / 2);
+        int centreX = leftPos + PREVIEW_X + PREVIEW_W / 2;
+        for (FormattedCharSequence line : lines) {
+            int width = font.width(line);
+            if (width > PREVIEW_W) {
+                GuiTextFit.drawCentred(graphics, font, plainText(line), leftPos + PREVIEW_X, lineY, PREVIEW_W, 0xFFE0E0E0);
+            } else {
+                graphics.text(font, line, centreX - width / 2, lineY, 0xFFE0E0E0, false);
+            }
+            lineY += lineGap;
+        }
+    }
+
+    /** The characters of a wrapped line without their styles, for {@link GuiTextFit}'s string-based drawing. */
+    private static String plainText(FormattedCharSequence line) {
+        StringBuilder text = new StringBuilder();
+        line.accept((index, style, codePoint) -> {
+            text.appendCodePoint(codePoint);
+            return true;
+        });
+        return text.toString();
     }
 
     private int previewRefreshCounter = 0;
@@ -296,6 +333,6 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         // Draw the custom titles if needed
         String titleStr = this.title.getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 111, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 111, imageWidth - 12, 0xFF404040);
     }
 }

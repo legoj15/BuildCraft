@@ -43,9 +43,20 @@ param(
     [ValidateSet('', 'neoforge', 'fabric')]
     [string]$Loader = '',
     # Game language for the run (options.txt `lang`), e.g. ru_ru or zh_cn for a text-overflow look. Re-applied every
-    # run, so a run without it is back in English. Steps that click by `widgetText` only work in English.
+    # run, so a run without it is back in English. Steps that click by `widgetText` only work in English: a scenario
+    # marked "englishOnly" is reported as skipped under any other language.
     [ValidatePattern('^[a-z]{2,3}_[a-z]{2,3}$')]
     [string]$Lang = 'en_us',
+    # Optional dev-runtime mods to load (aliases, e.g. -Mods a,b), passed to Gradle as -PwithMods=a,b next to the
+    # recipe-viewer switch; added to the scenario's own "mods" list.
+    [string[]]$Mods = @(),
+    # Play this save instead of the scenario's own (or bc-smoke), copied from -SaveSeed (default: the scenario's saveSeed,
+    # else bc-smoke) when it is missing. With -FreshSave it is deleted first, so every run starts from the seed as it
+    # is: what a comparison between runs (the same scenario bare and with mods) needs, since a scenario that builds on
+    # the world an earlier run left (item entities, loaded chunks) would otherwise start from a different state.
+    [string]$Save = '',
+    [string]$SaveSeed = '',
+    [switch]$FreshSave,
     [string]$Scenario,
     [string]$OutDir,
     # The McDevBridge checkout whose build/libs holds the node jars. $env:MCDEVBRIDGE_ROOT overrides the default, for a
@@ -70,6 +81,7 @@ Set-StrictMode -Version 3.0
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 # `pwsh -File ... -Nodes a,b` hands the list over as ONE string; accept both forms.
 $Nodes = @($Nodes | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$Mods = @($Mods | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 # A node's loader and Minecraft line come from its name: "26.3" is NeoForge on 26.3, "26.3-fabric" Fabric on 26.3.
 function Get-NodeLoader([string]$Node) { if ($Node -like '*-fabric') { 'fabric' } else { 'neoforge' } }
@@ -86,14 +98,26 @@ $BridgeFile = Join-Path $HOME '.mcdevbridge/bridge.json'
 $SaveName = 'bc-smoke'
 # A scenario may play a world of its own ("save"); "saveSeed" names the save to copy it from when it is missing (a
 # scenario without a seed needs its save copied in by hand first, e.g. a world carried over from another node).
-$PlaySave = if ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
-$PlaySeed = if ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } else { $null }
+$PlaySave = if ($Save) { $Save } elseif ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
+$PlaySeed = if ($SaveSeed) { $SaveSeed } elseif ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } elseif ($Save) { $SaveName } else { $null }
+# A save name is one folder under saves/: a separator or ".." would point the fresh-save delete somewhere else.
+if ($null -ne $PlaySeed) { $PlaySeed = $PlaySeed.Trim() }
+$PlaySave = "$PlaySave".Trim()
+foreach ($candidate in @($PlaySave, $PlaySeed) | Where-Object { $null -ne $_ }) {
+    if (-not $candidate -or $candidate.IndexOfAny([char[]]'\/:*?') -ge 0 -or $candidate.Trim('.') -eq '') { throw "'$candidate' is not a save name (one folder name, no path)" }
+}
+$WantFresh = $FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)
+if ($WantFresh -and $PlaySave -eq $SaveName) { Write-Host "note: a fresh save applies to a named save only; this run plays '$SaveName' as it is" }
+# Optional dev-runtime mods: the scenario's "mods" aliases plus -Mods, in that order, each once. Empty = no -PwithMods.
+$ModAliases = @(@(if ($ScenarioData.PSObject.Properties['mods']) { $ScenarioData.mods }) + $Mods |
+        ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
 
 # ── Bridge plumbing ──────────────────────────────────────────────────────────
 
 $script:Bridge = $null          # the pin: bridge.json as read at boot (url, token, pid, port) plus the client's startFileTime
 $script:Spawned = $null
 $script:PinViolation = $null    # why the pin broke, once it has; the scenario stops there
+$script:ScenarioStarted = [datetime]::MinValue   # when the current node's steps began: `expectFile` ignores older files
 
 function Assert-BridgePinned {
     # Every bridge call first proves the run still talks to the client it pinned at boot (SmokeGuard.ps1). The pinned url
@@ -280,6 +304,8 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     # without being asked; a Fabric one loads a viewer only when told to, so it is always named there.
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
     elseif ((Get-NodeLoader $Node) -eq 'fabric') { $gradleArgs += '-Precipe_viewer=jei' }
+    # A scenario's "mods" and -Mods name optional dev-runtime mods by alias; the Gradle side resolves them.
+    if ($ModAliases.Count) { $gradleArgs += "-PwithMods=$($ModAliases -join ',')" }
     $proc = Start-Process -FilePath (Join-Path $Repo 'gradlew.bat') -ArgumentList $gradleArgs -WorkingDirectory $Repo `
         -RedirectStandardOutput (Join-Path $LogDir 'gradle.out.log') -RedirectStandardError (Join-Path $LogDir 'gradle.err.log') `
         -WindowStyle Hidden -PassThru
@@ -294,6 +320,17 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     $gradleLog = Join-Path $LogDir 'gradle.out.log'
     $script:Bridge = Wait-Until {
         if ($proc.HasExited) { throw "FATAL: runClient exited early (code $($proc.ExitCode)); see $LogDir" }
+        # A mod set the loader refuses (a mod that wants another version of a library, a missing dependency): Fabric Loader
+        # shows its error window and the process stays alive, so the wait for bridge.json would run out the whole
+        # boot budget with the smoke lock held. The loader's own message is in the console log; say it now.
+        if (Test-Path $gradleLog) {
+            $refusal = @(Get-Content -LiteralPath $gradleLog -Tail 400 -ErrorAction SilentlyContinue |
+                    Where-Object { $_ -match 'Incompatible mod set|FormattedException|ModResolutionException|ModLoadingException' })
+            if ($refusal.Count) {
+                $why = @(Get-Content -LiteralPath $gradleLog -Tail 400 | Where-Object { $_ -match '^\s+- Mod |Mod .* (is incompatible|requires|depends)' } | Select-Object -First 4) -join ' | '
+                throw "FATAL: the mod loader refused this mod set: $($refusal[0].Trim())$(if ($why) { " [$why]" })"
+            }
+        }
         if (-not (Test-Path $BridgeFile) -or (Get-Item $BridgeFile).LastWriteTimeUtc -le $before) { return $null }
         # A read can catch the file mid-write: the parse throws and the next poll retries.
         $info = Get-Content -Raw $BridgeFile | ConvertFrom-Json
@@ -472,6 +509,18 @@ function Test-LoaderFilter($Item, [string]$Node) {
     return @($Item.loaders) -contains (Get-NodeLoader $Node)
 }
 
+function Get-SkipReason([string]$Node) {
+    # Why the whole scenario is not run on this node, or $null when it is. Not a failure either way: the scenario needs
+    # something this node or this language does not have.
+    if (-not (Test-LoaderFilter $ScenarioData $Node)) { return "runs on $(@($ScenarioData.loaders) -join ', ') only" }
+    # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
+    # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)
+    if ($Lang -ne 'en_us' -and $ScenarioData.PSObject.Properties['englishOnly'] -and $ScenarioData.englishOnly) {
+        return "runs in English only (it clicks by widget text; this run is -Lang $Lang)"
+    }
+    return $null
+}
+
 function Test-NodeFilter($Step, [string]$Node) {
     if (-not (Test-LoaderFilter $Step $Node)) { return $false }
     if (-not $Step.PSObject.Properties['nodes']) { return $true }
@@ -485,25 +534,29 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
     $shot = $null
     switch ($Step.do) {
         'cmd' {
-            $unclassified = 0
+            # "benign": true says every command of the step may legitimately fail (nothing to kill, nothing changed on a
+            # re-run): such a failure is not an error, in every language. `success` is the bridge's language-neutral result
+            # code, so any other failed command fails the step the same way in English and under -Lang.
+            $stepBenign = $Step.PSObject.Properties['benign'] -and [bool]$Step.benign
             foreach ($c in @($Step.run)) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
                 $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
-                # The world persists between runs, so "already so" replies are success for a rig builder.
+                # The world persists between runs, so "already so" replies are success for a rig builder. The reply TEXT is
+                # translated under -Lang, so the English wording is read in English runs only; a scenario meant for -Lang
+                # says it with "benign" or '?'.
                 # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...", and for
                 # a named marker "Clock ... is already at time marker minecraft:noon").
-                $benign = (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker'
+                # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language.
+                $idempotent = $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)\b'
+                $benign = $stepBenign -or $idempotent -or ($Lang -eq 'en_us' -and
+                    (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker')
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {
-                    # Under -Lang the game answers in that language, so an "already so" reply cannot be told from a real
-                    # failure by its text. The step goes on and says how many replies it could not classify; a rig that
-                    # really is missing shows in the steps that use it.
-                    if ($Lang -ne 'en_us') { $unclassified++; continue }
                     throw "command failed: $(Expand-Coords $c) -> $(@($r.output) -join ' | ')"
                 }
             }
-            $detail = "$(@($Step.run).Count) command(s)$(if ($unclassified) { ", $unclassified failure repl$(if ($unclassified -eq 1) { 'y' } else { 'ies' }) not classified (translated)" })"
+            $detail = "$(@($Step.run).Count) command(s)"
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
         }
@@ -677,6 +730,23 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             catch { throw "$($_.Exception.Message) (open: '$(try { Get-ScreenClass } catch { '?' })')" }
             $detail = $got
         }
+        # A file some other process leaves in this node's output folder: how a check the game cannot see learns that the
+        # outside driver really acted (Drive-RealMouse.ps1 writes real-mouse-*.done when its gesture is finished). A file
+        # from before this node's steps began is an earlier run's and does not count.
+        'expectFile' {
+            $rel = [string]$Step.path
+            $root = [System.IO.Path]::GetFullPath($NodeOut)
+            $full = [System.IO.Path]::GetFullPath($rel, $root)
+            if ([System.IO.Path]::IsPathRooted($rel) -or -not $full.StartsWith($root.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw "expectFile path '$rel' must be relative and stay inside the run's output folder"
+            }
+            $timeout = if ($Step.PSObject.Properties['timeoutSec']) { $Step.timeoutSec } else { 10 }
+            Wait-Until {
+                $f = Get-Item -LiteralPath $full -ErrorAction SilentlyContinue
+                $f -and $f.Length -gt 0 -and $f.LastWriteTime -ge $script:ScenarioStarted
+            } $timeout "file '$rel' in the run's output folder, written after this node's steps began" 500 | Out-Null
+            $detail = "${rel}: $((Get-Content -Raw -LiteralPath $full).Trim())"
+        }
         # Esc into the game window: opens the pause menu from the world (see Send-GameEscape). Follow with
         # `click` "Save and Quit to Title" to leave the world.
         'pause' {
@@ -704,6 +774,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
 function Invoke-Scenario([string]$Node, [string]$NodeOut) {
     $results = @()
     $i = 0
+    $script:ScenarioStarted = Get-Date
     foreach ($step in @($ScenarioData.steps)) {
         $i++
         if (-not (Test-NodeFilter $step $Node)) { continue }
@@ -743,9 +814,9 @@ if ($lock.Recovered) { Write-Host "[smoke lock] took over a stale lock: its pid 
 $summary = @()
 try {
     foreach ($node in $Nodes) {
-        if (-not (Test-LoaderFilter $ScenarioData $node)) {
-            # Not a failure: the scenario needs something only the other loader's dev runtime has.
-            $why = "runs on $(@($ScenarioData.loaders) -join ', ') only"
+        $why = Get-SkipReason $node
+        if ($why) {
+            # Not a failure: the scenario needs something only the other loader's dev runtime has, or English.
             Write-Host "[$node] skipped: scenario '$($ScenarioData.name)' $why"
             $summary += [pscustomobject]@{ node = $node; steps = 0; failed = 0; bcErrors = 0; fatal = $null; skipped = $why; report = $null }
             continue
@@ -767,6 +838,12 @@ try {
             $haveSave = Test-Path $savePath
             if ($PlaySave -ne $SaveName) {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
+                # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
+                if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
+                    Remove-Item -Recurse -Force -LiteralPath $playPath
+                } elseif ($WantFresh -and (Test-Path -LiteralPath $playPath)) {
+                    throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
+                }
                 if (-not (Test-Path $playPath)) {
                     $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }
                     if (-not $seedPath -or -not (Test-Path $seedPath)) {
@@ -808,7 +885,7 @@ try {
         # First run: adopt the save the menus just created (same rule as before booting).
         if ($prep) {
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
-            if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1) {
+            if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) {
                 Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName
             }
         }

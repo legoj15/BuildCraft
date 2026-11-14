@@ -8,6 +8,7 @@
  ],
  "save": "bc-upgrade",
  "saveSeed": "bc-smoke",
+ "englishOnly": true,
  "steps": [
   {
    "label": "load the rig's chunks",

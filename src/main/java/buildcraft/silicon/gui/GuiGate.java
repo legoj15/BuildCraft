@@ -11,6 +11,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
@@ -256,7 +257,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
 
         // Center the gate name at the top
         String titleStr = menu.gate.variant.getLocalizedName().getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 6, imageWidth - 12, 0xFF404040);
 
         // Offset the 'Inventory' label down into the correct place
         String invStr = Component.translatable("container.inventory").getString();

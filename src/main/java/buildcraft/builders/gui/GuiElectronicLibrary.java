@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.GuiTextFit;
 import buildcraft.lib.gui.elem.GuiElementScrollbar;
 import buildcraft.lib.gui.elem.ScrollWindow;
 import buildcraft.lib.gui.elem.ScrolledList;
@@ -290,7 +291,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                         LIST_X + LIST_W, rowY + LIST_ROW_H, 0x80_55_55_55);
             }
             int colour = isSelected ? 0xFF_FF_FA_A0 : 0xFF_E0_E0_E0;
-            String text = key.header == null ? key.toString() : key.header.name;
+            String text = key.header == null ? key.toString() : Snapshot.Header.displayInGui(key.header.name);
             // Clip to the row so a long name can't run over the scrollbar (1.7.10 trimmed the same way).
             graphics.text(font, font.plainSubstrByWidth(text, LIST_W), LIST_X, rowY, colour, false);
             rowY += LIST_ROW_H;
@@ -300,7 +301,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         // stratum via drawMenuOverlayLayer), consistent with the snapshot list above that already
         // draws unconditionally.
         String titleStr = Component.translatable("block.buildcraftunofficial.library").getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+        GuiTextFit.drawCentred(graphics, font, titleStr, 6, 6, imageWidth - 12, 0xFF404040);
     }
 
     /** Selects the snapshot under the cursor (left button only). @return true if a list row was clicked. */
@@ -322,8 +323,9 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     // Same signature on every node, so no directive: the wheel over the list panel or the scrollbar scrolls the list.
+    // GuiBC8 has already offered the wheel to the ledgers (a long one scrolls its text first), once, before this runs.
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    protected boolean mouseScrolledBelowLedgers(double mouseX, double mouseY, double scrollX, double scrollY) {
         double x = mouseX - leftPos, y = mouseY - topPos;
         if (x >= LIST_HELP_X && x < SCROLL_X + SCROLL_W && y >= SCROLL_Y && y < SCROLL_Y + SCROLL_H) {
             refreshList();
@@ -332,7 +334,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 return true;
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolledBelowLedgers(mouseX, mouseY, scrollX, scrollY);
     }
 
     //? if >=1.21.10 {

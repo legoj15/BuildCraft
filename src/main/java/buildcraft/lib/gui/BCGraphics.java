@@ -194,6 +194,36 @@ public final class BCGraphics {
     }*/
     //?}
 
+    // ── pose-stack scaling (GuiTextFit) ─────────────────────────────────────────
+    /**
+     * Pushes a uniform {@code scale} about the fixed point ({@code originX}, {@code originY}) onto the pose
+     * stack: that point stays put, everything else moves toward or away from it. Every push must be matched
+     * by exactly one {@link #popScale()} before the frame ends — an unbalanced stack breaks every later draw.
+     */
+    public void pushScale(float scale, float originX, float originY) {
+        //? if >=1.21.10 {
+        raw.pose().pushMatrix();
+        raw.pose().translate(originX, originY);
+        raw.pose().scale(scale, scale);
+        raw.pose().translate(-originX, -originY);
+        //?} else {
+        /*// 1.21.1 pose() is a 3D PoseStack: pushPose/popPose, and translate/scale take a z component.
+        raw.pose().pushPose();
+        raw.pose().translate(originX, originY, 0.0F);
+        raw.pose().scale(scale, scale, 1.0F);
+        raw.pose().translate(-originX, -originY, 0.0F);*/
+        //?}
+    }
+
+    /** Pops the matrix pushed by the matching {@link #pushScale(float, float, float)}. */
+    public void popScale() {
+        //? if >=1.21.10 {
+        raw.pose().popMatrix();
+        //?} else {
+        /*raw.pose().popPose();*/
+        //?}
+    }
+
     //? if >=1.21.10 {
     public void blitSprite(RenderPipeline pipeline, TextureAtlasSprite sprite, int x, int y, int width, int height) {
         raw.blitSprite(pipeline, sprite, x, y, width, height);

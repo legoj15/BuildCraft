@@ -8,11 +8,24 @@
  ],
  "steps": [
   {
-   "label": "load the rig's chunks",
+   "label": "window 854x480 (GUI scale 2: a 427x240 screen, which the ledger-tab positions assume)",
+   "do": "window",
+   "width": 854,
+   "height": 480
+  },
+  {
+   "label": "creative",
    "do": "cmd",
    "run": [
-    "gamemode creative @p",
-    "?forceload add {X-14} {Z-8} {X+14} {Z+4}"
+    "gamemode creative @p"
+   ]
+  },
+  {
+   "label": "load the rig's chunks",
+   "do": "cmd",
+   "benign": true,
+   "run": [
+    "forceload add {X-14} {Z-8} {X+14} {Z+4}"
    ]
   },
   {
@@ -32,13 +45,14 @@
   {
    "label": "floor, noon, empty inventory",
    "do": "cmd",
+   "benign": true,
    "run": [
-    "?difficulty peaceful",
-    "?time set 6000",
-    "?weather clear",
-    "?fill {X-14} {Y-1} {Z-8} {X+14} {Y-1} {Z+4} minecraft:smooth_stone",
-    "?fill {X-14} {Y} {Z-8} {X+14} {Y+4} {Z+4} minecraft:air",
-    "?clear @p"
+    "difficulty peaceful",
+    "time set 6000",
+    "weather clear",
+    "fill {X-14} {Y-1} {Z-8} {X+14} {Y-1} {Z+4} minecraft:smooth_stone",
+    "fill {X-14} {Y} {Z-8} {X+14} {Y+4} {Z+4} minecraft:air",
+    "clear @p"
    ]
   },
   {
@@ -193,8 +207,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.47,
+   "fy": 0.2,
    "allowMiss": true
   },
   {
@@ -279,8 +293,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.4,
+   "fy": 0.45,
    "allowMiss": true
   },
   {
@@ -1038,8 +1052,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.52,
+   "fy": 0.34,
    "allowMiss": true
   },
   {
@@ -1178,8 +1192,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.52,
+   "fy": 0.34,
    "allowMiss": true
   },
   {
@@ -1786,8 +1800,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.37,
+   "fy": 0.33,
    "allowMiss": true
   },
   {
@@ -2125,8 +2139,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.42,
+   "fy": 0.33,
    "allowMiss": true
   },
   {
@@ -2593,8 +2607,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.43,
+   "fy": 0.27,
    "allowMiss": true
   },
   {
@@ -2880,8 +2894,8 @@
   {
    "label": "point at an outlined element",
    "do": "hover",
-   "fx": 0.5,
-   "fy": 0.3,
+   "fx": 0.41,
+   "fy": 0.265,
    "allowMiss": true
   },
   {
@@ -2963,8 +2977,8 @@
   {
    "label": "open the chapters overlay",
    "do": "click",
-   "x": 250,
-   "y": 3,
+   "x": 232,
+   "y": 4,
    "allowMiss": true
   },
   {

@@ -1,5 +1,6 @@
 {
   "name": "line8",
+  "englishOnly": true,
   "description": "The 2026-09-26 in-client checklist (now closed): render sites, machine GUIs with button tooltips, the guide book.",
   "base": [0, 150, 0],
   "steps": [

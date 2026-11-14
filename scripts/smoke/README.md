@@ -25,8 +25,9 @@ error, or BuildCraft logged an ERROR.
 ## What it does per node
 
 1. **Own game folder.** `versions/<node>/run-smoke/` via `-PbcRunDir=run-smoke` (gitignored). The hand-used `run/`
-   with its extra mods and saves is never read or written (on Fabric the folder is passed as `--gameDir`, so
-   `run/logs/latest.log` is still the log file: Loom fixes the working directory). The node's newest McDevBridge jar is copied into
+   with its extra mods and saves is never read, and its mods, config, saves and options are never written. On Fabric one
+   file is: the folder is passed as `--gameDir`, but Loom fixes the working directory, so every smoke run still writes
+   (and rolls) `run/logs/latest.log`. The node's newest McDevBridge jar is copied into
    `run-smoke/mods` (searched in McDevBridge's `versions/<node>/build/libs` and its worktrees; `-BuildBridge` builds
    one if none exists). `options.txt` is written once: no pause on focus loss, no accessibility onboarding, sound
    off. The GUI scale is re-applied every run: the scenario's `guiScale`, else 2 (so screenshots line up across runs),
@@ -85,7 +86,7 @@ pwsh $r/Receive-FromServer1.ps1 -Path BuildCraft-<tag>/build/smoke/<name> -Desti
 
 Start long runs with `run_in_background` and redirect the console to a file; the poller only sleeps. `Invoke-SmokeBatch.ps1`
 runs the scenarios of one node one after the other (`-Scenarios a,b`, `-Skip`, `-Lang ru_ru,zh_cn`) and writes
-`batch-summary.md` and `batch-summary.json`; a pass over 34 scenarios of `26.3-fabric` took 47 minutes with no lock wait. The default list leaves out `zone-planner-drag`, `library-scrollbar-drag` and `pipe-sounds`: they only wait and take shots while a real-mouse driver or a listener does the work, so name them in `-Scenarios` when that company is there.
+`batch-summary.md` and `batch-summary.json`; the default list is 42 scenarios (a pass over 34 of them on `26.3-fabric` took 47 minutes with no lock wait). A scenario the runner skips (a `loaders` mismatch, or `englishOnly` under `-Lang`) shows as SKIPPED, not as a failure. The default list leaves out `zone-planner-drag`, `library-scrollbar-drag` and `pipe-sounds`: they wait while a real-mouse driver or a listener does the work (the first two fail their `expectFile` step without the driver), so name them in `-Scenarios` when that company is there. Console files are `<scenario>.console.log`, or `<scenario>-<lang>.console.log` under a language other than `en_us`.
 
 Traps (each one cost a run):
 - **`-NoDaemon` is not optional there.** A client is a child of the Gradle daemon that serves the build. An idle daemon from
@@ -103,7 +104,7 @@ Traps (each one cost a run):
   OpenAL device" and goes silent), so sound-only checks (`pipe-sounds`) cannot be done there.
 - `C:` is shared with other work: a node's first build and first boot take a few GB, so look at the free space first (keep
   15 GB) and delete `build/smoke/<name>` folders you have read.
-- A whole run folder is 100 MB for 34 scenarios; fetch single scenario folders when only a failure matters.
+- A whole run folder was 100 MB for 34 scenarios (the default list is 42 now); fetch single scenario folders when only a failure matters.
 - The McDevBridge copy is yours to patch for a diagnosis (the bridge reports a screen handler's exception only as
   `ReportedException: mouseClicked event handler`; logging `t` in `BridgeServer.dispatch` puts the cause in the client log),
   but re-sync it with `-Force` and rebuild the jar afterwards.
@@ -119,11 +120,13 @@ Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset);
 Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
 covers the NeoForge node and its Fabric twin, `"26.2-fabric"` only the twin) and `"loaders": ["neoforge"]` (run only on
 that loader). A top-level `"loaders"` skips the whole scenario on the other loader's nodes (reported as skipped, not as a
-failure): use it when a scenario needs a mod only one loader's dev runtime has.
+failure): use it when a scenario needs a mod only one loader's dev runtime has. A top-level `"englishOnly": true` skips
+the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
+widget text.
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). `echo: true` copies the last command's reply into the report (state dumps). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`) count as success, since the world persists between runs |
+| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`) are forgiven by the command itself, in every language. `echo: true` copies the last command's reply into the report (state dumps) |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at`; `exact` | look at a block's centre from the current eye position (standing eye height); the report records what the crosshair hit. `exact: true` aims at the point `at` itself (a box corner, an addon slot) |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |
@@ -143,17 +146,23 @@ failure): use it when a scenario needs a mod only one loader's dev runtime has.
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
+| `expectFile` | `path` (relative to the node's output folder, the one holding the screenshots), `timeoutSec` (default 10) | fails unless that file shows up, non-empty and written after the node's steps began (an earlier run's file does not count); the report's Detail holds its content. How a check the game cannot see learns that an outside driver acted: `Drive-RealMouse.ps1` writes `real-mouse-*.done` when its gesture is finished (see "Real-mouse checks"). The path may not leave the output folder |
 | `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed on GLFW nodes). 26.3 runs SDL3, which drops key messages for an unfocused window: when the post does not open the menu within 4 s, the runner brings the game window to the front (an Alt tap lifts Windows' foreground lock) and presses a real Esc, and the step's Detail says so. Follow with `click` "Save and Quit to Title" to leave the world |
 | `inWorld` | `timeoutSec` (default 300) | waits until the player is in a world with no screen open: after `click` "Play Selected World" |
 
 `-Lang <code>` (e.g. `ru_ru`, `zh_cn`) runs the scenario in that language, for a text-overflow look: screenshots
 and tooltips come out translated. Two things read English and so behave differently:
 - `click`/`hover` by `widgetText` match the English text, so a scenario meant for `-Lang` targets widgets by position
-  or slot (`scenarios/lang-overflow.json`).
-- The game answers commands in the run's language, so the runner cannot tell an "already so" reply from a failure.
-  Under `-Lang` a failing `cmd` command no longer ends its step: the step's Detail counts the replies it could not
-  classify, and a rig that really is missing shows in the steps that use it. `waitCmd`'s `match` still reads the
-  translated reply.
+  or slot (`scenarios/lang-overflow.json`). A scenario that does click by `widgetText` (without `allowMiss`) carries a
+  top-level `"englishOnly": true`: under any `-Lang` other than `en_us` the runner reports it as skipped, the same way
+  it reports a `loaders` mismatch, and the batch shows SKIPPED. Runs in English are unaffected.
+- The game answers commands in the run's language, so the runner cannot read an "already so" reply to tell it from a
+  failure. It does not need to: a failed command (the bridge's language-neutral `success: false`) fails its step under
+  `-Lang` exactly as in English, unless the command is optional (`?`) or the step has `allowFail` or `benign: true`
+  (the commands of that step may legitimately fail on a re-run). The English reply-text forgiveness applies to English
+  runs only, so a scenario meant for `-Lang` marks its own re-run failures (`generators/gen_lang_overflow.py` does).
+  `waitCmd`'s `match` still reads the translated reply: give a scenario meant for `-Lang` a language-neutral one (NBT
+  keys, numbers).
 The node's `bc-smoke` world must already exist (the first run creates it through the English menus).
 
 A top-level `"options": {"renderDistance": 4}` pins keys of the run's `options.txt` (`zone-planner-far-map` does); `renderDistance` goes
@@ -163,9 +172,11 @@ A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`
 A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
 runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
 
-A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise.
+A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run (the seed must be present and be another save; the runner refuses and keeps the save otherwise); `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
 
 A scenario that needs an optional dev-runtime mod names its Gradle switch in a top-level `"gradleProperties": ["withGuideMe"]`; each becomes a `-P` flag on the node's `runClient` (`guideme-guide` uses it to load GuideME and page through the generated guide).
+
+A scenario can also name optional dev-runtime mods by alias in a top-level `"mods": ["alias", ...]`, and the runner takes `-Mods alias,alias` for the same thing on the command line. When either is present (the two lists are joined, each alias once) the runner adds `-PwithMods=alias,alias` to the node's `runClient` Gradle command, next to the recipe-viewer switch. The runner only passes the property: the aliases are resolved by the Gradle side, and a name it does not know is its error to report.
 
 A scenario that visits a second world names it in a top-level `"extraSaves": ["bc-smoke-b"]`: before boot the runner copies the `bc-smoke` save to each missing name (so the first run on a node, which only creates `bc-smoke`, needs a second run). The world list is sorted by last played, so the world just left is entry one and `click` `x:213, y:100` picks entry two (see `scenarios/marker-relog.json`, which leaves a world, joins the other and comes back).
 
@@ -185,8 +196,10 @@ re-run them with `python`, never hand-edit their JSON. Each echo step's label sa
 every widget tooltip, clicking by position only, so it runs under `-Lang ru_ru` and `-Lang zh_cn`. Run it in English
 too and compare same-named shots: a title wider than its window, a ledger title cut at the ledger's edge, a help entry
 that runs off the bottom of the screen. Ledger tabs are not vanilla widgets; the generator computes their positions
-from each screen's size at the runner's 854x480 window and GUI scale 2 (its docstring has the rule), and the runner
-deletes `config/buildcraft/gui_state.json` before each boot so every ledger starts closed.
+from each screen's size at 854x480 and GUI scale 2 (its docstring has the rule): the scenario's first step is a `window`
+step that sets that size, since nothing else pins it. The runner deletes `config/buildcraft/gui_state.json` before each
+boot so every ledger starts closed. The commands that may fail on a re-run (chunks already loaded, settings already set,
+nothing to clear) sit in steps flagged `benign`, so a failed command anywhere else fails the step in every language.
 
 ## Facade shading
 
@@ -253,9 +266,19 @@ comparing are whether it shows at all (the render-state nodes draw the cube's ou
 The bridge has no press-drag-release, and the Zone Planner also asks the window system whether a pan's or stroke's
 button is still held, which no synthetic event can fake. These two scenarios set the screen up and wait for a REAL
 drag: a person, or an agent with desktop control (computer use) driving the game window. `zone-planner-drag` gives 45 s
-for an empty-hand pan and then 90 s for a brush stroke, echoing the red layer before and after;
+for an empty-hand pan and then 90 s for a brush stroke, echoing the red layer before and checking it after;
 `library-scrollbar-drag` gives 45 s to drag the Electronic Library's scrollbar and needs 14 or more blueprints in the
 node's `run-smoke/snapshots-client` first (copy some from its `run-gameTestServer/snapshots-server`).
+
+Neither scenario can pass undriven. Each waits out its fixed time and then has an `expectFile` step for the marker file
+`Drive-RealMouse.ps1` leaves in the node's output folder when a gesture is finished (`real-mouse-zp-pan.done`,
+`real-mouse-zp-stroke.done`, `real-mouse-lib-scrollbar.done`; the scenario name and the UTC time inside), so a run that
+nothing drove fails there. A person or an agent driving by hand does the same: when the drag is done, create the file
+(any non-empty content). The Zone Planner has one more check that needs no marker: after the stroke it `waitCmd`s on
+`data get block <planner> layer_14` until the reply holds a `chunkX` (the layer's NBT lists one entry per painted chunk;
+an unpainted layer reads `{chunkMapping: []}`), the language-neutral proof that the stroke reached the server. The pan
+has no server-side state, so the marker and the `zp-panned` shot are all there is; the scrollbar's result is judged from
+`lib-after`.
 
 On a machine nobody sits at (Server1) `Drive-RealMouse.ps1` plays both: a second desktop run beside the runner that waits for
 the shot that opens each window, brings the game window to the front and sends the real input (SetCursorPos and
@@ -268,7 +291,7 @@ press on a slope paints a rectangle that reaches past it on screen (a first run 
 rectangle from press to release).
 
 An agent driving them by hand: a warm client reaches the first wait about 30 s after launch, so block on the shot that opens
-each window (`10-zp-start.png` for the pan, `17-zp-before.png` for the stroke, `lib-before` for the library) in the
+each window (the `zp-start` shot for the pan, `zp-before` for the stroke, `lib-before` for the library; matched by name, whatever the step number) in the
 run's folder rather than starting late. The game window may come up behind others: grant computer use the node's own
 `java.exe` path (the 1.21.x nodes run a different JDK from the 26.x ones) and bring it to the front before the first
 press. Hold left with the agent's own button-down and moves, but send right through `Send-MouseButton.ps1` (a tap
@@ -310,3 +333,33 @@ vanilla complaining about the flat world's empty generator settings; the default
 ## Plugs on a shelf: `plug-shelf`
 
 `plug-shelf` (hand-written) checks issue #180 on 1.21.10 and later (shelves): three shelves hold the pulsar, timer, light sensor, blocker, power adaptor, an oak facade, and a gate, red lens and paper as the reference look; every plug must show its face, not its edge. Two mode-less `item_display`s (the facade and a gate) are then shot from the front and from behind: each must show its panel face-on from both sides. Issue #181 adds a third, a pulsar (its piston and LEDs on the north side), and a pulsar cargo run: a creative-engine wooden pipe pulls pulsars from a chest along a stone pipe at eye level. Pipe cargo turns to face its travel direction (as in 1.12.2), so from this side view a pulsar shows its slim side, exactly as the gate, lens, facade and flat vanilla items do; the shot checks it renders. The end-chest echo only reports how many arrived.
+
+## Cross-mod pass (#186): `crossmod-*`
+
+Scenarios for BuildCraft next to other mods on the dev runtime. The mods come from `-PwithMods` aliases (`withmod.<alias>` in
+`versions/<node>/gradle.properties`, resolved by `buildSrc/.../WithMods.kt`); a scenario names them in its top-level `"mods"` and the
+runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of them are generated: edit
+`generators/gen_crossmod_*.py` (shared step builders in `generators/xmod.py`) and re-run it, never hand-edit the JSON.
+
+- **A mod world is its own world.** A mod's blocks and ores end up in the save, and a Fabric client that loads that save without the
+  mod stops at "Missing content detected!" (Fabric registry sync), which blocks quick-play. So a scenario that needs mods names a
+  `"save"` seeded from `bc-smoke` (`"saveSeed"`) and `"freshSave": true` (the save is deleted and copied from the seed on every run, so a
+  claim, a battery or a rig from an earlier run never leaks in). Never explore with mods in `bc-smoke` itself.
+- **Comparing runs.** `-Save bc-perf -SaveSeed bc-smoke -FreshSave` (runner and batch wrapper) plays a fresh copy of the seed for every
+  scenario, so the same scenario bare and with `-Mods lithium,sodium,...` starts from the same world; without it a scenario builds on
+  what the one before it left (item entities, loaded chunks) and the shots differ for that reason alone.
+- **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
+  (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
+- **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
+- **A Quarry's boxes go in with the `setblock`** (`setblock ... quarry[facing=west]{frame_init:1b,...}`): it scans its frame from
+  `onLoaded`, which a later `data merge` never runs, so a quarry given its boxes afterwards sits idle with an empty scan queue.
+
+| Scenario | Mods | What it shows |
+|---|---|---|
+| `crossmod-claims-<mod>` | opac, flan (both loaders), ftbchunks (NeoForge 26.1.2) | three rigs of Quarry, Builder, Filler, stripes pipe and a Stripes robot beside a claim: none, one that is not the owner's, one that is. Each machine and each kind of act (place, break) is probed separately. `-stranger` variants (opac, flan) claim rig B like rig C (the dev's) and give its machines to a stranger instead; `flan-admin-stranger` does that inside an admin claim (on NeoForge Flan's admin claim stops a stranger's machine but not the dev's, who is the world's owner; the leading suspect is the leased fake player carrying its owner's permission level, not instrumented) |
+| `crossmod-energy` | tre, energizedpower, techreborn (Fabric) | BuildCraft's MJ dynamo into Energized Power and Tech Reborn batteries and cables, their creative sources into BuildCraft's FE engine; the other mod's stored energy rose, the Mining Well dug |
+| `crossmod-energy-notre` | none (Fabric) | the same BuildCraft blocks with no Team Reborn Energy: they place, open their GUIs, nothing is logged |
+| `crossmod-storage` | tomsstorage, extendeddrawers, techreborn (Fabric) | item pipes in and out of Tom's Simple Storage and Extended Drawers; fluid pipes, a Pump and a Flood Gate against Tech Reborn tank units with the 81-droplets-per-millibucket rule (1000 mB, 1234 mB, a unit holding a part millibucket) |
+
+The Fabric dev run has no recipe viewer unless asked and Team Reborn Energy only through `tre` (or a mod that nests it: Tech Reborn,
+Energized Power); 1.21.x Fabric nodes carry it always.

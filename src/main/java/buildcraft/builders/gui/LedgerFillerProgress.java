@@ -43,6 +43,8 @@ public class LedgerFillerProgress extends Ledger_Neptune {
         maxWidth = Math.max(CLOSED_WIDTH, overhead + contentW);
         // Two fixed 18px progress rows below the title — drawBackground steps textY by 18.
         maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + (font.lineHeight + 3) + 2 * 18 + LEDGER_GAP);
+        // The base class's cap to the screen (and to what a recipe viewer keeps clear), which this sizing bypassed.
+        applyHeightCap();
     }
 
     @Override

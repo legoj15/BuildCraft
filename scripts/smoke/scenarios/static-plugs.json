@@ -7,6 +7,11 @@
   ],
   "steps": [
     {
+      "label": "load the rig's chunks (a run that starts away from the base would fail the first fill)",
+      "do": "cmd",
+      "run": ["gamemode creative @p", "?forceload add {X-12} {Z-8} {X+12} {Z+12}"]
+    },
+    {
       "do": "tp",
       "at": [
         0,

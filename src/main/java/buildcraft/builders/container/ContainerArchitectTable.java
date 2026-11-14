@@ -115,7 +115,7 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
 
     // Access tile name for GUI
     public String getTileName() {
-        return tile != null ? tile.name : "<unnamed>";
+        return tile != null ? tile.name : "";
     }
 
     public void setTileName(String newName) {

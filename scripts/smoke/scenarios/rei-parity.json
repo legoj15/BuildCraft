@@ -9,7 +9,7 @@
     { "do": "wait", "ms": 3000 },
     { "label": "setup", "do": "cmd", "run": [
       "difficulty peaceful", "time set 6000", "weather clear",
-      "fill {X-6} {Y-1} {Z-6} {X+6} {Y-1} {Z+6} minecraft:smooth_stone",
+      "?fill {X-6} {Y-1} {Z-6} {X+6} {Y-1} {Z+6} minecraft:smooth_stone",
       "?fill {X-6} {Y} {Z-6} {X+6} {Y+4} {Z+6} minecraft:air",
       "setblock {X-4} {Y} {Z} buildcraftunofficial:assembly_table",
       "setblock {X-3} {Y} {Z} buildcraftunofficial:autoworkbench_item",

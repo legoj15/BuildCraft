@@ -22,6 +22,7 @@
     { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
     { "name": "zp-start", "do": "shot", "look": "the Zone Planner map at its opening view" },
     { "label": "REAL MOUSE NOW (pan): empty hand, hold LEFT on the map, drag about a third of its width, release", "do": "wait", "ms": 45000 },
+    { "label": "the driver finished the pan (Drive-RealMouse.ps1 leaves this marker; a hand-driven run creates it by hand)", "do": "expectFile", "path": "real-mouse-zp-pan.done", "timeoutSec": 20 },
     { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
     { "name": "zp-panned", "do": "shot", "look": "the map shifted the way the cursor was dragged (the terrain moved with the cursor)" },
     { "label": "red layer before (expect no painted entries)", "do": "cmd", "run": [ "data get block {X} {Y} {Z+2} layer_14" ], "allowFail": true, "echo": true },
@@ -29,8 +30,9 @@
     { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
     { "name": "zp-before", "do": "shot", "look": "the Zone Planner map, red brush on the cursor, nothing painted" },
     { "label": "REAL MOUSE NOW (paint): on the map hold LEFT, drag, tap RIGHT (left still held), keep dragging, release LEFT", "do": "wait", "ms": 90000 },
+    { "label": "the driver finished the stroke (Drive-RealMouse.ps1 leaves this marker; a hand-driven run creates it by hand)", "do": "expectFile", "path": "real-mouse-zp-stroke.done", "timeoutSec": 20 },
     { "name": "zp-after", "do": "shot", "look": "one red rectangle from where left went down to where it came up (not cut short where right was tapped)" },
-    { "label": "red layer after (expect painted entries)", "do": "cmd", "run": [ "data get block {X} {Y} {Z+2} layer_14" ], "allowFail": true, "echo": true },
+    { "label": "red layer after: painted (the reply lists chunk entries, a chunkX each; an empty layer is {chunkMapping: []})", "do": "waitCmd", "run": "data get block {X} {Y} {Z+2} layer_14", "match": "chunkX", "timeoutSec": 30 },
     { "label": "put the brush back", "do": "click", "slotIndex": 0, "allowMiss": true },
     { "do": "close" },
     { "label": "remove the planner (its layers live in the block entity)", "do": "cmd", "run": [ "setblock {X} {Y} {Z+2} minecraft:air", "?clear @p" ] }

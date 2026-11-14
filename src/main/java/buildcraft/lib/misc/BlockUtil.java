@@ -320,8 +320,10 @@ public class BlockUtil {
      * mod that acts on a break without cancelling it (a tree feller, which reads the axe in the breaker's main hand and
      * fells the tree) would act on the probe as on a break, so the player asks with its main hand empty, whatever the
      * machine has put in it for the use it is about to make; the same stack is back in the hand when the answer is
-     * ({@link FakePlayerUtil#withEmptyMainHand}). A break that really happens is posted by the break itself, with the
-     * tool in the hand.
+     * ({@link FakePlayerUtil#withEmptyMainHand}). A machine's own break ({@link #breakBlockAndGetDropsWithXp}) then
+     * removes the block without posting a second event, so this probe is the only break event a protection or logging
+     * mod sees for a quarry, mining well, builder or stripes pipe. Only a robot mining as a player posts a real break
+     * (through its game mode, with the tool in the hand).
      */
     private static boolean askBreak(ServerLevel level, BlockPos pos, Player player) {
         return FakePlayerUtil.withEmptyMainHand(player,

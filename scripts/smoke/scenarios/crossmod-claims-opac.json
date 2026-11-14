@@ -164,7 +164,7 @@
     "setblock {X+14} {Y} {Z+21} buildcraftunofficial:pipe_holder",
     "data merge block {X+14} {Y} {Z+21} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
     "setblock {X+15} {Y} {Z+21} buildcraftunofficial:pipe_holder",
-    "data merge block {X+15} {Y} {Z+21} {pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
+    "data merge block {X+15} {Y} {Z+21} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
     "setblock {X+12} {Y+1} {Z+21} minecraft:redstone_block",
     "setblock {X+13} {Y+1} {Z+21} buildcraftunofficial:engine_creative[facing=down]"
    ]
@@ -207,7 +207,7 @@
     "setblock {X+14} {Y} {Z+69} buildcraftunofficial:pipe_holder",
     "data merge block {X+14} {Y} {Z+69} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
     "setblock {X+15} {Y} {Z+69} buildcraftunofficial:pipe_holder",
-    "data merge block {X+15} {Y} {Z+69} {pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
+    "data merge block {X+15} {Y} {Z+69} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
     "setblock {X+12} {Y+1} {Z+69} minecraft:redstone_block",
     "setblock {X+13} {Y+1} {Z+69} buildcraftunofficial:engine_creative[facing=down]"
    ]
@@ -250,7 +250,7 @@
     "setblock {X+14} {Y} {Z+117} buildcraftunofficial:pipe_holder",
     "data merge block {X+14} {Y} {Z+117} {pipe:{def:\"buildcraftunofficial:stone_item\"}}",
     "setblock {X+15} {Y} {Z+117} buildcraftunofficial:pipe_holder",
-    "data merge block {X+15} {Y} {Z+117} {pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
+    "data merge block {X+15} {Y} {Z+117} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
     "setblock {X+12} {Y+1} {Z+117} minecraft:redstone_block",
     "setblock {X+13} {Y+1} {Z+117} buildcraftunofficial:engine_creative[facing=down]"
    ]
@@ -475,13 +475,14 @@
    "echo": true
   },
   {
-   "label": "A: docking station X+12 with a cobblestone chest, zone = the cell X+17",
+   "label": "A: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by the dev",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+26} buildcraftunofficial:pipe_holder",
     "data merge block {X+12} {Y+1} {Z+26} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+17},yMin:{Y},zMin:{Z+26},xMax:{X+17},yMax:{Y},zMax:{Z+26}}}}}}}}}}}",
     "setblock {X+12} {Y} {Z+26} minecraft:chest",
-    "item replace block {X+12} {Y} {Z+26} container.0 with minecraft:cobblestone 16"
+    "item replace block {X+12} {Y} {Z+26} container.0 with minecraft:cobblestone 16",
+    "data merge block {X+12} {Y+1} {Z+26} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}"
    ]
   },
   {
@@ -512,13 +513,14 @@
    "ms": 500
   },
   {
-   "label": "B: docking station X+12 with a cobblestone chest, zone = the cell X+17",
+   "label": "B: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by the dev",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+74} buildcraftunofficial:pipe_holder",
     "data merge block {X+12} {Y+1} {Z+74} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+17},yMin:{Y},zMin:{Z+74},xMax:{X+17},yMax:{Y},zMax:{Z+74}}}}}}}}}}}",
     "setblock {X+12} {Y} {Z+74} minecraft:chest",
-    "item replace block {X+12} {Y} {Z+74} container.0 with minecraft:cobblestone 16"
+    "item replace block {X+12} {Y} {Z+74} container.0 with minecraft:cobblestone 16",
+    "data merge block {X+12} {Y+1} {Z+74} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}"
    ]
   },
   {
@@ -549,13 +551,14 @@
    "ms": 500
   },
   {
-   "label": "C: docking station X+12 with a cobblestone chest, zone = the cell X+17",
+   "label": "C: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by the dev",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+122} buildcraftunofficial:pipe_holder",
     "data merge block {X+12} {Y+1} {Z+122} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+17},yMin:{Y},zMin:{Z+122},xMax:{X+17},yMax:{Y},zMax:{Z+122}}}}}}}}}}}",
     "setblock {X+12} {Y} {Z+122} minecraft:chest",
-    "item replace block {X+12} {Y} {Z+122} container.0 with minecraft:cobblestone 16"
+    "item replace block {X+12} {Y} {Z+122} container.0 with minecraft:cobblestone 16",
+    "data merge block {X+12} {Y+1} {Z+122} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}"
    ]
   },
   {

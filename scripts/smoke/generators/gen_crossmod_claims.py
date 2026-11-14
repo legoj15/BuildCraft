@@ -20,8 +20,8 @@ rig's own offset:
                    at X+16..18, with a dirt block in the way that it must break first
   Filler   (z+16)  fills a 3x3x3 box at X+16..18 with cobblestone
   Stripes  (z+21)  a stripes pipe at X+15 facing east, fed cobblestone by a wooden pipe, places at X+16
-  Robot    (z+26)  a Stripes robot on a docking station at X+12 (a chest of cobblestone under it) whose Work-in-Area zone
-                   is the single cell X+17: it flies in from outside the claim and must place there
+  Robot    (z+26)  a Stripes robot on a docking station at X+12 (a chest of cobblestone under it, the pipe owned by the dev)
+                   whose Work-in-Area zone is the single cell X+17: it flies in from outside the claim and must place there
 
 Probes are `execute if/unless block` commands run as plain `cmd` steps: a `cmd` step fails when the condition is false,
 so a probe that is not what the rig expects is a failed step and a screenshot of it. The rigs run side by side, so one
@@ -35,6 +35,8 @@ from xmod import BC, DEV_UUID, Scenario, at, pipe  # noqa: E402
 import robotrig  # noqa: E402
 
 OWNER = 'ownerUUID:"%s",ownerName:"Dev"' % DEV_UUID
+OWNER_DEV = OWNER
+STRANGER = 'ownerUUID:"00000000-0000-4000-8000-0000000000ee",ownerName:"Stranger"'
 RIG_Z = {"A": 0, "B": 48, "C": 96}
 BASE = [2048, 150, 2048]    # chunk aligned (2048 = 128 * 16) so every rig starts on a chunk border
 ARCH = (6, 0, -7)           # architect table facing west, like every builder: the blueprint then keeps its orientation
@@ -45,9 +47,12 @@ CHEST = (6, 0, -5)          # a builder (x+2..4, z-1..+1) is this relative to th
 class Mod:
     """What differs between the claim mods: how a claim is made (commands, run in order) and removed."""
 
-    def __init__(self, name, loaders, foreign, own, clear, notes=""):
+    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False):
         self.name, self.loaders = name, loaders
         self.foreign, self.own, self.clear, self.notes = foreign, own, clear, notes
+        # A mod with no way to make a claim that is not the dev's from a command: rig B is claimed by the dev's own
+        # command like rig C, and its machines are owned by a stranger instead (the claim is still not their owner's).
+        self.stranger_owner = stranger_owner
 
 
 def area(z0):
@@ -55,7 +60,7 @@ def area(z0):
     return BASE[0] + 16, BASE[2] + z0, BASE[0] + 31, BASE[2] + z0 + 31
 
 
-def machines(S, tag, z0):
+def machines(S, tag, z0, OWNER):
     """The machines of one rig, placed with the platform; every one is owned by the dev player."""
     def p(x, y, z):
         return at(x, y, z0 + z)
@@ -95,20 +100,25 @@ def machines(S, tag, z0):
           *pipe(13, 0, 21 + z0, "wood_item"),
           *pipe(14, 0, 21 + z0, "stone_item"),
           "setblock %s %spipe_holder" % (p(15, 0, 21), BC),
-          'data merge block %s {pipe:{def:"%sstripes_item",beh:{direction:"EAST"}}}' % (p(15, 0, 21), BC),
+          'data merge block %s {%s,pipe:{def:"%sstripes_item",beh:{direction:"EAST"}}}' % (p(15, 0, 21), OWNER, BC),
           "setblock %s minecraft:redstone_block" % p(12, 1, 21),
           "setblock %s %sengine_creative[facing=down]" % (p(13, 1, 21), BC))
 
 
-def robot(S, tag, z0):
+def robot(S, tag, z0, station_owner):
     """A docking station (cobblestone chest below) whose Work-in-Area zone is one cell inside the claim, and a Stripes robot."""
-    S.cmd("%s: docking station X+12 with a cobblestone chest, zone = the cell X+17" % tag,
+    # A robot answers to its deployer AND to the owner of its home station's pipe (RobotProtection); a station on a pipe with no
+    # owner is "[BuildCraft]", a stranger in the dev's own claim, so the pipe gets an owner: the dev, or in a rig whose
+    # machines belong to a stranger the stranger (the dev still deploys the robot, so it is refused for the stranger's sake).
+    S.cmd("%s: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by %s" % (
+              tag, "a stranger" if station_owner == STRANGER else "the dev"),
           *robotrig.station(12, z0 + 26, ["minecraft:cobblestone 16"], "buildcraft:station.provide_items",
-                            (17, 0, z0 + 26, 17, 0, z0 + 26)))
+                            (17, 0, z0 + 26, 17, 0, z0 + 26)),
+          "data merge block %s {%s}" % (at(12, 1, z0 + 26), station_owner))
     S.steps.extend(robotrig.deploy("%s: deploy the Stripes robot" % tag, 12, z0 + 26, "boardRobotStripes"))
 
 
-def builder(S, tag, z0):
+def builder(S, tag, z0, OWNER):
     """A builder whose blueprint is put in through its GUI (the one place a blueprint enters a Builder)."""
     def p(x, y, z):
         return at(x, y, z0 + z)
@@ -202,12 +212,15 @@ def build(mod):
         S.wait(2500)
     S.tp(8, 4, 8, 0, 20)
 
+    def owner(tag):
+        return STRANGER if (tag == "B" and mod.stranger_owner) else OWNER
+
     for tag, z0 in RIG_Z.items():
-        machines(S, tag, z0)
+        machines(S, tag, z0, owner(tag))
     for tag, z0 in RIG_Z.items():
-        builder(S, tag, z0)
+        builder(S, tag, z0, owner(tag))
     for tag, z0 in RIG_Z.items():
-        robot(S, tag, z0)
+        robot(S, tag, z0, owner(tag))
 
     S.hold("minecraft:air")
     for tag, z0 in RIG_Z.items():
@@ -237,19 +250,34 @@ def build(mod):
     return S
 
 
+def ftbc_claims(a):
+    """One `ftbchunks claim` per chunk of the area, at that chunk's position (the command claims where it is run)."""
+    x1, z1, x2, z2 = a
+    return ["execute as @p positioned %d %d %d run ftbchunks claim" % (x, BASE[1], z)
+            for x in range(x1, x2, 16) for z in range(z1, z2, 16)]
+
+
 MODS = [
     # `oclaims server claim` needs a dimension from a source with no player; `oclaims claim` (as the player) claims for the dev.
     Mod("opac", None,
         foreign=lambda a: ["oclaims server claim in minecraft:overworld %d %d %d %d" % a],
         own=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % a],
         clear=lambda tag, a: []),
-    # Flan claims from the player's command (a rectangle, any height); an admin claim has no owner, so it is no one's but
-    # the server's: the dev player standing in it is a stranger. `flan setAdminClaim` acts on the claim at the player's feet.
+    # Flan: `flan add x y z x y z` claims for the player (the 512-block area is over the 500 claim blocks everyone starts
+    # with, and its refusal goes to the player's chat, not to the command's reply, so the blocks are given first). An admin claim has
+    # no owner, so the dev player is a stranger in it; `flan setAdminClaim` acts on the claim at the player's feet.
     Mod("flan", None,
-        foreign=lambda a: ["execute as @p run flan add %d -64 %d %d 320 %d" % (a[0], a[1], a[2], a[3]),
+        foreign=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
+                           "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3]),
                            "execute as @p at @p run flan setAdminClaim true"],
-        own=lambda a: ["execute as @p run flan add %d -64 %d %d 320 %d" % (a[0], a[1], a[2], a[3])],
+        own=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
+                       "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3])],
         clear=lambda tag, a: []),
+    # FTB Chunks (NeoForge 26.1.2 only): a team's claim by `ftbchunks claim`. `claim_as` only takes a known profile and a
+    # fake player's team may claim nothing, so the foreign case is the machines being owned by a stranger.
+    Mod("ftbchunks", ["neoforge"], foreign=ftbc_claims, own=ftbc_claims, clear=lambda tag, a: [], stranger_owner=True,
+        notes="Rig B's claim is the dev's team's like rig C's, and rig B's machines are owned by a stranger (its robot is "
+              "deployed by the dev but its station pipe is the stranger's)."),
 ]
 
 

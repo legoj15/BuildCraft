@@ -4,7 +4,8 @@
  "mods": [
   "tomsstorage",
   "extendeddrawers",
-  "techreborn"
+  "techreborn",
+  "irontanks"
  ],
  "loaders": [
   "fabric"
@@ -26,7 +27,7 @@
     "difficulty peaceful",
     "time set day",
     "weather clear",
-    "?forceload add {X-16} {Z-16} {X+32} {Z+64}"
+    "?forceload add {X-16} {Z-16} {X+32} {Z+100}"
    ]
   },
   {
@@ -47,8 +48,8 @@
    "label": "a fresh rig: stone floor, air above, everything of an earlier run gone",
    "do": "cmd",
    "run": [
-    "fill {X-4} {Y-8} {Z-8} {X+16} {Y-1} {Z+60} minecraft:stone",
-    "fill {X-4} {Y} {Z-8} {X+16} {Y+8} {Z+60} minecraft:air"
+    "fill {X-4} {Y-8} {Z-8} {X+16} {Y-1} {Z+96} minecraft:stone",
+    "fill {X-4} {Y} {Z-8} {X+16} {Y+8} {Z+96} minecraft:air"
    ]
   },
   {
@@ -85,7 +86,7 @@
    "label": "1: Tom's Simple Storage: the source chest is empty",
    "do": "waitCmd",
    "run": "data get block {X+5} {Y} {Z+2} Items",
-   "match": "Items: \\[\\]",
+   "match": "block data: \\[\\]$",
    "timeoutSec": 60,
    "pollMs": 1000
   },
@@ -152,7 +153,7 @@
    "label": "2: Extended Drawers: the source chest is empty",
    "do": "waitCmd",
    "run": "data get block {X+5} {Y} {Z+16} Items",
-   "match": "Items: \\[\\]",
+   "match": "block data: \\[\\]$",
    "timeoutSec": 60,
    "pollMs": 1000
   },
@@ -221,6 +222,12 @@
     "setblock {X+3} {Y} {Z+36} buildcraftunofficial:pipe_holder",
     "data merge block {X+3} {Y} {Z+36} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
     "setblock {X+3} {Y} {Z+37} buildcraftunofficial:tank"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -229,6 +236,12 @@
    "run": [
     "setblock {X+1} {Y+1} {Z+34} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+2} {Y+1} {Z+34} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -238,8 +251,6 @@
     "data merge block {X} {Y} {Z+34} {stacks:[{id:\"minecraft:water\",amount:1000}]}"
    ],
    "nodes": [
-    "1.21.10",
-    "1.21.11",
     "26.1.2",
     "26.2",
     "26.3"
@@ -261,13 +272,34 @@
    "run": "data get block {X+3} {Y} {Z+34} TankStorage",
    "match": "value: 81000L",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "3: one bucket, 1000 mB: the first BuildCraft tank is empty",
    "do": "cmd",
    "run": [
     "execute unless data block {X} {Y} {Z+34} stacks[0].amount"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "3: one bucket, 1000 mB: the first BuildCraft tank is empty",
+   "do": "cmd",
+   "run": [
+    "execute unless data block {X} {Y} {Z+34} amount0"
+   ],
+   "nodes": [
+    "1.21.1"
    ]
   },
   {
@@ -276,6 +308,12 @@
    "run": [
     "setblock {X+3} {Y+1} {Z+35} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+4} {Y+1} {Z+35} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -284,7 +322,23 @@
    "run": "data get block {X+3} {Y} {Z+37} stacks",
    "match": "amount: 1000,",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "3: one bucket, 1000 mB: the second BuildCraft tank holds 1000 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+37} amount0",
+   "match": "block data: 1000$",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1"
+   ]
   },
   {
    "label": "3: one bucket, 1000 mB: the tank unit is left with 0 droplets",
@@ -292,7 +346,13 @@
    "run": "data get block {X+3} {Y} {Z+34} TankStorage.amount",
    "match": "value: 0L",
    "timeoutSec": 30,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "4: 1234 mB, not a whole number of buckets: tanks and pipes",
@@ -309,6 +369,12 @@
     "setblock {X+3} {Y} {Z+42} buildcraftunofficial:pipe_holder",
     "data merge block {X+3} {Y} {Z+42} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
     "setblock {X+3} {Y} {Z+43} buildcraftunofficial:tank"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -317,6 +383,12 @@
    "run": [
     "setblock {X+1} {Y+1} {Z+40} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+2} {Y+1} {Z+40} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -326,8 +398,6 @@
     "data merge block {X} {Y} {Z+40} {stacks:[{id:\"minecraft:water\",amount:1234}]}"
    ],
    "nodes": [
-    "1.21.10",
-    "1.21.11",
     "26.1.2",
     "26.2",
     "26.3"
@@ -349,13 +419,34 @@
    "run": "data get block {X+3} {Y} {Z+40} TankStorage",
    "match": "value: 99954L",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "4: 1234 mB, not a whole number of buckets: the first BuildCraft tank is empty",
    "do": "cmd",
    "run": [
     "execute unless data block {X} {Y} {Z+40} stacks[0].amount"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "4: 1234 mB, not a whole number of buckets: the first BuildCraft tank is empty",
+   "do": "cmd",
+   "run": [
+    "execute unless data block {X} {Y} {Z+40} amount0"
+   ],
+   "nodes": [
+    "1.21.1"
    ]
   },
   {
@@ -364,6 +455,12 @@
    "run": [
     "setblock {X+3} {Y+1} {Z+41} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+4} {Y+1} {Z+41} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -372,7 +469,23 @@
    "run": "data get block {X+3} {Y} {Z+43} stacks",
    "match": "amount: 1234,",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "4: 1234 mB, not a whole number of buckets: the second BuildCraft tank holds 1234 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+43} amount0",
+   "match": "block data: 1234$",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1"
+   ]
   },
   {
    "label": "4: 1234 mB, not a whole number of buckets: the tank unit is left with 0 droplets",
@@ -380,7 +493,13 @@
    "run": "data get block {X+3} {Y} {Z+40} TankStorage.amount",
    "match": "value: 0L",
    "timeoutSec": 30,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "5: a tank unit holding 100000 droplets (1234 mB and 46 droplets): tanks and pipes",
@@ -397,6 +516,12 @@
     "setblock {X+3} {Y} {Z+48} buildcraftunofficial:pipe_holder",
     "data merge block {X+3} {Y} {Z+48} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
     "setblock {X+3} {Y} {Z+49} buildcraftunofficial:tank"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -404,6 +529,12 @@
    "do": "cmd",
    "run": [
     "data merge block {X+3} {Y} {Z+46} {TankStorage:{amount:{value:100000L},fluid:{fluid:\"minecraft:water\"}}}"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -412,6 +543,12 @@
    "run": [
     "setblock {X+3} {Y+1} {Z+47} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+4} {Y+1} {Z+47} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -420,7 +557,23 @@
    "run": "data get block {X+3} {Y} {Z+49} stacks",
    "match": "amount: 1234,",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "5: a tank unit holding 100000 droplets (1234 mB and 46 droplets): the second BuildCraft tank holds 1234 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+49} amount0",
+   "match": "block data: 1234$",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1"
+   ]
   },
   {
    "label": "5: a tank unit holding 100000 droplets (1234 mB and 46 droplets): the tank unit is left with 46 droplets",
@@ -428,7 +581,13 @@
    "run": "data get block {X+3} {Y} {Z+46} TankStorage.amount",
    "match": "value: 46L",
    "timeoutSec": 30,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "do": "tp",
@@ -438,16 +597,34 @@
     38
    ],
    "yaw": 0,
-   "pitch": 45
+   "pitch": 45,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "do": "wait",
-   "ms": 1500
+   "ms": 1500,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "name": "fluids",
    "do": "shot",
-   "look": "three fluid lanes: BuildCraft tank, wooden fluid pipe with a creative engine, cobblestone fluid pipe, a Tech Reborn tank unit, and a second wooden fluid pipe with an engine leading to a BuildCraft tank holding water"
+   "look": "three fluid lanes: BuildCraft tank, wooden fluid pipe with a creative engine, cobblestone fluid pipe, a Tech Reborn tank unit, and a second wooden fluid pipe with an engine leading to a BuildCraft tank holding water",
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "6: a one-source pool, a Pump over it on a creative engine, a Tech Reborn tank unit above the Pump",
@@ -459,6 +636,12 @@
     "setblock {X+10} {Y+1} {Z+54} techreborn:basic_tank_unit",
     "setblock {X+9} {Y-1} {Z+54} minecraft:redstone_block",
     "setblock {X+9} {Y} {Z+54} buildcraftunofficial:engine_creative[facing=east]"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -467,7 +650,13 @@
    "run": "data get block {X+10} {Y+1} {Z+54} TankStorage",
    "match": "value: (81000|162000|243000|324000|405000|486000|567000|648000|729000|810000|891000|972000|1053000|1134000|1215000|1296000)L",
    "timeoutSec": 90,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "7: a tank unit with 3000 mB, a wooden fluid pipe with an engine, a Flood Gate",
@@ -478,6 +667,12 @@
     "setblock {X+13} {Y} {Z+60} buildcraftunofficial:pipe_holder",
     "data merge block {X+13} {Y} {Z+60} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
     "setblock {X+14} {Y} {Z+60} buildcraftunofficial:flood_gate"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -486,6 +681,12 @@
    "run": [
     "setblock {X+13} {Y+1} {Z+60} buildcraftunofficial:engine_creative[facing=down]",
     "setblock {X+14} {Y+1} {Z+60} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -494,17 +695,36 @@
    "run": "data get block {X+12} {Y} {Z+60} TankStorage.amount",
    "match": "value: 0L",
    "timeoutSec": 60,
-   "pollMs": 1000
+   "pollMs": 1000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "do": "wait",
-   "ms": 3000
+   "ms": 3000,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
-   "label": "7: the Flood Gate placed water beside itself",
+   "label": "7: the Flood Gate placed water around itself",
    "do": "cmd",
    "run": [
-    "execute if block {X+15} {Y} {Z+60} minecraft:water"
+    "clone {X+15} {Y-1} {Z+57} {X+20} {Y+2} {Z+63} {X+15} {Y-90} {Z+57} filtered minecraft:water",
+    "fill {X+15} {Y-90} {Z+57} {X+20} {Y-87} {Z+63} minecraft:air"
+   ],
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
    ]
   },
   {
@@ -515,16 +735,448 @@
     54
    ],
    "yaw": 0,
-   "pitch": 40
+   "pitch": 40,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "do": "wait",
-   "ms": 1500
+   "ms": 1500,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "name": "pump-and-gate",
    "do": "shot",
-   "look": "left: a Pump over a pool with a tank unit on top holding water; right: a tank unit, a wooden fluid pipe and a Flood Gate with water flooded around the gate"
+   "look": "left: a Pump over a pool with a tank unit on top holding water; right: a tank unit, a wooden fluid pipe and a Flood Gate with water flooded around the gate",
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: tanks and pipes",
+   "do": "cmd",
+   "run": [
+    "setblock {X} {Y} {Z+66} buildcraftunofficial:tank",
+    "setblock {X+1} {Y} {Z+66} buildcraftunofficial:pipe_holder",
+    "data merge block {X+1} {Y} {Z+66} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
+    "setblock {X+2} {Y} {Z+66} buildcraftunofficial:pipe_holder",
+    "data merge block {X+2} {Y} {Z+66} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+3} {Y} {Z+66} irontanks:iron_tank",
+    "setblock {X+3} {Y} {Z+67} buildcraftunofficial:pipe_holder",
+    "data merge block {X+3} {Y} {Z+67} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
+    "setblock {X+3} {Y} {Z+68} buildcraftunofficial:pipe_holder",
+    "data merge block {X+3} {Y} {Z+68} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+3} {Y} {Z+69} buildcraftunofficial:tank"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: forward engine on",
+   "do": "cmd",
+   "run": [
+    "setblock {X+1} {Y+1} {Z+66} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X+2} {Y+1} {Z+66} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the first BuildCraft tank gets 1000 mB",
+   "do": "cmd",
+   "run": [
+    "data merge block {X} {Y} {Z+66} {stacks:[{id:\"minecraft:water\",amount:1000}]}"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the first BuildCraft tank gets 1000 mB",
+   "do": "cmd",
+   "run": [
+    "data merge block {X} {Y} {Z+66} {fluid0:\"minecraft:water\",amount0:1000}"
+   ],
+   "nodes": []
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the Iron Tank holds 1000 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+66} Amount",
+   "match": "block data: 1000L",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: draining engine on",
+   "do": "cmd",
+   "run": [
+    "setblock {X+3} {Y+1} {Z+67} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X+4} {Y+1} {Z+67} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the second BuildCraft tank holds 1000 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+69} stacks",
+   "match": "amount: 1000,",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the second BuildCraft tank holds 1000 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+69} amount0",
+   "match": "block data: 1000$",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": []
+  },
+  {
+   "label": "8: Iron Tanks 1000 mB: the Iron Tank is empty",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+66} Amount",
+   "match": "block data: 0L",
+   "timeoutSec": 30,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: tanks and pipes",
+   "do": "cmd",
+   "run": [
+    "setblock {X} {Y} {Z+72} buildcraftunofficial:tank",
+    "setblock {X+1} {Y} {Z+72} buildcraftunofficial:pipe_holder",
+    "data merge block {X+1} {Y} {Z+72} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
+    "setblock {X+2} {Y} {Z+72} buildcraftunofficial:pipe_holder",
+    "data merge block {X+2} {Y} {Z+72} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+3} {Y} {Z+72} irontanks:iron_tank",
+    "setblock {X+3} {Y} {Z+73} buildcraftunofficial:pipe_holder",
+    "data merge block {X+3} {Y} {Z+73} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
+    "setblock {X+3} {Y} {Z+74} buildcraftunofficial:pipe_holder",
+    "data merge block {X+3} {Y} {Z+74} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+3} {Y} {Z+75} buildcraftunofficial:tank"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: forward engine on",
+   "do": "cmd",
+   "run": [
+    "setblock {X+1} {Y+1} {Z+72} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X+2} {Y+1} {Z+72} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the first BuildCraft tank gets 1234 mB",
+   "do": "cmd",
+   "run": [
+    "data merge block {X} {Y} {Z+72} {stacks:[{id:\"minecraft:water\",amount:1234}]}"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the first BuildCraft tank gets 1234 mB",
+   "do": "cmd",
+   "run": [
+    "data merge block {X} {Y} {Z+72} {fluid0:\"minecraft:water\",amount0:1234}"
+   ],
+   "nodes": []
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the Iron Tank holds 1234 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+72} Amount",
+   "match": "block data: 1234L",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: draining engine on",
+   "do": "cmd",
+   "run": [
+    "setblock {X+3} {Y+1} {Z+73} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X+4} {Y+1} {Z+73} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the second BuildCraft tank holds 1234 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+75} stacks",
+   "match": "amount: 1234,",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the second BuildCraft tank holds 1234 mB",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+75} amount0",
+   "match": "block data: 1234$",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": []
+  },
+  {
+   "label": "9: Iron Tanks 1234 mB: the Iron Tank is empty",
+   "do": "waitCmd",
+   "run": "data get block {X+3} {Y} {Z+72} Amount",
+   "match": "block data: 0L",
+   "timeoutSec": 30,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "10: a one-source pool, a Pump over it on a creative engine, an Iron Tank above the Pump",
+   "do": "cmd",
+   "run": [
+    "fill {X+9} {Y-2} {Z+79} {X+11} {Y-2} {Z+81} minecraft:smooth_stone",
+    "setblock {X+10} {Y-1} {Z+80} minecraft:water",
+    "setblock {X+10} {Y} {Z+80} buildcraftunofficial:pump",
+    "setblock {X+10} {Y+1} {Z+80} irontanks:iron_tank",
+    "setblock {X+9} {Y-1} {Z+80} minecraft:redstone_block",
+    "setblock {X+9} {Y} {Z+80} buildcraftunofficial:engine_creative[facing=east]"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "10: the Iron Tank above the Pump holds whole buckets of water",
+   "do": "waitCmd",
+   "run": "data get block {X+10} {Y+1} {Z+80} Amount",
+   "match": "block data: [1-9]\\d*000L",
+   "timeoutSec": 90,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "11: an Iron Tank with 3000 mB, a wooden fluid pipe with an engine, a Flood Gate",
+   "do": "cmd",
+   "run": [
+    "setblock {X+12} {Y} {Z+86} irontanks:iron_tank",
+    "data merge block {X+12} {Y} {Z+86} {Amount:3000L,Fluid:{fluid:\"minecraft:water\"}}",
+    "setblock {X+13} {Y} {Z+86} buildcraftunofficial:pipe_holder",
+    "data merge block {X+13} {Y} {Z+86} {pipe:{def:\"buildcraftunofficial:wood_fluid\"}}",
+    "setblock {X+14} {Y} {Z+86} buildcraftunofficial:flood_gate"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "11: engine on",
+   "do": "cmd",
+   "run": [
+    "setblock {X+13} {Y+1} {Z+86} buildcraftunofficial:engine_creative[facing=down]",
+    "setblock {X+14} {Y+1} {Z+86} minecraft:redstone_block"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "11: the Iron Tank is empty (the Flood Gate took all 3000 mB)",
+   "do": "waitCmd",
+   "run": "data get block {X+12} {Y} {Z+86} Amount",
+   "match": "block data: 0L",
+   "timeoutSec": 60,
+   "pollMs": 1000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 3000,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "11: the Flood Gate placed water around itself",
+   "do": "cmd",
+   "run": [
+    "clone {X+15} {Y-1} {Z+83} {X+20} {Y+2} {Z+89} {X+15} {Y-90} {Z+83} filtered minecraft:water",
+    "fill {X+15} {Y-90} {Z+83} {X+20} {Y-87} {Z+89} minecraft:air"
+   ],
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    10,
+    6,
+    76
+   ],
+   "yaw": 0,
+   "pitch": 40,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 1500,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "name": "iron-tanks",
+   "do": "shot",
+   "look": "Iron Tanks lanes: round trips through an Iron Tank, a Pump with an Iron Tank on top of it, an Iron Tank behind a wooden fluid pipe and a Flood Gate with water around the gate",
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8 Iron Tank (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+3} {Y} {Z+66}"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9 Iron Tank (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+3} {Y} {Z+72}"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "10 Iron Tank above the Pump (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+10} {Y+1} {Z+80}"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "11 Iron Tank (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+12} {Y} {Z+86}"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "8 second tank (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+3} {Y} {Z+69} stacks"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
+  },
+  {
+   "label": "9 second tank (mB)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+3} {Y} {Z+75} stacks"
+   ],
+   "allowFail": true,
+   "echo": true,
+   "nodes": [
+    "26.1.2",
+    "26.2"
+   ]
   },
   {
    "label": "3 tank unit (droplets)",
@@ -533,7 +1185,13 @@
     "data get block {X+3} {Y} {Z+34} TankStorage"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "4 tank unit (droplets)",
@@ -542,7 +1200,13 @@
     "data get block {X+3} {Y} {Z+40} TankStorage"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "5 tank unit (droplets)",
@@ -551,7 +1215,13 @@
     "data get block {X+3} {Y} {Z+46} TankStorage"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "6 tank unit above the Pump (droplets)",
@@ -560,7 +1230,13 @@
     "data get block {X+10} {Y+1} {Z+54} TankStorage"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "7 tank unit (droplets)",
@@ -569,34 +1245,58 @@
     "data get block {X+12} {Y} {Z+60} TankStorage"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "3 second tank (mB)",
    "do": "cmd",
    "run": [
-    "data get block {X+3} {Y} {Z+37} stacks"
+    "data get block {X+3} {Y} {Z+37}"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "4 second tank (mB)",
    "do": "cmd",
    "run": [
-    "data get block {X+3} {Y} {Z+43} stacks"
+    "data get block {X+3} {Y} {Z+43}"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   },
   {
    "label": "5 second tank (mB)",
    "do": "cmd",
    "run": [
-    "data get block {X+3} {Y} {Z+49} stacks"
+    "data get block {X+3} {Y} {Z+49}"
    ],
    "allowFail": true,
-   "echo": true
+   "echo": true,
+   "nodes": [
+    "1.21.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+   ]
   }
  ]
 }

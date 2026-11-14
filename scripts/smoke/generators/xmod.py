@@ -32,8 +32,23 @@ class Scenario:
         self.description = description
         self.top = top
         self.steps = []
+        self.only = None    # while set, every step added is limited to these nodes (see only_on)
+
+    def only_on(self, nodes):
+        """`with S.only_on(["26.1.2"]):` limits the steps added inside to those Minecraft lines (a step's "nodes")."""
+        scenario = self
+
+        class _Scope:
+            def __enter__(self):
+                self.before, scenario.only = scenario.only, list(nodes)
+
+            def __exit__(self, *exc):
+                scenario.only = self.before
+        return _Scope()
 
     def step(self, **kw):
+        if self.only is not None:
+            kw["nodes"] = [n for n in kw["nodes"] if n in self.only] if "nodes" in kw else self.only
         self.steps.append(kw)
 
     def cmd(self, label, *run, **kw):
@@ -43,8 +58,8 @@ class Scenario:
         """Run one command that may legitimately fail and put its reply in the report."""
         self.step(label=label, do="cmd", run=[c], allowFail=True, echo=True, **kw)
 
-    def wait_cmd(self, label, c, match, timeout=60, poll=1000):
-        self.step(label=label, do="waitCmd", run=c, match=match, timeoutSec=timeout, pollMs=poll)
+    def wait_cmd(self, label, c, match, timeout=60, poll=1000, **kw):
+        self.step(label=label, do="waitCmd", run=c, match=match, timeoutSec=timeout, pollMs=poll, **kw)
 
     def tp(self, x, y, z, yaw=0, pitch=0):
         self.step(do="tp", at=[x, y, z], yaw=yaw, pitch=pitch)

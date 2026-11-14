@@ -312,6 +312,17 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     $gradleLog = Join-Path $LogDir 'gradle.out.log'
     $script:Bridge = Wait-Until {
         if ($proc.HasExited) { throw "FATAL: runClient exited early (code $($proc.ExitCode)); see $LogDir" }
+        # A mod set the loader refuses (a mod that wants another version of a library, a missing dependency): Fabric Loader
+        # shows its error window and the process stays alive, so the wait for bridge.json would run out the whole
+        # boot budget with the smoke lock held. The loader's own message is in the console log; say it now.
+        if (Test-Path $gradleLog) {
+            $refusal = @(Get-Content -LiteralPath $gradleLog -Tail 400 -ErrorAction SilentlyContinue |
+                    Where-Object { $_ -match 'Incompatible mod set|FormattedException|ModResolutionException|ModLoadingException' })
+            if ($refusal.Count) {
+                $why = @(Get-Content -LiteralPath $gradleLog -Tail 400 | Where-Object { $_ -match '^\s+- Mod |Mod .* (is incompatible|requires|depends)' } | Select-Object -First 4) -join ' | '
+                throw "FATAL: the mod loader refused this mod set: $($refusal[0].Trim())$(if ($why) { " [$why]" })"
+            }
+        }
         if (-not (Test-Path $BridgeFile) -or (Get-Item $BridgeFile).LastWriteTimeUtc -le $before) { return $null }
         # A read can catch the file mid-write: the parse throws and the next poll retries.
         $info = Get-Content -Raw $BridgeFile | ConvertFrom-Json

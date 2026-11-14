@@ -172,7 +172,7 @@ A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`
 A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
 runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
 
-A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise.
+A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run; `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
 
 A scenario that needs an optional dev-runtime mod names its Gradle switch in a top-level `"gradleProperties": ["withGuideMe"]`; each becomes a `-P` flag on the node's `runClient` (`guideme-guide` uses it to load GuideME and page through the generated guide).
 
@@ -333,3 +333,32 @@ vanilla complaining about the flat world's empty generator settings; the default
 ## Plugs on a shelf: `plug-shelf`
 
 `plug-shelf` (hand-written) checks issue #180 on 1.21.10 and later (shelves): three shelves hold the pulsar, timer, light sensor, blocker, power adaptor, an oak facade, and a gate, red lens and paper as the reference look; every plug must show its face, not its edge. Two mode-less `item_display`s (the facade and a gate) are then shot from the front and from behind: each must show its panel face-on from both sides. Issue #181 adds a third, a pulsar (its piston and LEDs on the north side), and a pulsar cargo run: a creative-engine wooden pipe pulls pulsars from a chest along a stone pipe at eye level. Pipe cargo turns to face its travel direction (as in 1.12.2), so from this side view a pulsar shows its slim side, exactly as the gate, lens, facade and flat vanilla items do; the shot checks it renders. The end-chest echo only reports how many arrived.
+
+## Cross-mod pass (#186): `crossmod-*`
+
+Scenarios for BuildCraft next to other mods on the dev runtime. The mods come from `-PwithMods` aliases (`withmod.<alias>` in
+`versions/<node>/gradle.properties`, resolved by `buildSrc/.../WithMods.kt`); a scenario names them in its top-level `"mods"` and the
+runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of them are generated: edit
+`generators/gen_crossmod_*.py` (shared step builders in `generators/xmod.py`) and re-run it, never hand-edit the JSON.
+
+- **A mod world is its own world.** A mod's blocks and ores end up in the save, and a Fabric client that loads that save without the
+  mod stops at "Missing content detected!" (Fabric registry sync), which blocks quick-play. So a scenario that needs mods names a
+  `"save"` seeded from `bc-smoke` (`"saveSeed"`) and `"freshSave": true` (the save is deleted and copied from the seed on every run, so a
+  claim, a battery or a rig from an earlier run never leaks in). Never explore with mods in `bc-smoke` itself.
+- **Comparing runs.** `-Save bc-perf -SaveSeed bc-smoke -FreshSave` (runner and batch wrapper) plays a fresh copy of the seed for every
+  scenario, so the same scenario bare and with `-Mods lithium,sodium,...` starts from the same world; without it a scenario builds on
+  what the one before it left (item entities, loaded chunks) and the shots differ for that reason alone.
+- **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
+  (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
+- **A Quarry's boxes go in with the `setblock`** (`setblock ... quarry[facing=west]{frame_init:1b,...}`): it scans its frame from
+  `onLoaded`, which a later `data merge` never runs, so a quarry given its boxes afterwards sits idle with an empty scan queue.
+
+| Scenario | Mods | What it shows |
+|---|---|---|
+| `crossmod-claims-<mod>` | opac, flan (both loaders), ftbchunks (NeoForge 26.1.2) | three rigs of Quarry, Builder, Filler, stripes pipe and a Stripes robot beside a claim: none, one that is not the owner's, one that is. Each machine and each kind of act (place, break) is probed separately |
+| `crossmod-energy` | tre, energizedpower, techreborn (Fabric) | BuildCraft's MJ dynamo into Energized Power and Tech Reborn batteries and cables, their creative sources into BuildCraft's FE engine; the other mod's stored energy rose, the Mining Well dug |
+| `crossmod-energy-notre` | none (Fabric) | the same BuildCraft blocks with no Team Reborn Energy: they place, open their GUIs, nothing is logged |
+| `crossmod-storage` | tomsstorage, extendeddrawers, techreborn (Fabric) | item pipes in and out of Tom's Simple Storage and Extended Drawers; fluid pipes, a Pump and a Flood Gate against Tech Reborn tank units with the 81-droplets-per-millibucket rule (1000 mB, 1234 mB, a unit holding a part millibucket) |
+
+The Fabric dev run has no recipe viewer unless asked and Team Reborn Energy only through `tre` (or a mod that nests it: Tech Reborn,
+Energized Power); 1.21.x Fabric nodes carry it always.

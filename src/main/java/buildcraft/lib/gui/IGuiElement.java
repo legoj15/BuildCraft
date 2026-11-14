@@ -22,6 +22,14 @@ public interface IGuiElement extends IGuiArea, ITooltipElement, IHelpElement {
 
     default void tick() {}
 
+    /** True while this element lies over the window itself instead of beside it (a ledger the gap beside the window
+     *  cannot hold). Such an element draws in a pass of its own above the window's slots and items (see
+     *  {@link BuildCraftGui#drawCoveringElements}) and takes the mouse over the area it covers (see
+     *  {@link BuildCraftGui#isCovered}); every other element draws with the background, as it always has. */
+    default boolean coversWindow() {
+        return false;
+    }
+
     @Override
     default void addToolTips(List<ToolTip> tooltips) {}
 

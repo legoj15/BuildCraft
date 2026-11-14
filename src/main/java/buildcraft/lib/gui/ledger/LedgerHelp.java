@@ -168,10 +168,18 @@ public class LedgerHelp extends Ledger_Neptune {
 
     @Override
     public void drawBackground(float partialTicks) {
-        // Draw the ledger panel itself (background, icon, text)
+        // The target highlights go UNDER the panel: a panel lying over the window (see Ledger_Neptune#coversWindow)
+        // hides the targets it covers instead of being painted over by their borders. Beside the window the two
+        // never touch, so nothing changes there.
+        applyPersistedState();
+        drawTargets();
+        // The ledger panel itself (background, icon, text)
         super.drawBackground(partialTicks);
+    }
 
-        // Draw the interactive overlays on top of the GUI when the ledger is open
+    /** The interactive overlays on the GUI, while the ledger is open: a coloured border around every help target, and
+     *  the target under the mouse picks the ledger's text. */
+    private void drawTargets() {
         if (!shouldDrawOpen()) {
             return;
         }
@@ -179,6 +187,9 @@ public class LedgerHelp extends Ledger_Neptune {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
+        // The mouse on the panel is on the panel, not on a target beneath it (the panel can lie over the window): no
+        // target is hovered then, so the text stays what it was, to be read and scrolled.
+        boolean onPanel = contains(gui.mouse);
         boolean set = false;
         List<HelpPosition> elements = new ArrayList<>();
         for (IGuiElement element : gui.shownElements) {
@@ -193,7 +204,7 @@ public class LedgerHelp extends Ledger_Neptune {
             }
             for (HelpPosition info : elements) {
                 IGuiArea rect = info.target;
-                boolean isHovered = rect.contains(gui.mouse);
+                boolean isHovered = !onPanel && rect.contains(gui.mouse);
                 if (isHovered && !set) {
                     if (selected != element) {
                         selected = element;

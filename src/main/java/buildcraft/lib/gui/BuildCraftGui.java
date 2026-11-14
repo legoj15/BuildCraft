@@ -99,10 +99,46 @@ public class BuildCraftGui {
 
     public void drawElementBackgrounds() {
         for (IGuiElement element : shownElements) {
-            if (element != currentMenu) {
+            // An element lying over the window draws later, above the slots (see drawCoveringElements).
+            if (element != currentMenu && !element.coversWindow()) {
                 element.drawBackground(lastPartialTicks);
             }
         }
+    }
+
+    /** True when some element lies over the window right now (see {@link IGuiElement#coversWindow}). The screen
+     *  opens a layer for {@link #drawCoveringElements} only then, so a screen whose elements all sit beside the window
+     *  draws exactly as it did before that pass existed. */
+    public boolean hasCoveringElement() {
+        for (IGuiElement element : shownElements) {
+            if (element.coversWindow()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Draws the elements that lie over the window ({@link IGuiElement#coversWindow}), which
+     *  {@link #drawElementBackgrounds} left out. Run by the screen AFTER the slots and items vanilla drew, in a layer of
+     *  their own, so an open ledger that extends over the window is not drawn under the slots it covers. */
+    public void drawCoveringElements() {
+        for (IGuiElement element : shownElements) {
+            if (element.coversWindow()) {
+                element.drawBackground(lastPartialTicks);
+            }
+        }
+    }
+
+    /** True when an element lying over the window covers the screen point. What is under such an element is not
+     *  reachable through it: the screen hides its slots from the mouse and a click on it stops there (see
+     *  {@link #onMouseClicked}); a screen's own hit-test that runs before {@code super.mouseClicked} asks this too. */
+    public boolean isCovered(double x, double y) {
+        for (IGuiElement element : shownElements) {
+            if (element.coversWindow() && element.contains(x, y)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -192,8 +228,10 @@ public class BuildCraftGui {
             if (m instanceof buildcraft.lib.gui.ITooltipElement) {
                 ((buildcraft.lib.gui.ITooltipElement) m).addToolTips(tooltips);
             }
+            // With the mouse on an element lying over the window, only that one speaks: what it covers is not hovered.
+            boolean covered = isCovered(mouse.getX(), mouse.getY());
             for (IGuiElement element : shownElements) {
-                if (element instanceof buildcraft.lib.gui.ITooltipElement) {
+                if (element instanceof buildcraft.lib.gui.ITooltipElement && (!covered || element.coversWindow())) {
                     ((buildcraft.lib.gui.ITooltipElement) element).addToolTips(tooltips);
                 }
             }
@@ -230,7 +268,10 @@ public class BuildCraftGui {
                 ((IInteractionElement) element).onMouseClicked(mouseButton);
             }
         }
-        return false;
+        // A click that landed on an element lying over the window is finished here: the slot or widget it covers must
+        // not also see the click. Elements beside the window have nothing under them, so this only bites in the
+        // overlap case.
+        return isCovered(mouseX, mouseY);
     }
 
     public void onMouseDragged(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {

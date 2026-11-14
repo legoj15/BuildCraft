@@ -38,6 +38,17 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     /** Width the panel spends on everything but the text column: border (2) + icon (16) + gap + text + gap + border (2). */
     private static final int OVERHEAD = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2; // 28
 
+    /** The panel shows its icon only, no text, until it is wider than this: the first frames of the opening animation
+     *  stay clear of the text, and a ledger with less room than this beside the window would open empty. */
+    public static final int BODY_REVEAL_WIDTH = CLOSED_WIDTH + 10; // 32
+
+    /** The narrowest open panel worth showing: a 44 px text column. It is the column a 176-wide window leaves beside it
+     *  on vanilla's smallest GUI screen (320 wide, so 72 px each side), where ledgers have always fit. A gap narrower
+     *  than this (a 256-wide window leaves 32) opens the panel at this width over the window instead, clamped to the
+     *  screen, rather than as an empty strip; a ledger whose text is shorter keeps its natural width, and any gap
+     *  of this size or more is used as before. */
+    public static final int MIN_OPEN_WIDTH = OVERHEAD + 44; // 72
+
     /** Wrapped lines one wheel notch moves a scrolling ledger by. */
     private static final int LINES_PER_NOTCH = 3;
     private static final int SCROLLBAR_WIDTH = 2;
@@ -151,15 +162,27 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
         if (expandPositive) {
             // Right side — icon at left edge of ledger
-            positionLedgerStart = gui.lowerRightLedgerPos;
-            positionAnchor = positionLedgerStart;
-            // Advance the right-side position downward for the next ledger
-            gui.lowerRightLedgerPos = positionLedgerStart.offset(0, () -> this.getHeight() + 5);
+            positionAnchor = gui.lowerRightLedgerPos;
+            // Pinned at the window's right edge while the open width fits the gap beside it; wider than that
+            // (see MIN_OPEN_WIDTH) the start is pulled left over the window so the panel never passes the
+            // screen's right edge. Everything derived from this position (icon, text, scissor, the hit-box) follows
+            // the clamp, so the ledger moves as one unit.
+            positionLedgerStart = IGuiPosition.create(
+                () -> panelX(true, positionAnchor.getX(), this.getWidth(), screenWidth()),
+                positionAnchor::getY);
+            // Advance the right-side position downward for the next ledger (from the anchor, not the
+            // clamped start, so this ledger's overlap doesn't drag the stack position around).
+            gui.lowerRightLedgerPos = positionAnchor.offset(0, () -> this.getHeight() + 5);
             positionLedgerIconStart = positionLedgerStart.offset(2, LEDGER_GAP);
         } else {
             // Left side — ledger grows leftward
             positionAnchor = gui.lowerLeftLedgerPos; // stable reference for width calc
-            positionLedgerStart = gui.lowerLeftLedgerPos.offset(() -> -this.getWidth(), 0);
+            // Grows leftward from the window's left edge but never past the screen's left edge: once the open width
+            // outgrows the gap beside the window the surplus extends over the window instead of off-screen (see
+            // MIN_OPEN_WIDTH). Everything derived from this position follows the clamp, as on the right.
+            positionLedgerStart = IGuiPosition.create(
+                () -> panelX(false, positionAnchor.getX(), this.getWidth(), screenWidth()),
+                positionAnchor::getY);
             // Advance the left-side position downward for the next ledger
             gui.lowerLeftLedgerPos = gui.lowerLeftLedgerPos.offset(0, () -> this.getHeight() + 5);
             positionLedgerIconStart = positionLedgerStart.offset(LEDGER_GAP, LEDGER_GAP);
@@ -263,7 +286,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     private int availableHeight() {
         int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
         if (expandPositive) return Math.max(0, screenHeight);
-        int fullWidthLeftX = (int) Math.floor(positionAnchor.getX() - maxWidth);
+        int fullWidthLeftX = (int) Math.max(0, Math.floor(positionAnchor.getX() - maxWidth));
         return Math.max(0, screenHeight - LedgerViewport.leftBottomReserve(fullWidthLeftX));
     }
 
@@ -330,8 +353,14 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             maxAllowedWidth = Math.max(CLOSED_WIDTH, (int) positionAnchor.getX());
         }
 
-        maxWidth = Math.min(naturalWidth, maxAllowedWidth);
-        maxWidth = Math.max(CLOSED_WIDTH, maxWidth);
+        // A gap under MIN_OPEN_WIDTH leaves the open panel no readable text column (32 px or less: none at all, it
+        // opened empty). Keep that minimum and let the surplus extend over the window rather than showing nothing:
+        // never wider than the natural content width (a short ledger stays short) nor than the screen. The drawn
+        // start is clamped against the screen edges (see panelX), so an overlapping panel covers the window instead
+        // of running off-screen.
+        int readableWidth = Math.min(naturalWidth, MIN_OPEN_WIDTH);
+        maxWidth = Math.min(naturalWidth, Math.max(maxAllowedWidth, readableWidth));
+        maxWidth = Math.max(CLOSED_WIDTH, Math.min(maxWidth, screenWidth));
 
         // Height: the title and entries wrapped to the text column this width leaves. drawBackground draws from the
         // same layout, so what is measured here is exactly what is drawn.
@@ -395,15 +424,12 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return currentWidth > CLOSED_WIDTH || currentHeight > CLOSED_HEIGHT;
     }
 
-    @Override
-    public void drawBackground(float partialTicks) {
-        BCGraphics graphics = GuiIcon.getGuiGraphics();
-        if (graphics == null) return;
-
-        // First-frame snap from persisted state. Done here (rather than in the constructor)
-        // because subclass appendText() calls run after super(), so this is the earliest point
-        // calculateMaxSize() sees the full content. Snapping rather than animating means the
-        // restored ledger appears already-open from frame zero — no startup-flicker.
+    /** First-frame snap from persisted state. Done on the first draw (rather than in the constructor) because subclass
+     *  appendText() calls run after super(), so this is the earliest point calculateMaxSize() sees the full content.
+     *  Snapping rather than animating means the restored ledger appears already-open from frame zero — no
+     *  startup-flicker. {@link #drawBackground} runs it first; a subclass that draws before calling super (it must
+     *  know whether the panel is open) runs it first too. */
+    protected final void applyPersistedState() {
         if (!appliedInitialState) {
             appliedInitialState = true;
             if (pendingInitialOpen) {
@@ -415,6 +441,14 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
                 lastHeight = maxHeight;
             }
         }
+    }
+
+    @Override
+    public void drawBackground(float partialTicks) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
+        if (graphics == null) return;
+
+        applyPersistedState();
 
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
@@ -436,28 +470,28 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         // ceil(interpWidth + (rawX - floor(rawX))) to jump ±1 across frames, flickering
         // the rightmost 1–2px of the ledger during animation.
         //
-        // Left ledgers:  rawX = anchorX - interpWidth  (fractional; floor pulls left edge out)
-        //                w    = anchorX - floor(rawX)  (guaranteed right edge = anchorX exactly)
-        // Right ledgers: rawX = start position (integer anchor, no width dependency)
-        //                w    = ceil(interpWidth)       (always covers full pixel width)
-        double rawX, rawY;
-        if (expandPositive) {
-            rawX = positionLedgerStart.getX();         // integer anchor; no width dependency
-        } else {
-            rawX = positionAnchor.getX() - interpWidth; // consistent with interpWidth
-        }
-        rawY = getY(); // Y never depends on width; no drift issue
+        // The panel never leaves the screen (see panelX). While it fits the gap beside the window it is pinned
+        // against the window's edge, exactly as before; once it is wider than the gap the edge against the screen is
+        // pinned instead and the surplus extends over the window. Either way the pinned edge is exact:
+        // Left ledgers:  rawX = max(0, anchorX - interpWidth). Fits: w = anchorX - floor(rawX), the right edge is
+        //                anchorX exactly. Over the window: rawX is 0, w = ceil(interpWidth).
+        // Right ledgers: rawX = min(anchorX, screenWidth - interpWidth). Fits: rawX is the integer anchor,
+        //                w = ceil(interpWidth). Over the window: w = screenWidth - floor(rawX), the right edge is
+        //                the screen's exactly.
+        int screenW = screenWidth();
+        double anchorX = positionAnchor.getX();
+        boolean overWindow = overlapsWindow(expandPositive, anchorX, interpWidth, screenW);
+        double rawX = panelX(expandPositive, anchorX, interpWidth, screenW);
+        double rawY = getY(); // Y never depends on width; no drift issue
         int x = (int) Math.floor(rawX);
         int y = (int) Math.floor(rawY);
-        int w, h;
+        int w;
         if (expandPositive) {
-            // Right-side: anchor at left, grows rightward — ceil so right edge covers fully
-            w = (int) Math.ceil(interpWidth);
+            w = overWindow ? screenW - x : (int) Math.ceil(interpWidth);
         } else {
-            // Left-side: anchor at right — pin the right edge exactly to anchorX to avoid flicker
-            w = (int) positionAnchor.getX() - x;
+            w = overWindow ? (int) Math.ceil(interpWidth) : (int) anchorX - x;
         }
-        h = (int) Math.ceil(interpHeight + (rawY - y));
+        int h = (int) Math.ceil(interpHeight + (rawY - y));
 
         if (w <= 0 || h <= 0) return;
 
@@ -487,7 +521,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         Layout content = currentLayout();
 
         // Draw text content if expanded enough
-        if (interpWidth > CLOSED_WIDTH + 10) {
+        if (interpWidth > BODY_REVEAL_WIDTH) {
             drawContent(graphics, content, (int) iconX, (int) iconY, scissorY, scissorY + scissorH);
         }
 
@@ -541,7 +575,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     /** True while the panel is open far enough to show text and its content is taller than its viewport. */
     protected final boolean canScroll() {
-        return currentDifference == 1 && interpWidth > CLOSED_WIDTH + 10 && scrollMax() > 0;
+        return currentDifference == 1 && interpWidth > BODY_REVEAL_WIDTH && scrollMax() > 0;
     }
 
     /** Scrolls the content by {@value #LINES_PER_NOTCH} lines per wheel notch; positive {@code amountY} (wheel up)
@@ -589,6 +623,31 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public void onMouseReleased(int button) {}
+
+    private static int screenWidth() {
+        return Minecraft.getInstance().getWindow().getGuiScaledWidth();
+    }
+
+    /** The left edge of a panel of {@code width} whose window-side edge sits at {@code anchorX}, kept on the screen:
+     *  a left ledger grows leftward from the anchor but stops at x = 0, a right one grows rightward from it but stops
+     *  at {@code screenWidth}. A panel that fits the gap beside the window sits exactly where the anchor puts it. */
+    static double panelX(boolean expandPositive, double anchorX, double width, int screenWidth) {
+        return expandPositive ? Math.min(anchorX, screenWidth - width) : Math.max(0, anchorX - width);
+    }
+
+    /** True when {@link #panelX} had to move a panel of {@code width} off its anchor, so it lies over the window. */
+    static boolean overlapsWindow(boolean expandPositive, double anchorX, double width, int screenWidth) {
+        return expandPositive ? anchorX > screenWidth - width : anchorX - width < 0;
+    }
+
+    /** True while the panel, at the width it has this frame, lies over the window instead of beside it: the same test
+     *  {@link #drawBackground} makes, from the same interpolated width. A closed tab counts too when the gap is
+     *  narrower than the tab itself (22 px): it is kept on the screen over the window's edge, not left half
+     *  off-screen where only a sliver of it could be clicked. */
+    @Override
+    public boolean coversWindow() {
+        return overlapsWindow(expandPositive, positionAnchor.getX(), getWidth(), screenWidth());
+    }
 
     @Override
     public double getX() {

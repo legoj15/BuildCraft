@@ -212,6 +212,10 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
 
     /** The option under the mouse as an index over ALL the options (what the server selects by), or -1. */
     private int hitTestOption(int mouseX, int mouseY) {
+        // Runs before the ledgers see the click: one lying over an option keeps it (see BuildCraftGui.isCovered).
+        if (mainGui.isCovered(mouseX, mouseY)) {
+            return -1;
+        }
         int first = ProgrammingTableLayout.firstOptionOn(menu.getOptionPage());
         int shown = menu.tile.options == null ? 0
                 : Math.min(menu.tile.options.size() - first, ProgrammingTableLayout.PAGE_SIZE);

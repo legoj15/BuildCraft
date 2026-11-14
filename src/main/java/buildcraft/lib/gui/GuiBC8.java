@@ -28,6 +28,9 @@ import buildcraft.lib.gui.pos.IGuiArea;
 @SuppressWarnings("this-escape")
 public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> extends AbstractContainerScreen<C> {
 
+    /** A mouse position far outside every window, for the passes that must see no hover (see {@link #drawTooltipLayer}). */
+    private static final int MOUSE_AWAY = -100_000;
+
     public final BuildCraftGui mainGui;
 
     protected GuiBC8(C container, Inventory playerInventory, Component title) {
@@ -164,9 +167,17 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         graphics.nextStratum();
         //?}
         // (1.21.1 GuiGraphics has no stratum system; immediate draw order already sorts the drag icon on top.)
+        //? if <1.21.10 {
+        /*// 1.21.1 has no seam between the slots and the carried stack inside render(): a ledger lying over the window is
+        // drawn here, after both, and sorts under the carried stack (z 232) and the tooltip (z 400) by depth alone.
+        drawCoveringLedgers();*/
+        //?}
         mainGui.drawDragLayer(bcg);
         mainGui.drawMenuOverlayLayer(bcg);
-        drawTooltipLayer(mouseX, mouseY, partialTicks);
+        // Under a ledger lying over the window the mouse is on the ledger, not on what it covers: the screens' own
+        // tooltip hit-tests (tanks, readouts) are shown a mouse far outside the window.
+        boolean covered = mainGui.isCovered(mouseX, mouseY);
+        drawTooltipLayer(covered ? MOUSE_AWAY : mouseX, covered ? MOUSE_AWAY : mouseY, partialTicks);
         // 1.21.1: draw the single deferred tooltip set during this frame (last-wins, on top),
         // mirroring 26.1.2's engine-level "for next frame" tooltip. Without this, 1.21.1's
         // immediate renderTooltip drew every tooltip set in the frame, overlapping. (>=1.21.10
@@ -174,6 +185,53 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         //? if <1.21.10 {
         /*BCGraphics.flushDeferredTooltip();*/
         //?}
+    }
+
+    // Ledgers beside the window draw with the background, before the slots, as they always have. A ledger that lies over
+    // the window (the gap beside it is narrower than MIN_OPEN_WIDTH) draws after the slots and items instead, so its text
+    // is not hidden under them, and still under the stack the cursor carries: from the carried item's own seam where
+    // the node has one (>= 1.21.10), from render() on 1.21.1.
+    //? if >=26.1 {
+    @Override
+    public void extractCarriedItem(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        drawCoveringLedgers();
+        super.extractCarriedItem(graphics, mouseX, mouseY);
+    }
+    //?} elif >=1.21.10 {
+    /*@Override
+    public void renderCarriedItem(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY) {
+        drawCoveringLedgers();
+        super.renderCarriedItem(graphics, mouseX, mouseY);
+    }*/
+    //?}
+
+    private void drawCoveringLedgers() {
+        if (!mainGui.hasCoveringElement()) {
+            return;
+        }
+        BCGraphics bcg = GuiIcon.getGuiGraphics();
+        if (bcg == null) {
+            return;
+        }
+        //? if >=1.21.10 {
+        // The slots' items draw after the plain elements of their stratum, so the ledgers need a stratum of their own.
+        bcg.nextStratum();
+        mainGui.drawCoveringElements();
+        //?} else {
+        /*// Between the slot items (z 150, their count text z 200) and the carried stack (z 232).
+        bcg.pose().pushPose();
+        bcg.pose().translate(0.0F, 0.0F, 210.0F);
+        mainGui.drawCoveringElements();
+        bcg.pose().popPose();*/
+        //?}
+    }
+
+    /** The slots under a ledger that lies over the window are not there for the mouse: no hover, tooltip or highlight,
+     *  and the keys that act on the hovered slot (Q, the hotbar digits, swap-hands, middle click) leave them alone.
+     *  Vanilla finds the hovered slot, and every slot a click, drag or release lands on, through this one test. */
+    @Override
+    protected boolean isHovering(int left, int top, int width, int height, double mouseX, double mouseY) {
+        return !mainGui.isCovered(mouseX, mouseY) && super.isHovering(left, top, width, height, mouseX, mouseY);
     }
 
     //? if >=1.21.10 {
@@ -238,6 +296,10 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        // A ledger lying over the window that has nothing to scroll still keeps the wheel from what is under it.
+        if (mainGui.isCovered(mouseX, mouseY)) {
             return true;
         }
         return mouseScrolledBelowLedgers(mouseX, mouseY, scrollX, scrollY);

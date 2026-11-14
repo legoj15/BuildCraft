@@ -130,7 +130,8 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
             int mouseY = (int) event.y();
             for (int i = 0; i < menu.tile.recipesStates.size(); i++) {
                 IGuiArea area = getRecipeArea(i);
-                if (area.contains(mouseX, mouseY)) {
+                // Runs before the ledgers see the click: one lying over the cell keeps it (see BuildCraftGui.isCovered).
+                if (area.contains(mouseX, mouseY) && !mainGui.isCovered(mouseX, mouseY)) {
                     if (minecraft != null && minecraft.gameMode != null) {
                         minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
                     }
@@ -148,7 +149,8 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
             int mouseY = (int) mouseYd;
             for (int i = 0; i < menu.tile.recipesStates.size(); i++) {
                 IGuiArea area = getRecipeArea(i);
-                if (area.contains(mouseX, mouseY)) {
+                // Runs before the ledgers see the click: one lying over the cell keeps it (see BuildCraftGui.isCovered).
+                if (area.contains(mouseX, mouseY) && !mainGui.isCovered(mouseX, mouseY)) {
                     if (minecraft != null && minecraft.gameMode != null) {
                         minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
                     }

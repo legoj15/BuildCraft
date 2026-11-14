@@ -151,6 +151,10 @@ public class GuiGate extends GuiBC8<ContainerGate> {
      *  {@code mouseClicked} variants so the hit-test lives once; the connectors are the gate's wiring diagram rather
      *  than buttons, hence the screen plays the click sound itself (see ButtonUnificationGuardTester). */
     private boolean toggleConnectorAt(double mouseX, double mouseY) {
+        // Runs before the ledgers see the click: one lying over a connector keeps it (see BuildCraftGui.isCovered).
+        if (mainGui.isCovered(mouseX, mouseY)) {
+            return false;
+        }
         int pairIndex = layout.connectorPairAt((int) mouseX - leftPos, (int) mouseY - topPos);
         if (pairIndex < 0) {
             return false;

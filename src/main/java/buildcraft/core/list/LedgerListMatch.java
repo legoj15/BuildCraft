@@ -82,6 +82,25 @@ public class LedgerListMatch extends Ledger_Neptune {
         super.drawBackground(partialTicks);
     }
 
+    /** Besides the ledger itself, the wheel scrolls a long entry while the mouse stays over the list
+     *  slot that entry is about — the same rule as the help ledger. Moving the mouse onto the ledger
+     *  to scroll doesn't work here: leaving slot 0 clears the hover content (see
+     *  {@link #getHoveredLineForSlotZero}), which made text past the height cap unreachable. The
+     *  hovered-line signature keeps the content (and so the scroll offset) stable while the wheel
+     *  turns — {@link #updateHoverContent} only rebuilds the text when the line or its exemplar
+     *  actually changes. */
+    @Override
+    public boolean onMouseScrolled(double amountY) {
+        if (super.onMouseScrolled(amountY)) {
+            return true;
+        }
+        if (amountY != 0 && canScroll() && getHoveredLineForSlotZero() >= 0) {
+            scrollByWheel(amountY);
+            return true;
+        }
+        return false;
+    }
+
     private void updateHoverContent() {
         int hoveredLine = getHoveredLineForSlotZero();
 

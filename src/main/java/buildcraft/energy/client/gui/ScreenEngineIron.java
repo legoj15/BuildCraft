@@ -278,6 +278,10 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     //?}
 
     private boolean isTankClicked(double mouseX, double mouseY, int tankX, int tankY) {
+        // Runs before the ledgers see the click: one lying over the tank keeps it (see BuildCraftGui.isCovered).
+        if (mainGui.isCovered(mouseX, mouseY)) {
+            return false;
+        }
         int absX = leftPos + tankX;
         int absY = topPos + tankY;
         return mouseX >= absX && mouseX < absX + TANK_WIDTH

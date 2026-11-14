@@ -194,15 +194,12 @@ public class LangFileIntegrityTester {
                         + " — drop them from the allowlist.");
     }
 
-    /** The full unit names are the default label in every power readout, so an English value here shows up on
-     *  every machine screen of a Chinese client. The zh tooltips already say "Minecraft 焦耳" / "Forge 能量". */
+    /** The full FE name is the default label in every FE readout, so an English value here shows up on every FE
+     *  screen of a Chinese client. ("Minecraft Joules" stays English on purpose: it is BuildCraft's own term.) */
     @Test
-    public void fullUnitNamesAreTranslatedInChinese() {
-        Map<String, String> en = parse(EN);
-        Map<String, String> zh = parse(ZH);
-        for (String key : List.of("buildcraft.unit.mj.full", "buildcraft.unit.energy.full")) {
-            Assertions.assertNotEquals(en.get(key), zh.get(key), key + " is still the English text in zh_cn.json");
-        }
+    public void fullEnergyUnitNameIsTranslatedInChinese() {
+        String key = "buildcraft.unit.energy.full";
+        Assertions.assertNotEquals(parse(EN).get(key), parse(ZH).get(key), key + " is still the English text in zh_cn.json");
     }
 
     /** A rule name the code does not recognise is not an error at runtime, it silently means {@code english} — so a

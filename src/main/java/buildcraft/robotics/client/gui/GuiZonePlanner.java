@@ -287,7 +287,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     /** @return true if the click started a paint or pan on the map (caller should not pass it on). */
     private boolean onMapClicked(double mx, double my, int button) {
-        if (menu.tile != null && inMap(mx, my)) {
+        // Runs before the ledgers see the click: one lying over the map keeps it (see BuildCraftGui.isCovered).
+        if (menu.tile != null && inMap(mx, my) && !mainGui.isCovered(mx, my)) {
             ItemStack carried = menu.getCarried();
             if (isColouredBrush(carried)) {
                 // Left paints, right erases; any other button (middle, a side button) starts no stroke, and none

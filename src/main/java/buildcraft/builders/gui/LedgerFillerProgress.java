@@ -59,7 +59,7 @@ public class LedgerFillerProgress extends Ledger_Neptune {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
-        if (interpWidth > CLOSED_WIDTH + 10) {
+        if (interpWidth > BODY_REVEAL_WIDTH) {
             int scissorX = (int) getX() + 2; 
             int scissorY = (int) getY() + 4;
             int scissorW = (int) (interpWidth - LEDGER_GAP);

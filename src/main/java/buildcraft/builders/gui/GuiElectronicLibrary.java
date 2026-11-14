@@ -309,6 +309,10 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W) {
             return false;
         }
+        // Runs before the ledgers see the click: one lying over the list keeps it (see BuildCraftGui.isCovered).
+        if (mainGui.isCovered(mouseX, mouseY)) {
+            return false;
+        }
         // Hit-test the rows as last drawn. No refresh here: a selection sync or a list change that arrived since
         // the frame would otherwise scroll or reshuffle the rows under the cursor before the click resolves.
         Snapshot.Key key = rows.pick(mouseY - (topPos + LIST_Y), LIST_ROW_H);

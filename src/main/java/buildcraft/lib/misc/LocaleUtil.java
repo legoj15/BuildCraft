@@ -117,6 +117,12 @@ public class LocaleUtil {
         return formatLong(current) + " / " + formatLong(max) + " " + energyUnit();
     }
 
+    /** A fixed per-second FE/RF rate ("400 FE/s", or "400 Forge Energy per second" with full unit names),
+     *  for lists of rates that do not follow {@link BCLibConfig#flowDisplay}. */
+    public static String localizeRfPerSecond(long rfPerSecond) {
+        return withPerSecondSuffix(formatLong(rfPerSecond) + " " + energyUnit(), shouldUseFullNames());
+    }
+
     /** Format Forge Energy flow for display, picking PER_SECOND, PER_TICK, or BOTH per
      *  {@link BCLibConfig#flowDisplay}. Unit and time suffix follow
      *  {@link BCEnergyConfig#useFullUnitNames} (full names also spell out " per second" /

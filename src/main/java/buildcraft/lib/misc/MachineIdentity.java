@@ -18,6 +18,12 @@ import com.mojang.authlib.GameProfile;
  * asked about and the player that then breaks, places or uses an item are always the same one. They used to apply
  * three different rules.
  *
+ * <p>A machine is its owner to a protection mod down to the permission level: the fake player's {@code permissions()} is
+ * the server's lookup for its profile, the one a real player's answers, so an operator's machine is an operator to a mod
+ * that waves operators through. Flan's admin claims do (a player of level 2 and up passes one, by hand or as a machine;
+ * measured on NeoForge 26.3 with the world's cheats on, #204). That is the mod's rule applied to the owner, and no more
+ * standing than the owner has: a machine owned by a non-operator is refused where its owner's hands are.
+ *
  * <p>"Named" matters: an owner restored from a save that stored only its id comes back with an EMPTY name (authlib
  * rejects a null one, see {@code OwnerData}), and a fake player with a blank name is nobody to a claim mod's
  * trust list or log. Such a machine acts as "[BuildCraft]", like an unowned one.

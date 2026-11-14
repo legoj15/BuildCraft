@@ -101,8 +101,16 @@
    "label": "B: the claim over the target chunks",
    "do": "cmd",
    "run": [
-    "execute as @p at @p run flan setAdminClaim true"
+    "execute as @p positioned 2071 154 2111 run flan setAdminClaim true"
    ]
+  },
+  {
+   "label": "B: the claim is what the rig needs (reply matches 'Owner: Admin,')",
+   "do": "waitCmd",
+   "run": "execute as @p positioned 2071 154 2111 run flan info",
+   "match": "Owner: Admin,",
+   "timeoutSec": 10,
+   "pollMs": 500
   },
   {
    "do": "wait",
@@ -135,6 +143,14 @@
    "run": [
     "execute as @p run flan add 2064 150 2144 2079 150 2175"
    ]
+  },
+  {
+   "label": "C: the claim is what the rig needs (reply matches 'Owner: Dev,')",
+   "do": "waitCmd",
+   "run": "execute as @p positioned 2071 154 2159 run flan info",
+   "match": "Owner: Dev,",
+   "timeoutSec": 10,
+   "pollMs": 500
   },
   {
    "do": "wait",

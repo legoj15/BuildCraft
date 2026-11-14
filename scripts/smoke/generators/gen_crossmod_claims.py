@@ -47,10 +47,14 @@ CHEST = (6, 0, -5)          # a builder (x+2..4, z-1..+1) is this relative to th
 class Mod:
     """What differs between the claim mods: how a claim is made (commands, run in order) and removed."""
 
-    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None):
+    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None, verify=None):
         self.name, self.loaders = name, loaders
         self.alias = alias or name      # the -PwithMods alias (a variant of a mod's scenario has a name of its own)
         self.foreign, self.own, self.clear, self.notes = foreign, own, clear, notes
+        # verify(tag, area) -> (command, regex) or None: a reply that proves the rig's claim is the one the rig needs,
+        # checked before any machine is placed. A claim command that finds nothing to act on reports no failure, and the
+        # rig would then run against no claim (rig C) or the wrong one (rig B) and pass or fail for that reason alone.
+        self.verify = verify
         # A mod with no way to make a claim that is not the dev's from a command: rig B is claimed by the dev's own
         # command like rig C, and its machines are owned by a stranger instead (the claim is still not their owner's).
         self.stranger_owner = stranger_owner
@@ -210,6 +214,9 @@ def build(mod):
         S.wait(1500)
         for c in make(area(RIG_Z[tag])):
             S.cmd("%s: the claim over the target chunks" % tag, c)
+        check = mod.verify(tag, area(RIG_Z[tag])) if mod.verify else None
+        if check:
+            S.wait_cmd("%s: the claim is what the rig needs (reply matches '%s')" % (tag, check[1]), check[0], check[1], 10, 500)
         S.wait(2500)
     S.tp(8, 4, 8, 0, 20)
 
@@ -258,6 +265,28 @@ def ftbc_claims(a):
             for x in range(x1, x2, 16) for z in range(z1, z2, 16)]
 
 
+def flan_at(a):
+    """A point inside a rig's claim, as the position of the Flan commands that act on "the claim at" the command source.
+
+    Never `at @p`: `flan add` floors the claim 10 blocks under the y it is given, and the dev player, teleported up to
+    y+4 with nothing under him yet (the platforms come after the claims), is in free fall by the time the next command
+    runs: on NeoForge he was at y 124, 16 blocks under that floor, about two seconds after the teleport. `setAdminClaim`
+    then finds no claim, says so without failing, and rig B stayed the dev's own claim (#204: every machine of the dev's
+    rightly passed it). The same scenario passed on Fabric, where the player evidently still stood in the claim's height
+    (not measured).
+    """
+    return "%d %d %d" % ((a[0] + a[2]) // 2, BASE[1] + 4, (a[1] + a[3]) // 2)
+
+
+def flan_set_admin(a):
+    return "execute as @p positioned %s run flan setAdminClaim true" % flan_at(a)
+
+
+def flan_owner(owner_of):
+    """verify hook: `flan info` at the rig's claim must name the owner `owner_of(tag)` ("Admin" or "Dev")."""
+    return lambda tag, a: ("execute as @p positioned %s run flan info" % flan_at(a), "Owner: %s," % owner_of(tag))
+
+
 MODS = [
     # `oclaims server claim` needs a dimension from a source with no player; `oclaims claim` (as the player) claims for the dev.
     Mod("opac", None,
@@ -266,14 +295,17 @@ MODS = [
         clear=lambda tag, a: []),
     # Flan: `flan add x y z x y z` claims for the player (the 512-block area is over the 500 claim blocks everyone starts
     # with, and its refusal goes to the player's chat, not to the command's reply, so the blocks are given first). An admin claim has
-    # no owner, so the dev player is a stranger in it; `flan setAdminClaim` acts on the claim at the player's feet.
+    # no owner, so the dev player is a stranger in it, unless he is an operator: Flan lets a player of permission level 2 or
+    # higher through an admin claim, and a machine's fake player has its owner's level on NeoForge (#204). The dev world has
+    # cheats off, so the dev is not one. `flan setAdminClaim` acts on the claim at the command's position: see flan_at.
     Mod("flan", None,
         foreign=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
                            "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3]),
-                           "execute as @p at @p run flan setAdminClaim true"],
+                           flan_set_admin(a)],
         own=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
                        "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3])],
-        clear=lambda tag, a: []),
+        clear=lambda tag, a: [],
+        verify=flan_owner(lambda tag: "Admin" if tag == "B" else "Dev")),
     # OPaC with the dev's own claim and machines that belong to a stranger (see flan-stranger).
     Mod("opac-stranger", None, alias="opac", stranger_owner=True,
         foreign=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % a],
@@ -287,17 +319,19 @@ MODS = [
         own=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
                        "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3])],
         clear=lambda tag, a: [],
+        verify=flan_owner(lambda tag: "Dev"),
         notes="Rig B's claim is the dev's like rig C's and rig B's machines are owned by a stranger (its robot is deployed by "
               "the dev, its station pipe is the stranger's)."),
-    # An admin claim and machines owned by a stranger: told apart from `flan` (admin claim, dev's machines) by who may stand in an
-    # admin claim, since a leased fake player carries its owner's permission level on NeoForge and the dev is the world's owner.
+    # An admin claim and machines owned by a stranger: a machine whose owner is not a known player is refused through Flan's
+    # separate fake-player permission, so this one tells that rule apart from `flan` (admin claim, dev's machines).
     Mod("flan-admin-stranger", ["neoforge"], alias="flan", stranger_owner=True,
         foreign=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
                            "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3]),
-                           "execute as @p at @p run flan setAdminClaim true"],
+                           flan_set_admin(a)],
         own=lambda a: ["execute as @p run flan giveClaimBlocks Dev 5000",
                        "execute as @p run flan add %d 150 %d %d 150 %d" % (a[0], a[1], a[2], a[3])],
         clear=lambda tag, a: [],
+        verify=flan_owner(lambda tag: "Admin" if tag == "B" else "Dev"),
         notes="Rig B's claim is an admin claim and its machines are owned by a stranger."),
     # FTB Chunks (NeoForge 26.1.2 only): a team's claim by `ftbchunks claim`. `claim_as` only takes a known profile and a
     # fake player's team may claim nothing, so the foreign case is the machines being owned by a stranger.

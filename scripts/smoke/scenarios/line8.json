@@ -102,7 +102,7 @@
     { "name": "guide-prev-tooltip", "do": "shot" },
     { "label": "previous page", "do": "click", "widgetText": "Previous Page" },
     { "do": "wait", "ms": 400 },
-    { "label": "open chapters overlay", "do": "click", "x": 250, "y": 3, "allowMiss": true },
+    { "label": "open chapters overlay", "do": "click", "x": 232, "y": 4, "allowMiss": true },
     { "do": "wait", "ms": 400 },
     { "name": "guide-chapters", "do": "shot", "look": "chapter overlay: Getting Started, Power, Transport, Gates and Logic, Building, Mining and Fluids, Silicon, Robots" },
     { "label": "pick the Blocks chapter", "do": "click", "x": 155, "y": 50, "allowMiss": true },

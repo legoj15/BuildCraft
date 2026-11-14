@@ -779,7 +779,8 @@ public class GuiGuide extends Screen {
             // Topmost first, as drawn: the small-screen chapter overlay and the chapter tabs, then the page's own
             // widgets (search box, sort-order buttons). The side tabs overhang the left page's edge where the
             // contents page's sort-order buttons sit, so offering the click to the page first let a button under a
-            // tab steal it; likewise page widgets under the open overlay took clicks through it.
+            // tab steal it; likewise page widgets under the open overlay took clicks through it. (The closed small-screen
+            // "Chapters" tab is tested further down, after the page: nothing on a page reaches its band.)
             boolean overlayOpen = isSmallScreen() && showingContentsMenu;
             if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
                 GuideChapter chapter = chapterUnderMouse();

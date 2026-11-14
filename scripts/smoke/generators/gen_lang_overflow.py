@@ -201,7 +201,7 @@ steps += [{"do": "hold", "item": BC + "guide"},
           {"name": "guide-contents", "do": "hoverEach", "max": 10},
           # Was x=250, y=3: the tab's click area is its text width + 20 wide, and 250 missed it in Russian and Chinese
           # (issue #197).
-          {"label": "open the chapters overlay", "do": "click", "x": 230, "y": 4, "allowMiss": True},
+          {"label": "open the chapters overlay", "do": "click", "x": 232, "y": 4, "allowMiss": True},
           {"do": "wait", "ms": 500},
           {"name": "guide-chapters", "do": "shot", "look": "chapter names fit their rows; the Chapters tab fits its label"},
           {"label": "pick the third chapter", "do": "click", "x": 155, "y": 50, "allowMiss": True},

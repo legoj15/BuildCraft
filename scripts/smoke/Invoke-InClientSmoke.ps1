@@ -522,7 +522,9 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # says it with "benign" or '?'.
                 # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...", and for
                 # a named marker "Clock ... is already at time marker minecraft:noon").
-                $benign = $stepBenign -or ($Lang -eq 'en_us' -and
+                # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language.
+                $idempotent = $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)'
+                $benign = $stepBenign -or $idempotent -or ($Lang -eq 'en_us' -and
                     (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker')
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {
                     throw "command failed: $(Expand-Coords $c) -> $(@($r.output) -join ' | ')"

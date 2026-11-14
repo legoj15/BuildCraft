@@ -2977,7 +2977,7 @@
   {
    "label": "open the chapters overlay",
    "do": "click",
-   "x": 230,
+   "x": 232,
    "y": 4,
    "allowMiss": true
   },

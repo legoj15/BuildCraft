@@ -126,7 +126,7 @@ widget text.
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. `echo: true` copies the last command's reply into the report (state dumps) |
+| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`) are forgiven by the command itself, in every language. `echo: true` copies the last command's reply into the report (state dumps) |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at`; `exact` | look at a block's centre from the current eye position (standing eye height); the report records what the crosshair hit. `exact: true` aims at the point `at` itself (a box corner, an addon slot) |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |
@@ -291,7 +291,7 @@ press on a slope paints a rectangle that reaches past it on screen (a first run 
 rectangle from press to release).
 
 An agent driving them by hand: a warm client reaches the first wait about 30 s after launch, so block on the shot that opens
-each window (`10-zp-start.png` for the pan, `17-zp-before.png` for the stroke, `lib-before` for the library) in the
+each window (the `zp-start` shot for the pan, `zp-before` for the stroke, `lib-before` for the library; matched by name, whatever the step number) in the
 run's folder rather than starting late. The game window may come up behind others: grant computer use the node's own
 `java.exe` path (the 1.21.x nodes run a different JDK from the 26.x ones) and bring it to the front before the first
 press. Hold left with the agent's own button-down and moves, but send right through `Send-MouseButton.ps1` (a tap

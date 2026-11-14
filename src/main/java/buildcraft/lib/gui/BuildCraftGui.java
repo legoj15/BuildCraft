@@ -282,7 +282,8 @@ public class BuildCraftGui {
                 return true;
             }
             if (m.shouldFullyOverride()) {
-                return false;
+                // Consumed, as onMouseClicked does: false would hand the wheel to the screen beneath the popup.
+                return true;
             }
         }
 

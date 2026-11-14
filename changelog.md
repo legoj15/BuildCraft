@@ -32,6 +32,7 @@
 - Finally fixed plurals on numbers.
 - The Requester's help ledger now explains its two slot grids instead of saying help is unavailable.
 - Long help ledger entries no longer run off the bottom of the screen: a ledger now stops at the screen edge (and above JEI's bottom-left buttons) and scrolls with the mouse wheel.
+- The help ledger for the FE Engine and MJ Dynamo now keeps its conversion rate up to date while you hover the battery, instead of showing the rate from when you first pointed at it.
 - Ledger text wraps at word boundaries with a hyphen for over-long words, and Chinese lines no longer start with closing punctuation.
 - Window titles and ledger titles that are too long for their box in a translation now shrink or wrap instead of overflowing.
 - The Architect Table's unnamed-blueprint placeholder, the List's match buttons and the Zone Planner's coordinate read-out are now translatable.

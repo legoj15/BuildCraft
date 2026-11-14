@@ -6,7 +6,9 @@
 
 package buildcraft.lib.gui.help;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.misc.LocaleUtil;
@@ -34,6 +36,13 @@ public class ElementHelpInfo {
 
     public static ElementHelpInfo preTranslated(String title, int colour, String... lines) {
         return new ElementHelpInfo(title, colour, true, lines);
+    }
+
+    /** True when {@code other} would show exactly the same text: a screen that rebuilds its entry every frame (a live
+     *  rate) offers a new instance each time, and only a change in what it says should refresh the help ledger. */
+    public boolean sameContent(ElementHelpInfo other) {
+        return other != null && (other == this || (colour == other.colour && isPreTranslated == other.isPreTranslated
+                && Objects.equals(title, other.title) && Arrays.equals(localeKeys, other.localeKeys)));
     }
 
     public final HelpPosition target(IGuiArea target) {

@@ -352,10 +352,10 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
   (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
 - **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
-  something is under him: two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`
+  something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`
   floors it 10 blocks under the y it is given). `flan setAdminClaim` (the claim at the command's position) found nothing there,
   said "no claim" without failing, and rig B stayed the dev's own claim on NeoForge, so every machine of the dev's was rightly let
-  through (#204; it had been read as an operator leak for a day). Give such a command an explicit position
+  through (#204, first read as an operator leak in the fake player). Give such a command an explicit position
   (`execute as @p positioned x y z run ...`) and gate the rig on the reply (`waitCmd`), as `gen_crossmod_claims.py` does for Flan.
 - **A Quarry's boxes go in with the `setblock`** (`setblock ... quarry[facing=west]{frame_init:1b,...}`): it scans its frame from
   `onLoaded`, which a later `data merge` never runs, so a quarry given its boxes afterwards sits idle with an empty scan queue.

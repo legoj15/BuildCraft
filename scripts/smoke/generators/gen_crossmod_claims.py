@@ -270,9 +270,10 @@ def flan_at(a):
 
     Never `at @p`: `flan add` floors the claim 10 blocks under the y it is given, and the dev player, teleported up to
     y+4 with nothing under him yet (the platforms come after the claims), is in free fall by the time the next command
-    runs: on NeoForge he was at y 124, 16 blocks under that floor, two seconds after the teleport. `setAdminClaim` then
-    finds no claim, says so without failing, and rig B stayed the dev's own claim (#204: every machine of the dev's
-    rightly passed it; on Fabric the world under the rig is higher, so the player had not left the claim's height).
+    runs: on NeoForge he was at y 124, 16 blocks under that floor, about two seconds after the teleport. `setAdminClaim`
+    then finds no claim, says so without failing, and rig B stayed the dev's own claim (#204: every machine of the dev's
+    rightly passed it). The same scenario passed on Fabric, where the player evidently still stood in the claim's height
+    (not measured).
     """
     return "%d %d %d" % ((a[0] + a[2]) // 2, BASE[1] + 4, (a[1] + a[3]) // 2)
 

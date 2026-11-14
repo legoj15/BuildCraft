@@ -5,7 +5,9 @@ Run: python scripts/smoke/generators/gen_lang_overflow.py   (rewrites scripts/sm
      ... -Lang ru_ru    and    ... -Lang zh_cn     (the same tour translated; compare same-named shots with English)
 
 The tour never clicks by widget text and never depends on a command's reply text, so it runs in any language; the
-machine row is cleared and placed again on every run. Per screen it takes:
+machine row is cleared and placed again on every run. The commands that may fail on a re-run (chunks already loaded,
+settings already set, nothing to clear) sit in steps flagged "benign"; any other failed command fails its step in every
+language. Per screen it takes:
   NN-<screen>.png                the screen as it opens: title, fixed labels, buttons
   NN-<screen>-<ledger>.png       each ledger opened on its own (owner, power, progress on the right; help, match info
                                  on the left), then closed again
@@ -14,8 +16,9 @@ machine row is cleared and placed again on every run. Per screen it takes:
 What to look for: text running past the panel edge or into a neighbouring element, a title wider than its window, a
 ledger title cut off, a tooltip leaving the screen.
 
-Ledger tabs are not vanilla widgets, so they are clicked by position: the runner's window is 854x480 at GUI scale 2,
-a 427x240 screen, and a container sits at leftPos = (427 - width) / 2, topPos = (240 - height) / 2. Closed tabs are
+Ledger tabs are not vanilla widgets, so they are clicked by position: the scenario's first step resizes the window to
+854x480 (nothing else pins it), which at GUI scale 2 is a 427x240 screen, and a container sits at
+leftPos = (427 - width) / 2, topPos = (240 - height) / 2. Closed tabs are
 22x24, stacked 29 apart from topPos + 5, right of the window or left of it (lib/gui/ledger/Ledger_Neptune). The runner
 deletes config/buildcraft/gui_state.json before each boot, so every ledger starts closed.
 """
@@ -138,17 +141,25 @@ def look_at_screen(name, cls, size, right, left, hover=True):
 
 
 steps = [
-    {"label": "load the rig's chunks", "do": "cmd", "run": [
-        "gamemode creative @p", "?forceload add %s %s %s %s" % (o('X', -14), o('Z', -8), o('X', 14), o('Z', 4))]},
+    # The first step once the world is entered: the runner does not pin a window size, and every ledger-tab position
+    # below is computed for this one at GUI scale 2 (the runner's default).
+    {"label": "window 854x480 (GUI scale 2: a 427x240 screen, which the ledger-tab positions assume)",
+     "do": "window", "width": 854, "height": 480},
+    {"label": "creative", "do": "cmd", "run": ["gamemode creative @p"]},
+    # "benign": the game answers in the run's language, so the runner cannot read a reply to tell "already so" from a
+    # real failure. A step flagged benign says its commands may legitimately fail on a re-run (the world persists
+    # between runs: chunks already loaded, difficulty and time already set, floor already placed, nothing to clear),
+    # and that holds in every language; a failed command in any other step fails it, as in English.
+    {"label": "load the rig's chunks", "do": "cmd", "benign": True, "run": [
+        "forceload add %s %s %s %s" % (o('X', -14), o('Z', -8), o('X', 14), o('Z', 4))]},
     {"do": "tp", "at": [0, 0, 2], "yaw": 180, "pitch": 30},
     {"do": "wait", "ms": 3000},
-    # Every "already so" command is optional ("?"): the game answers in the run's language, so the runner's English
-    # "did not change" check cannot tell such a reply from a failure, and a failed command would end the step.
-    {"label": "floor, noon, empty inventory", "do": "cmd", "run": [
-        "?difficulty peaceful", "?time set 6000", "?weather clear",
-        "?fill %s %s minecraft:smooth_stone" % (at(-14, -1, -8), at(14, -1, 4)),
-        "?fill %s %s minecraft:air" % (at(-14, 0, -8), at(14, 4, 4)),
-        "?clear @p"]},
+    {"label": "floor, noon, empty inventory", "do": "cmd", "benign": True, "run": [
+        "difficulty peaceful", "time set 6000", "weather clear",
+        "fill %s %s minecraft:smooth_stone" % (at(-14, -1, -8), at(14, -1, 4)),
+        "fill %s %s minecraft:air" % (at(-14, 0, -8), at(14, 4, 4)),
+        "clear @p"]},
+    # Not benign: the row is placed on air the step above just cleared, so every setblock and merge must succeed.
     {"label": "the machine row", "do": "cmd", "run":
         [c for s in SCREENS for c in s[3]] +
         ["fill %s %s %sheat_exchange[facing=north]" % (at(HEAT_X - 1, 0, HEAT_Z), at(HEAT_X + 1, 0, HEAT_Z), BC)]},
@@ -188,7 +199,9 @@ steps += [{"do": "hold", "item": BC + "guide"},
           {"do": "wait", "ms": 600},
           {"name": "guide-contents", "do": "shot", "look": "contents entries and the sort buttons' area"},
           {"name": "guide-contents", "do": "hoverEach", "max": 10},
-          {"label": "open the chapters overlay", "do": "click", "x": 250, "y": 3, "allowMiss": True},
+          # Was x=250, y=3: the tab's click area is its text width + 20 wide, and 250 missed it in Russian and Chinese
+          # (issue #197).
+          {"label": "open the chapters overlay", "do": "click", "x": 230, "y": 4, "allowMiss": True},
           {"do": "wait", "ms": 500},
           {"name": "guide-chapters", "do": "shot", "look": "chapter names fit their rows; the Chapters tab fits its label"},
           {"label": "pick the third chapter", "do": "click", "x": 155, "y": 50, "allowMiss": True},

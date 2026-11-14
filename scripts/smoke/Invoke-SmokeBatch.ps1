@@ -14,11 +14,15 @@
   and reads each run's report.json back into <OutDir>/batch-summary.md and batch-summary.json.
 
   Output: <OutDir>/<scenario>[-<lang>]/ is the runner's own -OutDir for that scenario (summary.md, <node>/report.json,
-  screenshots), <OutDir>/<scenario>.console.log its console. Re-running the same -OutDir replaces those scenarios'
-  folders; -Scenarios picks which.
+  screenshots), <OutDir>/<scenario>[-<lang>].console.log its console (a language other than en_us is part of both
+  names, so the same scenario in two languages keeps two folders and two logs). Re-running the same -OutDir replaces
+  those scenarios' folders; -Scenarios picks which.
 
-  Exit code: 0 when every scenario ran clean or was skipped by the loader filter, 1 when any step failed, a node was
-  fatal, a scenario timed out or never got the lock.
+  A scenario the runner skips is shown as SKIPPED, not as a failure: one whose "loaders" leave out this node's loader,
+  and one marked "englishOnly" when -Lang names another language (it clicks by English widget text).
+
+  Exit code: 0 when every scenario ran clean or was skipped, 1 when any step failed, a node was fatal, a scenario
+  timed out or never got the lock.
 
 .EXAMPLE
   pwsh scripts/smoke/Invoke-SmokeBatch.ps1 -Node 26.3-fabric                                  # every scenario that runs unaided
@@ -64,9 +68,10 @@ $Scenarios = Split-List $Scenarios
 $Skip = Split-List $Skip
 $Lang = Split-List $Lang
 if (-not $Lang.Count) { $Lang = @('en_us') }
-# Scenarios that only wait and take shots while something else acts: a real-mouse driver (Drive-RealMouse.ps1) or a
-# person listening. Alone they would show PASS having checked nothing, so the default list leaves them out; name one in
-# -Scenarios to run it (with its driver).
+# Scenarios that wait while something else acts: a real-mouse driver (Drive-RealMouse.ps1) or a person listening.
+# Alone, the two real-mouse ones fail their expectFile step (the driver's marker never appears) and pipe-sounds would
+# show PASS having checked nothing, so the default list leaves them out; name one in -Scenarios to run it (with its
+# driver).
 $needsCompany = @('zone-planner-drag', 'library-scrollbar-drag', 'pipe-sounds')
 if (-not $Scenarios.Count) {
     $Scenarios = @(Get-ChildItem -File -Path $scenarioDir -Filter '*.json' | Sort-Object Name | ForEach-Object BaseName | Where-Object { $_ -notin $needsCompany })
@@ -164,7 +169,8 @@ foreach ($name in $Scenarios) {
             $row.status = if ($exit -eq 124) { 'TIMEOUT' } elseif ($row.fatal) { 'FATAL' } elseif ($row.failed -or $row.bcErrors) { 'FAILED' } elseif ($exit -ne 0) { "FAILED (exit $exit)" } else { 'PASS' }
         } elseif ($exit -eq 0 -and (Test-Path -LiteralPath (Join-Path $out 'summary.md')) -and
                 (Get-Content -Raw -LiteralPath (Join-Path $out 'summary.md')) -match 'skipped:') {
-            $row.status = 'SKIPPED (loader filter)'
+            # The runner's summary says why (Get-SkipReason in Invoke-InClientSmoke.ps1).
+            $row.status = if ((Get-Content -Raw -LiteralPath (Join-Path $out 'summary.md')) -match 'skipped: runs in English only') { 'SKIPPED (English only)' } else { 'SKIPPED (loader filter)' }
         } else {
             $row.status = if ($exit -eq 124) { 'TIMEOUT' } elseif ($exit -eq 3) { 'NO LOCK' } else { "NO REPORT (exit $exit)" }
         }

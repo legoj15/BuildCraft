@@ -1,5 +1,6 @@
 {
   "name": "sprite-reload",
+  "englishOnly": true,
   "base": [
     0,
     150,

@@ -8,11 +8,24 @@
  ],
  "steps": [
   {
-   "label": "load the rig's chunks",
+   "label": "window 854x480 (GUI scale 2: a 427x240 screen, which the ledger-tab positions assume)",
+   "do": "window",
+   "width": 854,
+   "height": 480
+  },
+  {
+   "label": "creative",
    "do": "cmd",
    "run": [
-    "gamemode creative @p",
-    "?forceload add {X-14} {Z-8} {X+14} {Z+4}"
+    "gamemode creative @p"
+   ]
+  },
+  {
+   "label": "load the rig's chunks",
+   "do": "cmd",
+   "benign": true,
+   "run": [
+    "forceload add {X-14} {Z-8} {X+14} {Z+4}"
    ]
   },
   {
@@ -32,13 +45,14 @@
   {
    "label": "floor, noon, empty inventory",
    "do": "cmd",
+   "benign": true,
    "run": [
-    "?difficulty peaceful",
-    "?time set 6000",
-    "?weather clear",
-    "?fill {X-14} {Y-1} {Z-8} {X+14} {Y-1} {Z+4} minecraft:smooth_stone",
-    "?fill {X-14} {Y} {Z-8} {X+14} {Y+4} {Z+4} minecraft:air",
-    "?clear @p"
+    "difficulty peaceful",
+    "time set 6000",
+    "weather clear",
+    "fill {X-14} {Y-1} {Z-8} {X+14} {Y-1} {Z+4} minecraft:smooth_stone",
+    "fill {X-14} {Y} {Z-8} {X+14} {Y+4} {Z+4} minecraft:air",
+    "clear @p"
    ]
   },
   {
@@ -2963,8 +2977,8 @@
   {
    "label": "open the chapters overlay",
    "do": "click",
-   "x": 250,
-   "y": 3,
+   "x": 230,
+   "y": 4,
    "allowMiss": true
   },
   {

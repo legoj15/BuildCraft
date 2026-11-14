@@ -20,6 +20,7 @@
     { "label": "park the cursor", "do": "hover", "fx": 0.95, "fy": 0.95 },
     { "name": "lib-before", "do": "shot", "look": "the blueprint list at its top, the scrollbar thumb at the top of its strip" },
     { "label": "REAL MOUSE NOW: hold LEFT on the scrollbar thumb, drag it to the bottom, release", "do": "wait", "ms": 45000 },
+    { "label": "the driver finished the drag (Drive-RealMouse.ps1 -Scenario library-scrollbar-drag leaves this marker; a hand-driven run creates it by hand)", "do": "expectFile", "path": "real-mouse-lib-scrollbar.done", "timeoutSec": 20 },
     { "label": "park the cursor", "do": "hover", "fx": 0.95, "fy": 0.95 },
     { "name": "lib-after", "do": "shot", "look": "the list scrolled to its end (later rows showing) and the thumb at the bottom of its strip" },
     { "do": "close" },

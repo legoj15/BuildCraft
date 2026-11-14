@@ -1,5 +1,6 @@
 {
   "name": "marker-relog",
+  "englishOnly": true,
   "description": "Volume markers across worlds and a relog (client marker cache follows its level; the join resync refills it). World A: build and connect a box, look. Leave, join world B (a copy of A with the same dimension key and the same coordinates, markers placed but NOT connected): no box may be drawn. Leave, rejoin A: the box must be back. Both worlds are left marker-free, because a world that still holds the markers sends them (or their removal) to the client and would hide a stale connection; delete saves/bc-smoke-b if either was left dirty. Run it a second time after the very first run on a node, which only creates the world the second save is copied from.",
   "base": [0, 150, 0],
   "extraSaves": ["bc-smoke-b"],

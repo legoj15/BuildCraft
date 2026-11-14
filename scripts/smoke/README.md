@@ -172,7 +172,7 @@ A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`
 A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
 runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
 
-A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run; `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
+A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run (the seed must be present and be another save; the runner refuses and keeps the save otherwise); `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
 
 A scenario that needs an optional dev-runtime mod names its Gradle switch in a top-level `"gradleProperties": ["withGuideMe"]`; each becomes a `-P` flag on the node's `runClient` (`guideme-guide` uses it to load GuideME and page through the generated guide).
 

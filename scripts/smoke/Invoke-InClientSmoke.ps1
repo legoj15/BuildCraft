@@ -101,8 +101,10 @@ $SaveName = 'bc-smoke'
 $PlaySave = if ($Save) { $Save } elseif ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
 $PlaySeed = if ($SaveSeed) { $SaveSeed } elseif ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } elseif ($Save) { $SaveName } else { $null }
 # A save name is one folder under saves/: a separator or ".." would point the fresh-save delete somewhere else.
-foreach ($candidate in @($PlaySave, $PlaySeed) | Where-Object { $_ }) {
-    if ($candidate.IndexOfAny([char[]]'\/:') -ge 0 -or $candidate -in '.', '..') { throw "'$candidate' is not a save name (one folder name, no path)" }
+if ($null -ne $PlaySeed) { $PlaySeed = $PlaySeed.Trim() }
+$PlaySave = "$PlaySave".Trim()
+foreach ($candidate in @($PlaySave, $PlaySeed) | Where-Object { $null -ne $_ }) {
+    if (-not $candidate -or $candidate.IndexOfAny([char[]]'\/:*?') -ge 0 -or $candidate.Trim('.') -eq '') { throw "'$candidate' is not a save name (one folder name, no path)" }
 }
 $WantFresh = $FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)
 if ($WantFresh -and $PlaySave -eq $SaveName) { Write-Host "note: a fresh save applies to a named save only; this run plays '$SaveName' as it is" }
@@ -837,9 +839,9 @@ try {
             if ($PlaySave -ne $SaveName) {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
                 # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
-                if ($WantFresh -and (Test-Path $playPath) -and $PlaySeed -and (Test-Path (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
+                if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
                     Remove-Item -Recurse -Force -LiteralPath $playPath
-                } elseif ($WantFresh -and (Test-Path $playPath)) {
+                } elseif ($WantFresh -and (Test-Path -LiteralPath $playPath)) {
                     throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
                 }
                 if (-not (Test-Path $playPath)) {
@@ -883,7 +885,7 @@ try {
         # First run: adopt the save the menus just created (same rule as before booting).
         if ($prep) {
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
-            if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1) {
+            if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) {
                 Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName
             }
         }

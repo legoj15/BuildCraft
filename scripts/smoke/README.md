@@ -350,6 +350,7 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
   what the one before it left (item entities, loaded chunks) and the shots differ for that reason alone.
 - **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
   (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
+- **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
 - **A Quarry's boxes go in with the `setblock`** (`setblock ... quarry[facing=west]{frame_init:1b,...}`): it scans its frame from
   `onLoaded`, which a later `data merge` never runs, so a quarry given its boxes afterwards sits idle with an empty scan queue.
 

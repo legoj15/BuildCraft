@@ -1,5 +1,6 @@
 {
   "name": "goggles-curios",
+  "loaders": ["neoforge"],
   "description": "Robot Goggles in the Curios head slot are drawn on the head (issue #97). Needs the node's Curios jar in run-smoke/mods (not shipped by the runner). The player wears the goggles in the Curios slot, first bare-headed and then under an iron helmet, seen in both third-person views; compare against goggles-worn's third-front/third-back, which draw the same model from the vanilla helmet slot.",
   "base": [20, 150, 40],
   "guiScale": 3,

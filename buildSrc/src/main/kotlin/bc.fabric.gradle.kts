@@ -58,6 +58,14 @@ val fabricApiDepRange = property("fabric_api_dep_range") as String
 // The opt-in -P switches the NeoForge runs read too (bc.neoforge), resolved once here at script scope.
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
+// The recipe viewer the dev runs load, opt-in here: `-Precipe_viewer=jei` or `rei`. Without the property no viewer is on
+// the runtime (the NeoForge runs default to JEI), so the headless game tests keep the runtime they were written against.
+// The in-client smoke runner passes it, so a Fabric smoke client has the viewer a NeoForge one has.
+val recipeViewer = (findProperty("recipe_viewer") as String?)?.lowercase()
+if (recipeViewer != null && recipeViewer != "jei" && recipeViewer != "rei") {
+    throw GradleException("recipe_viewer must be 'jei' or 'rei', not '$recipeViewer'")
+}
+val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
 val bcTests = findProperty("bcTests")?.toString()
 // FallingTree (tree-felling mod), opt-in for dev runs and game tests, as on the NeoForge nodes (bc.neoforge): `-PwithFallingTree`
 // loads it (dependencies below) and tells the game-test run to expect it, so robot_break_fallingtree_* fails if the mod
@@ -280,8 +288,11 @@ tasks.named<JavaExec>("runClientGameTest") {
 // Loom's default `:26.3-fabric:runClient` / `runServer` get the switches every BC NeoForge run has (bc.neoforge): the dev
 // workspace flag (BCLib.DEV-gated affordances: the /bcsoundtest command, debug logging), `-PbcDebug[=tier]` for
 // BCDebugging and, on the client, `-PbcQuickPlay=<saveFolderName>` to boot straight into a saved world. They sit on the
-// run tasks because Loom's RunConfigSettings setters are deprecated. `-PbcRunDir` has no twin: Loom sets the working
-// directory itself at launch (its only setter, runDir(), is deprecated).
+// run tasks because Loom's RunConfigSettings setters are deprecated.
+// `-PbcRunDir=<node-relative dir>` (client only) is the smoke runner's own game folder, as on NeoForge. Loom sets the
+// working directory itself at launch (its only setter, runDir(), is deprecated), so the folder is handed to the game as
+// `--gameDir` instead: mods, config, saves and options.txt then live there, and only logs/latest.log (written relative
+// to the working directory) stays in run/.
 listOf("runClient", "runServer").forEach { name ->
     tasks.named<JavaExec>(name) {
         systemProperty("buildcraft.dev", "true")
@@ -290,6 +301,13 @@ listOf("runClient", "runServer").forEach { name ->
         }
         if (name == "runClient" && bcQuickPlay != null) {
             args("--quickPlaySingleplayer", bcQuickPlay)
+        }
+        if (name == "runClient" && bcRunDir != null) {
+            // A local copy for the action: a task action must not capture a script-level val (configuration cache).
+            val gameDir = bcRunDir
+            args("--gameDir", gameDir.absolutePath)
+            // Fabric Loader creates <gameDir>/mods but not its parent, and dies when the folder is new.
+            doFirst { gameDir.mkdirs() }
         }
     }
 }
@@ -419,6 +437,13 @@ dependencies {
     // carry), the versions that POM pins.
     compileOnly("me.shedaniel.cloth:basic-math:$reiBasicMathVersion") { isTransitive = false }
     modConfig("compileOnly")("dev.architectury:architectury-fabric:$reiArchitecturyVersion") { isTransitive = false }
+    // The opt-in dev-run viewer (see recipeViewer above), never compiled against beyond the APIs, published or shipped.
+    // JEI needs nothing this node lacks; REI's POM brings cloth-config and architectury along.
+    if (recipeViewer == "jei") {
+        modConfig("localRuntime")("mezz.jei:jei-$minecraftVersion-fabric:$jeiVersion") { isTransitive = false }
+    } else if (recipeViewer == "rei") {
+        modConfig("localRuntime")("me.shedaniel:RoughlyEnoughItems-fabric:$reiVersion")
+    }
     // Team Reborn Energy, Fabric's de-facto FE/RF API, compile-only and optional at runtime (FabricEnergyStorages
     // touches it only when the mod is loaded). 5.0.0 is the newest build; it was compiled against
     // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are

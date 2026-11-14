@@ -34,7 +34,8 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ./gradlew :26.3:runGameTestServer -PwithFallingTree   # opt-in FallingTree (tree felling) on the 26.3 and 26.3-fabric runtime (robot_break_fallingtree_* then fails if it did not load); other nodes ignore it
 ./gradlew :26.3-fabric:runClient
 ./gradlew :26.3-fabric:runServer
-# Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> on the client), as the NeoForge ones do; -PbcRunDir is NeoForge-only (Loom fixes the working dir).
+# Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> and -PbcRunDir=<dir> on the client), as the NeoForge ones do; on Fabric -PbcRunDir is the game dir only (Loom fixes the working dir, so logs stay in run/).
+# A Fabric dev run loads no recipe viewer unless asked: -Precipe_viewer=jei or =rei (the smoke runner always passes one).
 
 # Unit tests / headless game tests
 ./gradlew :26.3:test

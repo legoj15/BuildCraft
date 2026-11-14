@@ -3,6 +3,12 @@
   "description": "The 2026-09-26 in-client checklist (now closed): render sites, machine GUIs with button tooltips, the guide book.",
   "base": [0, 150, 0],
   "steps": [
+    { "label": "load the rig's chunks (a fresh world spawns the player anywhere)", "do": "cmd", "run": [
+      "gamemode creative @p", "?forceload add {X-8} {Z-8} {X+8} {Z+16}"
+    ] },
+    { "do": "tp", "at": [0, 0, 6], "yaw": 180, "pitch": 25 },
+    { "do": "wait", "ms": 3000 },
+
     { "label": "setup", "do": "cmd", "run": [
       "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear",
       "fill {X-8} {Y-1} {Z-8} {X+8} {Y-1} {Z+16} minecraft:smooth_stone",

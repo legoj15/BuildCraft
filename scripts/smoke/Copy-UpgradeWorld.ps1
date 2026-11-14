@@ -47,9 +47,10 @@ if ($RefreshArchive -and (Test-Path $pristine)) { Remove-Item -Recurse -Force $p
 if (-not (Test-Path $pristine)) {
     New-Item -ItemType Directory -Force $pristine | Out-Null
     foreach ($p in $parts.GetEnumerator()) {
-        $from = Join-Path $src $p.Key
-        if (-not (Test-Path $from)) { throw "missing ${from}: run upgrade-26-3-author on $From first" }
-        Copy-Item -Recurse -LiteralPath $from -Destination (Join-Path $pristine $p.Value)
+        # Not $from: PowerShell names are case-insensitive, so that would overwrite the -From parameter the messages print.
+        $part = Join-Path $src $p.Key
+        if (-not (Test-Path $part)) { throw "missing ${part}: run upgrade-26-3-author on $From first" }
+        Copy-Item -Recurse -LiteralPath $part -Destination (Join-Path $pristine $p.Value)
     }
     "archived $From's author state in $pristine"
 }

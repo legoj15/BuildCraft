@@ -11,6 +11,6 @@
     { "label": "select the BuildCraft row: list rows are not widgets, so click by position (alphabetical list, GUI scale 2; the >=26.2 list is icon rows, the older one sorts Minecraft first)", "do": "click", "x": 75, "y": 48, "nodes": ["26.2", "26.3"] },
     { "do": "click", "x": 50, "y": 72, "nodes": ["1.21.1", "1.21.10", "1.21.11", "26.1.2"] },
     { "do": "wait", "ms": 1000 },
-    { "name": "modlist-banner", "do": "shot", "look": "info panel shows the new banner: crane, BuildCraft wordmark, yellow REDUX in the hazard bar, five gears (no obsidian), 'based on BuildCraft by SpaceToad' readable; name reads BuildCraft Redux; mod-list icon is the gear icon" }
+    { "name": "modlist-banner", "do": "shot", "look": "info panel shows the new banner: crane, BuildCraft wordmark, yellow REDUX in the hazard bar, five gears (no obsidian), 'based on BuildCraft by SpaceToad' readable; name reads BuildCraft Redux; mod-list icon is the gear icon. On Fabric the list is Mod Menu's: it has no banner, so check only the name, the gear icon and the description" }
   ]
 }

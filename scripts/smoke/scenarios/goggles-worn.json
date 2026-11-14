@@ -9,6 +9,7 @@
     { "do": "cmd", "run": ["gamemode creative @p"] },
     { "do": "wait", "ms": 3000 },
     { "label": "clear leftovers, floor, noon, bare head and hand", "do": "cmd", "run": [
+      "difficulty easy",
       "gamemode creative @p",
       "?tp @e[type=minecraft:husk,tag=bcgog] {X} -200 {Z}",
       "?kill @e[type=minecraft:armor_stand,tag=bcgog]",
@@ -83,7 +84,8 @@
     { "label": "clean up", "do": "cmd", "run": [
       "item replace entity @p armor.head with minecraft:air",
       "item replace entity @p weapon.mainhand with minecraft:air",
-      "gamemode creative @p"
+      "gamemode creative @p",
+      "difficulty peaceful"
     ] }
   ]
 }

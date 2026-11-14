@@ -167,11 +167,6 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         graphics.nextStratum();
         //?}
         // (1.21.1 GuiGraphics has no stratum system; immediate draw order already sorts the drag icon on top.)
-        //? if <1.21.10 {
-        /*// 1.21.1 has no seam between the slots and the carried stack inside render(): a ledger lying over the window is
-        // drawn here, after both, and sorts under the carried stack (z 232) and the tooltip (z 400) by depth alone.
-        drawCoveringLedgers();*/
-        //?}
         mainGui.drawDragLayer(bcg);
         mainGui.drawMenuOverlayLayer(bcg);
         // Under a ledger lying over the window the mouse is on the ledger, not on what it covers: the screens' own
@@ -190,7 +185,7 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
     // Ledgers beside the window draw with the background, before the slots, as they always have. A ledger that lies over
     // the window (the gap beside it is narrower than MIN_OPEN_WIDTH) draws after the slots and items instead, so its text
     // is not hidden under them, and still under the stack the cursor carries: from the carried item's own seam where
-    // the node has one (>= 1.21.10), from render() on 1.21.1.
+    // the node has one (>= 1.21.10), from renderLabels (after the slots, before the carried stack) on 1.21.1.
     //? if >=26.1 {
     @Override
     public void extractCarriedItem(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -218,11 +213,17 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         bcg.nextStratum();
         mainGui.drawCoveringElements();
         //?} else {
-        /*// Between the slot items (z 150, their count text z 200) and the carried stack (z 232).
-        bcg.pose().pushPose();
+        /*// 1.21.1 queues the slots' items and text and draws them when flushed, after the ledger panel (an immediate
+        // blit) would be: flush them first so the panel lands on top, then lift the ledgers above the items' depth (z 150,
+        // their count text z 200) and below the carried stack (z 232), which is drawn after this. The pose is in the
+        // window's frame here; preDrawForeground puts it back to the screen's.
+        bcg.raw.flush();
+        mainGui.preDrawForeground();
         bcg.pose().translate(0.0F, 0.0F, 210.0F);
         mainGui.drawCoveringElements();
-        bcg.pose().popPose();*/
+        mainGui.postDrawForeground();
+        // flush() turned the depth test back on; render() runs the rest of its labels and floating items with it off.
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();*/
         //?}
     }
 
@@ -323,6 +324,9 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         // left-aligned, duplicating BuildCraft's centered titles drawn in drawForegroundLayer().
         BCGraphics bcg = new BCGraphics(graphics);
         GuiIcon.setGuiGraphics(bcg);
+        //? if <1.21.10 {
+        /*drawCoveringLedgers();*/
+        //?}
         mainGui.preDrawForeground();
         mainGui.drawElementForegrounds(null);
         mainGui.postDrawForeground();

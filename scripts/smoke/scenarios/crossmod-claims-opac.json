@@ -84,8 +84,23 @@
    "label": "B: the claim over the target chunks",
    "do": "cmd",
    "run": [
-    "oclaims server claim in minecraft:overworld 2064 2096 2079 2127"
+    "oclaims server claim in minecraft:overworld 2064 2096 2064 2096"
    ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
+  },
+  {
+   "label": "B: the claim over the target chunks",
+   "do": "cmd",
+   "run": [
+    "oclaims server claim in minecraft:overworld 2064 2112 2064 2112"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
   },
   {
    "do": "wait",
@@ -109,8 +124,23 @@
    "label": "C: the claim over the target chunks",
    "do": "cmd",
    "run": [
-    "execute as @p run oclaims claim 2064 2144 2079 2175"
+    "execute as @p run oclaims claim 2064 2144 2064 2144"
    ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
+  },
+  {
+   "label": "C: the claim over the target chunks",
+   "do": "cmd",
+   "run": [
+    "execute as @p run oclaims claim 2064 2160 2064 2160"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
   },
   {
    "do": "wait",

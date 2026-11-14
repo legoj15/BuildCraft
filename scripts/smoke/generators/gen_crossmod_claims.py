@@ -47,8 +47,10 @@ CHEST = (6, 0, -5)          # a builder (x+2..4, z-1..+1) is this relative to th
 class Mod:
     """What differs between the claim mods: how a claim is made (commands, run in order) and removed."""
 
-    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None, verify=None):
+    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None, verify=None, gap_ms=0):
         self.name, self.loaders = name, loaders
+        # Milliseconds waited after each claim command (OPaC drops a player's second claim command in the same server tick)
+        self.gap_ms = gap_ms
         self.alias = alias or name      # the -PwithMods alias (a variant of a mod's scenario has a name of its own)
         self.foreign, self.own, self.clear, self.notes = foreign, own, clear, notes
         # verify(tag, area) -> (command, regex) or None: a reply that proves the rig's claim is the one the rig needs,
@@ -214,6 +216,8 @@ def build(mod):
         S.wait(1500)
         for c in make(area(RIG_Z[tag])):
             S.cmd("%s: the claim over the target chunks" % tag, c)
+            if mod.gap_ms:
+                S.wait(mod.gap_ms)
         check = mod.verify(tag, area(RIG_Z[tag])) if mod.verify else None
         if check:
             S.wait_cmd("%s: the claim is what the rig needs (reply matches '%s')" % (tag, check[1]), check[0], check[1], 10, 500)
@@ -258,6 +262,15 @@ def build(mod):
     return S
 
 
+def opac_chunks(a):
+    """The chunk corners (block x, z) of the area, one per chunk. OPaC's claim command treats an area as one chunk when
+    (left + right) / 2 == left and (top + bottom) / 2 == top in chunk coordinates, integer division included, so the
+    rigs' 1x2-chunk area claimed only its first chunk row: the Filler, stripes pipe and robot targets (second row) were
+    never claimed. Each chunk gets a command of its own (from = to), which no area shortcut can misread."""
+    x1, z1, x2, z2 = a
+    return [(x, z) for x in range(x1, x2 + 1, 16) for z in range(z1, z2 + 1, 16)]
+
+
 def ftbc_claims(a):
     """One `ftbchunks claim` per chunk of the area, at that chunk's position (the command claims where it is run)."""
     x1, z1, x2, z2 = a
@@ -290,9 +303,9 @@ def flan_owner(owner_of):
 MODS = [
     # `oclaims server claim` needs a dimension from a source with no player; `oclaims claim` (as the player) claims for the dev.
     Mod("opac", None,
-        foreign=lambda a: ["oclaims server claim in minecraft:overworld %d %d %d %d" % a],
-        own=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % a],
-        clear=lambda tag, a: []),
+        foreign=lambda a: ["oclaims server claim in minecraft:overworld %d %d %d %d" % (x, z, x, z) for x, z in opac_chunks(a)],
+        own=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % (x, z, x, z) for x, z in opac_chunks(a)],
+        clear=lambda tag, a: [], gap_ms=300),
     # Flan: `flan add x y z x y z` claims for the player (the 512-block area is over the 500 claim blocks everyone starts
     # with, and its refusal goes to the player's chat, not to the command's reply, so the blocks are given first). An admin claim has
     # no owner, so the dev player is a stranger in it, unless he is an operator: Flan lets a player of permission level 2 or
@@ -308,9 +321,9 @@ MODS = [
         verify=flan_owner(lambda tag: "Admin" if tag == "B" else "Dev")),
     # OPaC with the dev's own claim and machines that belong to a stranger (see flan-stranger).
     Mod("opac-stranger", None, alias="opac", stranger_owner=True,
-        foreign=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % a],
-        own=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % a],
-        clear=lambda tag, a: [],
+        foreign=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % (x, z, x, z) for x, z in opac_chunks(a)],
+        own=lambda a: ["execute as @p run oclaims claim %d %d %d %d" % (x, z, x, z) for x, z in opac_chunks(a)],
+        clear=lambda tag, a: [], gap_ms=300,
         notes="Rig B's claim is the dev's like rig C's and rig B's machines are owned by a stranger."),
     # The same claim mod with a claim that is the dev's and machines that belong to a stranger instead of an admin claim.
     Mod("flan-stranger", None, alias="flan", stranger_owner=True,

@@ -530,10 +530,15 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         if (scrollMax > 0) {
             // Along the inner edge of the text column, in the margin the panel keeps there anyway.
             int barX = textX + textColumnWidth() + 1;
-            int trackHeight = viewportHeight();
+            // The thumb's size comes from the settled viewport, but the track only runs as far as the panel is drawn,
+            // so a half-open panel never shows a bar taller than itself, nor a thumb outside its track.
+            int viewport = viewportHeight();
+            int trackHeight = Math.min(viewport, viewBottom - iconY);
+            if (trackHeight <= 0) return;
             graphics.fill(barX, iconY, barX + SCROLLBAR_WIDTH, iconY + trackHeight, SCROLLBAR_TRACK_COLOUR);
-            int contentHeight = trackHeight + scrollMax;
-            int thumbHeight = Math.max(SCROLLBAR_MIN_THUMB, Math.min(trackHeight, trackHeight * trackHeight / contentHeight));
+            int contentHeight = viewport + scrollMax;
+            int thumbHeight = Math.min(trackHeight,
+                    Math.max(SCROLLBAR_MIN_THUMB, trackHeight * viewport / contentHeight));
             int thumbTop = iconY + (trackHeight - thumbHeight) * scrollOffset / scrollMax;
             graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, SCROLLBAR_THUMB_COLOUR);
         }

@@ -52,11 +52,16 @@ public class LedgerTextWrapTester {
         return visible.codePointCount(0, visible.length());
     }
 
-    /** Every line is non-empty unless the input line it came from was, fits the column unless it is one character,
-     * and the lines together hold exactly the input. */
+    /** Nothing a reader can see: no characters, or only spaces and colour codes. */
+    private static boolean blank(String line) {
+        return line.replaceAll("§.", "").isBlank();
+    }
+
+    /** Every line shows something unless the input line it came from did not (a line of nothing but spaces counts as
+     * blank), fits the column unless it is one character, and the lines together hold exactly the input. */
     private static void assertWellFormed(String input, List<String> lines, int maxPx) {
-        long emptyInputLines = Arrays.stream(input.split("\n", -1)).filter(String::isEmpty).count();
-        Assertions.assertEquals(emptyInputLines, lines.stream().filter(String::isEmpty).count(),
+        long emptyInputLines = Arrays.stream(input.split("\n", -1)).filter(LedgerTextWrapTester::blank).count();
+        Assertions.assertEquals(emptyInputLines, lines.stream().filter(LedgerTextWrapTester::blank).count(),
             "empty lines for \"" + input + "\" at " + maxPx + " px: " + lines);
         for (String line : lines) {
             if (width(line) > maxPx) {

@@ -260,10 +260,17 @@ public final class LedgerTextWrap {
                 if (hyphen) cut = -cut;
                 // A space kept inside the unit (before a closing mark, after an opening one) is no place to break, but
                 // a forced cut can still land beside one. It goes like any space at a break, so no line begins or ends
-                // with it; a stretch of nothing but spaces (an indent) is left alone.
+                // with it.
                 int end = cut;
                 while (end > from && cells.get(end - 1).cp() == ' ') end--;
-                if (end == from) end = cut;
+                if (end == from) {
+                    // The part is nothing but spaces: an indent wider than the column. It would be a blank row, so it
+                    // goes; its codes still count.
+                    for (int i = from; i < cut; i++) active.applyAll(cells.get(i).codes());
+                    prefix = active.emit();
+                    from = cut;
+                    continue;
+                }
                 int next = cut;
                 while (next < size && cells.get(next).cp() == ' ') next++;
                 if (next == size) next = cut;

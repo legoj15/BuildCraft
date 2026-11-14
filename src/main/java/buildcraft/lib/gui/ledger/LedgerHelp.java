@@ -195,7 +195,9 @@ public class LedgerHelp extends Ledger_Neptune {
                 IGuiArea rect = info.target;
                 boolean isHovered = rect.contains(gui.mouse);
                 if (isHovered && !set) {
-                    if (selected != element) {
+                    // Keyed on what the entry says, not just on the element: one element may offer several areas with
+                    // their own text, and a live entry (an engine's conversion rate) must not freeze while hovered.
+                    if (selected != element || !info.info.sameContent(currentHelpInfo)) {
                         selected = element;
                         // Update ledger text to show the hovered element's help info
                         updateHelpText(info.info);
@@ -261,7 +263,7 @@ public class LedgerHelp extends Ledger_Neptune {
 
     /** Update the ledger's text content to reflect the given help info. */
     private void updateHelpText(ElementHelpInfo info) {
-        if (info == currentHelpInfo) return;
+        if (info.sameContent(currentHelpInfo)) return;
         currentHelpInfo = info;
 
         // Clear existing text and add the help info's text

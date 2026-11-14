@@ -548,8 +548,14 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # says it with "benign" or '?'.
                 # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...", and for
                 # a named marker "Clock ... is already at time marker minecraft:noon").
-                # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language.
-                $idempotent = $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)\b'
+                # World-state setters that fail only when the state is already so are benign by the COMMAND, in any language,
+                # unless the command never parsed (an unknown gamerule, a bad coordinate): vanilla then echoes the input up to
+                # the error and everything after it, so a reply line holds the command's last characters verbatim. A
+                # refusal at run time ("already set") does not echo the input.
+                $expanded = (Expand-Coords $c).TrimStart('/')
+                $tail = $expanded.Substring($expanded.Length - [Math]::Min($expanded.Length, 10))
+                $parseError = @($r.output | Where-Object { ([string]$_).Contains($tail) }).Count -gt 0
+                $idempotent = -not $parseError -and $c -match '^(difficulty|time set|weather|gamerule|gamemode|forceload add|tick (un)?freeze)\b'
                 $benign = $stepBenign -or $idempotent -or ($Lang -eq 'en_us' -and
                     (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to|is already at time marker')
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {

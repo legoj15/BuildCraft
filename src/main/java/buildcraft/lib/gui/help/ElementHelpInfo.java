@@ -36,6 +36,13 @@ public class ElementHelpInfo {
         return new ElementHelpInfo(title, colour, true, lines);
     }
 
+    /** True when {@code other} would show exactly the same text: a screen that rebuilds its entry every frame (a live
+     *  rate) offers a new instance each time, and only a change in what it says should refresh the help ledger. */
+    public boolean sameContent(ElementHelpInfo other) {
+        return other != null && (other == this || (colour == other.colour && isPreTranslated == other.isPreTranslated
+                && java.util.Objects.equals(title, other.title) && java.util.Arrays.equals(localeKeys, other.localeKeys)));
+    }
+
     public final HelpPosition target(IGuiArea target) {
         return new HelpPosition(this, target);
     }

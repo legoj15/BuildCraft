@@ -42,13 +42,13 @@ public class GuiRequester extends GuiBC8<ContainerRequester> {
         // pattern. The rectangles cover the 4×5 phantom template grid and the 4×5 delivery grid beside it,
         // mirroring ContainerRequester's slot positions, so the ledger can highlight each grid as a whole.
         mainGui.shownElements.add(new DummyHelpElement(
-                new GuiRectangle(9, 7, 70, 88).offset(mainGui.rootElement),
+                new GuiRectangle(9, 7, 72, 90).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.requester.requests.title", 0xFF_88_CC_FF,
                         "buildcraft.help.requester.requests.desc1",
                         "buildcraft.help.requester.requests.desc2")));
 
         mainGui.shownElements.add(new DummyHelpElement(
-                new GuiRectangle(117, 7, 70, 88).offset(mainGui.rootElement),
+                new GuiRectangle(117, 7, 72, 90).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.requester.delivery.title", 0xFF_88_CC_88,
                         "buildcraft.help.requester.delivery.desc1",
                         "buildcraft.help.requester.delivery.desc2")));

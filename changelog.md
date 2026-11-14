@@ -5,6 +5,7 @@
 - Added Chinese translations for the Guide Book because they were missed in the original translation update.
 - The setting that toggles the steam particles on searing fluids has been correctly moved to the client config settings instead of common/server settings.
 - Fixed a crash when clicking the Filler's pattern slot.
+- Fixed the Guide Book's "Chapters" tab being cut off by the top of the screen on small windows, and its clickable area not matching the tab in other languages.
 - Fixed boats sinking in oils and fuel liquids (gasses still make you sink). "Sticky Oil" (on by default) slows the boat, as expected.
 - {26.1.2/26.2/26.3} Fixed entities being completely stuck in oil on 26.x
 - Fixed edge cases with invalid pluggables like lenses without color or "blank" facades being peaceable on pipes.

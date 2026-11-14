@@ -143,6 +143,8 @@ public class GuiGuide extends Screen {
     public static final IGuiArea FLOATING_CHAPTER_MENU;
 
     private static final float BOOK_OPEN_TIME = 10f;
+    /** Extra rows the small-screen "Chapters" tab shows while hovered. */
+    private static final int CHAPTER_TAB_HOVER_GROW = 2;
 
     static {
         CHAPTER_MARKER_9 = new SpriteNineSliced(CHAPTER_MARKER.sprite, 8, 8, 24, 24, 32);
@@ -417,6 +419,21 @@ public class GuiGuide extends Screen {
         return this.width < 590;
     }
 
+    /** The small-screen "Chapters" tab, drawn and clicked from this one rectangle: as wide as its translated label,
+     *  from the top of the book (or of the screen, when the book is taller than it: 248 against the usual 240
+     *  minimum) down to the row the page title starts on, and never shorter than the label's glyphs (Force Unicode
+     *  Font can halve the screen to 180, where the title row is itself off screen). */
+    private GuiRectangle chapterTabArea() {
+        // The open book's origin, as in layoutPageButtons: minX/minY hold the cover's layout until the first open
+        // frame is drawn.
+        int bookX = (this.width - PAGE_LEFT.width * 2) / 2;
+        int bookY = (this.height - BOOK_COVER.height) / 2;
+        int top = Math.max(bookY, 0);
+        int width = currentFont.getStringWidth(LocaleUtil.localize("buildcraft.guide.chapter_list")) + 20;
+        int height = Math.max(bookY + 12 - top, currentFont.getMaxFontHeight() - 1);
+        return new GuiRectangle(bookX + PAGE_LEFT.width + (int) PAGE_RIGHT_TEXT.getX(), top, width, height);
+    }
+
     @Override
     //? if >=26.1 {
     public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
@@ -628,21 +645,23 @@ public class GuiGuide extends Screen {
                 currentFont.drawString(str, (int) FLOATING_CHAPTER_MENU.getX() + 7,
                     (int) FLOATING_CHAPTER_MENU.getY() + 7, 0);
             } else {
-                boolean isHovered = new GuiRectangle(secondPageX, minY, 80, 10).contains(mouse);
-                int tabY = minY + (isHovered ? -5 : 0);
-                int strWidth = currentFont.getStringWidth(str);
+                GuiRectangle tab = chapterTabArea();
+                int tabX = (int) tab.getX();
+                int tabTop = (int) tab.getY();
+                int tabBottom = tabTop + (int) tab.getHeight() + (tab.contains(mouse) ? CHAPTER_TAB_HOVER_GROW : 0);
+                // The label sits two below the tab's top, or higher when the band is too short for that (the book's
+                // top is off screen), so its last glyph row always ends inside the band.
+                int textY = Math.min(tabTop + 2, tabBottom - currentFont.getMaxFontHeight() + 1);
                 BCGraphics graphics = GuiIcon.getGuiGraphics();
                 if (graphics != null) {
-                    // Clip so the tab only peeks from the top edge rather than drawing its full
-                    // height down over the page.
-                    try (GuiUtil.AutoGlScissor scissor =
-                        GuiUtil.scissor(graphics, secondPageX, 0, strWidth + 20, minY + 10)) {
-                        CHAPTER_MARKER_9.draw(secondPageX, tabY, strWidth + 20, 100);
-                        currentFont.drawString(str, secondPageX + 10, tabY + 3, 0);
+                    // Clip so the tab only peeks from the top edge rather than drawing its full height down over the
+                    // page. The marker hangs from the book's top, which may be above the screen: its top border is
+                    // then simply not seen.
+                    try (GuiUtil.AutoGlScissor scissor = GuiUtil.scissor(
+                        graphics, tabX, tabTop, tab.getWidth(), tabBottom - tabTop)) {
+                        CHAPTER_MARKER_9.draw(tabX, minY, (int) tab.getWidth(), 100);
+                        currentFont.drawString(str, tabX + 10, textY, 0);
                     }
-                } else {
-                    CHAPTER_MARKER_9.draw(secondPageX, tabY, strWidth + 20, 100);
-                    currentFont.drawString(str, secondPageX + 10, tabY + 3, 0);
                 }
             }
         }
@@ -804,8 +823,7 @@ public class GuiGuide extends Screen {
 
                 // Small-screen "Chapters" tab that opens the overlay menu (1.12.2 behavior); the open overlay was
                 // handled above.
-                if (isSmallScreen() && new GuiRectangle(
-                    minX + PAGE_LEFT.width + (int) PAGE_RIGHT_TEXT.getX(), minY, 80, 10).contains(mouse)) {
+                if (isSmallScreen() && chapterTabArea().contains(mouse)) {
                     showingContentsMenu = true;
                     return true;
                 }

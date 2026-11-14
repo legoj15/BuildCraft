@@ -1,0 +1,158 @@
+{
+ "name": "guide-chapters-tab",
+ "description": "The guide book's small-screen Chapters tab (#192) at the runner's 854x480 window and GUI scale 2, where the 248 px book is taller than the 240 px screen: idle, hovered, and the overlay it opens. Clicks by position only, so it runs under -Lang.",
+ "base": [
+  60,
+  150,
+  -60
+ ],
+ "steps": [
+  {
+   "label": "a floor to stand on",
+   "do": "cmd",
+   "run": [
+    "gamemode creative @p",
+    "?forceload add {X-2} {Z-2} {X+2} {Z+2}",
+    "?time set 6000",
+    "?weather clear",
+    "?fill {X-2} {Y-1} {Z-2} {X+2} {Y-1} {Z+2} minecraft:smooth_stone"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "yaw": 0,
+   "pitch": -80
+  },
+  {
+   "do": "wait",
+   "ms": 2000
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:guide"
+  },
+  {
+   "do": "look",
+   "yaw": 0,
+   "pitch": -80
+  },
+  {
+   "label": "open guide",
+   "do": "use"
+  },
+  {
+   "do": "expectScreen",
+   "contains": "GuiGuide",
+   "timeoutSec": 20
+  },
+  {
+   "do": "wait",
+   "ms": 600
+  },
+  {
+   "label": "open the book",
+   "do": "click",
+   "x": 213,
+   "y": 120,
+   "allowMiss": true
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "label": "park the cursor off the tab",
+   "do": "hover",
+   "x": 100,
+   "y": 120
+  },
+  {
+   "name": "tab-idle",
+   "do": "shot",
+   "look": "the Chapters tab at the top of the right page shows its whole label, no letter cut by the screen edge or the tab's lower edge"
+  },
+  {
+   "label": "hover the tab",
+   "do": "hover",
+   "x": 232,
+   "y": 4
+  },
+  {
+   "name": "tab-hover",
+   "do": "shot",
+   "look": "hovered, the tab grows and the whole label is still readable"
+  },
+  {
+   "label": "click the tab",
+   "do": "click",
+   "x": 232,
+   "y": 4,
+   "allowMiss": true
+  },
+  {
+   "do": "wait",
+   "ms": 500
+  },
+  {
+   "name": "tab-overlay",
+   "do": "shot",
+   "look": "the chapter overlay opened"
+  },
+  {
+   "label": "pick a chapter from the overlay",
+   "do": "click",
+   "x": 155,
+   "y": 50,
+   "allowMiss": true
+  },
+  {
+   "do": "wait",
+   "ms": 500
+  },
+  {
+   "label": "open an entry on that spread (a titled page)",
+   "do": "click",
+   "x": 125,
+   "y": 72,
+   "allowMiss": true
+  },
+  {
+   "do": "wait",
+   "ms": 800
+  },
+  {
+   "label": "park the cursor off the tab",
+   "do": "hover",
+   "x": 100,
+   "y": 120
+  },
+  {
+   "name": "tab-over-title",
+   "do": "shot",
+   "look": "on a titled page the tab stops above the page title"
+  },
+  {
+   "label": "hover the tab",
+   "do": "hover",
+   "x": 232,
+   "y": 4
+  },
+  {
+   "name": "tab-over-title-hover",
+   "do": "shot",
+   "look": "hovered, the tab grows two rows; the label stays whole"
+  },
+  {
+   "do": "close"
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:air"
+  }
+ ]
+}

@@ -36,10 +36,8 @@ import buildcraft.lib.misc.LocaleUtil;
  *  present a normal, inviting help icon that opens onto a blank panel, because that is
  *  indistinguishable from the player simply mis-hovering.
  *
- *  <p>As of writing no shipped screen reaches this state — the two screens with no help wiring
- *  ({@code GuiAdvancedCraftingTable}, {@code GuiAutoCraftItems}) both return {@code false} from
- *  {@code shouldAddHelpLedger()}, so they never get this ledger. That is the intent: the warning is
- *  a regression alarm, not routine decoration. */
+ *  <p>A screen with no help entries must either register some or return {@code false} from
+ *  {@code shouldAddHelpLedger()}. */
 @SuppressWarnings("this-escape")
 public class LedgerHelp extends Ledger_Neptune {
     private static final Identifier ICON_HELP = Identifier.parse("buildcraftunofficial:textures/icons/help.png");
@@ -56,6 +54,9 @@ public class LedgerHelp extends Ledger_Neptune {
     private static final int COLOUR_WARNING = 0xFF_FF_AA_00;
 
     private IGuiElement selected = null;
+    /** The area of the help target whose text is shown: the last one the mouse was over. The wheel scrolls a long
+     *  entry from there too, so the reader need not leave the element to scroll its text. */
+    private IGuiArea selectedArea = null;
     /** True once at least one element has offered a help entry. Drives the warning presentation.
      *  Latching (never cleared back to false) is deliberate — see {@link #drawIcon}. */
     private boolean foundAny = false;
@@ -80,8 +81,22 @@ public class LedgerHelp extends Ledger_Neptune {
         super.tick();
         if (currentWidth == CLOSED_WIDTH && currentHeight == CLOSED_HEIGHT) {
             selected = null;
+            selectedArea = null;
             currentHelpInfo = null;
         }
+    }
+
+    /** Besides the ledger itself, the wheel scrolls a long entry while the mouse is over the help target it is about. */
+    @Override
+    public boolean onMouseScrolled(double amountY) {
+        if (super.onMouseScrolled(amountY)) {
+            return true;
+        }
+        if (selectedArea != null && canScroll() && selectedArea.contains(gui.mouse)) {
+            scrollByWheel(amountY);
+            return true;
+        }
+        return false;
     }
 
     /** Probes the screen's help entries once, on the first draw, and renders the icon.
@@ -185,6 +200,7 @@ public class LedgerHelp extends Ledger_Neptune {
                         // Update ledger text to show the hovered element's help info
                         updateHelpText(info.info);
                     }
+                    selectedArea = rect;
                     set = true;
                 }
                 boolean isSelected = selected == element;

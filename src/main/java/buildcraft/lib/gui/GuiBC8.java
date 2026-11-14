@@ -233,6 +233,16 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
     }*/
     //?}
 
+    // Same signature on every node, so no directive: the wheel goes to the ledgers (a long one scrolls its text)
+    // before the screen's own handling.
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
     /** Foreground labels. 26.1: extractLabels(GuiGraphicsExtractor); 1.21.11: renderLabels(GuiGraphics). */
     @Override
     //? if >=26.1 {

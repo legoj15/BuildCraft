@@ -269,6 +269,31 @@ public class BuildCraftGui {
         }
     }
 
+    /** Offers a mouse-wheel event to the open menu, then to every interaction element (ledgers scroll their text
+     *  with it). A fully-overriding menu keeps the wheel from everything beneath it.
+     *
+     *  @return true if an element used the event */
+    public boolean onMouseScrolled(double mouseX, double mouseY, double amountY) {
+        mouse.setMousePosition(mouseX, mouseY);
+
+        IMenuElement m = currentMenu;
+        if (m != null) {
+            if (m.onMouseScrolled(amountY)) {
+                return true;
+            }
+            if (m.shouldFullyOverride()) {
+                return false;
+            }
+        }
+
+        for (IGuiElement element : shownElements) {
+            if (element instanceof IInteractionElement && ((IInteractionElement) element).onMouseScrolled(amountY)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean onKeyTyped(char typedChar, int keyCode) {
         boolean action = false;
         IMenuElement m = currentMenu;

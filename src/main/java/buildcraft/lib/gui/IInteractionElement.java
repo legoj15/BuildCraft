@@ -14,4 +14,13 @@ public interface IInteractionElement extends IGuiElement {
     default boolean onKeyPress(char typedChar, int keyCode) {
         return false;
     }
+
+    /** Offered the mouse wheel before the screen's own handling; unlike the clicks above, an element is expected to
+     *  check for itself that the mouse is over it.
+     *
+     *  @param amountY the wheel delta, positive for wheel up
+     *  @return true if the event was used, which stops it reaching anything else */
+    default boolean onMouseScrolled(double amountY) {
+        return false;
+    }
 }

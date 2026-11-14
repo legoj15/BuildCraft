@@ -380,6 +380,10 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        // A ledger that scrolls its own text over the mouse takes the wheel before the map zoom does.
+        if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
         if (inMap(mouseX, mouseY) && scrollY != 0) {
             double step = scrollY > 0 ? ZOOM_STEP_IN : 1.0 / ZOOM_STEP_OUT;
             camera.zoomBy(step);

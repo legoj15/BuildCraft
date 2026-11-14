@@ -324,6 +324,10 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     // Same signature on every node, so no directive: the wheel over the list panel or the scrollbar scrolls the list.
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        // A ledger that scrolls its own text over the mouse takes the wheel first.
+        if (mainGui.onMouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
         double x = mouseX - leftPos, y = mouseY - topPos;
         if (x >= LIST_HELP_X && x < SCROLL_X + SCROLL_W && y >= SCROLL_Y && y < SCROLL_Y + SCROLL_H) {
             refreshList();

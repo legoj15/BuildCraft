@@ -445,8 +445,8 @@ echo("control: smooth stone counts", "execute positioned %s 0 %s positioned over
      "minecraft:smooth_stone" % (o('X', 12), o('Z', -6)))
 
 # ── oil feature ────────────────────────────────────────────────────────────────────────────────────────────
-# A range of 48, not 1: a fresh world's seed can put open water or trees right at 400,400, where a 1-block search finds no safe spot.
-cmd("go somewhere unexplored for the oil deposit", "spreadplayers 400 400 0 48 false @p")
+# A range of 200: a fresh world's seed can put open water around 400,400, and 48 still found no safe spot on two of five Fabric lines.
+cmd("go somewhere unexplored for the oil deposit", "spreadplayers 400 400 0 200 false @p")
 wait(4000)
 cmd("place BuildCraft's oil feature on a 3x3 chunk grid (fails unless the config raises mediumOilGenProb)",
     "?execute at @p run place feature buildcraftunofficial:oil ~ ~ ~",

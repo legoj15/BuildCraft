@@ -306,6 +306,12 @@ listOf("runClient", "runServer").forEach { name ->
         if (bcDebug != null) {
             systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
         }
+        if (name == "runClient") {
+            // The dev user is "Dev" on every loader, as on NeoForge: Fabric Loader would otherwise draw PlayerNNN anew
+            // on each launch, and a machine's ownerUUID (a scenario's, spelled with Dev's fixed offline UUID) then never
+            // names the player, so every owner-gated check (claims, the owner ledger) reads a stranger.
+            args("--username", "Dev")
+        }
         if (name == "runClient" && bcQuickPlay != null) {
             args("--quickPlaySingleplayer", bcQuickPlay)
         }

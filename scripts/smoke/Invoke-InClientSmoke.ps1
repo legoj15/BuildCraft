@@ -50,6 +50,13 @@ param(
     # Optional dev-runtime mods to load (aliases, e.g. -Mods a,b), passed to Gradle as -PwithMods=a,b next to the
     # recipe-viewer switch; added to the scenario's own "mods" list.
     [string[]]$Mods = @(),
+    # Play this save instead of the scenario's own (or bc-smoke), copied from -SaveSeed (default: the scenario's saveSeed,
+    # else bc-smoke) when it is missing. With -FreshSave it is deleted first, so every run starts from the seed as it
+    # is: what a comparison between runs (the same scenario bare and with mods) needs, since a scenario that builds on
+    # the world an earlier run left (item entities, loaded chunks) would otherwise start from a different state.
+    [string]$Save = '',
+    [string]$SaveSeed = '',
+    [switch]$FreshSave,
     [string]$Scenario,
     [string]$OutDir,
     # The McDevBridge checkout whose build/libs holds the node jars. $env:MCDEVBRIDGE_ROOT overrides the default, for a
@@ -91,8 +98,8 @@ $BridgeFile = Join-Path $HOME '.mcdevbridge/bridge.json'
 $SaveName = 'bc-smoke'
 # A scenario may play a world of its own ("save"); "saveSeed" names the save to copy it from when it is missing (a
 # scenario without a seed needs its save copied in by hand first, e.g. a world carried over from another node).
-$PlaySave = if ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
-$PlaySeed = if ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } else { $null }
+$PlaySave = if ($Save) { $Save } elseif ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
+$PlaySeed = if ($SaveSeed) { $SaveSeed } elseif ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } elseif ($Save) { $SaveName } else { $null }
 # Optional dev-runtime mods: the scenario's "mods" aliases plus -Mods, in that order, each once. Empty = no -PwithMods.
 $ModAliases = @(@(if ($ScenarioData.PSObject.Properties['mods']) { $ScenarioData.mods }) + $Mods |
         ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
@@ -812,6 +819,9 @@ try {
             $haveSave = Test-Path $savePath
             if ($PlaySave -ne $SaveName) {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
+                if (($FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)) -and (Test-Path $playPath)) {
+                    Remove-Item -Recurse -Force -LiteralPath $playPath
+                }
                 if (-not (Test-Path $playPath)) {
                     $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }
                     if (-not $seedPath -or -not (Test-Path $seedPath)) {

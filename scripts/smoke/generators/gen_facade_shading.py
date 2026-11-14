@@ -52,6 +52,11 @@ def rig(x0, floor, wall):
 
 
 steps = [
+    # A run that starts away from the base (another scenario left the player elsewhere, or a fresh world) would fail
+    # the first fill with "That position is not loaded": load the rig's chunks and stand in them first.
+    {"label": "load the rig's chunks", "do": "cmd", "run": ["gamemode creative @p", "?forceload add {X-16} {Z-12} {X+16} {Z+8}"]},
+    {"do": "tp", "at": [0, 1, 3], "yaw": 180, "pitch": 12},
+    {"do": "wait", "ms": 3000},
     {"label": "clear the area, noon, clear weather", "do": "cmd", "run": [
         "fill {X-14} {Y-1} {Z-10} {X+14} {Y+6} {Z+4} minecraft:air",
         "?time set noon",

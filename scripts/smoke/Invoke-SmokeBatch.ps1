@@ -45,6 +45,13 @@ param(
     [int]$BootMinutes = 0,
     # Passed to the runner as -NoDaemon (see there: needed whenever Gradle daemons from another Windows session may idle).
     [switch]$NoDaemon,
+    # Optional dev-runtime mod aliases for every scenario of the batch, passed on as the runner's -Mods (-PwithMods).
+    [string[]]$Mods = @(),
+    # Passed on as the runner's -Save / -SaveSeed / -FreshSave: every scenario plays a fresh copy of the seed save, so
+    # runs of the same scenario with and without mods start from the same world.
+    [string]$Save = '',
+    [string]$SaveSeed = '',
+    [switch]$FreshSave,
     # How long one scenario may hold the batch (the runner's own boot wait is 10 minutes of it).
     [int]$ScenarioTimeoutMinutes = 45,
     # How long to keep retrying while another session's run holds the machine-wide smoke lock.
@@ -67,6 +74,7 @@ function Split-List($Values) { @($Values | ForEach-Object { $_ -split ',' } | Fo
 $Scenarios = Split-List $Scenarios
 $Skip = Split-List $Skip
 $Lang = Split-List $Lang
+$Mods = Split-List $Mods
 if (-not $Lang.Count) { $Lang = @('en_us') }
 # Scenarios that wait while something else acts: a real-mouse driver (Drive-RealMouse.ps1) or a person listening.
 # Alone, the two real-mouse ones fail their expectFile step (the driver's marker never appears) and pipe-sounds would
@@ -97,6 +105,10 @@ foreach ($name in $Scenarios) {
         if ($McDevBridgeRoot) { $runArgs += @('-McDevBridgeRoot', $McDevBridgeRoot) }
         if ($BootMinutes -gt 0) { $runArgs += @('-BootMinutes', [string]$BootMinutes) }
         if ($NoDaemon) { $runArgs += '-NoDaemon' }
+        if ($Mods.Count) { $runArgs += @('-Mods', ($Mods -join ',')) }
+        if ($Save) { $runArgs += @('-Save', $Save) }
+        if ($SaveSeed) { $runArgs += @('-SaveSeed', $SaveSeed) }
+        if ($FreshSave) { $runArgs += '-FreshSave' }
 
         $clock = [System.Diagnostics.Stopwatch]::StartNew()
         $lockDeadline = (Get-Date).AddMinutes($LockWaitMinutes)

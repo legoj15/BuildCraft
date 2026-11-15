@@ -252,6 +252,10 @@ dependencies {
         compileOnly("io.wispforest:accessories-neoforge:$it") { isTransitive = false }
     }
 
+    // Open Parties and Claims' server API: a machine's placement asks it (lib.compat.claims.OpenPartiesAndClaims), which
+    // names the mod only behind a loaded-mod check. Compile-only against the jar this node's `withmod.opac` alias runs.
+    compileOnly(WithMods.compileCoordinate(project, "opac", "maven.modrinth:open-parties-and-claims")) { isTransitive = false }
+
     // GuideME (AE2's guide library), opt-in for dev runs: `./gradlew :26.3:runClient -PwithGuideMe` loads it so the
     // generated guide under assets/buildcraftunofficial/guides/ can be checked in-game. BC has no code dependency
     // on it (the guide is resources only), so it stays off the default runtime and the test runs.

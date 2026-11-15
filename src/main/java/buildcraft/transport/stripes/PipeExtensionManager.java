@@ -284,7 +284,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         w.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }
 
-    /** Posts the placement event for the block just placed where {@code before} was, as the owner; true if refused. */
+    /** Asks protection about the block just placed where {@code before} was, as the owner; true if refused. */
     private static boolean placeRefused(ServerLevel w, CapturedBlock before, GameProfile owner, Direction direction) {
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(w, owner, before.pos())) {
             return !Platform.protection().canPlaceOver(lease.player(), before, direction);

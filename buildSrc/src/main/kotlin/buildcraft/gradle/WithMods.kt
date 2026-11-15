@@ -50,6 +50,19 @@ object WithMods {
         return coordinates.toList()
     }
 
+    /**
+     * The coordinate `withmod.[alias]` names for [module] (`group:name`) on [project]'s node, for a mod BuildCraft names
+     * behind a loaded-mod check and so compiles against: the compiler and the `-PwithMods` dev runtime then see one jar,
+     * the version this node pins, and the pin lives once. Throws a [GradleException] naming the node when the alias or
+     * the module is missing, since the shared source needs it on every node.
+     */
+    fun compileCoordinate(project: Project, alias: String, module: String): String {
+        val definition = project.findProperty("withmod.$alias") as String?
+            ?: throw GradleException("${project.name} defines no withmod.$alias, which the shared source compiles against")
+        return definition.split(';').map { it.trim() }.firstOrNull { it.startsWith("$module:") }
+            ?: throw GradleException("withmod.$alias on ${project.name} names no $module coordinate: '$definition'")
+    }
+
     /** A jar unpacked from another jar's META-INF/jars/; [isMod] when it carries a fabric.mod.json (so it needs remapping). */
     data class NestedJar(val file: File, val isMod: Boolean)
 

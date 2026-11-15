@@ -75,7 +75,9 @@ public class LedgerListMatch extends Ledger_Neptune {
 
     @Override
     public void drawBackground(float partialTicks) {
-        // When closed/closing we don't need to compute hover state.
+        // Snap to the persisted open state first (as LedgerHelp does), or a ledger restored open would read
+        // as closed for its first frame and show the idle text. When closed/closing we don't need hover state.
+        applyPersistedState();
         if (shouldDrawOpen()) {
             updateHoverContent();
         }

@@ -32,23 +32,33 @@ class Scenario:
         self.description = description
         self.top = top
         self.steps = []
-        self.only = None    # while set, every step added is limited to these nodes (see only_on)
+        self.only = None          # while set, every step added is limited to these nodes (see only_on)
+        self.only_loaders = None  # and to these loaders
 
-    def only_on(self, nodes):
-        """`with S.only_on(["26.1.2"]):` limits the steps added inside to those Minecraft lines (a step's "nodes")."""
+    def only_on(self, nodes=None, loaders=None):
+        """`with S.only_on(["26.1.2"]):` limits the steps added inside to those Minecraft lines (a step's "nodes"),
+        `with S.only_on(loaders=["fabric"]):` to that loader's nodes (a step's "loaders"). Scopes nest and narrow."""
         scenario = self
 
         class _Scope:
             def __enter__(self):
-                self.before, scenario.only = scenario.only, list(nodes)
+                self.before = (scenario.only, scenario.only_loaders)
+                if nodes is not None:
+                    scenario.only = [n for n in nodes if scenario.only is None or n in scenario.only]
+                if loaders is not None:
+                    scenario.only_loaders = [ld for ld in loaders if scenario.only_loaders is None or ld in scenario.only_loaders]
 
             def __exit__(self, *exc):
-                scenario.only = self.before
+                scenario.only, scenario.only_loaders = self.before
         return _Scope()
 
     def step(self, **kw):
         if self.only is not None:
             kw["nodes"] = [n for n in kw["nodes"] if n in self.only] if "nodes" in kw else self.only
+        if self.only_loaders is not None:
+            kw["loaders"] = [ld for ld in kw["loaders"] if ld in self.only_loaders] if "loaders" in kw else self.only_loaders
+        if kw.get("nodes") == [] or kw.get("loaders") == []:
+            return    # the scopes leave it nowhere to run
         self.steps.append(kw)
 
     def cmd(self, label, *run, **kw):

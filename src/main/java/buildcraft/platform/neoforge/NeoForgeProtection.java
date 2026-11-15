@@ -29,12 +29,14 @@ import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
+import buildcraft.lib.compat.claims.OpenPartiesAndClaims;
 import buildcraft.platform.event.PlatformProtection;
 
 /**
  * {@link PlatformProtection} on NeoForge: the events of NeoForge's event bus. Break and place probes are
  * {@link NeoForgeBreakEvent} and {@link NeoForgePlaceProbe}; everything else posts the event NeoForge's own hook for a
- * player's act posts.
+ * player's act posts. Placements are also put to Open Parties and Claims' own API ({@link OpenPartiesAndClaims}),
+ * whose event handler waves a machine's placement through.
  */
 public final class NeoForgeProtection implements PlatformProtection {
 
@@ -43,9 +45,14 @@ public final class NeoForgeProtection implements PlatformProtection {
         return NeoForgeBreakEvent.canBreak(level, pos, state, player);
     }
 
+    /**
+     * The placement event's probe, then Open Parties and Claims' own placement ask: the probe's placed block is the
+     * cell's current one (air), which OPaC's event handler lets through whatever the claim ({@link OpenPartiesAndClaims}).
+     */
     @Override
     public boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player) {
-        return NeoForgePlaceProbe.canPlace(level, cells, player);
+        return NeoForgePlaceProbe.canPlace(level, cells, player)
+            && OpenPartiesAndClaims.mayPlaceAll(level, cells, player);
     }
 
     @Override
@@ -92,9 +99,14 @@ public final class NeoForgeProtection implements PlatformProtection {
         return new Captured(BlockSnapshot.create(level.dimension(), level, pos));
     }
 
+    /**
+     * Open Parties and Claims first, then the placement event: a placement OPaC refuses posts no event, so no
+     * {@code onBlockPlace} listener is told about a placement that then does not happen.
+     */
     @Override
     public boolean canPlaceOver(Entity placer, CapturedBlock replaced, Direction face) {
-        return !EventHooks.onBlockPlace(placer, ((Captured) replaced).snapshot(), face);
+        return OpenPartiesAndClaims.mayPlace(placer.level(), replaced.pos(), placer)
+            && !EventHooks.onBlockPlace(placer, ((Captured) replaced).snapshot(), face);
     }
 
     /** A {@link BlockSnapshot}, the record NeoForge's placement event carries. */

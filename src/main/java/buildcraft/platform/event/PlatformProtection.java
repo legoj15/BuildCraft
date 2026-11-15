@@ -47,7 +47,8 @@ public interface PlatformProtection {
      * any others the cells it fills too, a bed's head or a door's top): asks what a player's placement would ask (a
      * probe; nothing is placed) and answers whether nothing refused it. On NeoForge that is the placement event, which
      * BuildCraft's own {@code GameHooks.onBlockPlace} listeners see as a probe; Fabric has no place event, so the
-     * protection providers alone are asked and those listeners are not told. Each cell is "placed
+     * protection providers are asked and those listeners are not told. On both loaders Open Parties and Claims is
+     * asked too, through its own API, as its handlers let a machine's placement through. Each cell is "placed
      * against" the block below it, as a block set down on the floor of its cell is. Because nothing has been placed,
      * the event's placed state is the cell's current one.
      *
@@ -104,7 +105,8 @@ public interface PlatformProtection {
      * Whether {@code placer} may keep the block it has just placed where {@code replaced} was (captured before the
      * placement), placed against the face {@code face} names (the block behind it, as seen from the new block, is
      * in {@code face.getOpposite()}): posts the placement event a player's placement posts once the block is set
-     * down. Not a probe: the block is there.
+     * down. Not a probe: the block is there. Open Parties and Claims is asked too, as for {@link #canPlace}; on NeoForge
+     * it is asked first, and the event is posted only when it allows the placement.
      */
     boolean canPlaceOver(Entity placer, CapturedBlock replaced, Direction face);
 

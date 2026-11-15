@@ -4,6 +4,7 @@
 - Added Russian language support, thank you for your contribution, [maffaka](https://github.com/maffaka)!
 - Added Chinese translations for the Guide Book because they were missed in the original translation update.
 - The setting that toggles the steam particles on searing fluids has been correctly moved to the client config settings instead of common/server settings.
+- Fixed Quarries, Builders and Stripes pipes placing blocks inside someone else's Open Parties and Claims claim.
 - Fixed a crash when clicking the Filler's pattern slot.
 - Fixed the Guide Book's "Chapters" tab being cut off by the top of the screen on small windows, and its clickable area not matching the tab in other languages.
 - Fixed boats sinking in oils and fuel liquids (gasses still make you sink). "Sticky Oil" (on by default) slows the boat, as expected.

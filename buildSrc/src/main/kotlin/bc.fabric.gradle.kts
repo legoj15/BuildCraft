@@ -465,6 +465,10 @@ dependencies {
     // fabric-transfer-api-v1 7.0.0, whose BlockApiLookup/TransactionContext signatures its EnergyStorage names are
     // unchanged in the 8.x this node has, so its own transitive transfer-api pin is left out.
     modConfig("compileOnly")("teamreborn:energy:$teamRebornEnergyVersion") { isTransitive = false }
+    // Open Parties and Claims' server API, for the claim mod that guards placements through its own mixins and not Common
+    // Protection API (lib.compat.claims.OpenPartiesAndClaims names it only behind a loaded-mod check). Compile-only
+    // against the jar this node's `withmod.opac` alias runs.
+    modConfig("compileOnly")(WithMods.compileCoordinate(project, "opac", "maven.modrinth:open-parties-and-claims")) { isTransitive = false }
     // Common Protection API, the API Fabric claim mods answer "may this player break, place or use here" through
     // (FabricProtection). MIT, so it ships inside the jar (Loom's jar-in-jar `include`, carrying its own licence
     // file), as Fabric mods conventionally ship it; the loader keeps the newest copy when several mods bundle it.

@@ -184,9 +184,13 @@ def build(mod):
                  mods=[mod.alias], save="bc-xmod-claims-" + mod.name, saveSeed="bc-smoke", freshSave=True)
     if mod.loaders:
         S.top["loaders"] = mod.loaders
-    S.cmd("creative, daylight, the three rigs' chunks loaded",
-          "gamemode creative @p", "difficulty peaceful", "time set day", "weather clear",
-          "?forceload add {X-16} {Z-16} {X+48} {Z+144}")
+    S.cmd("creative, daylight, peaceful",
+          "gamemode creative @p", "difficulty peaceful", "time set day", "weather clear")
+    # One forceload per rig: on the 1.21.x lines the bridge's reply to a single forceload over all three rigs timed out
+    # while the server was still loading the chunks (#205).
+    for tag in ("A", "B", "C"):
+        z0 = RIG_Z[tag]
+        S.cmd("%s: the rig's chunks force-loaded" % tag, "?forceload add {X-16} {Z%+d} {X+48} {Z%+d}" % (z0 - 16, z0 + 48))
     S.tp(8, 4, 8, 0, 20)
     S.wait(3000)
     for tag in ("A", "B", "C"):

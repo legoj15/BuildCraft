@@ -44,6 +44,7 @@ import net.fabricmc.fabric.api.event.player.UseItemCallback;
 
 import eu.pb4.common.protection.api.CommonProtection;
 
+import buildcraft.lib.compat.claims.OpenPartiesAndClaims;
 import buildcraft.platform.event.GameHooks;
 import buildcraft.platform.event.HookOrder;
 import buildcraft.platform.event.PlatformProtection;
@@ -56,13 +57,15 @@ import buildcraft.platform.event.PlatformProtection;
  * about the owner ({@link #owner}).
  *
  * <p><b>Placements.</b> Fabric API has no block-placement event, so a placement is asked of the protection providers
- * alone, as NeoForge's placement event is all a machine's placement asks there (vanilla's spawn protection and world
+ * (and of Open Parties and Claims, below), as NeoForge's placement event is what a machine's placement asks there
+ * (vanilla's spawn protection and world
  * border gate a player's click packet, never a machine); a block an item use sets down is recorded as NeoForge's
  * snapshot capture records it ({@link #useItemOn}). BuildCraft's own {@code onBlockPlace} listeners are told about
- * these machine placements, never about a player's.
+ * these machine placements, never about a player's. Open Parties and Claims is asked through its own server API
+ * ({@link OpenPartiesAndClaims}) beside the providers: it registers no provider.
  *
- * <p><b>Gaps.</b> A claim mod that guards placements through its own mixins alone, not Common Protection API, is not
- * asked about a placement. Common Protection API has no item-use check: an item used in the air asks
+ * <p><b>Gaps.</b> Any other claim mod that guards placements through its own mixins alone, not Common Protection API,
+ * is not asked about a placement. Common Protection API has no item-use check: an item used in the air asks
  * whether the block the player stands in may be interacted with. Fabric has no harvest-check event:
  * {@link #canHarvest} is vanilla's tool check. Fabric callbacks cannot be unregistered: see {@link #onBreak}.
  *^/
@@ -111,8 +114,9 @@ public final class FabricProtection implements PlatformProtection {
     }
 
     /^*
-     * Each cell is asked of the protection providers. Not of vanilla's {@code mayInteract} (spawn protection, the
-     * world border): NeoForge's placement probe never asks it, and neither does a machine's break.
+     * Each cell is asked of the protection providers, then of Open Parties and Claims. Not of vanilla's
+     * {@code mayInteract} (spawn protection, the world border): NeoForge's placement probe never asks it, and neither
+     * does a machine's break.
      *^/
     @Override
     public boolean canPlace(ServerLevel level, List<BlockPos> cells, Player player) {
@@ -124,7 +128,7 @@ public final class FabricProtection implements PlatformProtection {
                 return false;
             }
         }
-        return true;
+        return OpenPartiesAndClaims.mayPlaceAll(level, cells, player);
     }
 
     /^*
@@ -336,7 +340,8 @@ public final class FabricProtection implements PlatformProtection {
 
     /^*
      * Asked of the protection providers, about the placer's profile (a placer that is no player is
-     * {@link CommonProtection#UNKNOWN}, as the API has it); not of vanilla's {@code mayInteract}, as {@link #canPlace}.
+     * {@link CommonProtection#UNKNOWN}, as the API has it), and of Open Parties and Claims; not of vanilla's
+     * {@code mayInteract}, as {@link #canPlace}.
      *^/
     @Override
     public boolean canPlaceOver(Entity placer, CapturedBlock replaced, Direction face) {
@@ -346,7 +351,8 @@ public final class FabricProtection implements PlatformProtection {
         Player player = placer instanceof Player p ? p : null;
         var profile = player != null ? owner(player) : CommonProtection.UNKNOWN;
         BlockPos pos = replaced.pos();
-        boolean allowed = CommonProtection.canPlaceBlock(level, pos, profile, player);
+        boolean allowed = CommonProtection.canPlaceBlock(level, pos, profile, player)
+            && OpenPartiesAndClaims.mayPlace(level, pos, placer);
         postPlace(new Placed(level, pos, level.getBlockState(pos.relative(face.getOpposite())), placer, !allowed));
         return allowed;
     }

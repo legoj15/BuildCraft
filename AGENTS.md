@@ -34,6 +34,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 ./gradlew :26.3:runGameTestServer -PwithFallingTree   # opt-in FallingTree (tree felling) on the 26.3 and 26.3-fabric runtime (robot_break_fallingtree_* then fails if it did not load); other nodes ignore it
 ./gradlew :26.3:runClient -PwithMods=opac,lithium   # opt-in third-party mods (cross-mod checks) on that node's runClient, runServer and game-test runtime, either loader; an alias a node does not define is logged and skipped
 # The aliases are `withmod.<alias>=<coordinate>[;<coordinate>...]` in versions/<node>/gradle.properties (the mod plus the libraries it needs, none transitive; the 1.21.x Fabric nodes unpack a mod's nested jars themselves, see WithMods.nestedJars); `./gradlew withModsResolve -I scripts/withmods-resolve.init.gradle.kts --no-configuration-cache` proves every alias still resolves.
+# `withmod.opac` is also the compile-only pin of `lib.compat.claims.OpenPartiesAndClaims` (#203): every node compiles the shared source against that jar (`WithMods.compileCoordinate`; the alias must keep its `maven.modrinth:open-parties-and-claims` coordinate), and the jar reaches a runtime only through `-PwithMods=opac`.
 ./gradlew :26.3-fabric:runClient
 ./gradlew :26.3-fabric:runServer
 # Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> and -PbcRunDir=<dir> on the client), as the NeoForge ones do; on Fabric -PbcRunDir is the game dir only (Loom fixes the working dir, so logs stay in run/), and runServer ignores it and says so.

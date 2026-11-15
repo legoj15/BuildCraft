@@ -30,12 +30,13 @@ import buildcraft.platform.Platform;
  * {@code onEntityPlaceBlock} with no block state, which judges the placer against the claim and the claim's
  * exceptions and nothing else. With no state none of the handler's block exemptions apply (air, a replaceable block,
  * an item usable there), so a stranger's machine is refused over grass as over air. The machine's fake player carries
- * its owner's
- * profile, so a claim's owner and party pass and everyone else is refused, as OPaC already answers the break probe.
+ * its owner's profile, so a claim's owner and party pass and everyone else is refused, as OPaC already answers the
+ * break probe.
  *
  * <p>Not asked: a machine's item click ({@code BlockUtil#tryUseItemOnBlock}: the Filler, a stripes pipe's handlers).
- * It posts the right-click first, which OPaC does answer on both loaders (its guard judges the clicked cell and the
- * cell beside the face), so a claimed cell refuses it already: the {@code crossmod-claims-opac} Filler, stripes pipe
+ * With {@code minePlayerProtected} off it posts the right-click first, which OPaC does answer on both loaders (its
+ * guard judges the clicked cell and the cell beside the face), so a claimed cell refuses it already: the
+ * {@code crossmod-claims-opac} Filler, stripes pipe
  * and Stripes robot probes are refused by a build without this class (#203), where the Quarry frame and Builder
  * probes are let through.
  *

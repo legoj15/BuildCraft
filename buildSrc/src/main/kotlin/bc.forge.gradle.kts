@@ -34,6 +34,8 @@ val mcDepRange = property("mc_dep_range") as String
 // The pack-format members of pack.mcmeta (min_format/max_format on 26.x, pack_format on 1.21.1).
 val packFields = property("pack_fields") as String
 val updateBranch = property("update_branch") as String
+// The Forge mixin config (src/main/resources-forge): declared to Mixin by a dev run's launch argument and by the jar manifest.
+val mixinConfig = "buildcraftunofficial.forge.mixins.json"
 // The opt-in -P switches the NeoForge and Fabric runs read too, resolved once here at script scope.
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
@@ -65,6 +67,9 @@ minecraft {
     runs {
         configureEach {
             workingDir.convention(layout.projectDirectory.dir("run"))
+            // BuildCraft's mixin config (platform.forge.mixin). A dev run has no jar manifest to carry it (see the jar below),
+            // so Mixin's own launch option declares it, and a `--mixin...` argument is also what makes FML enable Mixin in dev.
+            args("--mixin.config", mixinConfig)
             systemProperty("buildcraft.dev", "true")
             if (bcDebug != null) {
                 systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
@@ -115,7 +120,7 @@ sourceSets {
         // Stonecutter points the source set at (src/ raw, or this node's generated copy).
         java { exclude(viewerlessExcludes) }
         // BC's assets and data are shared; the loader metadata is not. src/main/resources-forge adds this node's own
-        // (mods.toml, pack.mcmeta) and the NeoForge-only file is dropped. META-INF/accesstransformer.cfg
+        // (mods.toml, pack.mcmeta, the mixin config) and the NeoForge-only file is dropped. META-INF/accesstransformer.cfg
         // STAYS: FML reads that name from a Forge mod jar as well (and the mavenizer already applied the same file at
         // compile time, so at run time it is idempotent). The NeoForge-shaped data JSON is rewritten after the copy
         // (DataForge, below).
@@ -185,6 +190,9 @@ tasks.named<Jar>("jar") {
     archiveBaseName = "BuildCraftRedux"
     archiveVersion = "$modVersion+mc$minecraftVersion"
     archiveClassifier = "forge"
+    // How an installed Forge mod declares its mixin config: the manifest attribute Mixin's default platform agent reads
+    // (a jar in mods/ is a container FML hands to Mixin). A dev run has no manifest, hence the launch argument above.
+    manifest { attributes("MixinConfigs" to mixinConfig) }
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("LICENSE.API")) { into("META-INF") }
     from(rootProject.file("LICENSE.MMPL")) { into("META-INF") }

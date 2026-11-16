@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "buildcraft.platform.forge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MixinConfigProbeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

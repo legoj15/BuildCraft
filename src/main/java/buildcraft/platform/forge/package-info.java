@@ -11,7 +11,7 @@
  * entrypoint, which FML finds). Today only the {@code 26.3-forge} node builds them, beside the rest of BuildCraft's
  * source (it compiles all of {@code src/main/java} bar the recipe-viewer plugins, and ships nothing yet). The common
  * seams are all implemented; what still throws "not ported (#209)" is the client holders of
- * {@code buildcraft.platform.client.ClientPlatform}, and a gap inside an implementation that exists is a
- * {@code TODO(#209 F3)}.
+ * {@code buildcraft.platform.client.ClientPlatform}; a known gap inside an implementation that exists is recorded in
+ * {@code docs/forge-port.md} (the hooks Forge lacks are served by the mixins in {@code platform.forge.mixin}).
  */
 package buildcraft.platform.forge;

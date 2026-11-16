@@ -65,7 +65,7 @@ Forge is closer to NeoForge 1.21.1 than to anything newer, and on the client it 
 | Fluids | `FluidStack` is NBT-based: no components, no `StreamCodec` (`FluidType.getBucket(FluidStack)` exists); no fluid data component; no water-like flag; `BucketItem` capability wiring and the item fluid-handler templates are commented out upstream, and `FluidUtil.getFluidHandler(ItemStack)` always answers empty; `forge:fluid_type` registers after every vanilla registry, fluids included | `platform/forge/ForgeFluid*`, `ForgeFlowingFluids`, `ForgeBoatFluids`. Item handlers come from `stack.getCapability(FLUID_HANDLER_ITEM)` (a `FluidBucketWrapper` per plain bucket, attached by an `AttachCapabilitiesEvent.ItemStacks` listener installed at construction); fluid-on-item content is `ForgeFluidContent` (after `FabricFluidContent`); thick-fluid motion is `FluidType.move` and needs no mixin, only the water-like flag does (F3); boat drag rides `LevelTickEvent.Post` |
 | Attachments | none | BC's own saved data / capability NBT, as `FabricAttachmentServices` does |
 | Fake players, chunk tickets | no `FakePlayer`; `ForgeChunkManager` only on 1.21.1 (gone on 26.x) | Follow `FabricFakePlayers` and `FabricChunkTickets` (vanilla `TicketType`) on every line |
-| Menus | `IForgeMenuType.create` + `IForgeServerPlayer.openMenu(provider, Consumer<buf>)`; vanilla `openMenu(provider)` is unhooked | `openFor` writes the data itself; the spectator path needs the Fabric `ServerPlayerMixin` approach |
+| Menus | `IForgeMenuType.create` + `IForgeServerPlayer.openMenu(provider, Consumer<buf>)`; vanilla `openMenu(provider)` is unhooked | `openFor` writes the data itself; the spectator path is `platform/forge/mixin/ServerPlayerMixin` (F3c) |
 | Config | `ForgeConfigSpec` (near-identical builder; no 4-arg `defineListAllowEmpty`; types CLIENT / COMMON / SERVER only) | Stonecutter replacement `ModConfigSpec` -> `ForgeConfigSpec` on forge nodes, like the `Identifier` rule; LOCAL maps to COMMON as on Fabric |
 | Patched overrides | Of the 37 hook rows in the seam map (33 `@LoaderHook` uses plus the `platform/hook` and `VanillaExtensions` routes), 17 compile unchanged and 14 differ in signature; missing: clone-item-stack, block shearing on 26.2+, per-entity tick, `writeClientSideData` | Same-shape ones become `//? if neoforge || forge`; the rest route through `platform/hook` interfaces and Forge mixins |
 | Client | No menu-screen event, no item tint source / sprite source / render pipeline registration, no level-render stage event after 1.21.4, no per-vertex quad colour, no PiP submit | Vanilla registries reached by access transformer where possible, otherwise the Fabric client mixins |
@@ -115,10 +115,11 @@ dir's first boot, `VanillaPackResourcesBuilder` "unexpected schema" warnings (th
 the spec's defaults), and two `AppenderLoggingException ... io.netty.channel.kqueue/epoll.Native` errors from the debug-file
 appender (netty's native-transport probe logging into the appender it is being called from; no BuildCraft frame).
 
-## Mixins on Forge (F4 probe)
+## Mixins on Forge (F4 probe, F3c)
 
-Settled on 26.3-66.1.8 by a one-mixin boot (`platform/forge/mixin/MixinConfigProbeMixin`, log line "BuildCraft's Forge mixin
-config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
+Settled on 26.3-66.1.8 by a one-mixin boot in F4 (a probe on `MinecraftServer#runServer`, deleted in F3c once the real
+mixins below proved the same mechanism: each shows "Mixing <Name> from buildcraftunofficial.forge.mixins.json into ..." in
+`run/logs/debug.log`):
 
 - **Declaration.** There is no mods.toml key: no FML 26.3 class reads a `mixins` table (strings of fmlloader, fmlcore and
   javafmllanguage searched). An installed mod declares its config with the jar manifest attribute `MixinConfigs`
@@ -130,14 +131,41 @@ config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
   `ModDirTransformerDiscoverer` sets `isMixinEnabledInDev` only when a `-mixin`/`--mixin` argument is present. The
   manifest path was not exercised in a production install (no Forge server install here; installing one is a download).
 - **Mixin and its library.** Forge 26.3-66.1.8 ships SpongePowered Mixin 0.8.7 and MixinExtras 0.5.4 (the common half is a
-  compile-only dependency the mavenizer adds). Mixin 0.8.7's `CompatibilityLevel` stops at `JAVA_21` (no later constant in the
-  jar), so the config says `JAVA_21`, not the node's Java 25 (Fabric's config expands the node's level; its Mixin is newer).
-  It logs at debug level that JAVA_21 exceeds the JAVA_13 it can verify, and that a Java 25 mixin class (version 69) exceeds
-  the class version it knows; the mixin applied regardless.
-- **No refmap, no annotation processor.** Forge 26.3 runs official names, the probe targets `runServer` by its Mojang name and
-  applied with neither (`bc.forge` adds no processor). A Forge mixin names vanilla members as the shared source does.
+  compile-only dependency the mavenizer adds; the boot log shows "Initializing MixinExtras ... version=0.5.4", so
+  `@WrapOperation`, `@WrapMethod` and `@Local` are available at runtime). Mixin 0.8.7's `CompatibilityLevel` stops at
+  `JAVA_21` (no later constant in the jar), so the config says `JAVA_21`, not the node's Java 25 (Fabric's config expands
+  the node's level; its Mixin is newer). It logs at debug level that JAVA_21 exceeds the JAVA_13 it can verify, and that a
+  Java 25 mixin class (version 69) exceeds the class version it knows; every mixin applied regardless.
+- **Strictness.** The config sets `injectors.defaultRequire` 1, so a target that moves fails the class load loudly. A mixin
+  applies when its target class first loads, so a boot proves the classes that load at startup (`Entity`, `ServerPlayer`,
+  `AnvilMenu`, `FloatGoal`, the registry wrapper, the saved-data storage); the two that load late
+  (`ServerGamePacketListenerImpl`, `Swim`) were proved by loading them from a temporary probe.
+- **No refmap, no annotation processor.** Forge 26.3 runs official names, so a Forge mixin names vanilla members as the shared
+  source does (`bc.forge` adds no processor).
 - **Layout.** `buildcraft.platform.forge.mixin` (package-private abstract classes, body in `//? if forge {`, like the Fabric
-  ones), listed in `src/main/resources-forge/buildcraftunofficial.forge.mixins.json`, which only the Forge jar carries.
+  ones), listed in `src/main/resources-forge/buildcraftunofficial.forge.mixins.json`, which only the Forge jar carries. A
+  mixin shared in spirit with Fabric's is a second file of the same name, not a shared one.
+- **A mixin's javadoc** names the NeoForge hook it stands in for and why its injection point is stable against Forge's
+  patch of the method. Patched vanilla for reading: the mavenizer's `injected-sources.jar` for the node's Forge version
+  (`~/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches/forge/net/minecraftforge/forge/<mc>-<forge>/`), which is
+  vanilla with Forge's patches applied.
+
+### Hooks Forge 26.3 lacks, and how each is served (F3c)
+
+| Hook | Served by | Why that point, and what the boot showed |
+|---|---|---|
+| Legacy-id aliases through vanilla codecs (`Item.CODEC`, every `holderByNameCodec`) | `NamespacedWrapperMixin`: tail of the wrapper's `get(Identifier)` and `get(ResourceKey)`, on an empty answer, through `ForgeRegistry#getRaw` and `getKey` | NeoForge's `MappedRegistry` resolves in those two; Forge's own aliases reach `getRaw` only. All 372 `LegacyAliases` mappings (items 198, blocks 72, fluids 60, block entities 38, components 4) resolve by id, by key, by `byNameCodec` and by `holderByNameCodec`; without the mixin the key and both codec lookups missed all 372. `containsKey` follows aliases on Forge and not on NeoForge: left as Forge has it |
+| `IBCMenuProvider.writeClientSideData` (spectator `openMenu`) | `ServerPlayerMixin`: head of vanilla `ServerPlayer#openMenu(MenuProvider)`, then `ForgeMenus#openWithOpeningData` over Forge's own `openMenu(provider, writer)` | Forge's `IContainerFactory` hands a menu that arrives through the vanilla packet a `null` buffer; Forge's patch of the method only adds an event call at its tail. A connection-less player on an embedded channel: a `MenuOpeningData` provider opens (id 1) with its data written, a plain provider takes vanilla's path (id 2), a provider whose `createMenu` answers null gives empty |
+| Level-aware saved data | `SavedDataStorageMixin` (`@WrapMethod` on `computeIfAbsent`, `get`, `collectDirtyTagsToSave`) and `ServerChunkCacheMixin` (constructor tail), with `ForgeSavedDataLevels` | Forge's own `LevelCapabilityData.type(level)` builds one `SavedDataType` per level, which cannot serve BuildCraft's static shared `TYPE`s (every call site would change, and the save-time encode still needs the storage's level). The factory saw `minecraft:overworld`, `the_nether` and `the_end` for the three dimensions' storages, and the encode wrote their files |
+| Water-like flag (`FluidProperties.waterLike`) | `EntityMixin` (wraps `baseTick`'s `isEyeInFluid(WATER)` and `updateFluidInteraction`'s `isInFluid(WATER)`, injects before `checkBelowWorld`), `EntityFluidInteractionMixin` with `EntityFluidTrackerAccessor` (the per-fluid tracker list), `FloatGoalMixin`, `SwimMixin`, `ForgeFluidPhysics` | Forge keeps vanilla's tag-based water state beside its per-type trackers, and every BuildCraft fluid is in the water tag. What Forge already asks of the fluid type needed nothing (currents by `motionScale`, wading by `move`, boating, drowning, item bobbing). A pig in four pools: water and `fuel_light` `isInWater` true, fall distance 0; `oil` and `oil_residue` `isInWater` false, fall distance 10 to 5 (the type's 0.5), `FloatGoal` and `Swim` false; without `EntityMixin` oil read `isInWater` true, fall 0 |
+| Lava ignition (`FireReactiveBlock.lavaIgnites`) | **No mixin.** `BCFluidBlock` sets vanilla's `ignitedByLava()` property from its constructor argument | Forge's `LavaFluid` tests that property AND `IForgeBlock#isFlammable` (`getFlammability > 0`, which `BCFluidBlock` answers from `fireBurnOdds`), and every burning band has a flammability above zero, so the pair equals `lavaIgnites(state)`; fire spread reads `getFlammability` and `getFireSpreadSpeed` and never the property. All 30 BuildCraft fluid blocks agree with `lavaIgnites(state)` (crude oil and residue unlit) |
+| Pick block on 26.x (`PickStackBlock`) | `ServerGamePacketListenerImplMixin`: `@WrapOperation` on the one `getCloneItemStack` call in `handlePickItemFromBlock`, with the listener's `player` | Forge patches neither the handler nor the call; 1.21.1 has `IForgeBlock#getCloneItemStack(..., player)` and its arm is written. Applied (the class loaded); the behaviour was not exercised, which needs a pipe holder with a pipe and a connected player |
+| Anvil and `/enchant` gate (`EnchantmentFilterItem`) | `AnvilMenuMixin` and `EnchantCommandMixin` (`@WrapOperation` on `Enchantment#canEnchant(ItemStack)` with the holder in hand) through `ForgeEnchantments` | A Forge extension cannot: `canApplyAtEnchantingTable` is the table's alone (the machines stay out of it) and `isBookEnchantable` only vetoes. The Quarry takes silk touch, fortune and efficiency from a book at the anvil and silk touch from `/enchant`, refuses unbreaking; a diamond pickaxe still takes silk touch, a sword does not; without the two mixins every quarry enchantment was refused. Not routed: the `enchant_randomly` loot function's compatibility test (NeoForge's third site), which sits inside a lambda |
+| Recipe sync for the guide (`syncRecipeTypes`) | `ForgeRecipeSync`: BuildCraft's own clientbound payload in batches from `OnDatapackSyncEvent`; the client end is `ForgeRecipeSync.addClientListener`, which the client slice's `ClientHooks#onRecipesReceived` calls | Forge has no switch for it. The payload carries each recipe's `Recipe.DIRECT_CODEC` NBT, not `RecipeHolder.STREAM_CODEC`: **Forge 26.3-66.1.8's `Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC` cannot encode or decode an empty ingredient slot** (it builds an empty `Ingredient`, whose constructor throws), so 295 of the 1518 crafting and smelting recipes failed to encode. With the data codec all 1518 (179 BuildCraft's) re-encode to the same bytes: 381 KB in 12 batches, the largest 61 KB against the 1 MiB clientbound cap. The send path (a connected player) and the client receiver are not exercised |
+
+Tests that stay NeoForge-shaped on Forge and need a Forge arm when the game tests come up (F5): `FluidFireTester.lavaIgnites`
+asks `FireReactiveBlock` on Forge, which is true by construction; the Forge truth is
+`state.ignitedByLava() && state.isFlammable(level, pos, face)`.
 
 ## Rules added for the third loader
 
@@ -170,6 +198,7 @@ config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
 | F1 | `ForgeBus` + entrypoint, lifecycle, game hooks, protection, registry, config (replacement rule), network, menus, sound, loot, crafting, shears, loader services | compile of `platform/**` |
 | F2 | Transfer: capability exposure and query, item / energy adapters, fluid adapters, fluid containers, flowing fluids | compile of `platform/**` |
 | F3 | Common code: re-key the loader forks, `@LoaderHook` routes, vanilla extensions, Forge mixins for the missing hooks | compile of all of `src/main` |
+| F3c | **Done.** The Forge mixins and routes for the hooks Forge 26.3 lacks (table under "Mixins on Forge") | `:26.3-forge:runServer` boots with every mixin applied |
 | F4 | **Done.** Resources: `mods.toml`, `pack.mcmeta`, access transformer check, `DataForge.kt`, jar, dedicated server boots to Done | `:26.3-forge:runServer` |
 | F5 | **Wired and run, not green.** Game tests on Forge; `LoaderTestEvents` forge arms; `nodeVerification` (not added until the run is green) | `:26.3-forge` game tests green (29 known failures, 10 tests excluded: see "Game tests on Forge (F5)") |
 | F6 | Client seams, models, renderers; dev client | smoke runner on `26.3-forge` |
@@ -268,15 +297,9 @@ the call site in its `patches/`.
   getRenderBoundingBox (Forge culls by block entity, so RenderFiller's renderer-level hook stays NeoForge-only);
   `EntityRobot.isPushedByFluid(FluidType)` (Forge's own `FluidType`; its no-argument vanilla twin is `@Deprecated` there,
   which is why the Fabric arm is not shared).
-- **Still owed, missing on Forge but served on Fabric through a `platform/hook` interface the class implements on every loader.**
-  No mixin is written yet; each needs one in `platform/forge/mixin`:
-
-  | Hook (interface) | Fabric route | Forge call site to patch |
-  |---|---|---|
-  | `IBCMenuProvider.writeClientSideData` (`MenuOpeningData`) | `ServerPlayerMixin` (`openMenu` head) | vanilla `ServerPlayer#openMenu(MenuProvider)`, reached by the spectator branch of `ServerPlayerGameMode#useItemOn` (Forge adds only an event beside it) |
-  | `ItemEnchantableMachine.supportsEnchantment` (`EnchantmentFilterItem`) | `EnchantmentEvents.ALLOW_ENCHANTING` (Fabric API, no mixin) | vanilla `Enchantment#canEnchant(ItemStack)` (anvil, `/enchant`), unpatched; Forge's `canApplyAtEnchantingTable` is the table's alone and the item must stay out of it |
-  | `BCFluidBlock.ignitedByLava` (`FireReactiveBlock.lavaIgnites`) | `LavaFluidMixin` on the 2-argument `LavaFluid#isFlammable` | Forge's `LavaFluid` patch tests the 3-argument `isFlammable(level, pos, face)`, whose test is the state's own `ignitedByLava()` flag and `IForgeBlock#isFlammable` (shared with fire spread): re-target the mixin there |
-  | `BlockPipeHolder.getCloneItemStack` (`PickStackBlock.pickedStack`), 26.x | `PlayerPickItemEvents.BLOCK` | server pick handler `ServerGamePacketListenerImpl#handlePickItemFromBlock`, which reaches `BlockStateBase#getCloneItemStack(BlockPos, LevelReader, boolean, Player)`; Forge patches neither. Forge 1.21.1 has the hook, and its arm is written |
+- **Missing on Forge but served on Fabric through a `platform/hook` interface the class implements on every loader:** the
+  four hooks F3b listed (menu opening data, the anvil gate, lava ignition, the 26.x pick block) are served in F3c; see the
+  table under "Mixins on Forge".
 
 - **Unchanged and fine:** `BCEvent` / `ICancellableBCEvent` keep Forge on the plain-class arm (see Open); the NeoForge-1.21.1
   `AbstractBCSyncedBlockEntity.onDataPacket` twin is not needed on Forge 1.21.1 (its default applies an empty update tag).
@@ -303,11 +326,15 @@ the call site in its `patches/`.
 - Settled in F1: the 3-arg `registerConfig(type, spec, fileName)` exists; Forge keeps one config per type per mod.
   `ForgeConfigSpec` lacks only the 4-arg `defineListAllowEmpty` (nine calls in `BCEnergyConfig` and `BCSiliconConfig`):
   they go through `lib.misc.ConfigListUtil.stringList`, whose one directive is the only loader fork.
-- Legacy-id aliases reach Forge's own lookups but not vanilla's codecs (`ForgeRegistryServices`, Alias gap): F3 mixin
-  or a BuildCraft-side fixer, before any Forge jar ships.
 - Forge's packet splitter is commented out upstream on 26.3: payloads are held to vanilla's caps (1 MiB clientbound,
   32 KiB serverbound). Measure the snapshot payloads in F5.
-- `syncRecipeTypes` has no Forge switch: the guide's recipe panels need a BuildCraft payload on remote servers (F3).
+- The recipe sync's client end (`ClientHooks#onRecipesReceived` on Forge, one call to `ForgeRecipeSync.addClientListener`),
+  and the client's `LoggingOut` clear, belong to F6; until then a client of a remote Forge server has no guide recipe panels.
+- Forge 26.3-66.1.8 cannot network-encode a shaped recipe with an empty slot (`Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC`,
+  see the recipe sync row). BuildCraft works around it; any other mod syncing `RecipeHolder.STREAM_CODEC` hits it. Worth a
+  report upstream (MinecraftForge) when the user wants one filed.
+- Unexercised F3c behaviour (applied and compiled, needs a client or a pipe in a game test): the pick-block wrap, the recipe
+  payload's send path, the spectator menu's client half (the factory reading the data).
 - `BCEvent` posts to the NeoForge bus only. Whether Forge addons get a bus post is an API decision; until asked, the
   Forge arm is the plain class Fabric uses.
 - McDevBridge has no `1.21.11-forge` node; needed only if that line is taken.

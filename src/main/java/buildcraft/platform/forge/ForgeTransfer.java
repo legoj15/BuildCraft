@@ -15,6 +15,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -110,7 +112,24 @@ public final class ForgeTransfer implements TransferServices {
     @Override
     @Nullable
     public BCItemStorage findItem(Entity entity) {
-        return ForgeItemStorages.fromForge(entity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).resolve().orElse(null));
+        // A horse is its inventory on every loader. Forge's own patch attaches that handler in registerGoals(), which
+        // Mob's constructor runs before the patch's `itemHandler = null` field initialiser wipes it (AbstractHorse.java
+        // lines 146 and 1039 of the patched source), so Forge's lookup never answers for a horse and a chested donkey
+        // would fall through to the equipment wrapper: read the container ourselves.
+        if (entity instanceof AbstractHorse horse && horse.isAlive()) {
+            IItemHandler handler = ForgeVanillaHandlers.horse(horse);
+            if (handler != null) {
+                return ForgeItemStorages.fromForge(handler);
+            }
+        }
+        IItemHandler answer = entity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).resolve().orElse(null);
+        // NeoForge's fallback for a living entity is its hands and four armour slots, each taking only what fits there;
+        // Forge's stock wrapper adds the body slot and takes anything anywhere.
+        if (answer != null && entity instanceof LivingEntity living && !(entity instanceof Player)
+                && ForgeVanillaHandlers.isStockEquipment(answer)) {
+            answer = ForgeVanillaHandlers.equipment(living);
+        }
+        return ForgeItemStorages.fromForge(answer);
     }
 
     @Override

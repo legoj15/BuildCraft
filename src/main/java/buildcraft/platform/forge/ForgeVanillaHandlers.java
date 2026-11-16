@@ -15,7 +15,11 @@ import com.google.common.math.IntMath;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainerHolder;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -32,12 +36,16 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidType;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.wrapper.CombinedInvWrapper;
 import net.minecraftforge.items.wrapper.EmptyHandler;
+import net.minecraftforge.items.wrapper.EntityEquipmentInvWrapper;
+import net.minecraftforge.items.wrapper.InvWrapper;
 import net.minecraftforge.items.wrapper.SidedInvWrapper;
 
 /^*
- * The capabilities of the vanilla blocks that have none on Forge because they have no block entity: a cauldron's fluid
- * handler and a composter's item handler. NeoForge registers both itself (its {@code CauldronWrapper} over
+ * The capabilities of the vanilla things that have none on Forge: a cauldron's fluid handler and a composter's item
+ * handler (blocks with no block entity, which Forge's capability model has nothing for), and a horse's inventory (which
+ * Forge's own patch fails to attach). NeoForge registers the first two itself (its {@code CauldronWrapper} over
  * {@code CauldronFluidContent}, and a forwarding {@code SidedInvWrapper} over the composter's own container), and
  * Fabric API's transfer API does for Fabric; Forge has neither, and {@link ForgeTransfer#query} otherwise answers
  * nothing for a block without a block entity. These are the 1.21.1 NeoForge classic wrappers over Forge's own handler
@@ -57,7 +65,21 @@ import net.minecraftforge.items.wrapper.SidedInvWrapper;
  * block that is no longer a cauldron, an empty tank), where NeoForge throws: a lookup held for a tick must not crash
  * the tick that follows a block change.
  *
- * <p>One handler per position (and side) is kept while something holds it, so the caches above, which
+ * <p><b>Horses.</b> An {@code AbstractHorse} is its inventory container (the chest grid once a chest is on it, else the
+ * saddle and armour slots), as NeoForge answers. Forge intends the same and does not deliver it: its patch of
+ * {@code AbstractHorse} sets the entity's {@code itemHandler} in {@code registerGoals()}, which {@code Mob}'s constructor
+ * runs, and the patch's own field initialiser {@code private LazyOptional<?> itemHandler = null} runs after it and wipes
+ * the value, so no horse ever answers {@code ITEM_HANDLER} and a chested donkey falls through to the six-slot equipment
+ * wrapper. The container is read directly instead (an access-transformed field: the container is replaced when a chest
+ * goes on, so the wrapper is asked of the current one each time).
+ *
+ * <p><b>Living entities.</b> Any other living entity is its two hands then its four humanoid armour slots, each taking
+ * only what the entity can equip there ({@code isEquippableInSlot}), as NeoForge's fallback provider answers. Forge's
+ * own wrapper for a living entity is the same slots plus the body slot, and takes any item in any of them, so the view
+ * Forge hands out is swapped for this one ({@link #equipment}, over Forge's own {@code EntityEquipmentInvWrapper} for the
+ * slot access and its equip side effects).
+ *
+ * <p>One handler per position (and side), or per container or entity, is kept while something holds it, so the caches above, which
  * rebuild their BuildCraft view when the handler object changes, do not allocate on each tick.
  ^/
 final class ForgeVanillaHandlers {
@@ -108,6 +130,10 @@ final class ForgeVanillaHandlers {
     /^* One handler per place while a lookup's view holds it (weak values); the key keeps the level until the entry is swept. ^/
     private static final ConcurrentMap<Key, IFluidHandler> CAULDRONS = new MapMaker().weakValues().makeMap();
     private static final ConcurrentMap<Key, IItemHandler> COMPOSTERS = new MapMaker().weakValues().makeMap();
+    /^* One wrapper per container (identity), while a lookup's view holds it. ^/
+    private static final ConcurrentMap<Container, InvWrapper> CONTAINERS = new MapMaker().weakKeys().weakValues().makeMap();
+    /^* One equipment handler per entity (identity), while a lookup's view holds it. ^/
+    private static final ConcurrentMap<LivingEntity, IItemHandler> EQUIPMENT = new MapMaker().weakKeys().weakValues().makeMap();
 
     /^*
      * What {@code capability} holds for the block-entity-less vanilla block {@code state} at {@code pos}, or null: a
@@ -128,6 +154,44 @@ final class ForgeVanillaHandlers {
             return (T) COMPOSTERS.computeIfAbsent(new Key(level, at, side), key -> new ComposterHandler(level, at, side));
         }
         return null;
+    }
+
+    /^*
+     * The item handler of {@code horse}: its inventory container as it is now, or null for a horse that has none yet (a
+     * plain equine before its first saddle or chest goes on carries none until its container is made).
+     ^/
+    @Nullable
+    static IItemHandler horse(AbstractHorse horse) {
+        Container inventory = horse.inventory;
+        return inventory == null ? null : CONTAINERS.computeIfAbsent(inventory, InvWrapper::new);
+    }
+
+    /^*
+     * Whether {@code forgeAnswer}, what Forge's lookup gave a living entity, is Forge's own stock equipment wrapper (the
+     * {@code CombinedInvWrapper} its {@code LivingEntity} patch builds, never a handler another mod answered with).
+     ^/
+    static boolean isStockEquipment(IItemHandler forgeAnswer) {
+        return forgeAnswer.getClass() == CombinedInvWrapper.class;
+    }
+
+    /^*
+     * The hands and humanoid armour of {@code entity} as one handler, NeoForge's fallback: Forge's slot access over
+     * exactly those slots (declaration order, so the hands first), with the equippability check Forge's wrapper never
+     * makes: an insert into a slot the item does not belong in is refused, as is a {@code isItemValid} question.
+     ^/
+    static IItemHandler equipment(LivingEntity entity) {
+        return EQUIPMENT.computeIfAbsent(entity, living -> new EntityEquipmentInvWrapper(living,
+                EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR) {
+            @Override
+            public boolean isItemValid(int slot, ItemStack stack) {
+                return entity.isEquippableInSlot(stack, validateSlotIndex(slot));
+            }
+
+            @Override
+            public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                return isItemValid(slot, stack) ? super.insertItem(slot, stack, simulate) : stack;
+            }
+        });
     }
 
     /^* The composter's container for {@code side}, read from the block as it is now. ^/

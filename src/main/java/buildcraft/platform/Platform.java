@@ -174,7 +174,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricNetwork();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: BCNetwork not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeNetwork();
             *///?}
         }
     }
@@ -188,7 +188,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricMenus();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: BCMenus not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeMenus();
             *///?}
         }
     }
@@ -412,7 +412,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRegistryServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: RegistryServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeRegistryServices();
             *///?}
         }
     }
@@ -426,7 +426,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricDataServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: DataServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeDataServices();
             *///?}
         }
     }
@@ -440,7 +440,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAttachmentServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: AttachmentServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeAttachmentServices();
             *///?}
         }
     }

@@ -97,13 +97,18 @@ public abstract class AbstractBCBlockEntity extends BlockEntity implements Clear
 
     // Fabric calls onJoinedLevel/onChunkUnload from its block-entity load and chunk-unload events
     // (FabricLoaderHookRoutes); NeoForge's and MinecraftForge's own hooks (same names; Forge's LevelChunk patch calls
-    // both) call them here.
+    // both) call them here. Forge calls onLoad the moment a chunk registers a block entity, where NeoForge's order is the
+    // head of the level's next block-entity tick: LevelChunkMixin hands BuildCraft's block entities to the same
+    // fresh-entity list, so both loaders get here at that moment.
     //? if neoforge || forge {
     @LoaderHook({"neoforge:IBlockEntityExtension#onLoad", "forge:IForgeBlockEntity#onLoad"})
     @Override
     public final void onLoad() {
         super.onLoad();
-        onJoinedLevel();
+        // NeoForge's tick-head pass skips a block entity removed or detached since it was queued; Forge's does not.
+        if (!isRemoved() && hasLevel()) {
+            onJoinedLevel();
+        }
     }
 
     @LoaderHook({"neoforge:IBlockEntityExtension#onChunkUnloaded", "forge:IForgeBlockEntity#onChunkUnloaded"})

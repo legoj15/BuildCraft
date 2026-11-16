@@ -10,6 +10,7 @@
     "EntityFluidTrackerAccessor",
     "EntityMixin",
     "FloatGoalMixin",
+    "LevelChunkMixin",
     "NamespacedWrapperMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",

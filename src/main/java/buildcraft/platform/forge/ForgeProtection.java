@@ -143,6 +143,8 @@ public final class ForgeProtection implements PlatformProtection {
         return !AttackEntityEvent.BUS.post(new AttackEntityEvent(attacker, target));
     }
 
+    // Gap: Forge's HarvestCheck carries no level or position (NeoForge's does), so a claim mod that decides harvest
+    // by position cannot be asked here; `level` and `pos` go unused. Breaking itself is still asked by position.
     @Override
     public boolean canHarvest(Player player, BlockState state, BlockGetter level, BlockPos pos) {
         return player.hasCorrectToolForDrops(state);

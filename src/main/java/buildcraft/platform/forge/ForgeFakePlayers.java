@@ -75,6 +75,15 @@ public final class ForgeFakePlayers implements FakePlayers {
         MachinePlayer(ServerLevel level, GameProfile profile) {
             super(level.getServer(), level, profile, ClientInformation.createDefault());
             this.connection = new NoNetworkListener(level.getServer(), this);
+            // The vanilla constructor just asked the player list for this profile's advancement tracker, and the list
+            // answers by RE-POINTING the cached tracker at the player who asked. For a machine acting as an online
+            // owner that is the owner's live tracker, whose rewards would from then on be granted to this dead
+            // player. NeoForge's player list skips fake players before that lookup; Forge has no such bypass, so ask
+            // again for the real player, which points the tracker back.
+            ServerPlayer online = level.getServer().getPlayerList().getPlayer(getUUID());
+            if (online != null && online != this) {
+                level.getServer().getPlayerList().getPlayerAdvancements(online);
+            }
             setPermanentlyInvulnerable(true);
         }
 

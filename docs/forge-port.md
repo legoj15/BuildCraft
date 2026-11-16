@@ -86,7 +86,14 @@ Loader lists that must grow together (F0 does the first three): `build.gradle.kt
 - How a Forge mod declares a mixin config on 26.x and 1.21.1 (manifest `MixinConfigs` attribute is the expected
   answer; not in the reference sources). Settle in F3 with a one-mixin boot.
 - Access transformer name form on 1.21.1 (official expected since Forge 50; the Forge docs still say SRG).
-- 3-arg `registerConfig(type, spec, fileName)` on Forge (FML core, not in the reference sources; `javap` it in F1).
+- Settled in F1: the 3-arg `registerConfig(type, spec, fileName)` exists; Forge keeps one config per type per mod.
+  `ForgeConfigSpec` lacks only the 4-arg `defineListAllowEmpty` (nine calls in `BCEnergyConfig` and `BCSiliconConfig`):
+  F3 routes those through a helper.
+- Legacy-id aliases reach Forge's own lookups but not vanilla's codecs (`ForgeRegistryServices`, Alias gap): F3 mixin
+  or a BuildCraft-side fixer, before any Forge jar ships.
+- Forge's packet splitter is commented out upstream on 26.3: payloads are held to vanilla's caps (1 MiB clientbound,
+  32 KiB serverbound). Measure the snapshot payloads in F5.
+- `syncRecipeTypes` has no Forge switch: the guide's recipe panels need a BuildCraft payload on remote servers (F3).
 - `BCEvent` posts to the NeoForge bus only. Whether Forge addons get a bus post is an API decision; until asked, the
   Forge arm is the plain class Fabric uses.
 - McDevBridge has no `1.21.11-forge` node; needed only if that line is taken.

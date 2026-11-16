@@ -45,9 +45,15 @@ import buildcraft.platform.registry.RegistryServices;
  * <p><b>Aliases.</b> Forge has no public alias API. The queue of {@link BCRegistrar#addAlias} calls is flushed in a
  * {@link RegisterEvent} listener of the registrar's own registry, where Forge has unfrozen it, through
  * {@link ForgeRegistry#addAlias}: public, but Forge's own TODO calls it "add as public API", and its own mod class
- * reaches it by a cast too. Only a Forge-owned registry takes one (items, blocks and data components, the three
- * BuildCraft aliases, are); any other fails loudly at the event. Whether a lookup by holder, not by id, follows the
- * alias is not verified: Forge's registry wrapper reads its own holder map for those.
+ * reaches it by a cast too ({@code ForgeRegistry} itself is marked internal). Only a Forge-owned registry takes one
+ * (all five BuildCraft flips are: items, blocks, block entities, fluids, data components); any other fails loudly at
+ * the event.
+ *
+ * <p><b>Alias gap.</b> The alias reaches Forge's own id lookups only. Vanilla's codecs ({@code Item.CODEC}, so every
+ * saved item stack) go through the vanilla-facing wrapper's {@code get(Identifier)}, which reads its own holder map
+ * and knows no alias: a stack saved under a legacy BuildCraft id fails to decode on Forge, where NeoForge and Fabric
+ * resolve it. TODO(#209 F3): needs a Forge mixin on the registry wrapper's by-name lookup (NamespacedWrapper), or a
+ * BuildCraft-side legacy id fixer; until then legacy-id inventories are not recovered on Forge.
  *
  * <p><b>Creative tabs.</b> Forge patches vanilla's no-argument {@code CreativeModeTab.builder()} and
  * {@code withTabsBefore} (as NeoForge does), and posts {@link BuildCreativeModeTabContentsEvent} on its own static game

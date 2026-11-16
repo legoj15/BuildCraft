@@ -32,6 +32,7 @@ public final class BCForgeEntrypoint {
 
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
         ForgeModBus.bind(context.getModBusGroup());
+        ForgeModBus.bindContext(context);
         // TODO(#209 F3): needs a Forge mixin for the boat tick, see platform/fabric/mixin/AbstractBoatMixin: Forge has no
         // per-entity tick event (NeoForge's EntityTickEvent.Post, which NeoForgeBoatFluids listens to from here), so
         // BoatFluidMotion.tick(boat) has no caller on Forge until a mixin at the end of AbstractBoat.tick calls it.

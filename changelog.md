@@ -7,11 +7,11 @@
 - Fixed Quarries, Builders and Stripes pipes placing blocks inside someone else's Open Parties and Claims claim.
 - Fixed a crash when clicking the Filler's pattern slot.
 - Fixed the Guide Book's "Chapters" tab being cut off by the top of the screen on small windows, and its clickable area not matching the tab in other languages.
-- Fixed boats sinking in oils and fuel liquids (gasses still make you sink). "Sticky Oil" (on by default) slows the boat, as expected.
+- Fixed boats sinking in oils and fuel liquids (gasses still make you sink). The "Oil is Sticky" config option slows the boat now, just like entities.
 - {26.1.2/26.2/26.3} Fixed entities being completely stuck in oil on 26.x
 - Fixed edge cases with invalid pluggables like lenses without color or "blank" facades being peaceable on pipes.
 - Fixed the facade de-duplicator causing invisible facades on servers.
-- Fixed markers placed against the side of grass, flowers and other replaceable plants hanging sideways in mid-air; they now attach to a solid block next to them, like a torch, and can only be placed against a solid face.
+- Fixed markers placed against the side of grass, flowers and other replaceable surfaces hanging sideways in mid-air.
 - {1.21.10/1.21.11/26.1.2/26.2/26.3} Fixed pipes and engines showing no breaking progress texture while being mined on Minecraft 1.21.10 and later.
 - {1.21.10/1.21.11} Fixed dropped pluggables being invisible on Minecraft 1.21.10 and 1.21.11. 
 - {26.1.2/26.2/26.3} Fixed dropped pluggables and sinking halfway into the ground on 26.1.2 and later.
@@ -21,7 +21,7 @@
 - Fixed the blueprint and snapshot 3D preview drawing dyed lenses and filters white/untinted.
 - The Architect Table now says why its preview panel is empty (no area to scan, or an area too large for a live preview) instead of showing a blank panel.
 - Made the act of brushing a pipe in multiplayer look less jank.
-- Wood pipes are no longer noticeably louder than every other pipe when walked on, placed or broken.
+- Reduced the volume of placing/breaking Wooden Pipes because the sounds were far too loud.
 - Robot Goggles now show the current state of the robot you are aimed at so you can see what's going on in their tiny cube brains.
 - Wearing the Robot Goggles now keeps the outline and the robot rendering out to 64 blocks.
 - Fixed a robot with a nametag having that name render twice.
@@ -32,8 +32,8 @@
 - Fixed pluggables not facing the correct directing in pipes and item frames.
 - Improved world loading time by moving the Guide Book loading to when you first open it (and reduced the stutter that would occur when that used to happen).
 - Finally fixed plurals on numbers.
-- The Requester's help ledger now explains its two slot grids instead of saying help is unavailable.
-- Long help ledger entries no longer run off the bottom of the screen: a ledger now stops at the screen edge (and above JEI's bottom-left buttons) and scrolls with the mouse wheel.
+- Added help text to the Requester block's GUI.
+- Improved how long help text from the expandable ledger works, it no longer breaks JEI as badly and can now be scrolled with the scrollwheel instead of being unreadable off-screen.
 - The help ledger for the FE Engine and MJ Dynamo now keeps its conversion rate up to date while you hover the battery, instead of showing the rate from when you first pointed at it.
 - Ledger text wraps at word boundaries with a hyphen for over-long words, and Chinese lines no longer start with closing punctuation.
 - Ledgers beside a window with little room next to it now open over the window so their text stays readable.

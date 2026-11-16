@@ -4,10 +4,15 @@
   "package": "buildcraft.platform.forge.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "EntityFluidInteractionMixin",
+    "EntityFluidTrackerAccessor",
+    "EntityMixin",
+    "FloatGoalMixin",
     "NamespacedWrapperMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",
-    "ServerPlayerMixin"
+    "ServerPlayerMixin",
+    "SwimMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -60,10 +60,12 @@ import buildcraft.platform.registry.BCRegistrar;
  * use resolves, and a type's description id is read from its registry key on first ask. The registrar that
  * {@link BCRegistrar#create} returns for the type key must be a {@code DeferredRegister} over that key (or equivalent).
  *
- * <p><b>The water-like flag is missing.</b> Forge's fluid type has no equivalent of NeoForge's {@code isWaterLike}, and
- * BuildCraft's fluids are in the {@code minecraft:water} tag (data), so what vanilla's "is this entity in water" tests
- * cannot be switched per fluid (the TODO in {@link #typeProperties}). Thick-fluid wading does not need it: it is
- * {@link Type#move}.
+ * <p><b>The water-like flag is a set of mixins.</b> Forge's fluid type has no equivalent of NeoForge's
+ * {@code isWaterLike}, and BuildCraft's fluids are in the {@code minecraft:water} tag (data), which Forge's entity physics
+ * still reads beside its per-type tracking. The flag is served by {@link ForgeFluidPhysics} and the mixins
+ * {@code EntityMixin}, {@code EntityFluidInteractionMixin}, {@code FloatGoalMixin} and {@code SwimMixin} in
+ * {@code platform.forge.mixin}; the rest of what NeoForge reads from the type (current, wading, swimming, drowning,
+ * boating, item bobbing) Forge asks of {@link Type} itself, and thick-fluid wading is {@link Type#move}.
  ^/
 public final class ForgeFlowingFluids implements BCFluidRegistrar {
     private final BCRegistrar<FluidType> types;
@@ -113,10 +115,8 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
                 .canPushEntity(p.canPushEntity())
                 .canDrown(p.canDrown())
                 .supportsBoating(p.supportsBoating());
-        // TODO(#209 F3): needs a Forge mixin for the water-like flag, see platform/fabric/mixin/EntityFluidInteractionMixin.java
-        // (FluidProperties#waterLike is NeoForge's Properties.isWaterLike; Forge has no such property, and every
-        // BuildCraft fluid is in the minecraft:water tag, so Entity.isInWater and the per-tag fluid trackers take crude
-        // oil and residue for water: swimming, splash, the fall-distance reset, which ThickFluidMotion cannot undo.)
+        // FluidProperties#waterLike (NeoForge's Properties.isWaterLike) has no Forge property: ForgeFluidPhysics and its
+        // mixins read it off the declared properties (see the class comment).
         if (p.bucketFill() != null) {
             props.sound(SoundActions.BUCKET_FILL, p.bucketFill());
         }

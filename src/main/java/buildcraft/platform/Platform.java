@@ -300,7 +300,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFluids();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: FluidServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeFluids();
             *///?}
         }
     }

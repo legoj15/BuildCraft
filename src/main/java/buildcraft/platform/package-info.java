@@ -19,11 +19,11 @@
  * <p><b>Binder rule.</b> {@link buildcraft.platform.Platform} has one static accessor per service, each reading a
  * {@code static final} field of its own lazy holder class, so reaching one service never loads another's
  * implementation. The holders carry the binder's own loader directives: {@code //? if neoforge} builds the NeoForge
- * implementation, {@code //? if fabric} the Fabric one, {@code //? if forge} the MinecraftForge one. The rest of common code names a loader constant only on a
- * patched-override arm (a member a loader's own patch gives a vanilla or BuildCraft base class, written once per
- * loader) and in a few documented exceptions (loader metadata such as the REI annotations, the NeoForge event arms of
- * {@code BCEvent}, {@code BCFluidTank.movesNothing}); {@code docs/platform-layer.md} (Rules for directives) is the
- * list.
+ * implementation, {@code //? if fabric} the Fabric one, {@code //? if forge} the MinecraftForge one. The rest of
+ * common code names a loader constant only on a patched-override arm (a member a loader's own patch gives a vanilla or
+ * BuildCraft base class, written once per loader) and in a few documented exceptions (loader metadata such as the REI
+ * annotations, the NeoForge event arms of {@code BCEvent}, {@code BCFluidTank.movesNothing}, the config option shapes
+ * of {@code ConfigListUtil}); {@code docs/platform-layer.md} (Rules for directives) is the list.
  *
  * <p><b>Implementation-package rule.</b> Loader code lives in {@code buildcraft.platform.<loader>}, one package per
  * loader. Each of its files keeps its {@code package} line live and sits whole inside that loader's directive arm,

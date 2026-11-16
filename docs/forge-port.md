@@ -18,6 +18,16 @@ Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (272 rows, each
 - ForgeGradle 7.0.40 (`net.minecraftforge.gradle`) through `bc.forge` in buildSrc; the Minecraft Mavenizer builds the
   patched artifact. Official names at runtime on every target line: no reobf, no refmap, no remap mode.
 - `E:\GitHub\McDevBridge\build.forge.gradle.kts` is the working reference (same wrapper, same Stonecutter).
+- Access transformer: the NeoForge node's own `src/main/resources/META-INF/accesstransformer.cfg` is handed to the mavenizer
+  with `minecraft.getAccessTransformer().from(...)` in `bc.forge.gradle.kts` (set on the extension: the per-dependency
+  `minecraft.dependency(...) { }` block cannot be configured from Kotlin, its Action overload throws a ClassCastException).
+  Official names, so every entry applies as written. Forge's own transformer opens none of what NeoForge's does, so the
+  file also lists the vanilla members BC reads that NeoForge opens itself (a no-op on a NeoForge node); a shared-source
+  read of any other NeoForge-opened member fails the Forge compile with a "has private/protected access" error, and the
+  fix is a line there. Not yet opened, so still reflective in `platform/forge`: `RecipeManager.recipes`,
+  `CustomData.tag`, and Forge's own `SidedInvWrapper` fields.
+- The viewer plugin packages (`compat/jei`, `compat/rei`) compile on a Forge node only if it has a `jei_version` /
+  `rei_version` property (none has a viewer for 26.3), so `26.3-forge` builds the rest of `src/main/java` without them.
 - Forge needs `META-INF/mods.toml` (not `neoforge.mods.toml`) and a `pack.mcmeta`, or FML covers the title screen with
   a load warning. Pack fields differ: `pack_format` on 1.21.1, `min_format`/`max_format` on 26.x.
 - Reference sources: `.forge-ref/` (gitignored, filled by `bash scripts/forge-sources-sync.sh`), Forge's classes plus `patches/` (vanilla patch diffs, the place to see
@@ -88,7 +98,7 @@ Loader lists that must grow together (F0 does the first three): `build.gradle.kt
 - Access transformer name form on 1.21.1 (official expected since Forge 50; the Forge docs still say SRG).
 - Settled in F1: the 3-arg `registerConfig(type, spec, fileName)` exists; Forge keeps one config per type per mod.
   `ForgeConfigSpec` lacks only the 4-arg `defineListAllowEmpty` (nine calls in `BCEnergyConfig` and `BCSiliconConfig`):
-  F3 routes those through a helper.
+  they go through `lib.misc.ConfigListUtil.stringList`, whose one directive is the only loader fork.
 - Legacy-id aliases reach Forge's own lookups but not vanilla's codecs (`ForgeRegistryServices`, Alias gap): F3 mixin
   or a BuildCraft-side fixer, before any Forge jar ships.
 - Forge's packet splitter is commented out upstream on 26.3: payloads are held to vanilla's caps (1 MiB clientbound,

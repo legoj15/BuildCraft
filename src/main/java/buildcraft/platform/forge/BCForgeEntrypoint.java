@@ -9,6 +9,10 @@ package buildcraft.platform.forge;
 /*import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
+import buildcraft.core.BCCore;
+import buildcraft.core.BCCoreClient;
+import buildcraft.platform.Platform;
+
 /^*
  * BuildCraft's MinecraftForge entrypoint (not NeoForge), the twin of {@code BCNeoForgeEntrypoint} and the only class FML
  * hands the mod bus group to. It binds the group for the implementations ({@link ForgeModBus}) and then runs
@@ -23,26 +27,20 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
  * extra steps is needed: FML runs the registry events and the setup phases itself, so there are no pending registrations
  * to flush and no queue of setup actions to run.
  *
- * <p><b>Not yet wired (compile-only node).</b> {@code BCCore} and {@code BCCoreClient} are outside the sources this node
- * compiles (see {@code bc.forge.gradle.kts}), so their calls are the TODO below; naming them would not compile. The
- * mod id is spelled out for the same reason ({@code BCCore.MODID}).
+ * <p>The boat drag needs no step here: {@code ForgeFlowingFluids} registers its listeners when the fluids are
+ * registered (Forge has no per-entity tick event, which is why NeoForge's entrypoint does it by hand).
  *^/
-@Mod("buildcraftunofficial")
+@Mod(BCCore.MODID)
 public final class BCForgeEntrypoint {
 
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
         ForgeModBus.bind(context.getModBusGroup());
         ForgeModBus.bindContext(context);
-        // TODO(#209 F3): needs a Forge mixin for the boat tick, see platform/fabric/mixin/AbstractBoatMixin: Forge has no
-        // per-entity tick event (NeoForge's EntityTickEvent.Post, which NeoForgeBoatFluids listens to from here), so
-        // BoatFluidMotion.tick(boat) has no caller on Forge until a mixin at the end of AbstractBoat.tick calls it.
-        // TODO(#209 F3): BCCore is outside the compiled set (the whole node compiles buildcraft/platform/** only); once it
-        // is in, replace this block and the string in @Mod with
-        //     BCCore.init();
-        //     if (Platform.loader().isPhysicalClient()) {
-        //         BCCoreClient.init();
-        //     }
-        // and @Mod(BCCore.MODID).
+
+        BCCore.init();
+        if (Platform.loader().isPhysicalClient()) {
+            BCCoreClient.init();
+        }
     }
 }
 *///?}

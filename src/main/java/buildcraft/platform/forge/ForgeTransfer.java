@@ -65,10 +65,8 @@ import buildcraft.platform.transfer.TransferServices;
  * BuildCraft's own side-dependent answers. As NeoForge's cache does, it answers null for an unloaded position instead
  * of loading the chunk.
  *
- * <p><b>Fluid container items</b> (buckets, the fragile shard) are packet E's ({@code ForgeFluidContainers}); the six
- * contract methods below still throw {@code UnsupportedOperationException} until that class is merged and they delegate
- * to it, which is the ledger the {@code not ported (#209)} text keeps (the fragile shard's registration instead logs, as
- * a boot-time call cannot stop the game from starting).
+ * <p><b>Fluid container items</b> (buckets, the fragile shard): the six contract methods at the end delegate to the
+ * static method of the same name on {@code ForgeFluidContainers}, as {@code NeoForgeTransfer} does to its twin.
  ^/
 public final class ForgeTransfer implements TransferServices {
     @Override
@@ -170,37 +168,36 @@ public final class ForgeTransfer implements TransferServices {
         };
     }
 
-    // ---- Fluid container items: packet E's ForgeFluidContainers. Each body becomes a delegation to the static method of
-    // the same name and parameters once that class exists (NeoForgeTransfer does the same to NeoForgeFluidContainers).
+    // ---- Fluid container items: ForgeFluidContainers.
 
     @Override
     public BCFluidStack getFluidContained(ItemStack stack) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.getFluidContained(stack);
     }
 
     @Override
     public boolean isFluidContainer(ItemStack stack) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.isFluidContainer(stack);
     }
 
     @Override
     public boolean drainContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.drainContainerSlot(slots, slot, setSlot, tank);
     }
 
     @Override
     public boolean fillContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.fillContainerSlot(slots, slot, setSlot, tank);
     }
 
     @Override
     public boolean interactWithHeldContainer(Player player, InteractionHand hand, BlockPos pos, BCFluidStorage tank) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.interactWithHeldContainer(player, hand, pos, tank);
     }
 
     @Override
     public boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank) {
-        throw new UnsupportedOperationException("forge: fluid container items not ported (#209)");
+        return ForgeFluidContainers.exchangeWithCarriedContainer(player, tank);
     }
 }
 *///?}

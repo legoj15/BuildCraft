@@ -44,10 +44,10 @@ import buildcraft.platform.transfer.BCTransactionContext;
  * <p>The ledgers are held weakly by their container ({@link AdapterCache}); an open transaction holds the ledger it
  * owes through its journal, so a lookup inside that transaction finds it again.
  *
- * <p><b>Reflection.</b> {@code SidedInvWrapper} keeps its container and side protected with no getter, and
- * {@code CompoundContainer} keeps its two halves private (NeoForge's build widens them with an access transformer; the
- * Forge node ships none yet, docs/forge-port.md "Open"). Both are read reflectively, and a wrapper or compound that
- * cannot be read is treated as its own container, the limit #148 lifted, not a crash.
+ * <p><b>Reflection.</b> {@code SidedInvWrapper} keeps its container and side protected with no getter (a Forge class; the
+ * shared access transformer names vanilla classes only), so those two fields are read reflectively, and a wrapper that
+ * cannot be read is treated as its own container, the limit #148 lifted, not a crash. {@code CompoundContainer}'s two
+ * halves are private in vanilla and read directly: the shared access transformer opens them.
  ^/
 final class ClassicSlotLedger {
     private static final AdapterCache<Object, ClassicSlotLedger> LEDGERS =
@@ -57,10 +57,6 @@ final class ClassicSlotLedger {
     private static final Field SIDED_INV = field(SidedInvWrapper.class, "inv");
     @Nullable
     private static final Field SIDED_SIDE = field(SidedInvWrapper.class, "side");
-    @Nullable
-    private static final Field COMPOUND_FIRST = field(CompoundContainer.class, "container1");
-    @Nullable
-    private static final Field COMPOUND_SECOND = field(CompoundContainer.class, "container2");
 
     /^* One real call owed at the root commit, made on the handler and slot that promised it. ^/
     private record Owed(int slot, boolean insert, ItemStack stack, IItemHandler handler, int handlerSlot) {}
@@ -136,11 +132,8 @@ final class ClassicSlotLedger {
     // A double chest's capability answers with an InvWrapper over a CompoundContainer of its two halves, one per half.
     private static Slot inContainer(Container container, int slot) {
         while (container instanceof CompoundContainer compound) {
-            Container first = half(compound, COMPOUND_FIRST);
-            Container second = half(compound, COMPOUND_SECOND);
-            if (first == null || second == null) {
-                break;
-            }
+            Container first = compound.container1;
+            Container second = compound.container2;
             int firstSize = first.getContainerSize();
             if (slot < firstSize) {
                 container = first;
@@ -150,18 +143,6 @@ final class ClassicSlotLedger {
             }
         }
         return new Slot(LEDGERS.get(container), slot);
-    }
-
-    @Nullable
-    private static Container half(CompoundContainer compound, @Nullable Field field) {
-        if (field == null) {
-            return null;
-        }
-        try {
-            return (Container) field.get(compound);
-        } catch (IllegalAccessException e) {
-            return null;
-        }
     }
 
     private int owed(int slot, boolean insert, ItemStack resource) {

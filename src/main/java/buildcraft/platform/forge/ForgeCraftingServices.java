@@ -40,8 +40,9 @@ import buildcraft.platform.CraftingServices;
  * vanilla recipes, so it carries no codec and registers no serializer.
  *
  * <p><b>Recipe map.</b> Read from the private {@code recipes} field through FML's reflection helper, which finds it by
- * its Mojang name (Forge on 26.x runs unobfuscated). A direct read needs an access transformer line, and the shared
- * resources are not this layer's; swap it in when the Forge node's transformer opens the field.
+ * its Mojang name (Forge on 26.x runs unobfuscated). A direct read needs a line in the shared access transformer
+ * ({@code public net.minecraft.world.item.crafting.RecipeManager recipes}), which NeoForge's nodes would then apply too;
+ * left reflective until that line is wanted.
  *^/
 public final class ForgeCraftingServices implements CraftingServices {
     @Override

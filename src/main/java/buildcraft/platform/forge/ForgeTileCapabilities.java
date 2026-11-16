@@ -32,7 +32,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-import buildcraft.api.core.BCLog;
 import buildcraft.platform.transfer.BCEnergyStorage;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCItemStorage;
@@ -166,9 +165,7 @@ final class ForgeTileCapabilities {
         @Override
         public void itemFluidsDrainOnlyConsumable(ItemLike item, Supplier<? extends DataComponentType<?>> content,
                 int capacity) {
-            // Packet E's (fluid containers). Not a throw: this runs at boot for every player, and a missing optional item
-            // capability must not stop the game from starting. Replace with ForgeFluidContainers.registerDrainOnlyConsumable.
-            BCLog.logger.warn("[platform] forge: the fragile fluid shard's fluid capability is not ported (#209)");
+            ForgeFluidContainers.registerDrainOnlyConsumable(item, content, capacity);
         }
     }
 

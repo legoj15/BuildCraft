@@ -54,7 +54,8 @@ import buildcraft.platform.VanillaExtensions;
  * used; so no mixin is needed here, unlike Fabric.</li>
  * <li><b>Custom data.</b> Forge adds no key lookup to {@code CustomData} and its tag is private, so the lookup reads
  * that field through FML's reflection helper to avoid copying the tag (the caller runs on inventory ticks). A direct read
- * needs an access transformer line, and the shared resources are not this layer's.</li>
+ * needs a line in the shared access transformer ({@code public net.minecraft.world.item.component.CustomData tag}),
+ * which NeoForge's nodes would then apply too; left reflective until that line is wanted.</li>
  * <li><b>Level-aware saved data.</b> Forge does not patch the saved-data type; the level reaches the factory and codec
  * through {@link ForgeSavedDataLevels}, as on Fabric, which nothing feeds yet (see the marker at that method).</li>
  * </ul>

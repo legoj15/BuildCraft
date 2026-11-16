@@ -45,6 +45,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientVanillaExtensions();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientVanillaExtensions();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientVanillaExtensions not ported (#209)");
             *///?}
         }
     }
@@ -57,6 +59,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientModels();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientModels();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientModels not ported (#209)");
             *///?}
         }
     }
@@ -74,6 +78,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientFluids();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientFluids();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientFluids not ported (#209)");
             *///?}
         }
     }
@@ -86,6 +92,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientHooks();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientHooks not ported (#209)");
             *///?}
         }
     }
@@ -98,6 +106,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientRegistrationSinks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientRegistrationSinks();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientRegistrationSinks not ported (#209)");
             *///?}
         }
     }
@@ -110,6 +120,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientConfigScreens();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientConfigScreens();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ClientConfigScreens not ported (#209)");
             *///?}
         }
     }

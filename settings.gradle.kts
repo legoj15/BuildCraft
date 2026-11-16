@@ -33,6 +33,9 @@ stonecutter {
         version("1.21.11-fabric", "1.21.11")
         version("1.21.10-fabric", "1.21.10")
         version("1.21.1-fabric", "1.21.1")
+        // Forge nodes are `<mc>-forge`, named like the Fabric ones: MinecraftForge, NOT NeoForge (#209). 26.3-forge is the
+        // compile-only toolchain spike: it builds buildcraft/platform/** and ships nothing (see buildSrc bc.forge.gradle.kts).
+        version("26.3-forge", "26.3")
         vcsVersion = "26.3"
     }
 }

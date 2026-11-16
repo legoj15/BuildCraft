@@ -1,9 +1,9 @@
 // Central (per-node) build script. Runs once per Stonecutter version node.
 // It holds only what every loader shares (the Stonecutter constants and replacements, the Java toolchain, javac
 // flags), then applies the node's loader convention plugin, `bc.$loader` (buildSrc/src/main/kotlin/): bc.neoforge
-// brings ModDevGradle and everything NeoForge-specific, bc.fabric brings Loom. Never both on one node, and never two
-// plugin DSLs inline behind conditionals (docs/platform-layer.md). The loader plugins' versions are pinned in
-// buildSrc/build.gradle.kts.
+// brings ModDevGradle and everything NeoForge-specific, bc.fabric brings Loom, bc.forge brings ForgeGradle (MinecraftForge,
+// not NeoForge). Never two on one node, and never two plugin DSLs inline behind conditionals (docs/platform-layer.md).
+// The loader plugins' versions are pinned in buildSrc/build.gradle.kts.
 import buildcraft.gradle.BcNode
 
 plugins {
@@ -13,11 +13,11 @@ plugins {
 // Per-node Java toolchain: 26.1+ needs Java 25; the 1.21.11 node (pre-CalVer) overrides to 21.
 val javaVersion = property("java_version") as String
 // The mod loader this node builds against (root gradle.properties, overridable per node). It becomes the
-// Stonecutter constants `neoforge` / `fabric` below and picks the convention plugin; it is never derived from the
-// node name.
+// Stonecutter constants `neoforge` / `fabric` / `forge` below and picks the convention plugin; it is never derived from
+// the node name.
 val loader = property("loader") as String
-if (loader != "neoforge" && loader != "fabric") {
-    throw GradleException("loader must be 'neoforge' or 'fabric', not '$loader'")
+if (loader != "neoforge" && loader != "fabric" && loader != "forge") {
+    throw GradleException("loader must be 'neoforge', 'fabric' or 'forge', not '$loader'")
 }
 // True only on MC lines below 1.21.11 (the 1.21.10 and 1.21.1 nodes). Gates the back-compat source
 // replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
@@ -49,12 +49,12 @@ extensions.add(BcNode::class.java, "bcNode", BcNode(isPre1_21_11, isPre1_21_10, 
 // accessor renames, `helper.assertTrue(`).
 stonecutter {
     // Loader constants: `//? if neoforge {` is live on a node whose `loader` is neoforge, `//? if fabric {` on a fabric
-    // one. match() sets the key equal to `loader` true and the other false (verified against 0.9.8's
-    // ConstantContainer). Directives in common main code stay about MC versions; a loader arm belongs only in a
+    // one, `//? if forge {` on a MinecraftForge one. match() sets the key equal to `loader` true and the others false
+    // (verified against 0.9.8's ConstantContainer). Directives in common main code stay about MC versions; a loader arm belongs only in a
     // buildcraft/platform/<loader>/ file, a binder holder, or one of the documented exceptions
     // (docs/platform-layer.md, Rules for directives). Shared test code is looser: game-test
     // bodies carry loader arms where a loader's own route differs (docs/platform-layer.md, Phase 2c).
-    constants.match(loader, "neoforge", "fabric")
+    constants.match(loader, "neoforge", "fabric", "forge")
     replacements {
         regex {
             direction.set(isPre1_21_11)

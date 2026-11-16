@@ -34,8 +34,8 @@ What it measures, all on the live view (the code the node actually compiles):
     tagged (carry a @LoaderHook annotation) and untagged. A match counts only when the declaring BC type descends
     from the vanilla type that carries the extension (IBlockExtension -> Block, found through class headers in the
     same sources), so a BC method that merely shares a name with an extension method is not mistaken for a patch.
- 5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge or .fabric) other than
-    the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package (any BC
+ 5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge, .fabric or .forge) other than
+    the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc, net.minecraftforge or a BC gameplay package (any BC
     package but buildcraft.platform, buildcraft.api.fluids and buildcraft.api.capability).
  6. Stonecutter directive lines remaining in common code.
  7. Test-tree figures (src/test/java), informational.
@@ -70,7 +70,7 @@ REPO = Path(__file__).resolve().parent.parent
 #: The NeoForge implementation package: references here are the point of the package, so they are not counted.
 IMPL_PREFIX = "buildcraft/platform/neoforge/"
 #: Loader implementation packages. Contract rules apply to every other file under buildcraft/platform/.
-LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/")
+LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/", "buildcraft/platform/forge/")
 #: The only common files allowed to name a loader implementation package (the compile-time binders).
 BINDERS = ("buildcraft/platform/Platform.java", "buildcraft/platform/client/ClientPlatform.java")
 #: The oldest node. Its commented arms do not count toward the finish line (NeoForge-only forever).
@@ -219,7 +219,7 @@ _D_ELIF = re.compile(r"^\}\s*(?:elif|else\s+if)\s+(.+?)\s*\{$")
 _D_ELSE = re.compile(r"^\}\s*else\s*\{$")
 _D_END = re.compile(r"^\}$")
 _TERM_VERSION = re.compile(r"^(>=|<=|!=|>|<|=)?\s*(\d+(?:\.\d+)*)$")
-_TERM_CONSTANT = re.compile(r"^(neoforge|fabric)$")
+_TERM_CONSTANT = re.compile(r"^(neoforge|fabric|forge)$")
 
 
 class CensusError(Exception):
@@ -306,7 +306,7 @@ class ChainStates:
 
         for line, text in directives:
             kind, cond = parse_directive(text)
-            if cond is not None and re.search(r"\b(?:neoforge|fabric)\b", cond):
+            if cond is not None and re.search(r"\b(?:neoforge|fabric|forge)\b", cond):
                 self.loader_lines += 1
             if kind == "if":
                 self.chains += 1
@@ -659,10 +659,11 @@ def harvest_extension_methods(path):
 
 _NEOFORGED = re.compile(r"(?<![\w.$])net\.neoforged(?:\.(?:\w+|\*))*")
 _IMPORT_PREFIX = re.compile(r"\s*import\s+(?:static\s+)?$")
-_IMPL_NAME = re.compile(r"(?<![\w.$])buildcraft\.platform\.(?:neoforge|fabric)\b")
+_IMPL_NAME = re.compile(r"(?<![\w.$])buildcraft\.platform\.(?:neoforge|fabric|forge)\b")
 _CONTRACT_BANS = (
     (re.compile(r"(?<![\w.$])net\.neoforged\b"), "net.neoforged"),
     (re.compile(r"(?<![\w.$])net\.fabricmc\b"), "net.fabricmc"),
+    (re.compile(r"(?<![\w.$])net\.minecraftforge\b"), "net.minecraftforge"),
     # buildcraft.api.fluids and buildcraft.api.capability are the only other BC packages a contract may name:
     # BCFluidStack and the BCCapability token are vanilla-only and the Fabric node compiles them (bc.fabric.gradle.kts),
     # so the fluid storage contracts (S14d) and the capability registrar and lookups (S14e) carry them.

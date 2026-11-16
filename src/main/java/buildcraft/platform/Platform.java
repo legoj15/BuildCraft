@@ -145,6 +145,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeTransfer();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricTransfer();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: TransferServices not ported (#209)");
             *///?}
         }
     }
@@ -157,6 +159,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeLoaderServices();
             *///?}
         }
     }
@@ -169,6 +173,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeNetwork();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricNetwork();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: BCNetwork not ported (#209)");
             *///?}
         }
     }
@@ -181,6 +187,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeMenus();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricMenus();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: BCMenus not ported (#209)");
             *///?}
         }
     }
@@ -193,6 +201,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeProtection();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricProtection();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: PlatformProtection not ported (#209)");
             *///?}
         }
     }
@@ -205,6 +215,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeGameHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricGameHooks();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: GameHooks not ported (#209)");
             *///?}
         }
     }
@@ -217,6 +229,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLifecycleHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLifecycleHooks();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: LifecycleHooks not ported (#209)");
             *///?}
         }
     }
@@ -229,6 +243,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeFakePlayers();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFakePlayers();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: FakePlayers not ported (#209)");
             *///?}
         }
     }
@@ -241,6 +257,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeConfigRegistrar();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigRegistrar();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ConfigRegistrar not ported (#209)");
             *///?}
         }
     }
@@ -253,6 +271,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeConfigHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigHooks();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ConfigHooks not ported (#209)");
             *///?}
         }
     }
@@ -265,6 +285,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeSoundServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricSoundServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: SoundServices not ported (#209)");
             *///?}
         }
     }
@@ -277,6 +299,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeFluids();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFluids();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: FluidServices not ported (#209)");
             *///?}
         }
     }
@@ -289,6 +313,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeChunkTickets();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricChunkTickets();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ChunkTickets not ported (#209)");
             *///?}
         }
     }
@@ -301,6 +327,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeCraftingServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricCraftingServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: CraftingServices not ported (#209)");
             *///?}
         }
     }
@@ -313,6 +341,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeShearServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricShearServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: ShearServices not ported (#209)");
             *///?}
         }
     }
@@ -325,6 +355,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeAccessorySlots();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAccessorySlots();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: AccessorySlotServices not ported (#209)");
             *///?}
         }
     }
@@ -337,6 +369,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeVanillaExtensions();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricVanillaExtensions();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: VanillaExtensions not ported (#209)");
             *///?}
         }
     }
@@ -349,6 +383,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLootServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: LootServices not ported (#209)");
             *///?}
         }
     }
@@ -361,6 +397,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeRenderData();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRenderData();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: RenderDataServices not ported (#209)");
             *///?}
         }
     }
@@ -373,6 +411,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeRegistryServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRegistryServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: RegistryServices not ported (#209)");
             *///?}
         }
     }
@@ -385,6 +425,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeDataServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricDataServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: DataServices not ported (#209)");
             *///?}
         }
     }
@@ -397,6 +439,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeAttachmentServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAttachmentServices();
+            *///?} elif forge {
+            /*throw new UnsupportedOperationException("forge: AttachmentServices not ported (#209)");
             *///?}
         }
     }

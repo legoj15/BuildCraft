@@ -79,9 +79,9 @@ import org.junit.jupiter.api.Test;
  * verdict is too. Which arms are live is decided against the active node, read from the {@code stonecutter active}
  * line of {@code stonecutter.gradle.kts}, whose text {@code src/} always matches (the node name may carry a
  * {@code -<loader>} suffix, as a Fabric node's does), and against the loader that node builds against: {@code loader}
- * in the node's own {@code gradle.properties}, else the root one. The bare identifiers {@code neoforge} and
- * {@code fabric} are the loader constants build.gradle.kts defines, so {@code //? if neoforge} is live exactly when
- * that loader is the active one.
+ * in the node's own {@code gradle.properties}, else the root one. The bare identifiers {@code neoforge},
+ * {@code fabric} and {@code forge} (MinecraftForge) are the loader constants build.gradle.kts defines, so
+ * {@code //? if neoforge} is live exactly when that loader is the active one.
  *
  * <p><b>What it cannot see.</b> Whether an inactive arm's block comment holds code or prose. Stonecutter wraps code in
  * exactly that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first
@@ -115,7 +115,7 @@ public class StonecutterDirectiveGuardTester {
     private static final Pattern ELSE = Pattern.compile("^\\}\\s*else\\s*\\{$");
     /** One term of a condition: a version comparison (groups 1 and 2) or a loader constant (group 3). */
     private static final Pattern TERM =
-        Pattern.compile("^(?:(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)|(neoforge|fabric))$");
+        Pattern.compile("^(?:(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)|(neoforge|fabric|forge))$");
 
     @Test
     public void noDirectiveArmIsLeftForStonecutterToMangle() throws IOException {
@@ -247,6 +247,8 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertTrue(holds("fabric || >=26.3", active, "neoforge"));
         Assertions.assertFalse(holds("fabric && >=26.3", active, "neoforge"));
         Assertions.assertTrue(holds("fabric && >=26.3", active, "fabric"));
+        Assertions.assertFalse(holds("forge", active, "neoforge"));
+        Assertions.assertTrue(holds("forge", active, "forge"));
         Matcher suffixed = ACTIVE_NODE.matcher("stonecutter active \"26.3-fabric\" /* [SC] DO NOT EDIT */");
         Assertions.assertTrue(suffixed.find() && suffixed.group(1).equals("26.3-fabric") && suffixed.group(2).equals("26.3"));
     }
@@ -711,7 +713,7 @@ public class StonecutterDirectiveGuardTester {
                 Matcher m = TERM.matcher(term.trim());
                 if (!m.matches()) {
                     throw new IllegalArgumentException("cannot evaluate the condition `" + cond + "` (only version "
-                        + "comparisons and the loader constants neoforge and fabric, joined by && and ||, are "
+                        + "comparisons and the loader constants neoforge, fabric and forge, joined by && and ||, are "
                         + "understood) - extend the guard before using other forms");
                 }
                 if (m.group(3) != null) {

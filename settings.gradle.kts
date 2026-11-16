@@ -34,8 +34,8 @@ stonecutter {
         version("1.21.10-fabric", "1.21.10")
         version("1.21.1-fabric", "1.21.1")
         // Forge nodes are `<mc>-forge`, named like the Fabric ones: MinecraftForge, NOT NeoForge (#209). 26.3-forge is the
-        // compile-only while the port is in progress: it builds all of src/main/java bar the recipe-viewer plugins and ships
-        // nothing (see buildSrc bc.forge.gradle.kts).
+        // port in progress: it builds all of src/main/java bar the recipe-viewer plugins into a jar, boots a dedicated server
+        // and runs the shared game tests, and ships nothing yet (see buildSrc bc.forge.gradle.kts).
         version("26.3-forge", "26.3")
         vcsVersion = "26.3"
     }

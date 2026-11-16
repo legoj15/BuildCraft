@@ -23,11 +23,12 @@ import net.minecraftforge.common.crafting.conditions.ICondition;
  * (NeoForge's takes the context alone); this condition reads neither, so the class needs no Stonecutter directives
  * even though {@link IContext} differs by Forge line.
  *
- * <p>Where a condition is read is not NeoForge's. Forge decodes the {@code forge:condition} field only inside a
- * {@code forge:conditional} recipe wrapper (and the codec registry this file's codec goes in is what names the type
- * there); it has no reader for a top-level key on an arbitrary recipe object, which is how the 18 RF pipe recipes carry
- * {@code neoforge:conditions}. Getting that JSON read is the data pipeline's job (the Forge build's resource rewrite),
- * not this class's.
+ * <p>Where a condition is written is not NeoForge's. NeoForge reads a {@code neoforge:conditions} list at the top of a
+ * datum; Forge 26.3 reads one {@code forge:condition} object at the top of any datum (its patched
+ * {@code ResourceManagerRegistryLoadTask} and {@code SimpleJsonResourceReloadListener} take it off before the codec runs,
+ * recipes included), with the codec registry this file's codec goes in naming the type. The 18 RF pipe recipes carry
+ * {@code neoforge:conditions}, so turning that into the Forge key is the data pipeline's job (the Forge build's resource
+ * rewrite, {@code DataForge}), not this class's.
  *^/
 final class ForgeFlagCondition implements ICondition {
     private final String name;

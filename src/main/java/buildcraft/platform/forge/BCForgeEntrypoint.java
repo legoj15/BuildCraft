@@ -27,8 +27,9 @@ import buildcraft.platform.Platform;
  * extra steps is needed: FML runs the registry events and the setup phases itself, so there are no pending registrations
  * to flush and no queue of setup actions to run.
  *
- * <p>The boat drag needs no step here: {@code ForgeFlowingFluids} registers its listeners when the fluids are
- * registered (Forge has no per-entity tick event, which is why NeoForge's entrypoint does it by hand).
+ * <p>The boat drag needs no step here: {@code ForgeFlowingFluids.subscribe()} registers its listener
+ * ({@code ForgeBoatFluids.register()}) with the fluids' own registrations (Forge has no per-entity tick event, which is
+ * why NeoForge's entrypoint does it by hand).
  *^/
 @Mod(BCCore.MODID)
 public final class BCForgeEntrypoint {

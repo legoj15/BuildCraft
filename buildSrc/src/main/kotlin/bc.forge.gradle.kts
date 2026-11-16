@@ -5,8 +5,8 @@
 // Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
 // of a viewer this node has no build of (see the sourceSets block), builds a jar collected beside the NeoForge and Fabric
 // ones by buildAndCollect, and runs the dedicated server (slice F4, docs/forge-port.md). No unit tests (FML-JUnit has no
-// Forge twin); the shared game tests run through `runGameTest` (slice F5, below), which is not yet part of nodeVerification.
-// Its share of the root fullTestSuite is the compile, the transformed resources and the collected jar.
+// Forge twin); the shared game tests run through `runGameTest` (slice F5, below), which nodeVerification runs.
+// Its share of the root fullTestSuite is the compile, the transformed resources, the collected jar and the game tests.
 //
 // Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
 // directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
@@ -265,8 +265,7 @@ tasks.withType<JavaExec>().configureEach {
         }
     }
 }
-// The Fabric node's task name, for the same command on every loader. Not in nodeVerification yet (the orchestrator adds it
-// once the run is green).
+// The Fabric node's task name, for the same command on every loader. Part of nodeVerification, as on Fabric.
 tasks.register("runGameTest") {
     group = "verification"
     description = "Runs every shared game test on Forge's game-test server (the pass check reads run-gameTestServer/logs/latest.log)."
@@ -323,9 +322,9 @@ tasks.register<Copy>("buildAndCollect") {
 }
 
 // What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the transformed resources and the
-// collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests; `runGameTest` joins this list once it is green (F5).
+// collected jar and the game tests. The NeoForge twin in bc.neoforge adds unit tests (there are none on Forge: FML-JUnit has no twin).
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform and the collected jar (runGameTest is not in it yet)."
-    dependsOn("compileJava", "processResources", "jar", "buildAndCollect")
+    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform, the collected jar and the game tests."
+    dependsOn("compileJava", "processResources", "jar", "buildAndCollect", "runGameTest")
 }

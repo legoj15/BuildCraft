@@ -29,10 +29,10 @@ import buildcraft.platform.registry.DataServices;
  * {@code forge:biome_modifier_serializers}). The biome modifier's feature comes from its JSON, as on NeoForge, so the
  * {@code feature} argument is unused here.
  *
- * <p>This registers the types only. Forge reads the data under its own names (a {@code forge:condition} inside a
- * {@code forge:conditional} recipe, biome modifiers under the {@code forge} folder of a data pack), so the JSON
+ * <p>This registers the types only. Forge reads the data under its own names (a top-level {@code forge:condition} object
+ * on any datum, recipes included; biome modifiers under the {@code forge} folder of a data pack), so the JSON
  * BuildCraft ships in NeoForge's shape ({@code neoforge:conditions}, {@code neoforge/biome_modifier}) reaches these
- * types only once the Forge build rewrites it, which is the data pipeline's job and not part of this seam.
+ * types only once the Forge build rewrites it ({@code DataForge}), which is the data pipeline's job and not part of this seam.
  *^/
 public final class ForgeDataServices implements DataServices {
     @Override

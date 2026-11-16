@@ -501,8 +501,11 @@ public class BlockUtil {
     @Nullable
     public static Fluid getFluidWithFlowing(Block block) {
         if (block instanceof LiquidBlock liquidBlock) {
-            Fluid fluid = liquidBlock.fluid;
-            if (fluid != null && fluid != Fluids.EMPTY) {
+            // The fluid the block was built with, read off its level-0 state (the cache vanilla fills from that fluid's
+            // source state). Not the field: LiquidBlock.fluid is private on MinecraftForge, whose transformer redirects
+            // every outside read to getFluid() and refuses a class whose field an access transformer opened.
+            Fluid fluid = liquidBlock.defaultBlockState().getFluidState().getType();
+            if (fluid != Fluids.EMPTY) {
                 return fluid;
             }
         }

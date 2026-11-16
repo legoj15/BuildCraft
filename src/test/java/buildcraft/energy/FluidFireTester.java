@@ -472,8 +472,14 @@ public class FluidFireTester {
     private static boolean lavaIgnites(ServerLevel level, BlockPos pos, Block block) {
         //? if neoforge {
         return block.defaultBlockState().ignitedByLava(level, pos, Direction.UP);
-        //?} elif fabric || forge {
+        //?} elif fabric {
         /*return ((buildcraft.platform.hook.FireReactiveBlock) block).lavaIgnites(block.defaultBlockState());*/
+        //?} elif forge {
+        /*// What Forge's LavaFluid consults before it lights a block: vanilla's own property AND the flammability the
+        // block answers (BCFluidBlock sets the first from its constructor and answers the second from fireBurnOdds),
+        // not the BuildCraft hook directly, which Forge never calls.
+        BlockState state = block.defaultBlockState();
+        return state.ignitedByLava() && state.isFlammable(level, pos, Direction.UP);*/
         //?}
     }
 

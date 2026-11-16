@@ -445,7 +445,7 @@ public class FluidFireTester {
         state.onCaughtFire(level, abs, Direction.UP, null, net.minecraft.world.item.ItemStack.EMPTY);
         //?} elif fabric {
         /*((buildcraft.platform.hook.FireReactiveBlock) state.getBlock()).catchFire(state, level, abs);*/
-        //?} else {
+        //?} elif neoforge || forge {
         /*state.onCaughtFire(level, abs, Direction.UP, null);*/
         //?}
     }
@@ -457,12 +457,14 @@ public class FluidFireTester {
             .orElseThrow(() -> new IllegalStateException("no BuildCraft energy fluid named " + name));
     }
 
-    // NeoForge's context-aware fire odds; on Fabric FireBlockMixin and LavaFluidMixin return the block's own
-    // FireReactiveBlock answers, which is what these read there.
+    // NeoForge's and Forge's context-aware fire odds (the same IBlockExtension / IForgeBlockState calls); on Fabric
+    // FireBlockMixin and LavaFluidMixin return the block's own FireReactiveBlock answers, which is what these read there.
+    // Forge has no lava-ignition hook wired yet (BCFluidBlock.ignitedByLava is NeoForge's; Forge's LavaFluid patch asks the
+    // state's own flag and isFlammable, docs/forge-port.md, "Still owed"), so the Forge arm reads the block's own answer too.
     private static int flammability(ServerLevel level, BlockPos pos, Block block) {
-        //? if neoforge {
+        //? if neoforge || forge {
         return block.defaultBlockState().getFlammability(level, pos, Direction.UP);
-        //?} else {
+        //?} elif fabric {
         /*return ((buildcraft.platform.hook.FireReactiveBlock) block).fireBurnOdds(block.defaultBlockState());*/
         //?}
     }
@@ -470,15 +472,15 @@ public class FluidFireTester {
     private static boolean lavaIgnites(ServerLevel level, BlockPos pos, Block block) {
         //? if neoforge {
         return block.defaultBlockState().ignitedByLava(level, pos, Direction.UP);
-        //?} else {
+        //?} elif fabric || forge {
         /*return ((buildcraft.platform.hook.FireReactiveBlock) block).lavaIgnites(block.defaultBlockState());*/
         //?}
     }
 
     private static int fireSpread(ServerLevel level, BlockPos pos, Block block) {
-        //? if neoforge {
+        //? if neoforge || forge {
         return block.defaultBlockState().getFireSpreadSpeed(level, pos, Direction.UP);
-        //?} else {
+        //?} elif fabric {
         /*return ((buildcraft.platform.hook.FireReactiveBlock) block).fireIgniteOdds(block.defaultBlockState());*/
         //?}
     }

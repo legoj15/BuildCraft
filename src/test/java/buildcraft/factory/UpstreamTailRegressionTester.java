@@ -83,12 +83,13 @@ public class UpstreamTailRegressionTester {
             inserted = handler.insert(ItemResource.of(new ItemStack(Items.OAK_LOG)), 1, tx);
             tx.commit();
         }
-        //?} elif fabric {
-        /*// Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages).
+        //?} elif fabric || forge {
+        /*// Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages); Forge: the same
+        // lookup over the classic ITEM_HANDLER capability (ForgeTransfer).
         var handler = buildcraft.platform.transfer.TransferAccess.findItem(helper.getLevel(), abs, Direction.UP);
         helper.assertTrue(handler != null, "Precondition: the workbench must expose an item capability");
         int inserted = buildcraft.lib.transfer.ItemStorageUtil.insertStacking(handler, new ItemStack(Items.OAK_LOG), 1, null);*/
-        //?} else {
+        //?} elif neoforge {
         /*var handler = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, abs, Direction.UP);
         helper.assertTrue(handler != null, "Precondition: the workbench must expose an item capability");
         int inserted = 1 - net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(

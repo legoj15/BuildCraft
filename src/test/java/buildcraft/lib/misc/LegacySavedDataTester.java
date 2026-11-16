@@ -138,6 +138,38 @@ public class LegacySavedDataTester {
         ((buildcraft.platform.fabric.FabricSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
         return storage;
     }*/
+    //?} elif forge && >=26.1 {
+    /*// Forge has no level-aware saved data either: ForgeSavedDataLevels is Fabric's thread-local answer, and nothing on Forge
+    // sets the level on a storage yet (docs/forge-port.md, "Still owed": the storage and chunk-source mixins), so a storage
+    // built here cannot hand its level to a factory or a codec. Tests that read through newStorage fail on that gap.
+    // A fresh type data for the level, as the level's storage would make it.
+    static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
+        return buildcraft.platform.forge.ForgeSavedDataLevels.with(level, () -> type.constructor().get());
+    }
+
+    // The type's codec as the level's storage would use it.
+    static <T extends SavedData> Codec<T> codec(SavedDataType<T> type, ServerLevel level) {
+        Codec<T> codec = type.codec();
+        return new Codec<T>() {
+            @Override
+            public <O> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<T, O>> decode(
+                    com.mojang.serialization.DynamicOps<O> ops, O input) {
+                return buildcraft.platform.forge.ForgeSavedDataLevels.with(level, () -> codec.decode(ops, input));
+            }
+
+            @Override
+            public <O> com.mojang.serialization.DataResult<O> encode(T input,
+                    com.mojang.serialization.DynamicOps<O> ops, O prefix) {
+                return buildcraft.platform.forge.ForgeSavedDataLevels.with(level,
+                        () -> codec.encode(input, ops, prefix));
+            }
+        };
+    }
+
+    // A saved-data storage over the folder: not level-aware, see above.
+    static SavedDataStorage newStorage(ServerLevel level, Path folder) {
+        return new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+    }*/
     //?}
 
     /** The overworld's pre-26.1 saved-data file is picked up by the real storage the first time the type is asked for. */

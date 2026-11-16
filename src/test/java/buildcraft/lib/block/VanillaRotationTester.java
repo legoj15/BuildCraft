@@ -332,10 +332,10 @@ public class VanillaRotationTester {
                 new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), nonCrouch,
                         InteractionHand.MAIN_HAND, wrench, hit);
 
-        // Fabric runs the same method from UseBlockCallback (FabricLoaderHookRoutes).
-        //? if neoforge {
+        // Fabric runs the same method from UseBlockCallback (FabricLoaderHookRoutes); Forge patches onItemUseFirst in as NeoForge does.
+        //? if neoforge || forge {
         InteractionResult r1 = wrenchItem.onItemUseFirst(wrench, nonCrouchCtx);
-        //?} else {
+        //?} elif fabric {
         /*InteractionResult r1 = wrenchItem.useBeforeBlock(wrench, nonCrouchCtx);*/
         //?}
         assertTrue(r1 == InteractionResult.PASS,
@@ -352,9 +352,9 @@ public class VanillaRotationTester {
                 new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), crouch,
                         InteractionHand.MAIN_HAND, wrench, hit);
 
-        //? if neoforge {
+        //? if neoforge || forge {
         InteractionResult r2 = wrenchItem.onItemUseFirst(wrench, crouchCtx);
-        //?} else {
+        //?} elif fabric {
         /*InteractionResult r2 = wrenchItem.useBeforeBlock(wrench, crouchCtx);*/
         //?}
         assertTrue(r2 == InteractionResult.SUCCESS,

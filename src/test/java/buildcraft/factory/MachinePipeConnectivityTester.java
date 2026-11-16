@@ -361,12 +361,13 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
-        // Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages).
+        // Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages); Forge: the same
+        // lookup over the classic ITEM_HANDLER capability (ForgeTransfer).
         //? if neoforge && >=1.21.10 {
         var handler = level.getCapability(Capabilities.Item.BLOCK, absPos, Direction.NORTH);
-        //?} elif fabric {
+        //?} elif fabric || forge {
         /*var handler = buildcraft.platform.transfer.TransferAccess.findItem(level, absPos, Direction.NORTH);*/
-        //?} else {
+        //?} elif neoforge {
         /*var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, absPos, Direction.NORTH);*/
         //?}
         helper.assertTrue(handler != null,
@@ -402,21 +403,22 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
-        // Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages).
+        // Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages); Forge: the classic ENERGY capability
+        // (ForgeTransfer); both through the platform seam.
         //? if neoforge && >=1.21.10 {
         var energy = level.getCapability(Capabilities.Energy.BLOCK, absPos, Direction.NORTH);
-        //?} elif fabric {
+        //?} elif fabric || forge {
         /*var energy = buildcraft.platform.transfer.TransferAccess.findEnergy(level, absPos, Direction.NORTH);*/
-        //?} else {
+        //?} elif neoforge {
         /*var energy = level.getCapability(Capabilities.EnergyStorage.BLOCK, absPos, Direction.NORTH);*/
         //?}
         if (expectExposed) {
             helper.assertTrue(energy != null,
                 name + " must expose Forge Energy when MJ-RF autoconversion is enabled");
-            //? if >=1.21.10 || fabric {
+            //? if >=1.21.10 || fabric || forge {
             helper.assertTrue(energy.getCapacityAsLong() > 0,
                 name + "'s Forge Energy handler should report a non-zero capacity");
-            //?} else {
+            //?} elif neoforge {
             /*helper.assertTrue(energy.getMaxEnergyStored() > 0,
                 name + "'s Forge Energy handler should report a non-zero capacity");*/
             //?}

@@ -784,8 +784,9 @@ public class EngineTester {
                 net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, feAbs, Direction.NORTH);
             TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos, TileEngineBase_BC8.class);
             TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos, TileEngineBase_BC8.class);
-            //?} elif fabric {
-            /*// Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages).
+            //?} elif fabric || forge {
+            /*// Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages); Forge: the classic ENERGY capability
+            // (ForgeTransfer); both through the platform seam.
             var westFe = buildcraft.platform.transfer.TransferAccess.findEnergy(helper.getLevel(), feAbs, Direction.WEST);
             var northFe = buildcraft.platform.transfer.TransferAccess.findEnergy(helper.getLevel(), feAbs, Direction.NORTH);
             //? if >=1.21.10 {
@@ -795,7 +796,7 @@ public class EngineTester {
             /^TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos);
             TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos);
             ^///?}*/
-            //?} else {
+            //?} elif neoforge {
             /*var westFe = helper.getLevel().getCapability(
                 net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, feAbs, Direction.WEST);
             var northFe = helper.getLevel().getCapability(

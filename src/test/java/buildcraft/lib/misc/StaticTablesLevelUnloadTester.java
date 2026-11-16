@@ -99,8 +99,8 @@ public class StaticTablesLevelUnloadTester {
 
         static ChunkOwnersProbe open(GameTestHelper helper, ServerLevel arena, ServerLevel other) {
             ChunkOwnersProbe probe = new ChunkOwnersProbe(arena, other);
-            //? if fabric {
-            /*buildcraft.platform.fabric.FabricChunkTickets tickets = tickets();
+            //? if fabric || forge {
+            /*var tickets = tickets();
             probe.releaseAll();
             helper.assertTrue(tickets.claim(other.dimension(), FIRST, CHUNK, CHUNK)
                     && tickets.claim(arena.dimension(), FIRST, CHUNK, CHUNK),
@@ -115,8 +115,8 @@ public class StaticTablesLevelUnloadTester {
         }
 
         void assertForgotten(GameTestHelper helper) {
-            //? if fabric {
-            /*buildcraft.platform.fabric.FabricChunkTickets tickets = tickets();
+            //? if fabric || forge {
+            /*var tickets = tickets();
             try {
                 helper.assertTrue(tickets.claim(other.dimension(), NEXT, CHUNK, CHUNK),
                         "the unloaded level's chunk owners must be dropped: the next world's first claim on the chunk"
@@ -132,9 +132,15 @@ public class StaticTablesLevelUnloadTester {
         //? if fabric {
         /*private static buildcraft.platform.fabric.FabricChunkTickets tickets() {
             return (buildcraft.platform.fabric.FabricChunkTickets) buildcraft.platform.Platform.chunkTickets();
-        }
+        }*/
+        //?} elif forge {
+        /*private static buildcraft.platform.forge.ForgeChunkTickets tickets() {
+            return (buildcraft.platform.forge.ForgeChunkTickets) buildcraft.platform.Platform.chunkTickets();
+        }*/
+        //?}
 
-        private void releaseAll() {
+        //? if fabric || forge {
+        /*private void releaseAll() {
             for (ServerLevel level : new ServerLevel[] {arena, other}) {
                 tickets().release(level.dimension(), FIRST, CHUNK, CHUNK);
                 tickets().release(level.dimension(), NEXT, CHUNK, CHUNK);
@@ -217,11 +223,11 @@ public class StaticTablesLevelUnloadTester {
         helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
                 "precondition: the unload dropped the level's marker sub-cache");
 
-        // What the loader calls: NeoForge's patched onChunkUnloaded, or Fabric's chunk-unload route
+        // What the loader calls: NeoForge's and Forge's patched onChunkUnloaded, or Fabric's chunk-unload route
         // (FabricLoaderHookRoutes), which calls the hook's onChunkUnload.
-        //? if neoforge {
+        //? if neoforge || forge {
         marker.onChunkUnloaded();
-        //?} else {
+        //?} elif fabric {
         /*marker.onChunkUnload();*/
         //?}
 

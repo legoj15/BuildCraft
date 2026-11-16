@@ -23,14 +23,16 @@ public final class FeHandlerAccess {
         if (handler instanceof BCEnergyStorage storage) {
             return storage;
         }
-        // Fabric's lookup (TransferAccess.findEnergy) already hands out BuildCraft storages.
+        // Fabric's and Forge's lookup (TransferAccess.findEnergy) already hand out BuildCraft storages.
         //? if neoforge && >=1.21.10 {
         return buildcraft.platform.neoforge.NeoForgeEnergyStorages.fromNeo(
                 (net.neoforged.neoforge.transfer.energy.EnergyHandler) handler);
         //?} elif neoforge {
         /*return buildcraft.platform.neoforge.NeoForgeEnergyStorages.fromNeo(
                 (net.neoforged.neoforge.energy.IEnergyStorage) handler);*/
-        //?} else {
+        //?} elif forge {
+        /*return buildcraft.platform.forge.ForgeEnergyStorages.fromForge((net.minecraftforge.energy.IEnergyStorage) handler);*/
+        //?} elif fabric {
         /*throw new IllegalArgumentException("not a BuildCraft energy storage: " + handler);*/
         //?}
     }

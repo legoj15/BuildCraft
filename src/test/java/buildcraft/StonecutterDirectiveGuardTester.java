@@ -64,11 +64,12 @@ import org.junit.jupiter.api.Test;
  * {@code /^ ... ^/} (and {@code /^* ... *^/}); inside a block comment's body the scanner reads that form as a comment.
  * In a file's own text it is not Java, so there the scanner does not read it as one and it counts as code.
  *
- * <p><b>One design rule on top: no bare loader {@code else} in main code.</b> With three loaders, an {@code else} after
- * an arm that names a loader silently means "the other two", so a feature written for NeoForge and Fabric quietly
- * reaches MinecraftForge on the Fabric arm. A chain in {@code src/main} that names a loader in any arm may not end in
- * a plain {@code else}; it names each loader it serves ({@code elif fabric || forge}). Version-only chains keep
- * their {@code else}, and test code is not held to this yet (its forks are re-keyed with the seam each one tests).
+ * <p><b>One design rule on top: no bare loader {@code else} in main or test code.</b> With three loaders, an
+ * {@code else} after an arm that names a loader silently means "the other two", so a feature written for NeoForge and
+ * Fabric quietly reaches MinecraftForge on the Fabric arm. A chain in {@code src/main} or {@code src/test/java} that
+ * names a loader in any arm may not end in a plain {@code else}; it names each loader it serves
+ * ({@code elif fabric || forge}). Version-only chains keep their {@code else}. (Test code joined main code in the
+ * Forge game-test slice, F5, which re-keyed the last of its forks.)
  *
  * <p><b>What Stonecutter processes.</b> Every file in the {@code src/} source dirs, resources included, whose
  * extension has a handler in Stonecutter's {@code Defaults.kt}; everything else (json, toml, md, txt, images) is
@@ -351,10 +352,10 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertTrue(mixed.findings.get(1).startsWith("S.java:6: "), mixed.findings.get(1));
     }
 
-    /** With three loaders, an {@code else} after a loader-keyed arm silently means "the other two": main code (not test
-     *  code, whose forks are still being re-keyed) must name each loader it serves. A version-only chain keeps its else. */
+    /** With three loaders, an {@code else} after a loader-keyed arm silently means "the other two": main and test code
+     *  must name each loader they serve. A version-only chain keeps its else. */
     @Test
-    public void scannerFlagsABareLoaderElseInMainCode() {
+    public void scannerFlagsABareLoaderElseInMainAndTestCode() {
         int[] active = {26, 3};
         String chain = """
             //? if neoforge {
@@ -389,7 +390,13 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertTrue(versioned.findings.get(0).startsWith("src/main/java/B.java:3: "), versioned.findings.get(0));
         Assertions.assertTrue(versioned.findings.get(1).startsWith("src/main/java/B.java:10: "), versioned.findings.get(1));
 
-        // Sound: every loader named, a version-only chain with an else, and the same bare else in test code.
+        // Test code is held to the rule too.
+        Scan bareTest = new Scan(active);
+        bareTest.file("src/test/java/T.java", chain);
+        Assertions.assertEquals(1, bareTest.findings.size(), bareTest.findings.toString());
+        Assertions.assertTrue(bareTest.findings.get(0).startsWith("src/test/java/T.java:3: "), bareTest.findings.get(0));
+
+        // Sound: every loader named, and a version-only chain with an else.
         Scan sound = new Scan(active);
         sound.file("src/main/java/C.java", """
             //? if neoforge {
@@ -403,7 +410,13 @@ public class StonecutterDirectiveGuardTester {
             /*int e = 2;
             *///?}
             """);
-        sound.file("src/test/java/D.java", chain);
+        sound.file("src/test/java/D.java", """
+            //? if neoforge || forge {
+            int d = 1;
+            //?} elif fabric {
+            /*int d = 2;
+            *///?}
+            """);
         Assertions.assertEquals(List.of(), sound.findings);
 
         // The conditions those chains use: && and || read left to right, as Stonecutter does (see holds).
@@ -698,7 +711,8 @@ public class StonecutterDirectiveGuardTester {
                     begin(chain, open.group(1), marker, tok);
                 } else if (!stack.isEmpty() && (elif.matches() || ELSE.matcher(body).matches())) {
                     end(stack.peek().arm);
-                    if (!elif.matches() && stack.peek().loaderKeyed && where.startsWith("src/main/")) {
+                    if (!elif.matches() && stack.peek().loaderKeyed
+                            && (where.startsWith("src/main/") || where.startsWith("src/test/java/"))) {
                         report(tok, "`" + marker + "` ends a chain that names a loader, so it silently also serves "
                             + "every loader the chain does not name. Name each loader the arm serves instead "
                             + "(`} elif fabric || forge {`), as docs/forge-port.md requires of main code");

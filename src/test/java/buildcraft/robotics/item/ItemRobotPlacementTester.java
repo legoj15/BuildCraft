@@ -405,14 +405,22 @@ public class ItemRobotPlacementTester {
     private static final class RecordingPlayer
             //? if neoforge {
             extends net.neoforged.neoforge.common.util.FakePlayer {
-            //?} else {
+            //?} elif fabric {
             /*extends net.fabricmc.fabric.api.entity.FakePlayer {*/
+            //?} elif forge {
+            /*extends net.minecraft.server.level.ServerPlayer {*/
             //?}
         final List<Component> overlay = new ArrayList<>();
 
         RecordingPlayer(ServerLevel level) {
+            //? if neoforge || fabric {
             super(level, new GameProfile(UUID.fromString("5c7c0c9e-2b1f-4b8e-9a51-0b1d3c10e0aa"),
                     "[BC robot tester]"));
+            //?} elif forge {
+            /*// Forge has no fake-player base class: a bare ServerPlayer on no connection, as ForgeFakePlayers makes one.
+            super(level.getServer(), level, new GameProfile(UUID.fromString("5c7c0c9e-2b1f-4b8e-9a51-0b1d3c10e0aa"),
+                    "[BC robot tester]"), net.minecraft.server.level.ClientInformation.createDefault());*/
+            //?}
         }
 
         //? if >=26.1 {

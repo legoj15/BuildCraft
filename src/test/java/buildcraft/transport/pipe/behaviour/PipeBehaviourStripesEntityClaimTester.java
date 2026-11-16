@@ -146,6 +146,9 @@ public class PipeBehaviourStripesEntityClaimTester {
      */
     //? if neoforge {
     @net.neoforged.fml.common.EventBusSubscriber(modid = "buildcraftunofficial")
+    //?} elif forge {
+    /*@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = "buildcraftunofficial",
+            bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.MOD)*/
     //?}
     public static final class LoadTimeLowestClaim {
         static volatile Entity target;
@@ -156,7 +159,12 @@ public class PipeBehaviourStripesEntityClaimTester {
         public static void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
             event.enqueueWork(LoadTimeLowestClaim::register);
         }
-        //?} else {
+        //?} elif forge {
+        /*@net.minecraftforge.eventbus.api.listener.SubscribeEvent
+        public static void onCommonSetup(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+            event.enqueueWork(LoadTimeLowestClaim::register);
+        }*/
+        //?} elif fabric {
         /*static {
             register();
         }*/

@@ -99,15 +99,15 @@ public class DyedPipeTableDriftTester {
     }
 
     private static Set<Item> itemsOf(Ingredient ingredient) {
-        // NeoForge deprecates vanilla's items() for getValues(); vanilla (Fabric) has only items().
+        // NeoForge deprecates vanilla's items() for getValues(); vanilla (Fabric) and Forge have only items().
         //? if neoforge && >=1.21.10 {
         return ingredient.getValues().stream().map(net.minecraft.core.Holder::value).collect(Collectors.toSet());
-        //?} elif fabric && >=1.21.10 {
+        //?} elif fabric && >=1.21.10 || forge && >=1.21.10 {
         /*// Vanilla deprecates items() as display-only; outside NeoForge it is the only full listing there is.
         @SuppressWarnings("deprecation")
         java.util.stream.Stream<net.minecraft.core.Holder<Item>> items = ingredient.items();
         return items.map(net.minecraft.core.Holder::value).collect(Collectors.toSet());*/
-        //?} else {
+        //?} elif <1.21.10 {
         /*return java.util.Arrays.stream(ingredient.getItems())
                 .map(ItemStack::getItem).collect(Collectors.toSet());*/
         //?}

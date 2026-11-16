@@ -38,6 +38,10 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * Fabric claim mod answers placements through Common Protection API, so there the placement half is a
  * {@code ProtectionProvider} each claim registers and removes again. The provider is asked once per cell, where
  * NeoForge posts one event for a multi-cell placement (at its first cell).
+ *
+ * <p>On Forge each is a listener on the event's own bus (a predicate answering true refuses), removed again through the
+ * handle {@code addListener} returned. A multi-cell placement posts {@code EntityMultiPlaceEvent}, which has a bus of its
+ * own (an event does not pass to its subclasses' buses), so the placement half listens on both.
  */
 public final class WorkClaimMod implements AutoCloseable {
 
@@ -52,7 +56,10 @@ public final class WorkClaimMod implements AutoCloseable {
     private final Consumer<PlayerInteractEvent.RightClickBlock> toolListener;
     private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
     private final Consumer<PlayerInteractEvent.RightClickItem> itemListener;
-    //?} else {
+    //?} elif forge {
+    /*/^* The handles of this claim's Forge listeners, removed by close. ^/
+    private final net.minecraftforge.eventbus.api.listener.EventListener[] handles;*/
+    //?} elif fabric {
     /*private static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
     private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
     /^* This claim's Common Protection API provider id: registered by the constructor, removed by close. *^/
@@ -124,7 +131,22 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, toolListener);
         NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem.class, itemListener);
-        //?} else {
+        //?} elif forge {
+        /*java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock> tool =
+                event -> toolAsk(event.getPos());
+        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent> place =
+                event -> placeAsk(event.getPos());
+        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent> placeMulti =
+                event -> placeAsk(event.getPos());
+        java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem> item =
+                event -> itemAsk(event.getPos());
+        handles = new net.minecraftforge.eventbus.api.listener.EventListener[] {
+            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.addListener(tool),
+            net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.addListener(place),
+            net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.addListener(placeMulti),
+            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.addListener(item)
+        };*/
+        //?} elif fabric {
         /*OPEN.add(this);
         // The placement: a Common Protection API provider, as a Fabric claim mod answers one (it refuses nothing else:
         // the right-click and the item use are the callbacks above).
@@ -218,7 +240,12 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.unregister(toolListener);
         NeoForge.EVENT_BUS.unregister(placeListener);
         NeoForge.EVENT_BUS.unregister(itemListener);
-        //?} else {
+        //?} elif forge {
+        /*net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.removeListener(handles[0]);
+        net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.removeListener(handles[1]);
+        net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.removeListener(handles[2]);
+        net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.removeListener(handles[3]);*/
+        //?} elif fabric {
         /*OPEN.remove(this);
         eu.pb4.common.protection.api.CommonProtection.remove(providerId);*/
         //?}

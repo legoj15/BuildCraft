@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -53,9 +54,9 @@ import buildcraft.platform.transfer.TransferServices;
  *
  * <p><b>Querying.</b> Forge has no position-keyed capability lookup, so a query asks the block entity itself, as Forge's
  * own {@code FluidUtil.getFluidHandler(Level, BlockPos, Direction)} does ({@link #query}); an entity is asked directly.
- * A block with no block entity answers nothing, which means the capability-less vanilla blocks NeoForge registers
- * providers for (a composter's inventory) are not found here; Forge's patched vanilla block entities (chests, furnaces,
- * hoppers, brewing stands) answer as usual.
+ * A block with no block entity answers nothing except the two vanilla blocks NeoForge and Fabric API register providers
+ * for, which Forge does not ({@link ForgeVanillaHandlers}: a cauldron's fluid handler, a composter's inventory);
+ * Forge's patched vanilla block entities (chests, furnaces, hoppers, brewing stands) answer as usual.
  *
  * <p><b>Caches.</b> Forge has no {@code BlockCapabilityCache}, and nothing that tells a neighbour's reader its answer
  * changed other than a {@code LazyOptional}'s invalidation, which only a holder of that optional hears. The cache here
@@ -92,8 +93,9 @@ public final class ForgeTransfer implements TransferServices {
     /^* What {@code capability} holds for the block at {@code pos} from {@code side}, or null (the block entity's answer). ^/
     @Nullable
     private static <T> T query(Level level, BlockPos pos, Capability<T> capability, @Nullable Direction side) {
-        if (!level.getBlockState(pos).hasBlockEntity()) {
-            return null;
+        BlockState state = level.getBlockState(pos);
+        if (!state.hasBlockEntity()) {
+            return ForgeVanillaHandlers.find(level, pos, state, capability, side);
         }
         BlockEntity tile = level.getBlockEntity(pos);
         return tile == null ? null : tile.getCapability(capability, side).resolve().orElse(null);

@@ -64,6 +64,31 @@ stonecutter {
             direction.set(isPre1_21_11)
             replace("\\bIdentifierArgument\\b", "ResourceLocationArgument", "\\bResourceLocationArgument\\b", "IdentifierArgument")
         }
+        // MinecraftForge ONLY (#209): BuildCraft's config classes name NeoForge's ModConfigSpec, and Forge's twin has another
+        // name AND another package (ForgeConfigSpec, same nested value classes and builder methods; docs/forge-port.md). Fabric
+        // gets away without this only because Forge Config API Port ships NeoForge's class names. The pair follows the rules
+        // above: `direction` is true on a forge node (ModConfigSpec -> ForgeConfigSpec) and false everywhere else, where the
+        // reverse half runs. The reverse half is no mere formality: the active node's text is what src/ holds, so with a forge
+        // node active it would read ForgeConfigSpec, and every other node needs the reverse to compile it. On the neoforge and
+        // fabric nodes it matches nothing in BuildCraft's code (ForgeConfigSpec appears only in the Forge platform files,
+        // whose bodies are comments there). Two rules because the import is a package change and the bare name is not; the
+        // bare half refuses a match after a dot or a word character so the two never overlap, whatever order Stonecutter
+        // applies them in. Keep prose in the Forge platform files from naming either class on the other side of the
+        // contrast (the rewrite runs over comments too, see the note above the first rule).
+        regex {
+            direction.set(loader == "forge")
+            replace(
+                "\\bnet\\.neoforged\\.neoforge\\.common\\.ModConfigSpec\\b", "net.minecraftforge.common.ForgeConfigSpec",
+                "\\bnet\\.minecraftforge\\.common\\.ForgeConfigSpec\\b", "net.neoforged.neoforge.common.ModConfigSpec"
+            )
+        }
+        regex {
+            direction.set(loader == "forge")
+            replace(
+                "(?<![\\w.])ModConfigSpec\\b", "ForgeConfigSpec",
+                "(?<![\\w.])ForgeConfigSpec\\b", "ModConfigSpec"
+            )
+        }
         // RenderType moved out of the `rendertype` subpackage AT 1.21.11. This is a clean,
         // reversible package-move (same class name) so it rides as a replacement; `\b` stops
         // before RenderTypeS (which was a separate split-out class on 1.21.11 — handled via

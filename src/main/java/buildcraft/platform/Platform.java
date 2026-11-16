@@ -244,7 +244,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFakePlayers();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: FakePlayers not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeFakePlayers();
             *///?}
         }
     }
@@ -258,7 +258,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigRegistrar();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: ConfigRegistrar not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeConfigRegistrar();
             *///?}
         }
     }
@@ -272,7 +272,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigHooks();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: ConfigHooks not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeConfigHooks();
             *///?}
         }
     }
@@ -286,7 +286,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricSoundServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: SoundServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeSoundServices();
             *///?}
         }
     }
@@ -314,7 +314,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricChunkTickets();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: ChunkTickets not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeChunkTickets();
             *///?}
         }
     }
@@ -328,7 +328,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricCraftingServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: CraftingServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeCraftingServices();
             *///?}
         }
     }
@@ -342,7 +342,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricShearServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: ShearServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeShearServices();
             *///?}
         }
     }
@@ -356,7 +356,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAccessorySlots();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: AccessorySlotServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeAccessorySlots();
             *///?}
         }
     }
@@ -370,7 +370,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricVanillaExtensions();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: VanillaExtensions not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeVanillaExtensions();
             *///?}
         }
     }
@@ -384,7 +384,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: LootServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeLootServices();
             *///?}
         }
     }
@@ -398,7 +398,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRenderData();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: RenderDataServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeRenderData();
             *///?}
         }
     }

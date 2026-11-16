@@ -70,7 +70,7 @@ Forge is closer to NeoForge 1.21.1 than to anything newer, and on the client it 
 | Patched overrides | Of the 37 hook rows in the seam map (33 `@LoaderHook` uses plus the `platform/hook` and `VanillaExtensions` routes), 17 compile unchanged and 14 differ in signature; missing: clone-item-stack, block shearing on 26.2+, per-entity tick, `writeClientSideData` | Same-shape ones become `//? if neoforge || forge`; the rest route through `platform/hook` interfaces and Forge mixins |
 | Client | No menu-screen event, no item tint source / sprite source / render pipeline registration, no level-render stage event after 1.21.4, no per-vertex quad colour, no PiP submit | Vanilla registries reached by access transformer where possible, otherwise the Fabric client mixins |
 | Data | `forge:` namespace; `fluid_container` is a model-file loader, not an item-definition type; no components ingredient; recipe conditions are read at the top of any data-driven-registry datum on 26.3 (the seam map's "not found" was wrong); no `recipe_priorities` | `DataForge.kt` rewrite beside `DataFabric.kt` (decisions below); BC-registered ingredient serializer and flag condition |
-| Tests | No FML-JUnit. 26.x: `TEST_FUNCTION` is a vanilla registry, test instances are datapack JSON, entry is `net.minecraft.gametest.Main`. 1.21.1: annotation / `Method` based | Fabric's arrangement: no unit tests, the compile is the deprecation guard, the shared game tests are the gate |
+| Tests | No FML-JUnit. 26.x: `TEST_FUNCTION` is a vanilla registry, test instances are datapack JSON, entry is `net.minecraft.gametest.Main` (F5: measured, all of it holds). 1.21.1: annotation / `Method` based | Fabric's arrangement: no unit tests, the compile is the deprecation guard, the shared game tests are the gate (`:26.3-forge:runGameTest`, below) |
 
 ## Data on Forge (F4): `DataForge.kt`, decision per kind
 
@@ -144,8 +144,9 @@ config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
 - A third constant, `forge`. `constants.match(loader, "neoforge", "fabric", "forge")`.
 - **No bare loader `else`.** With three loaders an `else` after `if neoforge` silently means "Fabric and Forge". Every
   loader chain names each loader it serves (`if neoforge || forge`, `elif fabric`). The five main-code forks that had a bare
-  else are re-keyed (F3b) and `StonecutterDirectiveGuardTester` fails a new one in `src/main`; about thirty test-code forks
-  still have one, re-keyed in the slice that ports each seam, and the guard does not hold test code to the rule until then.
+  else are re-keyed (F3b), the test code's forks were re-keyed in F5, and `StonecutterDirectiveGuardTester` fails a new one in
+  `src/main` or `src/test/java`. A chain whose last arm is a version split (`else` for "before 1.21.10") names the version
+  instead: `elif <1.21.10`.
 - Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (measured on a scratch probe: `neoforge || forge &&
   >=1.21.10` is off on NeoForge 1.21.1). A mixed condition repeats the version term after each loader:
   `neoforge && >=1.21.10 || forge && >=1.21.10`. The guard and the census evaluate left to right to match.
@@ -170,7 +171,7 @@ config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
 | F2 | Transfer: capability exposure and query, item / energy adapters, fluid adapters, fluid containers, flowing fluids | compile of `platform/**` |
 | F3 | Common code: re-key the loader forks, `@LoaderHook` routes, vanilla extensions, Forge mixins for the missing hooks | compile of all of `src/main` |
 | F4 | **Done.** Resources: `mods.toml`, `pack.mcmeta`, access transformer check, `DataForge.kt`, jar, dedicated server boots to Done | `:26.3-forge:runServer` |
-| F5 | Game tests on Forge; `LoaderTestEvents` forge arms; `nodeVerification` | `:26.3-forge` game tests green |
+| F5 | **Wired and run, not green.** Game tests on Forge; `LoaderTestEvents` forge arms; `nodeVerification` (not added until the run is green) | `:26.3-forge` game tests green (29 known failures, 10 tests excluded: see "Game tests on Forge (F5)") |
 | F6 | Client seams, models, renderers; dev client | smoke runner on `26.3-forge` |
 | F7 | `1.21.1-forge` (EventBus 6 arm, 1.21.1 client shapes, `ForgeChunkManager` or vanilla tickets) | same gates on that node |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
@@ -179,6 +180,73 @@ Loader lists that must grow together (F0 does the first three): `build.gradle.kt
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
 (`Get-NodeLoader`, `Get-NodeMcVersion`, `-Loader`, node list, the `neoforge-client.toml` edit);
 `scripts/smoke/multiplayer/mp.init.gradle`; `release/modules/BcRelease.psm1` and `release/config/release.json`.
+
+## Game tests on Forge (F5)
+
+`./gradlew :26.3-forge:runGameTest` runs every shared game test on Forge's own game-test server and fails the task unless
+the run reports all required tests passed. Options: `-PbcTests=<glob>` (vanilla's `--tests`, `buildcraftunofficial:pipe_*`),
+`-PbcGameTestTrace` (a start and an end line per test, and the stack of a failure thrown from a body: the way to name the
+tests in flight when a product exception in a level tick crashes the server, which the crash report never does),
+`-PbcLoudGameTestLogs` (the console on Gradle's output instead of `run-gameTestServer/console.log`). The run directory is
+`versions/26.3-forge/run-gameTestServer/` (gitignored); the log the pass check reads is its `logs/latest.log`. A whole task
+is about 45 s (35 s of boot, 14 s of tests). It is not in `nodeVerification` yet.
+
+**How the tests load.**
+
+- *Run type.* ForgeGradle 7 inherits Forge's userdev run `gameTestServer` (launch target `forge_userdev_server_gametest`, main
+  `net.minecraft.gametest.Main`, which Forge patches to set `forge.enableGameTest` / `forge.gameTestServer`, run the mod
+  loader, and agree to the EULA itself). It makes `runGameTestServer` (the main source set alone) and `runTestGameTestServer`
+  (the test source set's runtime classpath): `runGameTest` is the alias of the second, and the pass check is on it.
+- *One mod, assembled.* The tests are part of BuildCraft's mod, not a second mod. This FML finds a dev mod by the
+  `META-INF/mods.toml` of one classpath directory; FG7's `mods { sources(a, b) }` is read by nothing in it, and two directories
+  that both hold `buildcraft.transport.block` fail module resolution ("Modules buildcraftunofficial and test export package
+  ..."). So `assembleGameTestMod` (`buildSrc/.../AssembleGameTestMod.kt`) lays the test output over main's in
+  `build/gameTestMod`, and the test source set's runtime classpath swaps both outputs for that directory (the jar never sees it).
+  The only file both outputs hold is the `c:tools/wrench` tag (the test adds `shears`), written as the union of the two.
+- *Registration.* `platform/forge/ForgeGameTestHooks` (an automatic `@Mod.EventBusSubscriber(bus = MOD)` on `FMLConstructModEvent`;
+  FML injects those right after the `@Mod` constructor, which has bound `ForgeModBus`) calls `BuildCraftGameTests.register`.
+  `Registries.TEST_FUNCTION` is a vanilla registry and `RegisterEvent` fires for it, so `BCRegistrar` registers the functions
+  exactly as on the other loaders; there is no `RegisterGameTestsEvent` on 26.x and none is used. The manifests are datapack
+  JSON in the mod's own resources and load as they are; `forge.gameTestServer` (set by `Main`) is the test-only-blocks switch.
+- *Source set.* `src/test/java` through Stonecutter's copy, less `platform/neoforge/**` and every file importing `org.junit`
+  (there are no unit tests on Forge). `platform/fabric/**` stays: its files are whole-file `//? if fabric` comments here, and
+  `FabricAdapterTester` is a bare success. `processTestResources` drops the manifests of the tests the node does not register
+  (the Fabric helper), and fails on a registered test without one.
+- *Excluded on Forge*, in `BuildCraftGameTests.registerAll`: a test only the Forge node cannot run sits in a
+  `//? if neoforge || fabric {` arm under a `// Not on Forge: <reason>` line (`GameTestManifestTester` reads an arm that names
+  Fabric as registered on Fabric). A client-class test (`//? if neoforge {`) is left out of Fabric and Forge both.
+- *Pass check.* The JVM exit code is trustworthy (vanilla ends the process non-zero for a failed required test, a crash, and an
+  empty selection: measured) and the task also demands `All N required tests passed` (N > 0) in `latest.log`. "N GAME TESTS
+  COMPLETE" counts one test more than BuildCraft registers: Minecraft ships `minecraft:always_pass`.
+- *A product exception in a tick listener ends the run* (the server crashes; nothing contains it per test), so a product bug of
+  that kind has to be excluded to see the rest, and is named with the trace.
+
+**Test code on Forge.** `LoaderTestEvents`, `WorkClaimMod`, `CapabilityOnlyCart`, `FeHandlerAccess` and 12 test classes got
+Forge arms (EventBus 7: an event's own `BUS`, a listener refuses by answering `true`, and is removed through the handle
+`addListener` returned; a claim needs `EntityPlaceEvent` and `EntityMultiPlaceEvent` both). Where the answer was a platform
+seam it is shared with Fabric (`TransferAccess.findEnergy` / `findItem`, `ForgeChunkTickets`'s owner-set probe). Not covered on
+Forge: the claim-provider tests have no Common Protection API (they post the events instead, as NeoForge's arm does).
+
+**State of the run** (Forge 66.1.8, MC 26.3; 955 registered tests): 945 run, 916 pass; 29 fail every run and two more
+(`mining_well_*`) in about half of them; 10 are excluded.
+
+| # | Root cause | Tests | Where |
+|---|---|---|---|
+| 1 | **Level-aware saved data is not wired**: every `levelSavedDataType` factory and codec gets a null level, so `LevelSavedDataVolumeBoxes.world` is null | 9 fail: `filler_owns_box_from_survival_markers`, `machines_leave_markers_backing_lifted_box`, `filler_lone_marker_gets_no_owned_box`, `machine_enchantments_quarry_keeps_them_when_broken`, `quarry_on_placed_by_records_owner` (NPE `this.world` is null), `legacy_saved_data_{content_current_wins,empty_current_is_recovered,legacy_alone_migrates,pre_26_file_is_picked_up}` (`LegacySavedData.type` needs the level its factory and codec are handed to find the old file). 3 excluded because they kill the server: `filler_owns_box_from_floating_box`, `claimed_box_resizes_with_filler`, `filler_planner_save_migrates` (a lock on a null-world box, `Lock$Cause$CauseBlock.stillWorks` from `LevelSavedDataVolumeBoxes.tick`, NPE in the level tick) | `ForgeVanillaExtensions.levelSavedDataType` (the comment above it says so), `ForgeSavedDataLevels.with` has no caller; `LevelSavedDataVolumeBoxes.java:258,408,448` dereference `world`. Needs the storage and chunk-source mixins (Fabric: `SavedDataStorageMixin`, `ServerChunkCacheMixin`) |
+| 2 | **Forge replaces the held stack object** instead of restoring it in place | 7: `stripes_refused_claim_stops_block_placement`, `stripes_fire_needs_placement_ask_at_target`, `robot_plant_failure_keeps_seed`, `robot_planter_does_not_retry_refused_planting`, `robot_planter_sleeps_after_repeated_refusals`, `builder_claim_filler_asks_and_parks`, `loader_parity_refused_two_cell_drops_nothing`. A refused placement of a 3-stack through `BlockUtil.tryUseItemOnBlock`: Forge leaves the original object at 2 and puts a copy of 3 in the hand (`sameObject=false`); NeoForge leaves the original at 3 | `ForgeProtection.useItemOn` (line 171) just calls the patched `ItemStack.useOn`, whose `ForgeHooks.onPlaceItemIntoWorld` does `player.setItemInHand(hand, preUse)` (the pre-use copy) on a refusal and `setItemInHand(hand, postUse)` otherwise, where `PlatformProtection.useItemOn` promises "the stack is restored" and every caller reads the stack it passed. Fix in `ForgeProtection`: copy the hand's stack back into the context's |
+| 3 | **A fake player takes the server's default game mode**: creative in a game-test server, so no tool wear and no item consumed | 3: `robot_use_tool_holds_tool_in_hand`, `robot_use_tool_breaking_tool_empties_hand`, `robot_deployer_stripes_throw_not_refused_for_owner_cell`. Measured: the leased player has `instabuild=true`, `hasInfiniteMaterials()=true` on Forge (`false` on NeoForge), the server default is CREATIVE, `setGameMode(SURVIVAL)` gives wear 1, and all three pass with the server default set to survival (that experiment also left the other 26 failing) | `ForgeFakePlayers.MachinePlayer` (line 74): nothing sets a game mode. A creative-default production server would run every machine in creative |
+| 4 | **No block capability for block-entity-less vanilla blocks** (cauldron, composter) | 6: `pipe_fluid_fills_cauldron`, `pipe_wood_fluid_drains_cauldron`, `pipe_wood_fluid_keeps_its_fluid`, `gate_reads_cauldron_fluid`, `pipe_item_feeds_composter`, `gate_reads_composter_inventory` ("Fluid pipe should connect to the cauldron as a TILE neighbour") | `ForgeTransfer.java:95` (`query` answers null without a block entity). NeoForge ships those capabilities itself; Forge has none, so BuildCraft needs its own adapters over `LayeredCauldronBlock` / `ComposterBlock` |
+| 5 | **A horse's item handler is never set** (a Forge patch bug) | 1: `entity_item_storage_living_fallback`: a chested donkey answers the 7-slot equipment wrapper before and after the chest goes on (probe) | Forge's `AbstractHorse.java.patch` sets `itemHandler` in `registerGoals()` (line 7), which `Mob`'s constructor runs before the patch's own `itemHandler = null` field initializer (line 61) wipes it. `ForgeTransfer.findItem(Entity)` (line 110) can read a horse's inventory itself |
+| 6 | **Block entities join at registration, not at the head of the tick** | 1: `loader_parity_block_entity_joins_after_block_ticks` | Forge's `LevelChunk.addAndRegisterBlockEntity` patch calls `onLoad` at once; `AbstractBCBlockEntity.onLoad` (line 104) is the shared arm. Defer it as Fabric's route does, or settle that Forge may join early |
+| 7 | **The water-like flag is missing** | 1: `oil_bobbing_physics` (crude oil is "in water" for a pig) | `ForgeFlowingFluids.java:116` (the TODO), as noted in the fluids row above |
+| 8 | **The enchantment filter hook has no Forge route** | 1: `machine_enchantments_anvil_takes_only_mining_enchantments` (the anvil refuses what the machine takes) | `ItemEnchantableMachine.java:45`, the third row of the F3b "still owed" table |
+| 9 | Intermittent | `mining_well_redstone_pauses_and_resumes`, `mining_well_placed_beside_redstone_starts_paused`: pass 3 of 3 alone, fail in roughly half of the full runs; not diagnosed | `BlockMiningWell.neighborChanged` is what reads the signal |
+
+Not run on Forge, 7: the client-class tests (`guide_recipe_lookup_synced_cache`, `guide_modifier_recipe_renders_correct_input_variant`,
+`zone_planner_{overlay_in_view,overlay_survey_zoom,cull_above_camera,survey_edge_low_terrain,survey_outline_on_cells}`): Forge's
+dedicated server refuses a client class ("Attempted to load class ... for invalid dist DEDICATED_SERVER", measured), so they need a
+Forge client game test (F6). No other test had to be left out: none of them needs JEI, REI or Curios, and the FallingTree ones
+pass without the mod, as on the other nodes (`-PwithFallingTree` is not wired on Forge).
 
 ## Common-code loader forks (F3b)
 
@@ -216,6 +284,11 @@ the call site in its `patches/`.
 
 ## Open
 
+- F5 left the gate red on purpose: the nine causes above are product work (the first four are the big ones: 9, 7, 3 and 6
+  tests), each with a file and a line. `nodeVerification` gets `runGameTest` when the list is empty; the 10 excluded tests come
+  back as their causes land (the three saved-data crashers with cause 1, the seven client-class tests with a Forge client game test).
+- `StaticTablesLevelUnloadTester`'s chunk-owner probe runs on Forge only as far as `ForgeChunkTickets.claim` / `release` go; the
+  rest of that test is shared.
 - The gitignored release tool rejects any node whose loader is not neoforge or fabric, so it must learn `forge`
   (or skip it) before this branch merges to main, or the next NeoForge/Fabric release run fails at enumeration.
 

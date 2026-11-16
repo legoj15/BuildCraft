@@ -165,16 +165,27 @@ public class GameTestManifestTester {
     /** An entry of BCFabricClientGameTest.CLIENT_CLASS_GAME_TESTS: new ClientClassGameTest("<id>", ... */
     private static final Pattern CLIENT_CLASS_ENTRY = Pattern.compile("new ClientClassGameTest\\(\\s*\"([a-z0-9_/]+)\"");
 
-    /** The ids registered inside a {@code //? if neoforge} arm of {@code registerAll}: the tests the Fabric node
-     * does not register. */
+    /** An arm opener, {@code //? if <condition> {}: group 1 is the condition. */
+    private static final Pattern ARM_OPENER = Pattern.compile("^//\\?\\s*if\\s+(.+?)\\s*\\{$");
+
+    /** Whether an arm opened by {@code condition} leaves the Fabric node out: it names NeoForge (or Forge, which runs
+     * the same client classes) but not Fabric. An arm that names Fabric ({@code neoforge || fabric}: a test the Forge
+     * node cannot run) registers there. */
+    private static boolean leavesFabricOut(String condition) {
+        return condition.contains("neoforge") && !condition.contains("fabric");
+    }
+
+    /** The ids registered inside a {@code //? if neoforge ...} arm of {@code registerAll} that leaves the Fabric
+     * node out: the tests it does not register. */
     private static List<String> neoforgeOnlyIds() {
         Path registrar = TestHelper.repoRoot().resolve(REGISTRAR);
         List<String> ids = new ArrayList<>();
         boolean inArm = false;
         for (String line : read(registrar).split("\\R")) {
             String trimmed = line.strip();
-            if (trimmed.startsWith("//? if neoforge")) {
-                inArm = true;
+            Matcher opener = ARM_OPENER.matcher(trimmed);
+            if (opener.matches()) {
+                inArm = leavesFabricOut(opener.group(1));
             } else if (trimmed.startsWith("//?")) {
                 inArm = false;
             } else if (inArm) {

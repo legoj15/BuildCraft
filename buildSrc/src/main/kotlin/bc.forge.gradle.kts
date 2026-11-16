@@ -5,15 +5,19 @@
 // Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
 // of a viewer this node has no build of (see the sourceSets block), builds a jar collected beside the NeoForge and Fabric
 // ones by buildAndCollect, and runs the dedicated server (slice F4, docs/forge-port.md). No unit tests (FML-JUnit has no
-// Forge twin) and no game tests yet (F5). Its share of the root fullTestSuite is the compile, the transformed resources
-// and the collected jar.
+// Forge twin); the shared game tests run through `runGameTest` (slice F5, below), which is not yet part of nodeVerification.
+// Its share of the root fullTestSuite is the compile, the transformed resources and the collected jar.
 //
 // Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
 // directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
 // ForgeGradle builds that patched Minecraft+Forge artifact itself, on demand, through the repositories below.
 
+import buildcraft.gradle.AppendingLogStream
+import buildcraft.gradle.AssembleGameTestMod
 import buildcraft.gradle.DataForge
+import buildcraft.gradle.FabricGameTests
 import buildcraft.gradle.WithMods
+import java.time.Duration
 
 plugins {
     // Already applied by build.gradle.kts; named here because ForgeGradle does not apply it, and without it this script
@@ -40,6 +44,10 @@ val mixinConfig = "buildcraftunofficial.forge.mixins.json"
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
+val bcTests = findProperty("bcTests")?.toString()
+// The game-test server's working directory (gitignored, the twin of the NeoForge nodes' run-gameTestServer): the universe,
+// config, logs/latest.log (the pass check below reads it) and console.log all land here.
+val gameTestRunDir = file("run-gameTestServer")
 
 repositories {
     // ForgeGradle's repository helpers: the mavenizer (builds the patched, mapped Minecraft+Forge artifact on demand), Forge's
@@ -92,6 +100,24 @@ minecraft {
             // No console window on the dev server: its console is the Gradle task's, and "stop" on stdin ends it.
             args("--nogui")
         }
+        // Forge's own game-test run type (launch target forge_userdev_server_gametest): net.minecraft.gametest.Main, which Forge
+        // patches to set forge.enableGameTest and forge.gameTestServer and to run its mod loader before the server exists. There
+        // is no NeoForge-style `type = "gameTestServer"` to set: the run inherits the userdev config of the same name. The tasks
+        // this makes are runGameTestServer (the main source set alone) and runTestGameTestServer (main plus the test source
+        // set in one mod, the one the shared game tests need); `runGameTest` below is the front door.
+        register("gameTestServer") {
+            workingDir.set(gameTestRunDir)
+            // Optional filter, as on the other nodes: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's own `--tests` selector,
+            // a namespaced glob against the test_instance registry).
+            if (bcTests != null) {
+                args("--tests", bcTests)
+            }
+            // -PbcGameTestTrace logs every test's start and end (buildcraft.lib.test.GameTestTrace): the way to name the tests
+            // in flight when a product exception in a level tick crashes the server.
+            if (hasProperty("bcGameTestTrace")) {
+                systemProperty("buildcraft.gameTestTrace", "true")
+            }
+        }
     }
 }
 
@@ -134,9 +160,22 @@ sourceSets {
         }
     }
     named("test") {
-        // Unit tests stay NeoForge-only: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan).
-        java { exclude("**") }
-        resources { exclude("**") }
+        // The shared game-test bodies (src/test/java through Stonecutter's copy for this node, so the `//? if forge` arms are
+        // live), less what only another loader can compile. There are no unit tests here (FML-JUnit has no Forge twin;
+        // docs/platform-layer.md, test plan), so every JUnit file is dropped by content (a game-test body never imports
+        // org.junit), and so is buildcraft/platform/neoforge: the NeoForge implementations' tests and NeoForgeGameTestHooks,
+        // all typed in NeoForge classes outside any directive. platform/fabric stays: its files are whole-file
+        // `//? if fabric` comments here, except FabricAdapterTester, whose body is a bare success off Fabric. The Forge
+        // hook is platform/forge/ForgeGameTestHooks.
+        // A game test this node cannot run sits in a `//? if neoforge || fabric {` arm of BuildCraftGameTests.registerAll under a
+        // `// Not on Forge: <reason>` line, and processTestResources drops its manifest (below).
+        java {
+            exclude("buildcraft/platform/neoforge/**")
+            exclude { !it.isDirectory && it.file.readText().contains("import org.junit") }
+        }
+        // The test source set sees everything the main one does, as bc.neoforge's does (Forge's java plugin only adds main's
+        // output and its implementation configuration, not main's compile-only ones).
+        compileClasspath += sourceSets["main"].compileClasspath
     }
 }
 
@@ -155,8 +194,84 @@ dependencies {
 // pass this node's compile gate vacuously (the edge bc.fabric states for the same reason).
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
-// No unit tests: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan). Game tests come in slice F5.
+// No unit tests: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan). The game tests are below.
 tasks.named("test") { enabled = false }
+
+// ─── Game tests (F5) ─────────────────────────────────────────────────────────
+// `:26.3-forge:runGameTest` runs the SAME game-test bodies the NeoForge and Fabric nodes run, on Forge's own game-test server.
+// - The tests are part of BuildCraft's mod, not a second mod: test_instance manifests, structures and BuildCraft's classes are
+//   one pack, and platform/forge/ForgeGameTestHooks (an automatic @Mod.EventBusSubscriber) calls
+//   BuildCraftGameTests.register from FMLConstructModEvent. Forge finds a mod in dev by the META-INF/mods.toml of a classpath
+//   directory (there is no way to say "these two directories are one mod": FG7's `mods { sources(a, b) }` is not read by
+//   this FML), and Java refuses two modules that both hold buildcraft.transport.block ("Modules buildcraftunofficial and test
+//   export package ..."), which the tests, sharing packages with the code they test, would be. So the test run's classpath
+//   swaps the two source set outputs for ONE directory, assembleGameTestMod: main's output (classes, the transformed
+//   resources, mods.toml, the mixin config) with the tests' classes and resources copied over it. The jar never sees it.
+// - The test source set reads the TEST copy of Stonecutter's output, so it waits for that copy, not for main's.
+tasks.named("compileTestJava") { dependsOn("stonecutterGenerateTest") }
+val assembleGameTestMod = tasks.register<AssembleGameTestMod>("assembleGameTestMod") {
+    group = "verification"
+    description = "BuildCraft's mod directory with the game tests merged in: what the Forge game-test run loads as one mod."
+    mainOutput.from(sourceSets["main"].output)
+    testOutput.from(sourceSets["test"].output)
+    modDir.set(layout.buildDirectory.dir("gameTestMod"))
+}
+sourceSets.named("test") {
+    // FG7 builds the `runTest...` tasks from this source set's runtime classpath, read lazily when a task runs.
+    runtimeClasspath = project.files(assembleGameTestMod) + (runtimeClasspath - output - sourceSets["main"].output)
+}
+tasks.named<ProcessResources>("processTestResources") {
+    dependsOn("stonecutterGenerateTest")
+    // The registrations this node compiles (BuildCraftGameTests as Stonecutter wrote it for this node): a manifest naming a test
+    // function this node does not register would fail that test at run time ("no such function"), so it is dropped, as on
+    // Fabric; a registered test without a manifest fails the build.
+    val registrar = sourceSets["test"].java.srcDirs.map { it.resolve("buildcraft/BuildCraftGameTests.java") }
+    inputs.files(registrar).optional()
+    doLast {
+        FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
+    }
+}
+
+// The game-test server's console (INFO, and a progress line per test tick) goes to run-gameTestServer/console.log instead of
+// Gradle's output, as on the Fabric node; logs/latest.log is untouched. `-PbcLoudGameTestLogs` keeps it on the console. Then the
+// pass check: a run must end with vanilla's "All N required tests passed" (N > 0), so an empty or aborted run cannot pass on
+// its exit code alone (Forge's bootstrap hands the exit code of the game's main on, but a run that finds no test exits 0).
+// The closures use only local Files: the configuration cache cannot serialise script-level values.
+tasks.withType<JavaExec>().configureEach {
+    if (name != "runTestGameTestServer") return@configureEach
+    val runDir = project.file("run-gameTestServer")
+    val consoleLog = runDir.resolve("console.log")
+    val serverLog = runDir.resolve("logs/latest.log")
+    val loud = project.hasProperty("bcLoudGameTestLogs")
+    // A wall-clock guard: the whole suite runs in minutes, so a run still going after 25 has hung.
+    timeout.set(Duration.ofMinutes(25))
+    doFirst {
+        if (serverLog.exists() && !serverLog.delete()) {
+            throw GradleException("Cannot delete the previous game-test log $serverLog (locked by another process?)")
+        }
+        if (!loud) {
+            runDir.mkdirs()
+            consoleLog.writeText("")
+            standardOutput = AppendingLogStream(consoleLog)
+        }
+    }
+    doLast {
+        val text = if (serverLog.isFile) serverLog.readText() else ""
+        if (!Regex("""All [1-9]\d* required tests passed""").containsMatchIn(text)) {
+            throw GradleException(
+                "The Forge game-test run exited 0 without 'All N required tests passed' (N > 0) in $serverLog; " +
+                    "its console is in $consoleLog."
+            )
+        }
+    }
+}
+// The Fabric node's task name, for the same command on every loader. Not in nodeVerification yet (the orchestrator adds it
+// once the run is green).
+tasks.register("runGameTest") {
+    group = "verification"
+    description = "Runs every shared game test on Forge's game-test server (the pass check reads run-gameTestServer/logs/latest.log)."
+    dependsOn("runTestGameTestServer")
+}
 
 tasks.named<ProcessResources>("processResources") {
     val replaceProperties = mapOf(
@@ -208,9 +323,9 @@ tasks.register<Copy>("buildAndCollect") {
 }
 
 // What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the transformed resources and the
-// collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests; the Forge game tests come with slice F5.
+// collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests; `runGameTest` joins this list once it is green (F5).
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform and the collected jar (no game tests yet)."
+    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform and the collected jar (runGameTest is not in it yet)."
     dependsOn("compileJava", "processResources", "jar", "buildAndCollect")
 }

@@ -18,12 +18,16 @@ import buildcraft.lib.test.TestOnlyBlocks;
 /**
  * Every BuildCraft game test, registered the same way on every loader. A loader hook calls {@link #register} during
  * mod construction: {@code platform.neoforge.NeoForgeGameTestHooks} from {@code FMLConstructModEvent} on NeoForge,
- * {@code platform.fabric.BCFabricGameTestEntrypoint} from the game-test mod's initializer on Fabric. 1.21.1 predates
- * the dynamic {@code TEST_FUNCTION} registry, so its NeoForge hook feeds {@link #registerAll} into
+ * {@code platform.fabric.BCFabricGameTestEntrypoint} from the game-test mod's initializer on Fabric,
+ * {@code platform.forge.ForgeGameTestHooks} (an automatic mod-bus subscriber on {@code FMLConstructModEvent}) on Forge.
+ * 1.21.1 predates the dynamic {@code TEST_FUNCTION} registry, so its NeoForge hook feeds {@link #registerAll} into
  * {@code GameTestRegistry} instead (see that hook).
  *
- * <p>A test the Fabric node cannot run sits in a {@code //? if neoforge} arm of {@link #registerAll} with its reason;
- * the Fabric build drops the manifests of the tests it does not register (bc.fabric, {@code FabricGameTests}).
+ * <p>A test the Fabric node cannot run sits in a {@code //? if neoforge} arm of {@link #registerAll} with its reason
+ * (it names neither Fabric nor Forge, so Forge leaves it out too: a client class on a dedicated server is refused there
+ * as well). A test only the Forge node cannot run sits in a {@code //? if neoforge || fabric} arm under a
+ * {@code // Not on Forge: <reason>} line. Both builds drop the manifests of the tests they do not register (bc.fabric,
+ * bc.forge, {@code FabricGameTests}).
  */
 public class BuildCraftGameTests {
 
@@ -42,7 +46,8 @@ public class BuildCraftGameTests {
         }
         buildcraft.platform.registry.BCRegistrar<Consumer<GameTestHelper>> functions =
                 buildcraft.platform.registry.BCRegistrar.create(net.minecraft.core.registries.Registries.TEST_FUNCTION, NAMESPACE);
-        registerAll((id, sup) -> functions.register(path(id), sup));
+        // GameTestTrace.wrap is the test itself unless -Dbuildcraft.gameTestTrace is set.
+        registerAll((id, sup) -> functions.register(path(id), buildcraft.lib.test.GameTestTrace.wrap(id, sup)));
         functions.subscribe();
     }
     //?}
@@ -382,7 +387,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gui_test_filler_ui", () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
         // Guide book recipe lookups off the server-synced cache (multiplayer recipe-panel fix)
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_recipe_lookup_synced_cache", () -> buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache);
         //?}
@@ -394,7 +400,12 @@ public class BuildCraftGameTests {
         // The Filler's preview cubes: only cells still empty, farthest first, the nearest kept past the cap, scanned rarely.
         reg.accept("buildcraftunofficial:filler_preview_draws_only_empty_cells_farthest_first", () -> buildcraft.builders.FillerPreviewTester::previewDrawsOnlyWhatIsStillEmptyFarthestFirst);
         // A Filler left over from the Filler Planner days takes its Volume Box, pattern and invert flag over by ticking.
+        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
+        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
+        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
+        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:filler_planner_save_migrates", () -> buildcraft.builders.tile.FillerPlannerMigrationTester::aFillerBesideAPlannerBoxTakesItOverByTicking);
+        //?}
         // A weakly fed Filler spends its power as it arrives: the work signal clients get must still read as working.
         reg.accept("buildcraftunofficial:filler_slow_feed_syncs_as_working", () -> buildcraft.builders.tile.FillerProgressTester::aSlowlyFedFillerSyncsAsWorkingAndAStarvedOneDoesNot);
         // A Filler switched back to On after idling re-reads its whole box first: a block lost meanwhile is rebuilt, queued work is kept.
@@ -684,11 +695,21 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
         // Survival markers a Filler takes over become a volume box it owns: no wrench removes it, and it goes with the Filler.
         reg.accept("buildcraftunofficial:filler_owns_box_from_survival_markers", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::survivalMarkersBecomeABoxTheFillerOwns);
+        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
+        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
+        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
+        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:filler_owns_box_from_floating_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::floatingBoxBecomesTheFillersOwnedBox);
+        //?}
         reg.accept("buildcraftunofficial:machines_leave_markers_backing_lifted_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::machinesLeaveMarkersBackingALiftedBox);
         reg.accept("buildcraftunofficial:filler_lone_marker_gets_no_owned_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::aLoneMarkerGivesTheFillerNoOwnedBox);
         reg.accept("buildcraftunofficial:sneak_use_leaves_box_another_player_drags", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::sneakUseLeavesABoxAnotherPlayerDrags);
+        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
+        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
+        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
+        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:claimed_box_resizes_with_filler", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::claimedBoxResizesWithTheFiller);
+        //?}
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);
@@ -954,7 +975,8 @@ public class BuildCraftGameTests {
         // because `Ingredient.items()` drops data-component patches) and that CLAY_BRICK
         // Basic Gate has no assembly usages.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
         //?}
@@ -1105,7 +1127,8 @@ public class BuildCraftGameTests {
         // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
         // in place of its layer, and nothing out of view or off the mapped terrain.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
@@ -1113,13 +1136,15 @@ public class BuildCraftGameTests {
         //?}
         // ...and terrain far below the planner, de-magnified into view from beyond the ground span, is still drawn.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_edge_low_terrain", () -> buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn);
         //?}
         // ...and the survey-square outline is made of the terrain's own cells.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_outline_on_cells", () -> buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells);
         //?}

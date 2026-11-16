@@ -45,6 +45,8 @@ Verified facts this section rests on:
 - Everywhere else, loader differences live in loader packages, and directives in common code stay about MC version.
 - Never use negation (`!fabric`); write the positive constant.
 - Never nest a loader arm inside an MC arm in common code. Nesting MC arms inside a loader-gated implementation file is fine.
+- Three loaders (docs/forge-port.md): no bare `else` after a loader-keyed arm in main code (`StonecutterDirectiveGuardTester` fails it); name each loader the arm serves. A patched override MinecraftForge calls under the same name and signature opens `//? if neoforge || forge {` and lists both hooks in its `@LoaderHook`; one whose Forge signature differs gets an `//?} elif forge {` arm beside it.
+- Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (measured: `neoforge || forge && >=1.21.10` is off on NeoForge 1.21.1). Write a mixed condition with the version term repeated after each loader, `neoforge && >=1.21.10 || forge && >=1.21.10`, which reads the same either way; the guard and the census evaluate left to right too.
 
 ## Binding mechanism
 

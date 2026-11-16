@@ -37,7 +37,10 @@ public class ItemEnchantableMachine extends BlockItem implements EnchantmentFilt
         return MachineEnchantments.enabled() && MachineEnchantments.isUseful(enchantment);
     }
 
-    // Fabric asks acceptsEnchantment through EnchantmentEvents.ALLOW_ENCHANTING (FabricLoaderHookRoutes).
+    // Fabric asks acceptsEnchantment through EnchantmentEvents.ALLOW_ENCHANTING (FabricLoaderHookRoutes). MinecraftForge
+    // has no such hook: its canApplyAtEnchantingTable is the enchanting table's alone (this item must stay out of
+    // that), and Enchantment#canEnchant, which the anvil asks, is unpatched. A Forge node needs a mixin there that
+    // asks acceptsEnchantment.
     //? if neoforge {
     @LoaderHook("neoforge:IItemExtension#supportsEnchantment")
     @Override

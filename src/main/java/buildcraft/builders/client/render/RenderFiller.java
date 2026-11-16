@@ -126,6 +126,7 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
 
     // The block, or (with the preview on) the block and the whole box, so NeoForge's frustum test keeps the renderer
     // alive. Vanilla, and so Fabric, has no per-renderer frustum test: shouldRenderOffScreen above already keeps it.
+    // MinecraftForge culls by the block entity instead: TileFiller#getRenderBoundingBox answers it there.
     //? if neoforge {
     @LoaderHook("neoforge:IBlockEntityRendererExtension#getRenderBoundingBox")
     @Override

@@ -143,9 +143,15 @@ config is applied: MinecraftServer#runServer entered" in `run/logs/debug.log`):
 
 - A third constant, `forge`. `constants.match(loader, "neoforge", "fabric", "forge")`.
 - **No bare loader `else`.** With three loaders an `else` after `if neoforge` silently means "Fabric and Forge". Every
-  loader chain names each loader it serves (`if neoforge || forge`, `elif fabric`). Five main-code forks and some thirty test-code
-  forks have a bare else today; each is re-keyed in the slice that ports its seam, and the directive guard fails on a
-  new one once the port compiles all of main.
+  loader chain names each loader it serves (`if neoforge || forge`, `elif fabric`). The five main-code forks that had a bare
+  else are re-keyed (F3b) and `StonecutterDirectiveGuardTester` fails a new one in `src/main`; about thirty test-code forks
+  still have one, re-keyed in the slice that ports each seam, and the guard does not hold test code to the rule until then.
+- Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (measured on a scratch probe: `neoforge || forge &&
+  >=1.21.10` is off on NeoForge 1.21.1). A mixed condition repeats the version term after each loader:
+  `neoforge && >=1.21.10 || forge && >=1.21.10`. The guard and the census evaluate left to right to match.
+- `@LoaderHook` takes one entry per loader that calls the method. An override both NeoForge and Forge call under one
+  name opens `//? if neoforge || forge {` and lists both; a Forge signature that differs is an `//?} elif forge {` arm
+  beside the NeoForge one (commented in-tree, like every inactive arm).
 - Only binder holders fail loudly when an arm is missing. A no-else `if neoforge` block compiles clean on Forge with the
   feature absent, so "it compiles" proves nothing: the gate for a seam is its game tests, and a holder whose forge arm
   still throws `not ported (#209)` is the ledger of what remains (`grep -rn "not ported (#209)" src/main`).
@@ -173,6 +179,40 @@ Loader lists that must grow together (F0 does the first three): `build.gradle.kt
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
 (`Get-NodeLoader`, `Get-NodeMcVersion`, `-Loader`, node list, the `neoforge-client.toml` edit);
 `scripts/smoke/multiplayer/mp.init.gradle`; `release/modules/BcRelease.psm1` and `release/config/release.json`.
+
+## Common-code loader forks (F3b)
+
+Every loader-keyed directive outside `platform/` was walked (`//? if neoforge`, `fabric`, `forge`, bare elses). Evidence
+per hook is in [forge-seam-map.md](forge-seam-map.md) (loader-hooks); each row was re-read against Forge 26.3 66.1.8 and
+the call site in its `patches/`.
+
+- **Shared with NeoForge (`neoforge || forge`):** `AbstractBCBlockEntity` onLoad / onChunkUnloaded; `BlockPipeHolder`
+  getSoundType, getExplosionResistance, addRunningEffects, addLandingEffects; `BCFluidBlock` getFlammability,
+  getFireSpreadSpeed; `ItemWrench_Neptune` doesSneakBypassUse, onItemUseFirst; `EntityRobot` onRemovedFromLevel (Forge 1.21.1
+  names it `onRemovedFromWorld`: the 1.21.1 node needs an arm for it). `BlockPipeHolder.canConnectRedstone` needed no arm:
+  Forge's own `RedStoneWireBlock` patch calls `IForgeBlock#canConnectRedstone` on every line (the seam map said it did
+  not), so the 26.3 `shouldRedstoneWireConnectTo` override is not what the wire's connection test asks there.
+- **Forge arm of its own (`elif forge`):** `TilePipeHolder` handleUpdateTag / onDataPacket (the 2-argument and 3-argument
+  forms with the registry lookup, 26.x) and getModelData (Forge's `ModelData`); `BCFluidBlock.onCaughtFire` (the 5-argument
+  boolean, 26.x; NeoForge 26.3 alone takes the item); `EntityRobot` class header and spawn data (`IEntityAdditionalSpawnData`
+  with a plain `FriendlyByteBuf`, wrapped into a `RegistryFriendlyByteBuf` through `Platform.network().registryBuf`; the
+  platform layer cannot add the interface from outside, since Forge tests `this instanceof` it); `TileFiller`
+  getRenderBoundingBox (Forge culls by block entity, so RenderFiller's renderer-level hook stays NeoForge-only);
+  `EntityRobot.isPushedByFluid(FluidType)` (Forge's own `FluidType`; its no-argument vanilla twin is `@Deprecated` there,
+  which is why the Fabric arm is not shared).
+- **Still owed, missing on Forge but served on Fabric through a `platform/hook` interface the class implements on every loader.**
+  No mixin is written yet; each needs one in `platform/forge/mixin`:
+
+  | Hook (interface) | Fabric route | Forge call site to patch |
+  |---|---|---|
+  | `IBCMenuProvider.writeClientSideData` (`MenuOpeningData`) | `ServerPlayerMixin` (`openMenu` head) | vanilla `ServerPlayer#openMenu(MenuProvider)`, reached by the spectator branch of `ServerPlayerGameMode#useItemOn` (Forge adds only an event beside it) |
+  | `ItemEnchantableMachine.supportsEnchantment` (`EnchantmentFilterItem`) | `EnchantmentEvents.ALLOW_ENCHANTING` (Fabric API, no mixin) | vanilla `Enchantment#canEnchant(ItemStack)` (anvil, `/enchant`), unpatched; Forge's `canApplyAtEnchantingTable` is the table's alone and the item must stay out of it |
+  | `BCFluidBlock.ignitedByLava` (`FireReactiveBlock.lavaIgnites`) | `LavaFluidMixin` on the 2-argument `LavaFluid#isFlammable` | Forge's `LavaFluid` patch tests the 3-argument `isFlammable(level, pos, face)`, whose test is the state's own `ignitedByLava()` flag and `IForgeBlock#isFlammable` (shared with fire spread): re-target the mixin there |
+  | `BlockPipeHolder.getCloneItemStack` (`PickStackBlock.pickedStack`), 26.x | `PlayerPickItemEvents.BLOCK` | server pick handler `ServerGamePacketListenerImpl#handlePickItemFromBlock`, which reaches `BlockStateBase#getCloneItemStack(BlockPos, LevelReader, boolean, Player)`; Forge patches neither. Forge 1.21.1 has the hook, and its arm is written |
+
+- **Unchanged and fine:** `BCEvent` / `ICancellableBCEvent` keep Forge on the plain-class arm (see Open); the NeoForge-1.21.1
+  `AbstractBCSyncedBlockEntity.onDataPacket` twin is not needed on Forge 1.21.1 (its default applies an empty update tag).
+  `BCFluidTank.movesNothing` gives Forge the classic answer 0 that NeoForge 1.21.1 and Fabric give.
 
 ## Open
 

@@ -70,10 +70,10 @@ public class ItemWrench_Neptune extends Item implements IToolWrench, SneakBypass
             ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
     }
 
-    //? if neoforge && <1.21.10 {
-    /*// 1.21.1 has no enchantable component: the item answers itself (NeoForge's stack-aware hook; vanilla's own no-arg
-    // one, which Fabric overrides, is deprecated there).
-    @buildcraft.platform.LoaderHook("neoforge:IItemExtension#getEnchantmentValue")
+    //? if neoforge && <1.21.10 || forge && <1.21.10 {
+    /*// 1.21.1 has no enchantable component: the item answers itself (the stack-aware hook of NeoForge and of Forge,
+    // same name and arguments; vanilla's own no-arg one, which Fabric overrides, is deprecated there).
+    @buildcraft.platform.LoaderHook({"neoforge:IItemExtension#getEnchantmentValue", "forge:IForgeItem#getEnchantmentValue"})
     @Override
     public int getEnchantmentValue(ItemStack stack) {
         return tier.enchantmentValue();
@@ -115,17 +115,18 @@ public class ItemWrench_Neptune extends Item implements IToolWrench, SneakBypass
         return true;
     }
 
-    // NeoForge's patched item hooks. Fabric reaches sneakBypassesUse through its game-mode mixins and useBeforeBlock
-    // through UseBlockCallback (FabricLoaderHookRoutes).
-    //? if neoforge {
-    @LoaderHook("neoforge:IItemExtension#doesSneakBypassUse")
+    // NeoForge's and MinecraftForge's patched item hooks (same names and arguments; Forge's ServerPlayerGameMode and
+    // MultiPlayerGameMode patches call both). Fabric reaches sneakBypassesUse through its game-mode mixins and
+    // useBeforeBlock through UseBlockCallback (FabricLoaderHookRoutes).
+    //? if neoforge || forge {
+    @LoaderHook({"neoforge:IItemExtension#doesSneakBypassUse", "forge:IForgeItem#doesSneakBypassUse"})
     @Override
     public boolean doesSneakBypassUse(ItemStack stack, net.minecraft.world.level.LevelReader level,
             net.minecraft.core.BlockPos pos, Player player) {
         return sneakBypassesUse(stack, level, pos, player);
     }
 
-    @LoaderHook("neoforge:IItemExtension#onItemUseFirst")
+    @LoaderHook({"neoforge:IItemExtension#onItemUseFirst", "forge:IForgeItem#onItemUseFirst"})
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         return useBeforeBlock(stack, context);

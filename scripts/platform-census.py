@@ -93,7 +93,7 @@ ALLOWLIST = {
     "api-events-on-neoforge-bus": {
         "reason": "BuildCraft's API events stay NeoForge Events posted on NeoForge.EVENT_BUS on NeoForge, so addon "
                   "listeners keep working (user decision, 2026-11: no NeoForge behaviour change); the //? if neoforge "
-                  "arms are confined to these two files and are absent on Fabric",
+                  "arms are confined to these two files and are absent on Fabric and Forge",
         "types": [],
         "paths": [
             "buildcraft/api/events/BCEvent.java",
@@ -270,11 +270,21 @@ def _term_true(term, node):
 def condition_nodes(cond, nodes):
     """The names of the nodes for which a directive condition holds, or None when the grammar is not understood."""
     try:
-        groups = [[t for t in part.split("&&")] for part in cond.split("||")]
-        return frozenset(
-            node.name for node in nodes if any(all(_term_true(t, node) for t in ands) for ands in groups))
+        return frozenset(node.name for node in nodes if _cond_holds(cond, node))
     except ValueError:
         return None
+
+
+def _cond_holds(cond, node):
+    """Stonecutter 0.9.8 gives && and || the same rank and reads left to right (measured with a scratch probe: on the
+    1.21.1 NeoForge node `neoforge || forge && >=1.21.10` is off, where the usual precedence would turn it on). The
+    tree writes mixed conditions with the version term repeated after each loader, which reads the same either way."""
+    parts = re.split(r"(&&|\|\|)", cond)
+    result = _term_true(parts[0], node)
+    for op, term in zip(parts[1::2], parts[2::2]):
+        value = _term_true(term, node)
+        result = (result and value) if op == "&&" else (result or value)
+    return result
 
 
 def parse_directive(text):

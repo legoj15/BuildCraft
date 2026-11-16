@@ -15,7 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * A block that decides for itself whether redstone wire beside it connects, before 26.3 (where vanilla's
  * {@code shouldRedstoneWireConnectTo} does this): NeoForge's {@code IBlockExtension#canConnectRedstone}, with the same
- * arguments. On Fabric a redstone-wire mixin asks it for the wire's direct neighbour.
+ * arguments. MinecraftForge keeps {@code IForgeBlock#canConnectRedstone} on every line (its redstone-wire patch calls
+ * it in place of vanilla's test). On Fabric a redstone-wire mixin asks it for the wire's direct neighbour.
  */
 public interface RedstoneConnectBlock {
     /** Whether wire on {@code direction}'s side of the block at {@code pos} connects to it (null: no side known). */

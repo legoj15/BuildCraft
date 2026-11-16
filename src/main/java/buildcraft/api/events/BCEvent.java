@@ -13,11 +13,12 @@ package buildcraft.api.events;
  * {@code NeoForge.EVENT_BUS} after the BuildCraft listeners, so a NeoForge addon's {@code @SubscribeEvent} or
  * {@code addListener} on these classes still receives every post. NeoForge listeners run after the BuildCraft list,
  * with the cancel state it left: a cancel there skips the NeoForge listeners that do not take cancelled events. On
- * Fabric it is a plain class and the lists are the only listeners.
+ * Fabric and MinecraftForge it is a plain class and the lists are the only listeners (a Forge bus post is an API
+ * decision nobody has asked for yet).
  */
 //? if neoforge {
 public abstract class BCEvent extends net.neoforged.bus.api.Event {
-//?} else {
+//?} elif fabric || forge {
 /*public abstract class BCEvent {
 *///?}
 

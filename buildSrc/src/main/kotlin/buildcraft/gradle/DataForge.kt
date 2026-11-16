@@ -228,7 +228,12 @@ object DataForge {
             // The item's name relative to items/ is the model's name relative to models/item/ (Forge's "item/<name>").
             val name = f.relativeTo(itemsDir).invariantSeparatorsPath.removeSuffix(".json")
             val modelFile = ns.resolve("models/item").resolve("$name.json")
-            if (modelFile.exists()) fail(modelFile, "a model file already exists where the Forge fluid-container model goes")
+            // This runs on the processResources destination, which Gradle does not clean of files it did not copy: on a
+            // re-run after an item file changed, the model this transform wrote last time is still there. That one is
+            // ours to overwrite; anything else in its place is an authored model the rewrite must not clobber.
+            if (modelFile.exists() && (parse(modelFile) as? Map<*, *>)?.get("loader") != "forge:fluid_container") {
+                fail(modelFile, "a model file already exists where the Forge fluid-container model goes")
+            }
             // "parent": Forge's own bucket models use forge:item/default for the display transforms and gui light.
             val model = LinkedHashMap<String, Any?>()
             model["loader"] = "forge:fluid_container"

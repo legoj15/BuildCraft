@@ -2,7 +2,7 @@
 
 Standing design for the third loader. "Forge" here is MinecraftForge (`net.minecraftforge`), never NeoForge. The
 platform layer rules in [platform-layer.md](platform-layer.md) apply unchanged; this file records only what differs.
-Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (252 rows, each with a `.forge-ref/` path and line).
+Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (272 rows, each with a `.forge-ref/` path and line).
 
 ## Scope
 
@@ -20,7 +20,7 @@ Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (252 rows, each
 - `E:\GitHub\McDevBridge\build.forge.gradle.kts` is the working reference (same wrapper, same Stonecutter).
 - Forge needs `META-INF/mods.toml` (not `neoforge.mods.toml`) and a `pack.mcmeta`, or FML covers the title screen with
   a load warning. Pack fields differ: `pack_format` on 1.21.1, `min_format`/`max_format` on 26.x.
-- Reference sources: `.forge-ref/` (gitignored), Forge's classes plus `patches/` (vanilla patch diffs, the place to see
+- Reference sources: `.forge-ref/` (gitignored, filled by `bash scripts/forge-sources-sync.sh`), Forge's classes plus `patches/` (vanilla patch diffs, the place to see
   where a hook is called) per line. The 1.21.1 tree names vanilla members by SRG, so grep it by Forge names. FML core
   (ModConfig, ModList, ModLoadingContext, the event bus) is not in it: use `javap` on the cached jars.
 
@@ -38,7 +38,7 @@ Forge is closer to NeoForge 1.21.1 than to anything newer, and on the client it 
 | Fake players, chunk tickets | no `FakePlayer`; `ForgeChunkManager` only on 1.21.1 (gone on 26.x) | Follow `FabricFakePlayers` and `FabricChunkTickets` (vanilla `TicketType`) on every line |
 | Menus | `IForgeMenuType.create` + `IForgeServerPlayer.openMenu(provider, Consumer<buf>)`; vanilla `openMenu(provider)` is unhooked | `openFor` writes the data itself; the spectator path needs the Fabric `ServerPlayerMixin` approach |
 | Config | `ForgeConfigSpec` (near-identical builder; no 4-arg `defineListAllowEmpty`; types CLIENT / COMMON / SERVER only) | Stonecutter replacement `ModConfigSpec` -> `ForgeConfigSpec` on forge nodes, like the `Identifier` rule; LOCAL maps to COMMON as on Fabric |
-| Patched overrides | 17 of 37 `@LoaderHook` routes compile unchanged; 14 differ in signature; missing: clone-item-stack, block shearing on 26.2+, per-entity tick, `writeClientSideData` | Same-shape ones become `//? if neoforge || forge`; the rest route through `platform/hook` interfaces and Forge mixins |
+| Patched overrides | Of the 37 hook rows in the seam map (33 `@LoaderHook` uses plus the `platform/hook` and `VanillaExtensions` routes), 17 compile unchanged and 14 differ in signature; missing: clone-item-stack, block shearing on 26.2+, per-entity tick, `writeClientSideData` | Same-shape ones become `//? if neoforge || forge`; the rest route through `platform/hook` interfaces and Forge mixins |
 | Client | No menu-screen event, no item tint source / sprite source / render pipeline registration, no level-render stage event after 1.21.4, no per-vertex quad colour, no PiP submit | Vanilla registries reached by access transformer where possible, otherwise the Fabric client mixins |
 | Data | `forge:` namespace; `fluid_container` loader exists; no components ingredient; recipe conditions wired on 1.21.1, not found on 26.3; no `recipe_priorities` | `DataForge.kt` rewrite beside `DataFabric.kt`; BC-registered ingredient and flag condition as on Fabric |
 | Tests | No FML-JUnit. 26.x: `TEST_FUNCTION` is a vanilla registry, test instances are datapack JSON, entry is `net.minecraft.gametest.Main`. 1.21.1: annotation / `Method` based | Fabric's arrangement: no unit tests, the compile is the deprecation guard, the shared game tests are the gate |
@@ -47,7 +47,7 @@ Forge is closer to NeoForge 1.21.1 than to anything newer, and on the client it 
 
 - A third constant, `forge`. `constants.match(loader, "neoforge", "fabric", "forge")`.
 - **No bare loader `else`.** With three loaders an `else` after `if neoforge` silently means "Fabric and Forge". Every
-  loader chain names each loader it serves (`if neoforge || forge`, `elif fabric`). Five main-code and 38 test-code
+  loader chain names each loader it serves (`if neoforge || forge`, `elif fabric`). Five main-code forks and some thirty test-code
   forks have a bare else today; each is re-keyed in the slice that ports its seam, and the directive guard fails on a
   new one once the port compiles all of main.
 - Only binder holders fail loudly when an arm is missing. A no-else `if neoforge` block compiles clean on Forge with the
@@ -79,6 +79,9 @@ Loader lists that must grow together (F0 does the first three): `build.gradle.kt
 `scripts/smoke/multiplayer/mp.init.gradle`; `release/modules/BcRelease.psm1` and `release/config/release.json`.
 
 ## Open
+
+- The gitignored release tool rejects any node whose loader is not neoforge or fabric, so it must learn `forge`
+  (or skip it) before this branch merges to main, or the next NeoForge/Fabric release run fails at enumeration.
 
 - How a Forge mod declares a mixin config on 26.x and 1.21.1 (manifest `MixinConfigs` attribute is the expected
   answer; not in the reference sources). Settle in F3 with a one-mixin boot.

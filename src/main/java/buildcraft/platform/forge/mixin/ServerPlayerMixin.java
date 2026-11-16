@@ -17,7 +17,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.level.GameType;
 
+import buildcraft.platform.forge.ForgeFakePlayers;
 import buildcraft.platform.forge.ForgeMenus;
 import buildcraft.platform.menu.MenuOpeningData;
 
@@ -35,6 +37,15 @@ import buildcraft.platform.menu.MenuOpeningData;
  * call target inside the body. The method's own descriptor is vanilla's and Forge cannot change it. A provider that is not
  * a {@code MenuOpeningData} (every vanilla and foreign menu) falls through to vanilla untouched. There is no recursion:
  * Forge's two-argument {@code openMenu} never calls the one-argument one.
+ *
+ * <p><b>A machine's game mode.</b> The player constructor takes the server's default game mode, which a creative-default
+ * server hands to every machine's {@link ForgeFakePlayers} player: no tool wear, no item consumed, instant breaking.
+ * NeoForge's patch of {@code calculateGameModeForNewPlayer} and Fabric API's mixin on the same method both answer survival
+ * for a fake player; this is the Forge twin, injected at the head of that private method so the player is never creative
+ * at all (its abilities are set from the answer in the constructor, and changing the mode afterwards would broadcast a
+ * tab-list update for a player nobody lists). Forge's patch leaves the method as vanilla has it; the head depends on
+ * no local, ordinal or call target. The test is made while the vanilla constructor is still running, which is why it
+ * asks the machine player's own class and not a field.
  *^/
 @Mixin(ServerPlayer.class)
 abstract class ServerPlayerMixin {
@@ -44,6 +55,14 @@ abstract class ServerPlayerMixin {
     private void buildcraft$openingData(@Nullable MenuProvider provider, CallbackInfoReturnable<OptionalInt> cir) {
         if (provider instanceof MenuOpeningData data) {
             cir.setReturnValue(ForgeMenus.openWithOpeningData((ServerPlayer) (Object) this, provider, data));
+        }
+    }
+
+    @Inject(method = "calculateGameModeForNewPlayer(Lnet/minecraft/world/level/GameType;)Lnet/minecraft/world/level/GameType;",
+            at = @At("HEAD"), cancellable = true)
+    private void buildcraft$machinesAreSurvival(@Nullable GameType loaded, CallbackInfoReturnable<GameType> cir) {
+        if (ForgeFakePlayers.isMachinePlayer(this)) {
+            cir.setReturnValue(GameType.SURVIVAL);
         }
     }
 }

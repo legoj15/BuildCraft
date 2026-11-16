@@ -48,6 +48,10 @@ import buildcraft.platform.FakePlayers;
  * tracker of the profile's UUID, so a machine acting for an owner shares the owner's tracker. BuildCraft never awards
  * through a fake player's own tracker for that reason ({@code AdvancementUtil}); NeoForge's per-line patch that hands a
  * fake player a no-op one is not reproduced.
+ *
+ * <p><b>Game mode.</b> A machine is always in survival, whatever the server's default is (NeoForge's patch and Fabric
+ * API's mixin do the same): {@code ServerPlayerMixin} answers survival where the player constructor asks which mode a
+ * new player takes. Left alone, a creative-default server ran every machine in creative: no tool wear, no item used up.
  *^/
 public final class ForgeFakePlayers implements FakePlayers {
 
@@ -63,6 +67,11 @@ public final class ForgeFakePlayers implements FakePlayers {
 
     @Override
     public boolean isFakePlayer(Entity entity) {
+        return isMachinePlayer(entity);
+    }
+
+    /^* Whether {@code entity} is a player made here ({@code ServerPlayerMixin} asks it of a player still being constructed). ^/
+    public static boolean isMachinePlayer(Object entity) {
         return entity instanceof MachinePlayer;
     }
 

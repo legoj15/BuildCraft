@@ -75,7 +75,7 @@ LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/", "buildcraft/platf
 BINDERS = ("buildcraft/platform/Platform.java", "buildcraft/platform/client/ClientPlatform.java")
 #: The oldest node. Its commented arms do not count toward the finish line (NeoForge-only forever).
 LEGACY_NODE = "1.21.1"
-FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "26.3-fabric")
+FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "26.3-fabric", "26.3-forge")
 
 #: References that are tolerated for now. Matched in order: `paths` are source-root-relative prefixes, `types` are
 #: regexes over the fully qualified name. A reference matching an entry counts as allowlisted, not remaining.

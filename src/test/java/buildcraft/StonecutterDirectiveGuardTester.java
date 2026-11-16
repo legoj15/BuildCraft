@@ -90,7 +90,7 @@ import org.junit.jupiter.api.Test;
  * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Such prose
  * does not blind the scan to what follows it: a quote or apostrophe in it opens a literal that ends with its line, as
  * Java's string and char literals do, so a nested chain on a later line is still judged. Conditions
- * beyond version comparisons and the two loader constants, joined by {@code &&} and {@code ||}, are reported rather
+ * beyond version comparisons and the three loader constants, joined by {@code &&} and {@code ||}, are reported rather
  * than guessed at, and the arms of such a chain are not judged. */
 public class StonecutterDirectiveGuardTester {
 

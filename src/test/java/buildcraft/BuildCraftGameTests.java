@@ -400,12 +400,7 @@ public class BuildCraftGameTests {
         // The Filler's preview cubes: only cells still empty, farthest first, the nearest kept past the cap, scanned rarely.
         reg.accept("buildcraftunofficial:filler_preview_draws_only_empty_cells_farthest_first", () -> buildcraft.builders.FillerPreviewTester::previewDrawsOnlyWhatIsStillEmptyFarthestFirst);
         // A Filler left over from the Filler Planner days takes its Volume Box, pattern and invert flag over by ticking.
-        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
-        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
-        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
-        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:filler_planner_save_migrates", () -> buildcraft.builders.tile.FillerPlannerMigrationTester::aFillerBesideAPlannerBoxTakesItOverByTicking);
-        //?}
         // A weakly fed Filler spends its power as it arrives: the work signal clients get must still read as working.
         reg.accept("buildcraftunofficial:filler_slow_feed_syncs_as_working", () -> buildcraft.builders.tile.FillerProgressTester::aSlowlyFedFillerSyncsAsWorkingAndAStarvedOneDoesNot);
         // A Filler switched back to On after idling re-reads its whole box first: a block lost meanwhile is rebuilt, queued work is kept.
@@ -695,21 +690,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
         // Survival markers a Filler takes over become a volume box it owns: no wrench removes it, and it goes with the Filler.
         reg.accept("buildcraftunofficial:filler_owns_box_from_survival_markers", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::survivalMarkersBecomeABoxTheFillerOwns);
-        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
-        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
-        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
-        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:filler_owns_box_from_floating_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::floatingBoxBecomesTheFillersOwnedBox);
-        //?}
         reg.accept("buildcraftunofficial:machines_leave_markers_backing_lifted_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::machinesLeaveMarkersBackingALiftedBox);
         reg.accept("buildcraftunofficial:filler_lone_marker_gets_no_owned_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::aLoneMarkerGivesTheFillerNoOwnedBox);
         reg.accept("buildcraftunofficial:sneak_use_leaves_box_another_player_drags", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::sneakUseLeavesABoxAnotherPlayerDrags);
-        // Not on Forge: level-aware saved data is not wired there yet (ForgeSavedDataLevels.with has no caller), so the volume
-        // boxes are built with a null level, and a lock this test leaves behind crashes the server in the next level tick
-        // (Lock$Cause$CauseBlock.stillWorks(null) in LevelSavedDataVolumeBoxes.tick; docs/forge-port.md, F5).
-        //? if neoforge || fabric {
         reg.accept("buildcraftunofficial:claimed_box_resizes_with_filler", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::claimedBoxResizesWithTheFiller);
-        //?}
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);

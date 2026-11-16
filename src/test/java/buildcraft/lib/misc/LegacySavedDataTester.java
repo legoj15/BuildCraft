@@ -139,9 +139,8 @@ public class LegacySavedDataTester {
         return storage;
     }*/
     //?} elif forge && >=26.1 {
-    /*// Forge has no level-aware saved data either: ForgeSavedDataLevels is Fabric's thread-local answer, and nothing on Forge
-    // sets the level on a storage yet (docs/forge-port.md, "Still owed": the storage and chunk-source mixins), so a storage
-    // built here cannot hand its level to a factory or a codec. Tests that read through newStorage fail on that gap.
+    /*// Forge's level-aware saved data is Fabric's shape: ForgeSavedDataLevels is the thread-local answer, ServerChunkCacheMixin
+    // tells each dimension's own storage its level and SavedDataStorageMixin runs the storage's calls under it.
     // A fresh type data for the level, as the level's storage would make it.
     static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
         return buildcraft.platform.forge.ForgeSavedDataLevels.with(level, () -> type.constructor().get());
@@ -166,9 +165,11 @@ public class LegacySavedDataTester {
         };
     }
 
-    // A saved-data storage over the folder: not level-aware, see above.
+    // A saved-data storage over the folder that belongs to the level, as the level's own does.
     static SavedDataStorage newStorage(ServerLevel level, Path folder) {
-        return new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+        SavedDataStorage storage = new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+        ((buildcraft.platform.forge.ForgeSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
+        return storage;
     }*/
     //?}
 

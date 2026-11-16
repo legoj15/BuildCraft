@@ -25,6 +25,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -166,10 +167,33 @@ public final class ForgeProtection implements PlatformProtection {
         return !PlayerInteractEvent.RightClickItem.BUS.post(new PlayerInteractEvent.RightClickItem(player, hand));
     }
 
-    /^* Forge's patched {@code ItemStack.useOn} captures the placement and posts its event itself. *^/
+    /^*
+     * Forge's patched {@code ItemStack.useOn} captures the placement and posts its event itself. It also keeps the
+     * stack the placement event sees apart from the one the use left: {@code ForgeHooks.onPlaceItemIntoWorld} copies the
+     * stack before the use and, when a listener refuses the placement, puts that COPY in the player's hand and leaves
+     * the caller's stack object holding what the use made of it (a seed or a block item one short). NeoForge's hook
+     * restores the caller's stack in place instead, and {@link PlatformProtection#useItemOn} promises that ("the stack
+     * is restored"): every caller goes on reading the stack object it passed. So a refusal is put back here the same
+     * way, and the caller's stack goes back in the hand.
+     *^/
     @Override
     public InteractionResult useItemOn(UseOnContext context) {
-        return context.getItemInHand().useOn(context);
+        ItemStack stack = context.getItemInHand();
+        Player player = context.getPlayer();
+        if (player == null || context.getLevel().isClientSide()) {
+            return stack.useOn(context);
+        }
+        ItemStack before = stack.copy();
+        InteractionResult result = stack.useOn(context);
+        ItemStack held = player.getItemInHand(context.getHand());
+        // Only the hook's own refusal puts a content-equal copy of the pre-use stack in the hand; a use that moved some
+        // other stack into the hand (a transformed one) keeps it, and the caller reads it from the result.
+        if (result == InteractionResult.FAIL && held != stack && ItemStack.matches(held, before)) {
+            stack.setCount(held.getCount());
+            stack.applyComponents(held.getComponents());
+            player.setItemInHand(context.getHand(), stack);
+        }
+        return result;
     }
 
     @Override

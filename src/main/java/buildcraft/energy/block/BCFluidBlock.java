@@ -69,7 +69,10 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
      *                     (grass beside the lake) still spreads onto crude oil like any fire */
     public BCFluidBlock(FlowingFluid fluid, BlockBehaviour.Properties properties, int heat,
                         FluidVolatility.Band volatility, boolean lavaIgnites) {
-        super(fluid, properties);
+        // The vanilla flag too, for MinecraftForge has no per-block hook for lava's ignition test, only
+        // this flag ANDed with IForgeBlock#isFlammable (which is getFlammability > 0, answered above), and that pair
+        // equals lavaIgnites(state): every band that burns has a flammability above zero.
+        super(fluid, lavaIgnites ? properties.ignitedByLava() : properties);
         this.searing = heat >= 2;
         this.volatility = volatility;
         this.lavaIgnites = lavaIgnites;
@@ -122,9 +125,11 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
     }
     //?}
 
-    // Whether lava lights this block: NeoForge asks the block. Forge has no such hook: its LavaFluid patch tests the
-    // block state's own ignitedByLava flag, then IForgeBlock#isFlammable (which fire spread shares), so a Forge node
-    // needs a mixin on the lava ignition test that asks FireReactiveBlock#lavaIgnites, as Fabric's LavaFluidMixin does.
+    // Whether lava lights this block: NeoForge asks the block. Fabric's LavaFluidMixin asks FireReactiveBlock#lavaIgnites.
+    // Forge has no such hook, and needs no mixin: its LavaFluid patch tests the block state's own ignitedByLava flag
+    // (set from lavaIgnites in the constructor) and then IForgeBlock#isFlammable, the getFlammability answer above, which
+    // is positive exactly while this block burns; that is lavaIgnites(state). Fire spread reads getFlammability and
+    // getFireSpreadSpeed only, never the flag.
     //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#ignitedByLava")
     @Override

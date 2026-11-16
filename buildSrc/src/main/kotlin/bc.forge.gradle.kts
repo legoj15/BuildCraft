@@ -2,10 +2,10 @@
 // forge (today only 26.3-forge). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
 // different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
 //
-// Toolchain spike (#209): COMPILE ONLY, NOTHING SHIPS. The node compiles the loader-neutral platform contracts, the binder
-// with its forge arm live, and buildcraft.platform.forge (every Forge implementation written so far), and nothing else
-// but the few BuildCraft classes those name (the sourceSets block lists them): no resources, no tests, no jar, no
-// buildAndCollect. Its share of the root fullTestSuite is compileJava alone.
+// Port in progress (#209), COMPILE ONLY, NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer
+// plugin packages of a viewer this node has no build of (see the sourceSets block): no resources, no tests, no jar, no
+// buildAndCollect. Its share of the root fullTestSuite is compileJava alone. Resources, the jar and a runtime follow in
+// slice F4 (docs/forge-port.md).
 //
 // Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
 // directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
@@ -44,31 +44,30 @@ minecraft {
     mappings("official", minecraftVersion)
 }
 
+// The access transformer is the NeoForge node's own file, src/main/resources/META-INF/accesstransformer.cfg: ForgeGradle 7
+// hands it to the mavenizer, which applies it while it builds the Minecraft+Forge artifact, so the same entries open the
+// same members (Forge 26.3 runs the official names the file is written in). Set on the extension, not inside a
+// minecraft.dependency {} block: that block is a Groovy-closure owner, and Kotlin's Action overload of it fails with a
+// ClassCastException (the lambda is handed the plain dependency, not the closure owner). A dependency with none of its own
+// inherits this one.
+// Resolved from the root, as bc.neoforge does, because src/ lives at the tree root, not under versions/<node>/.
+minecraft.getAccessTransformer().from(rootProject.file("src/main/resources/META-INF/accesstransformer.cfg"))
+
+// A recipe viewer's plugin packages (compat/jei, compat/rei in every subsystem) are compiled only on a node that pins that
+// viewer: the pin is the node's `jei_version` / `rei_version` property, which the other loaders' nodes all carry and this
+// node does not (neither JEI nor REI has a Forge build for 26.3). Nothing outside those packages names them (the viewers
+// find their plugins themselves), so leaving them out costs nothing here. A Forge node that gains a viewer sets the
+// property and adds the matching compile-only dependencies, as bc.neoforge does; the exclusion then stops on its own.
+val viewerlessExcludes = buildList {
+    if (findProperty("jei_version") == null) add("**/compat/jei/**")
+    if (findProperty("rei_version") == null) add("**/compat/rei/**")
+}
+
 sourceSets {
     named("main") {
-        // Only the platform layer compiles here until the rest of BC has a Forge route. The filter applies to whichever
-        // directory Stonecutter points the source set at (src/ raw, or this node's generated copy). The contracts name two
-        // vanilla-only api packages (BCFluidStack, the BCCapability token: buildcraft/platform/package-info.java), so those
-        // compile too; every other buildcraft.api package stays out because it is not part of the contract.
-        java {
-            include("buildcraft/platform/**")
-            include("buildcraft/api/fluids/**", "buildcraft/api/capability/**")
-            // The one BuildCraft class outside the platform layer that ForgeProtection names (a machine's placement asks Open
-            // Parties and Claims through it), with the four buildcraft.api.core classes its logging pulls in (BCLog ->
-            // BuildCraftAPI -> IFakePlayerProvider, IWorldProperty). Vanilla and Platform are all else they touch.
-            include("buildcraft/lib/compat/claims/OpenPartiesAndClaims.java")
-            include("buildcraft/api/core/BCLog.java", "buildcraft/api/core/BuildCraftAPI.java")
-            include("buildcraft/api/core/IFakePlayerProvider.java", "buildcraft/api/core/IWorldProperty.java")
-            // Transfer (#209): the classic adapters name AdapterCache, DeferredFluidCalls and BCLog (with the two api/core types
-            // BCLog's closure holds), and the Forge capabilities of the three MJ tokens are typed over their interfaces. Each is
-            // a file of vanilla, JDK, Guava and log4j types only; nothing else of lib, api/core or api/mj comes along.
-            include(
-                "buildcraft/lib/transfer/AdapterCache.java", "buildcraft/lib/transfer/DeferredFluidCalls.java",
-                "buildcraft/api/core/BCLog.java", "buildcraft/api/core/BuildCraftAPI.java",
-                "buildcraft/api/core/IFakePlayerProvider.java", "buildcraft/api/core/IWorldProperty.java",
-                "buildcraft/api/mj/IMjConnector.java", "buildcraft/api/mj/IMjReceiver.java",
-                "buildcraft/api/mj/IMjRedstoneReceiver.java")
-        }
+        // The whole of BuildCraft's source, less the viewer packages above. The filter applies to whichever directory
+        // Stonecutter points the source set at (src/ raw, or this node's generated copy).
+        java { exclude(viewerlessExcludes) }
         // BC's resources are NeoForge's (mods.toml, the data down-ports); a Forge node ships none yet.
         resources { exclude("**") }
     }
@@ -94,7 +93,7 @@ dependencies {
 // pass this node's only gate vacuously (the edge bc.fabric states for the same reason).
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
-// No tests and no jar: the node exists only to prove the platform layer compiles against Forge.
+// No tests and no jar yet: the node exists to prove the shared source compiles against Forge (slice F4 adds the jar).
 tasks.named("test") { enabled = false }
 tasks.named("jar") { enabled = false }
 
@@ -103,6 +102,6 @@ tasks.named("jar") { enabled = false }
 // unqualified `buildAndCollect` runs only on the nodes that have one.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava only (compile-only spike, nothing ships)."
+    description = "This Forge node's share of fullTestSuite: compileJava only (compile-only, nothing ships yet)."
     dependsOn("compileJava")
 }

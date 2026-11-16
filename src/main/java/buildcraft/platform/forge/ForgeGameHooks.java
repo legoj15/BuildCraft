@@ -286,16 +286,15 @@ public final class ForgeGameHooks implements GameHooks {
     }
 
     /^*
-     * Not ported: Forge 26.3 posts {@code OnDatapackSyncEvent} before vanilla sends its recipe packet, which carries only
-     * the stonecutter recipes and item properties, and the event can add nothing to that packet (NeoForge's
-     * {@code sendRecipes}) or switch it off. Fabric's route is a Fabric API serializer registry that Forge has no twin
-     * of. Until BuildCraft sends the recipes itself over its own payload, the guide's recipe panels have nothing to show
-     * on a client of a remote server.
+     * Forge 26.3 has no recipe sync to switch on: its {@code OnDatapackSyncEvent} is posted before vanilla sends its recipe
+     * packet, which carries only the stonecutter recipes and item properties, and the event can add nothing to it
+     * (NeoForge's {@code sendRecipes}); Fabric's route is a Fabric API serializer registry Forge has no twin of. So
+     * BuildCraft sends the recipes itself over its own payload ({@link ForgeRecipeSync}); the client side of it
+     * ({@code ClientHooks#onRecipesReceived}) is the client slice's one call to {@link ForgeRecipeSync#addClientListener}.
      *^/
     @Override
     public void syncRecipeTypes(List<RecipeType<?>> types) {
-        // TODO(#209 F3): no Forge hook for the recipe sync: needs BuildCraft's own payload sent from onDatapackSync, plus
-        // the client receiver that fills ClientGuideRecipeCache (NeoForge: OnDatapackSyncEvent#sendRecipes).
+        ForgeRecipeSync.request(types);
     }
 
     /^* {@link BlockPlace} over the placement event; {@link #isProbe} is the placement probe's own mark. *^/

@@ -4,6 +4,8 @@
   "package": "buildcraft.platform.forge.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AnvilMenuMixin",
+    "EnchantCommandMixin",
     "EntityFluidInteractionMixin",
     "EntityFluidTrackerAccessor",
     "EntityMixin",
@@ -11,6 +13,7 @@
     "NamespacedWrapperMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",
+    "ServerGamePacketListenerImplMixin",
     "ServerPlayerMixin",
     "SwimMixin"
   ],

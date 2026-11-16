@@ -978,7 +978,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // Pick block (middle click) — return the correct item for what's targeted
     // Fabric asks pickedStack(level, pos, player) from PlayerPickItemEvents.BLOCK (FabricLoaderHookRoutes).
     // MinecraftForge has this hook on 1.21.1 only (the second arm); from 26.1 no Forge hook carries the player, so
-    // a Forge 26.x node needs a mixin on the server's pick-block handler that asks pickedStack, as Fabric's event does.
+    // a Forge 26.x node asks pickedStack from a mixin on the server's pick-block handler (platform/forge/mixin
+    // ServerGamePacketListenerImplMixin), as Fabric's event does.
     //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockExtension#getCloneItemStack")
     @Override

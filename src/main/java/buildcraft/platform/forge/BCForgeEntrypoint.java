@@ -36,6 +36,8 @@ public final class BCForgeEntrypoint {
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
         ForgeModBus.bind(context.getModBusGroup());
         ForgeModBus.bindContext(context);
+        // The components ingredient's serializer, ahead of the registry event: the gate recipes name it.
+        ForgeCraftingServices.registerSerializers();
 
         BCCore.init();
         if (Platform.loader().isPhysicalClient()) {

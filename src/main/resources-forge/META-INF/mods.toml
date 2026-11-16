@@ -1,0 +1,42 @@
+# MinecraftForge metadata (NOT NeoForge: that is META-INF/neoforge.mods.toml, which the Forge node's jar leaves out; the Forge
+# node adds this file from src/main/resources-forge). The placeholders are filled in by bc.forge's processResources
+# (a template engine reads comments too, so no dollar-brace belongs in one).
+modLoader="javafml"
+loaderVersion="${forge_loader_version_range}"
+# Single-valued by design, and it names the licence covering the overwhelming majority of the jar. The jar
+# also carries MIT (most of buildcraft.api) and MMPL-1.0.1 (files carried over from 1.7.10/1.12.2) — see
+# META-INF/NOTICE.md, shipped alongside all three licence texts, for the file-to-licence map.
+license="MPL-2.0"
+issueTrackerURL="https://github.com/legoj15/BuildCraft/issues"
+
+[[mods]]
+modId="buildcraftunofficial"
+version="${mod_version}"
+displayName="BuildCraft Redux"
+# Forge reads only logoFile (no bannerFile/iconFile like NeoForge 26.2+); logo.png is the wide image.
+logoFile="logo.png"
+credits="Created by SpaceToad"
+authors="SpaceToad, BuildCraft Team, legoj15 (1.21.1+ port)"
+description='''
+Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
+A fan-made continuation reuniting BuildCraft 7 and 8.
+'''
+displayURL="https://github.com/legoj15/BuildCraft"
+# The same version manifest the NeoForge and Fabric jars read: Forge's own update check understands this shape (a
+# `promos` map and a per-version changelog).
+updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_branch}/BuildCraftVersions.json"
+
+[[dependencies.buildcraftunofficial]]
+    modId="forge"
+    mandatory=true
+    # Per Forge node (versions/<node>/gradle.properties -> forge_version_range), not the dev pin the node compiles against.
+    versionRange="${forge_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.buildcraftunofficial]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="${mc_dep_range}"
+    ordering="NONE"
+    side="BOTH"

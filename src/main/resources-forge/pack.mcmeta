@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "description": "BuildCraft Redux",
+    ${pack_fields}
+  }
+}

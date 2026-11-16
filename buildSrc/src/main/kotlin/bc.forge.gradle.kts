@@ -2,15 +2,17 @@
 // forge (today only 26.3-forge). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
 // different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
 //
-// Port in progress (#209), COMPILE ONLY, NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer
-// plugin packages of a viewer this node has no build of (see the sourceSets block): no resources, no tests, no jar, no
-// buildAndCollect. Its share of the root fullTestSuite is compileJava alone. Resources, the jar and a runtime follow in
-// slice F4 (docs/forge-port.md).
+// Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
+// of a viewer this node has no build of (see the sourceSets block), builds a jar collected beside the NeoForge and Fabric
+// ones by buildAndCollect, and runs the dedicated server (slice F4, docs/forge-port.md). No unit tests (FML-JUnit has no
+// Forge twin) and no game tests yet (F5). Its share of the root fullTestSuite is the compile, the transformed resources
+// and the collected jar.
 //
 // Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
 // directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
 // ForgeGradle builds that patched Minecraft+Forge artifact itself, on demand, through the repositories below.
 
+import buildcraft.gradle.DataForge
 import buildcraft.gradle.WithMods
 
 plugins {
@@ -23,6 +25,19 @@ plugins {
 // Per-node values, resolved from versions/<node>/gradle.properties (inheriting root gradle.properties).
 val minecraftVersion = property("minecraft_version") as String
 val forgeVersion = property("forge_version") as String
+val modVersion = property("mod_version") as String
+// The player-facing minimums mods.toml declares: their own properties, so a routine bump of the dev pin never raises what a
+// Forge player must install (the Forge twins of bc.neoforge's neo_dep_range / mc_dep_range).
+val forgeVersionRange = property("forge_version_range") as String
+val forgeLoaderVersionRange = property("forge_loader_version_range") as String
+val mcDepRange = property("mc_dep_range") as String
+// The pack-format members of pack.mcmeta (min_format/max_format on 26.x, pack_format on 1.21.1).
+val packFields = property("pack_fields") as String
+val updateBranch = property("update_branch") as String
+// The opt-in -P switches the NeoForge and Fabric runs read too, resolved once here at script scope.
+val bcDebug = findProperty("bcDebug")?.toString()
+val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
+val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
 
 repositories {
     // ForgeGradle's repository helpers: the mavenizer (builds the patched, mapped Minecraft+Forge artifact on demand), Forge's
@@ -42,6 +57,37 @@ repositories {
 minecraft {
     // Mojang's official names, which the shared source is written in (and which Forge runs on, see the header).
     mappings("official", minecraftVersion)
+
+    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:26.3-forge:runServer` and `runClient`.
+    // Both carry the switches every BC run has: the dev workspace flag (BCLib.DEV-gated affordances: debug logging, the
+    // /bcsoundtest command) and `-PbcDebug[=tier]` for BCDebugging. A Forge dev run loads no recipe viewer (neither JEI nor
+    // REI has a Forge build for 26.3), so there is no recipe_viewer switch.
+    runs {
+        configureEach {
+            workingDir.convention(layout.projectDirectory.dir("run"))
+            systemProperty("buildcraft.dev", "true")
+            if (bcDebug != null) {
+                systemProperty("buildcraft.debug", bcDebug.ifBlank { "log" })
+            }
+        }
+        register("client") {
+            // The dev user is "Dev" on every loader (see bc.fabric): the owner-gated checks name the player by its UUID.
+            args("--username", "Dev")
+            // Optional quick-play and game directory, as on NeoForge: `-PbcQuickPlay=<save>` boots straight into a saved
+            // world, `-PbcRunDir=<node-relative dir>` is the scripted smoke run's own folder. ForgeGradle passes
+            // `--gameDir .`, so moving the working directory moves mods, config, saves and options.txt with it.
+            if (bcQuickPlay != null) {
+                args("--quickPlaySingleplayer", bcQuickPlay)
+            }
+            if (bcRunDir != null) {
+                workingDir.set(bcRunDir)
+            }
+        }
+        register("server") {
+            // No console window on the dev server: its console is the Gradle task's, and "stop" on stdin ends it.
+            args("--nogui")
+        }
+    }
 }
 
 // The access transformer is the NeoForge node's own file, src/main/resources/META-INF/accesstransformer.cfg: ForgeGradle 7
@@ -68,8 +114,19 @@ sourceSets {
         // The whole of BuildCraft's source, less the viewer packages above. The filter applies to whichever directory
         // Stonecutter points the source set at (src/ raw, or this node's generated copy).
         java { exclude(viewerlessExcludes) }
-        // BC's resources are NeoForge's (mods.toml, the data down-ports); a Forge node ships none yet.
-        resources { exclude("**") }
+        // BC's assets and data are shared; the loader metadata is not. src/main/resources-forge adds this node's own
+        // (mods.toml, pack.mcmeta) and the NeoForge-only file is dropped. META-INF/accesstransformer.cfg
+        // STAYS: FML reads that name from a Forge mod jar as well (and the mavenizer already applied the same file at
+        // compile time, so at run time it is idempotent). The NeoForge-shaped data JSON is rewritten after the copy
+        // (DataForge, below).
+        resources {
+            srcDir(rootProject.file("src/main/resources-forge"))
+            exclude("META-INF/neoforge.mods.toml")
+            // The Curios/Accessories slot tags (and the Curios entity assignment under BC's own namespace) put the goggles
+            // in a slot those mods own; neither has a Forge 26.3 build and ForgeAccessorySlots never looks, so the jar does
+            // not advertise a slot BC does not read. (bc.fabric leaves the inert data/buildcraftunofficial/curios in.)
+            exclude("data/accessories/**", "data/curios/**", "data/*/accessories/**", "data/*/curios/**")
+        }
     }
     named("test") {
         // Unit tests stay NeoForge-only: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan).
@@ -90,18 +147,62 @@ dependencies {
 }
 
 // Stonecutter has to emit this node's sources before they compile: a compile against a stale or empty generated copy would
-// pass this node's only gate vacuously (the edge bc.fabric states for the same reason).
+// pass this node's compile gate vacuously (the edge bc.fabric states for the same reason).
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
-// No tests and no jar yet: the node exists to prove the shared source compiles against Forge (slice F4 adds the jar).
+// No unit tests: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan). Game tests come in slice F5.
 tasks.named("test") { enabled = false }
-tasks.named("jar") { enabled = false }
 
-// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile alone. The NeoForge twin in
-// bc.neoforge adds unit tests, game tests and the jar. There is no buildAndCollect here: the root never names it, and an
-// unqualified `buildAndCollect` runs only on the nodes that have one.
+tasks.named<ProcessResources>("processResources") {
+    val replaceProperties = mapOf(
+        "mod_version" to modVersion,
+        "update_branch" to updateBranch,
+        "forge_version_range" to forgeVersionRange,
+        "forge_loader_version_range" to forgeLoaderVersionRange,
+        "mc_dep_range" to mcDepRange,
+        "pack_fields" to packFields,
+    )
+    inputs.properties(replaceProperties)
+    filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta")) {
+        expand(replaceProperties)
+    }
+    // A file present in both resource trees is a mistake, not something to drop silently.
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    // The NeoForge -> Forge data transform (conditions, components ingredients, biome modifiers, fluid_container item
+    // models), then the guard that nothing NeoForge-keyed is left. No down-port runs first: 26.3 is the line BC's data is
+    // authored for (a 1.21.1 Forge node would run DataDownport1211 here, as bc.neoforge and bc.fabric do).
+    doLast {
+        DataForge.apply(destinationDir)
+        DataForge.verifyNoNeoForgeData(destinationDir)
+    }
+}
+
+// ─── Distribution JAR ────────────────────────────────────────────────────────
+// The NeoForge jar's name (bc.neoforge) plus the loader: BuildCraftRedux-<mod_version>+mc<mc>-forge.jar, so every loader's
+// jar for one MC version sits side by side in build/libs/<mod_version>/. Forge on 26.x runs official names, so `jar` is the
+// shipped jar (no reobfuscation). The licence texts ride along exactly as in the other jars.
+tasks.named<Jar>("jar") {
+    archiveBaseName = "BuildCraftRedux"
+    archiveVersion = "$modVersion+mc$minecraftVersion"
+    archiveClassifier = "forge"
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+    from(rootProject.file("LICENSE.API")) { into("META-INF") }
+    from(rootProject.file("LICENSE.MMPL")) { into("META-INF") }
+    from(rootProject.file("NOTICE.md")) { into("META-INF") }
+}
+
+// The twin of bc.neoforge's buildAndCollect: this node's jar into the same build/libs/<mod_version>/.
+tasks.register<Copy>("buildAndCollect") {
+    group = "build"
+    from(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+    into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
+    dependsOn("assemble")
+}
+
+// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the transformed resources and the
+// collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests; the Forge game tests come with slice F5.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava only (compile-only, nothing ships yet)."
-    dependsOn("compileJava")
+    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform and the collected jar (no game tests yet)."
+    dependsOn("compileJava", "processResources", "jar", "buildAndCollect")
 }

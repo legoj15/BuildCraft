@@ -49,11 +49,11 @@ import buildcraft.platform.registry.RegistryServices;
  * (all five BuildCraft flips are: items, blocks, block entities, fluids, data components); any other fails loudly at
  * the event.
  *
- * <p><b>Alias gap.</b> The alias reaches Forge's own id lookups only. Vanilla's codecs ({@code Item.CODEC}, so every
- * saved item stack) go through the vanilla-facing wrapper's {@code get(Identifier)}, which reads its own holder map
- * and knows no alias: a stack saved under a legacy BuildCraft id fails to decode on Forge, where NeoForge and Fabric
- * resolve it. TODO(#209 F3): needs a Forge mixin on the registry wrapper's by-name lookup (NamespacedWrapper), or a
- * BuildCraft-side legacy id fixer; until then legacy-id inventories are not recovered on Forge.
+ * <p><b>Alias gap, closed by a mixin.</b> The alias reaches Forge's own id lookups ({@code getRaw}: the wrapper's
+ * {@code getValue} and {@code getOptional}) but not the vanilla-facing wrapper's {@code get(Identifier)} and
+ * {@code get(ResourceKey)}, which read its own holder map: vanilla's codecs ({@code Item.CODEC}, so every saved item
+ * stack, and every {@code holderByNameCodec}) go through those. {@code platform.forge.mixin.NamespacedWrapperMixin} makes
+ * both consult the alias map when they miss, as NeoForge's {@code MappedRegistry} does by resolving in them.
  *
  * <p><b>Creative tabs.</b> Forge patches vanilla's no-argument {@code CreativeModeTab.builder()} and
  * {@code withTabsBefore} (as NeoForge does), and posts {@link BuildCreativeModeTabContentsEvent} on its own static game

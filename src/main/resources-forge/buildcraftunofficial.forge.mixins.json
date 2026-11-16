@@ -4,7 +4,10 @@
   "package": "buildcraft.platform.forge.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "MixinConfigProbeMixin"
+    "NamespacedWrapperMixin",
+    "SavedDataStorageMixin",
+    "ServerChunkCacheMixin",
+    "ServerPlayerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -57,7 +57,8 @@ import buildcraft.platform.VanillaExtensions;
  * needs a line in the shared access transformer ({@code public net.minecraft.world.item.component.CustomData tag}),
  * which NeoForge's nodes would then apply too; left reflective until that line is wanted.</li>
  * <li><b>Level-aware saved data.</b> Forge does not patch the saved-data type; the level reaches the factory and codec
- * through {@link ForgeSavedDataLevels}, as on Fabric, which nothing feeds yet (see the marker at that method).</li>
+ * through {@link ForgeSavedDataLevels}, as on Fabric, which two Forge mixins feed ({@code SavedDataStorageMixin},
+ * {@code ServerChunkCacheMixin}).</li>
  * </ul>
  *^/
 public final class ForgeVanillaExtensions implements VanillaExtensions {
@@ -110,9 +111,8 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
         return entity.getPersistentData();
     }
 
-    // TODO(#209 F3): needs a Forge mixin for the storage's level (the saved-data storage and the chunk source tell
-    // ForgeSavedDataLevels which level a storage call is for), see platform/fabric/mixin/SavedDataStorageMixin and
-    // ServerChunkCacheMixin. Until then every factory and codec below is handed null.
+    // The level comes from platform/forge/mixin/SavedDataStorageMixin and ServerChunkCacheMixin through
+    // ForgeSavedDataLevels; a storage with no level (the server-wide one) hands the factory and the codec null.
     @Override
     public <T extends SavedData> SavedDataType<T> levelSavedDataType(Identifier id, Function<ServerLevel, T> factory,
             Function<ServerLevel, Codec<T>> codec, DataFixTypes fixType) {

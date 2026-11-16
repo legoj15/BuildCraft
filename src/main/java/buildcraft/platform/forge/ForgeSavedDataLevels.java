@@ -12,16 +12,22 @@ import net.minecraft.server.level.ServerLevel;
 
 /^*
  * Which level the saved-data storage at work on this thread belongs to: NeoForge's level-aware saved data, which Forge
- * does not patch, the way {@code FabricSavedDataLevels} provides it on Fabric. The storage calls that build, read or
- * write data are meant to run inside {@link #with}, so a {@code levelSavedDataType}'s factory and codec see the level
- * through {@link #current} (see {@link ForgeVanillaExtensions}). Nothing calls {@link #with} yet: it needs the Forge
- * mixins on the storage and on the chunk source, so until then every factory and codec is handed null, the value the
- * server-wide storage has on NeoForge.
+ * does not patch, the way {@code FabricSavedDataLevels} provides it on Fabric. {@code ServerChunkCacheMixin} tells each
+ * dimension's storage its level, and {@code SavedDataStorageMixin} wraps the storage calls that build, read or write
+ * data in {@link #with}, so a {@code levelSavedDataType}'s factory and codec see the level through {@link #current}
+ * (see {@link ForgeVanillaExtensions}). The server-wide storage has no level, so its data sees null, as on NeoForge.
  *^/
 public final class ForgeSavedDataLevels {
     private ForgeSavedDataLevels() {}
 
     private static final ThreadLocal<ServerLevel> CURRENT = new ThreadLocal<>();
+
+    /^* A saved-data storage that knows the level it belongs to (duck interface of {@code SavedDataStorageMixin}). ^/
+    public interface LevelAwareStorage {
+        void buildcraft$setLevel(ServerLevel level);
+
+        ServerLevel buildcraft$level();
+    }
 
     /^* The level of the storage call running on this thread, or null. ^/
     public static ServerLevel current() {

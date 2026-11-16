@@ -3,12 +3,15 @@
 // different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
 //
 // Toolchain spike (#209): COMPILE ONLY, NOTHING SHIPS. The node compiles the loader-neutral platform contracts, the binder
-// with its forge arm live, and buildcraft.platform.forge (ForgeLoaderServices today), and nothing else: no resources, no
-// tests, no jar, no buildAndCollect. Its share of the root fullTestSuite is compileJava alone.
+// with its forge arm live, and buildcraft.platform.forge (every Forge implementation written so far), and nothing else
+// but the few BuildCraft classes those name (the sourceSets block lists them): no resources, no tests, no jar, no
+// buildAndCollect. Its share of the root fullTestSuite is compileJava alone.
 //
 // Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
 // directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
 // ForgeGradle builds that patched Minecraft+Forge artifact itself, on demand, through the repositories below.
+
+import buildcraft.gradle.WithMods
 
 plugins {
     // Already applied by build.gradle.kts; named here because ForgeGradle does not apply it, and without it this script
@@ -28,6 +31,11 @@ repositories {
     minecraft.mavenizer(this)
     maven(fg.forgeMaven)
     maven(fg.minecraftLibsMaven)
+    // Modrinth's maven, for the compile-only Open Parties and Claims jar alone (see the dependency below).
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
     mavenCentral()
 }
 
@@ -45,6 +53,12 @@ sourceSets {
         java {
             include("buildcraft/platform/**")
             include("buildcraft/api/fluids/**", "buildcraft/api/capability/**")
+            // The one BuildCraft class outside the platform layer that ForgeProtection names (a machine's placement asks Open
+            // Parties and Claims through it), with the four buildcraft.api.core classes its logging pulls in (BCLog ->
+            // BuildCraftAPI -> IFakePlayerProvider, IWorldProperty). Vanilla and Platform are all else they touch.
+            include("buildcraft/lib/compat/claims/OpenPartiesAndClaims.java")
+            include("buildcraft/api/core/BCLog.java", "buildcraft/api/core/BuildCraftAPI.java")
+            include("buildcraft/api/core/IFakePlayerProvider.java", "buildcraft/api/core/IWorldProperty.java")
         }
         // BC's resources are NeoForge's (mods.toml, the data down-ports); a Forge node ships none yet.
         resources { exclude("**") }
@@ -61,6 +75,10 @@ dependencies {
     // jsr305's javax.annotation (@Nullable/@Nonnull, used throughout BC) along, as ModDevGradle does on NeoForge, so the
     // compile-only line bc.fabric needs for it is not repeated here.
     implementation(minecraft.dependency("net.minecraftforge:forge:$minecraftVersion-$forgeVersion"))
+
+    // Open Parties and Claims' server API, which lib.compat.claims.OpenPartiesAndClaims names behind a loaded-mod check:
+    // compile-only against the jar this node's `withmod.opac` alias names, as bc.neoforge and bc.fabric do.
+    compileOnly(WithMods.compileCoordinate(project, "opac", "maven.modrinth:open-parties-and-claims")) { isTransitive = false }
 }
 
 // Stonecutter has to emit this node's sources before they compile: a compile against a stale or empty generated copy would

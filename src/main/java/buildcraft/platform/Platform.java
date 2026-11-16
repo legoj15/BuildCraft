@@ -202,7 +202,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricProtection();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: PlatformProtection not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeProtection();
             *///?}
         }
     }
@@ -216,7 +216,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricGameHooks();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: GameHooks not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeGameHooks();
             *///?}
         }
     }
@@ -230,7 +230,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLifecycleHooks();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: LifecycleHooks not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeLifecycleHooks();
             *///?}
         }
     }

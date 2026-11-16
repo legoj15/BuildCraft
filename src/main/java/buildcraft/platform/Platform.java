@@ -146,7 +146,7 @@ public final class Platform {
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricTransfer();
             *///?} elif forge {
-            /*throw new UnsupportedOperationException("forge: TransferServices not ported (#209)");
+            /*return new buildcraft.platform.forge.ForgeTransfer();
             *///?}
         }
     }

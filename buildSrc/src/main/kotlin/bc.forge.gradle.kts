@@ -59,6 +59,15 @@ sourceSets {
             include("buildcraft/lib/compat/claims/OpenPartiesAndClaims.java")
             include("buildcraft/api/core/BCLog.java", "buildcraft/api/core/BuildCraftAPI.java")
             include("buildcraft/api/core/IFakePlayerProvider.java", "buildcraft/api/core/IWorldProperty.java")
+            // Transfer (#209): the classic adapters name AdapterCache, DeferredFluidCalls and BCLog (with the two api/core types
+            // BCLog's closure holds), and the Forge capabilities of the three MJ tokens are typed over their interfaces. Each is
+            // a file of vanilla, JDK, Guava and log4j types only; nothing else of lib, api/core or api/mj comes along.
+            include(
+                "buildcraft/lib/transfer/AdapterCache.java", "buildcraft/lib/transfer/DeferredFluidCalls.java",
+                "buildcraft/api/core/BCLog.java", "buildcraft/api/core/BuildCraftAPI.java",
+                "buildcraft/api/core/IFakePlayerProvider.java", "buildcraft/api/core/IWorldProperty.java",
+                "buildcraft/api/mj/IMjConnector.java", "buildcraft/api/mj/IMjReceiver.java",
+                "buildcraft/api/mj/IMjRedstoneReceiver.java")
         }
         // BC's resources are NeoForge's (mods.toml, the data down-ports); a Forge node ships none yet.
         resources { exclude("**") }

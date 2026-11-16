@@ -26,11 +26,12 @@ import java.io.File
 //      moves to data/<ns>/forge/biome_modifier/ (Forge's datapack registry forge:biome_modifier), with neoforge:add_features
 //      renamed forge:add_features (same fields: biomes, features, step). BC's own modifier type
 //      (buildcraftunofficial:add_oil) passes through: ForgeDataServices registers it in forge:biome_modifier_serializers.
-//   4. neoforge:fluid_container item models. NeoForge reads them as a client item type in assets/<ns>/items; Forge has
-//      only the older shape, a MODEL file in assets/<ns>/models/item with "loader": "forge:fluid_container"
-//      (DynamicFluidContainerModel.Loader, registered by ClientForgeMod), same fields. So each one becomes a plain
-//      minecraft:model item pointing at a new models/item file, and NeoForge's mask texture becomes Forge's own mask of
-//      the same name (assets/forge/textures/item/mask/, in Forge's universal jar).
+//   4. neoforge:fluid_container item models -> buildcraftunofficial:fluid_container, BuildCraft's own item model type
+//      with NeoForge's fields (ForgeFluidContainerModel, the Forge twin of FabricFluidContainerModel), and NeoForge's
+//      mask texture becomes Forge's own mask of the same name (assets/forge/textures/item/mask/, in Forge's universal
+//      jar). Not Forge's forge:fluid_container: that is a block-model geometry baked for the one fluid its JSON names
+//      (the fragile shard could not show its contents), it looks for the fluid's sprite on the item atlas, and Forge
+//      26.3 ships no tint for its fluid layer.
 // Anything it cannot translate fails the build with the file named, rather than shipping data Forge would ignore or
 // reject. verifyNoNeoForgeData then fails on any "neoforge:" left in the output.
 
@@ -58,9 +59,10 @@ object DataForge {
     // the same name becomes Forge's. Any other neoforge: texture fails.
     private val FORGE_MASKS = setOf("bucket_fluid", "bucket_fluid_cover", "bucket_fluid_cover_drip", "bucket_fluid_drip")
 
-    // What a neoforge:fluid_container item model may carry. Forge's loader reads the same four fields besides the
-    // textures; its defaults (flip_gas false, cover_is_mask true, apply_fluid_luminosity true) are NeoForge's.
-    private val FLUID_CONTAINER_KEYS = setOf("type", "textures", "fluid", "flip_gas", "cover_is_mask", "apply_fluid_luminosity")
+    // What a neoforge:fluid_container item model may carry: the fields ForgeFluidContainerModel's codec reads, with
+    // NeoForge's defaults.
+    private val FLUID_CONTAINER_KEYS =
+        setOf("type", "textures", "fluid", "flip_gas", "cover_is_mask", "apply_fluid_luminosity", "force_opaque_fluid")
 
     // Strings that may remain in the processed output, each with the reason. Empty today.
     private val ALLOWED_NEOFORGE_STRINGS: Map<String, String> = emptyMap()
@@ -216,32 +218,20 @@ object DataForge {
             val root = parse(f) as? Map<String, Any?> ?: return@forEach
             val spec = root["model"] as? Map<String, Any?> ?: return@forEach
             if (spec["type"] != "neoforge:fluid_container") return@forEach
-            if (root.keys != setOf("model")) fail(f, "a neoforge:fluid_container item has item-definition fields besides model: ${root.keys - "model"}")
             val unknown = spec.keys - FLUID_CONTAINER_KEYS
-            if (unknown.isNotEmpty()) fail(f, "neoforge:fluid_container has fields with no Forge twin: $unknown")
+            if (unknown.isNotEmpty()) fail(f, "neoforge:fluid_container has fields ForgeFluidContainerModel does not read: $unknown")
             val textures = spec["textures"] as? Map<String, Any?>
                 ?: fail(f, "neoforge:fluid_container model has no textures")
             val outTextures = LinkedHashMap<String, Any?>()
             textures.forEach { (slot, tex) ->
                 outTextures[slot] = if (tex is String && tex.startsWith(NF)) forgeMask(tex, f) else tex
             }
-            // The item's name relative to items/ is the model's name relative to models/item/ (Forge's "item/<name>").
-            val name = f.relativeTo(itemsDir).invariantSeparatorsPath.removeSuffix(".json")
-            val modelFile = ns.resolve("models/item").resolve("$name.json")
-            // This runs on the processResources destination, which Gradle does not clean of files it did not copy: on a
-            // re-run after an item file changed, the model this transform wrote last time is still there. That one is
-            // ours to overwrite; anything else in its place is an authored model the rewrite must not clobber.
-            if (modelFile.exists() && (parse(modelFile) as? Map<*, *>)?.get("loader") != "forge:fluid_container") {
-                fail(modelFile, "a model file already exists where the Forge fluid-container model goes")
-            }
-            // "parent": Forge's own bucket models use forge:item/default for the display transforms and gui light.
-            val model = LinkedHashMap<String, Any?>()
-            model["loader"] = "forge:fluid_container"
-            model["parent"] = "forge:item/default"
+            val model = LinkedHashMap(spec)
+            model["type"] = "buildcraftunofficial:fluid_container"
             model["textures"] = outTextures
-            spec.filterKeys { it != "type" && it != "textures" }.forEach { (k, v) -> model[k] = v }
-            write(modelFile, model)
-            write(f, mapOf("model" to linkedMapOf("type" to "minecraft:model", "model" to "${ns.name}:item/$name")))
+            val out = LinkedHashMap(root)
+            out["model"] = model
+            write(f, out)
         }
     }
 

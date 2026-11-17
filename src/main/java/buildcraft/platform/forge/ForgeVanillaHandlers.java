@@ -19,7 +19,11 @@ import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainerHolder;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+//?} else {
+/^import net.minecraft.world.entity.animal.horse.AbstractHorse;
+^///?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -77,7 +81,8 @@ import net.minecraftforge.items.wrapper.SidedInvWrapper;
  * only what the entity can equip there ({@code isEquippableInSlot}), as NeoForge's fallback provider answers. Forge's
  * own wrapper for a living entity is the same slots plus the body slot, and takes any item in any of them, so the view
  * Forge hands out is swapped for this one ({@link #equipment}, over Forge's own {@code EntityEquipmentInvWrapper} for the
- * slot access and its equip side effects).
+ * slot access and its equip side effects). On 1.21.1 Forge's wrapper is NeoForge's 1.21.1 fallback already (hands and
+ * armour, any item), so nothing is swapped there and {@link #equipment} is not built.
  *
  * <p>One handler per position (and side), or per container or entity, is kept while something holds it, so the caches above, which
  * rebuild their BuildCraft view when the handler object changes, do not allocate on each tick.
@@ -179,6 +184,7 @@ final class ForgeVanillaHandlers {
      * exactly those slots (declaration order, so the hands first), with the equippability check Forge's wrapper never
      * makes: an insert into a slot the item does not belong in is refused, as is a {@code isItemValid} question.
      ^/
+    //? if >=1.21.10 {
     static IItemHandler equipment(LivingEntity entity) {
         return EQUIPMENT.computeIfAbsent(entity, living -> new EntityEquipmentInvWrapper(living,
                 EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR) {
@@ -193,6 +199,7 @@ final class ForgeVanillaHandlers {
             }
         });
     }
+    //?}
 
     /^* The composter's container for {@code side}, read from the block as it is now. ^/
     private static final class ComposterHandler implements IItemHandler {

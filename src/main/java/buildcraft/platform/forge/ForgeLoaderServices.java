@@ -27,8 +27,8 @@ import buildcraft.platform.LoaderServices;
  * {@link LoaderServices} on MinecraftForge (not NeoForge): FML's environment, mod list and paths, and Forge's server
  * lifecycle hooks. It holds no state and reads FML on every call, so nothing here runs before it is asked for.
  *
- * <p><b>Static API.</b> Forge's {@link ModList} is all static (NeoForge's is an instance behind {@code ModList.get()}),
- * and {@link FMLEnvironment#dist} is a field, as on NeoForge before 1.21.10.
+ * <p><b>Static API.</b> Forge 26.3's {@link ModList} is all static (NeoForge's is an instance behind {@code ModList.get()},
+ * and so is Forge 1.21.1's), and {@link FMLEnvironment#dist} is a field, as on NeoForge before 1.21.10.
  *
  * <p><b>Installed, not constructed.</b> {@link ModList#isLoaded} reads an index that Forge fills only once the mods have
  * been constructed, so before then it is a null dereference. {@link #isModLoaded} asks the discovery-time file index
@@ -46,15 +46,27 @@ public final class ForgeLoaderServices implements LoaderServices {
         return FMLEnvironment.dist == Dist.CLIENT;
     }
 
+    private static List<IModInfo> mods() {
+        //? if >=1.21.10 {
+        return ModList.getMods();
+        //?} else {
+        /^return ModList.get().getMods();
+        ^///?}
+    }
+
     @Override
     public boolean isModLoaded(String modId) {
+        //? if >=1.21.10 {
         return ModList.getModFileById(modId) != null;
+        //?} else {
+        /^return ModList.get().getModFileById(modId) != null;
+        ^///?}
     }
 
     @Override
     public List<String> modIds() {
         List<String> ids = new ArrayList<>();
-        for (IModInfo info : ModList.getMods()) {
+        for (IModInfo info : mods()) {
             ids.add(info.getModId());
         }
         return List.copyOf(ids);
@@ -62,7 +74,7 @@ public final class ForgeLoaderServices implements LoaderServices {
 
     @Override
     public Optional<String> modVersion(String modId) {
-        for (IModInfo info : ModList.getMods()) {
+        for (IModInfo info : mods()) {
             if (modId.equals(info.getModId())) {
                 return Optional.of(info.getVersion().toString());
             }
@@ -72,7 +84,11 @@ public final class ForgeLoaderServices implements LoaderServices {
 
     @Override
     public List<Path> modSourcePaths(String modId) {
+        //? if >=1.21.10 {
         IModFileInfo modFile = ModList.getModFileById(modId);
+        //?} else {
+        /^IModFileInfo modFile = ModList.get().getModFileById(modId);
+        ^///?}
         if (modFile == null) {
             return List.of();
         }

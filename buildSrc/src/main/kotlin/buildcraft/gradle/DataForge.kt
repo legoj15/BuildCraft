@@ -31,6 +31,13 @@ import java.io.File
 //      (DynamicFluidContainerModel.Loader, registered by ClientForgeMod), same fields. So each one becomes a plain
 //      minecraft:model item pointing at a new models/item file, and NeoForge's mask texture becomes Forge's own mask of
 //      the same name (assets/forge/textures/item/mask/, in Forge's universal jar).
+//   5. 1.21.1 only (after DataDownport1211): the classic models/item files that down-port writes name NeoForge model
+//      loaders (neoforge:fluid_container for the 31 fluid containers, neoforge:separate_transforms for the Goggles). Forge 52
+//      registers both under its own namespace with the same fields (ClientForgeMod: fluid_container, separate_transforms;
+//      SeparateTransformsModel reads base and perspectives, as NeoForge's does), so the loader id is renamed. The fluid
+//      containers' models are then rewritten by step 4 exactly as on 26.3 (Forge's forge:item/default parent carries the
+//      same display transforms the down-port stamped). 1.21.1 reads no items/ file; step 4 rewrites them anyway, so the
+//      guard below holds the same on every line.
 // Anything it cannot translate fails the build with the file named, rather than shipping data Forge would ignore or
 // reject. verifyNoNeoForgeData then fails on any "neoforge:" left in the output.
 
@@ -71,7 +78,36 @@ object DataForge {
         dropNeoForgeNamespace(dataDir.resolve("neoforge"))
         moveBiomeModifiers(dataDir)
         dataDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { transformDataFile(it) }
-        resourcesDir.resolve("assets").listFiles()?.forEach { ns -> rewriteFluidContainerModels(ns) }
+        resourcesDir.resolve("assets").listFiles()?.forEach { ns ->
+            renameClassicModelLoaders(ns)
+            rewriteFluidContainerModels(ns)
+        }
+    }
+
+    // NeoForge model loaders a classic (pre-1.21.4) model file may name, and Forge 52's id for each (step 5).
+    private val CLASSIC_MODEL_LOADERS = mapOf(
+        "neoforge:fluid_container" to "forge:fluid_container",
+        "neoforge:separate_transforms" to "forge:separate_transforms",
+    )
+
+    // ─── 5: classic model files (the 1.21.1 down-port's output) ──────────────
+
+    @Suppress("UNCHECKED_CAST")
+    private fun renameClassicModelLoaders(ns: File) {
+        val modelsDir = ns.resolve("models")
+        if (!modelsDir.isDirectory) return
+        modelsDir.walkTopDown().filter { it.isFile && it.extension == "json" }.toList().forEach { f ->
+            if (!f.readText().contains(NF)) return@forEach
+            val root = parse(f) as? Map<String, Any?> ?: return@forEach
+            val loader = root["loader"] as? String ?: return@forEach
+            val forgeLoader = CLASSIC_MODEL_LOADERS[loader] ?: fail(f, "model loader $loader has no Forge twin")
+            val out = LinkedHashMap<String, Any?>(root)
+            out["loader"] = forgeLoader
+            (root["textures"] as? Map<String, Any?>)?.let { textures ->
+                out["textures"] = textures.mapValues { (_, tex) -> if (tex is String && tex.startsWith(NF)) forgeMask(tex, f) else tex }
+            }
+            write(f, out)
+        }
     }
 
     private fun parse(f: File): Any? = groovy.json.JsonSlurper().parse(f)
@@ -96,7 +132,9 @@ object DataForge {
     private fun transformNode(node: Any?, f: File, isRoot: Boolean): Any? = when (node) {
         is Map<*, *> -> {
             val m = node as Map<String, Any?>
-            if (m.containsKey("neoforge:ingredient_type")) {
+            // The second form is the 1.21.1 down-port's (DataDownport1211 renames the dispatch key to "type", which
+            // 1.21.1's NeoForge reads), so the same ingredient arrives either way.
+            if (m.containsKey("neoforge:ingredient_type") || m["type"] == "neoforge:components") {
                 componentsIngredient(m, f)
             } else {
                 val out = LinkedHashMap<String, Any?>()
@@ -156,9 +194,9 @@ object DataForge {
     }
 
     private fun componentsIngredient(m: Map<String, Any?>, f: File): Map<String, Any?> {
-        val type = m["neoforge:ingredient_type"]
+        val type = m["neoforge:ingredient_type"] ?: m["type"]
         if (type != "neoforge:components") fail(f, "ingredient type $type has no Forge translation")
-        val unknown = m.keys - setOf("neoforge:ingredient_type", "items", "components", "strict")
+        val unknown = m.keys - setOf("neoforge:ingredient_type", "type", "items", "components", "strict")
         if (unknown.isNotEmpty()) fail(f, "neoforge:components ingredient has unknown keys $unknown")
         // BuildCraft's ingredient is NeoForge's non-strict test only (the listed components present and equal).
         if (m["strict"] == true) fail(f, "a strict neoforge:components ingredient has no Forge twin")

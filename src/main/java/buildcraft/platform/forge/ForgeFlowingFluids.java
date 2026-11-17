@@ -225,6 +225,7 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
         }
 
         @Override
+        //? if >=1.21.10 {
         public void tick(ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
             if (behaviour.beforeTick(this, level, pos, fluidState)) {
                 return;
@@ -232,9 +233,22 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
             super.tick(level, pos, state, fluidState);
             behaviour.afterTick(this, level, pos, fluidState);
         }
+        //?} else {
+        /^public void tick(Level level, BlockPos pos, FluidState fluidState) {
+            if (behaviour.beforeTick(this, level, pos, fluidState)) {
+                return;
+            }
+            super.tick(level, pos, fluidState);
+            behaviour.afterTick(this, level, pos, fluidState);
+        }
+        ^///?}
 
         @Override
+        //? if >=1.21.10 {
         protected Map<Direction, FluidState> getSpread(ServerLevel level, BlockPos pos, BlockState state) {
+        //?} else {
+        /^protected Map<Direction, FluidState> getSpread(Level level, BlockPos pos, BlockState state) {^/
+        //?}
             Map<Direction, FluidState> map = new EnumMap<>(super.getSpread(level, pos, state));
             behaviour.adjustSpread(this, level, pos, state, map);
             return map;
@@ -261,7 +275,11 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
 
         @Override
         public Map<Direction, FluidState> spreadTargets(Level level, BlockPos pos, BlockState state) {
+            //? if >=1.21.10 {
             return getSpread((ServerLevel) level, pos, state);
+            //?} else {
+            /^return getSpread(level, pos, state);^/
+            //?}
         }
 
         @Override
@@ -272,7 +290,11 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
 
         @Override
         public FluidState newLiquidAt(Level level, BlockPos pos, BlockState state) {
+            //? if >=1.21.10 {
             return getNewLiquid((ServerLevel) level, pos, state);
+            //?} else {
+            /^return getNewLiquid(level, pos, state);^/
+            //?}
         }
     }
 
@@ -286,6 +308,7 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
         }
 
         @Override
+        //? if >=1.21.10 {
         public void tick(ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
             if (behaviour.beforeTick(this, level, pos, fluidState)) {
                 return;
@@ -293,9 +316,22 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
             super.tick(level, pos, state, fluidState);
             behaviour.afterTick(this, level, pos, fluidState);
         }
+        //?} else {
+        /^public void tick(Level level, BlockPos pos, FluidState fluidState) {
+            if (behaviour.beforeTick(this, level, pos, fluidState)) {
+                return;
+            }
+            super.tick(level, pos, fluidState);
+            behaviour.afterTick(this, level, pos, fluidState);
+        }
+        ^///?}
 
         @Override
+        //? if >=1.21.10 {
         protected Map<Direction, FluidState> getSpread(ServerLevel level, BlockPos pos, BlockState state) {
+        //?} else {
+        /^protected Map<Direction, FluidState> getSpread(Level level, BlockPos pos, BlockState state) {^/
+        //?}
             Map<Direction, FluidState> map = new EnumMap<>(super.getSpread(level, pos, state));
             behaviour.adjustSpread(this, level, pos, state, map);
             return map;
@@ -322,7 +358,11 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
 
         @Override
         public Map<Direction, FluidState> spreadTargets(Level level, BlockPos pos, BlockState state) {
+            //? if >=1.21.10 {
             return getSpread((ServerLevel) level, pos, state);
+            //?} else {
+            /^return getSpread(level, pos, state);^/
+            //?}
         }
 
         @Override
@@ -333,7 +373,11 @@ public final class ForgeFlowingFluids implements BCFluidRegistrar {
 
         @Override
         public FluidState newLiquidAt(Level level, BlockPos pos, BlockState state) {
+            //? if >=1.21.10 {
             return getNewLiquid((ServerLevel) level, pos, state);
+            //?} else {
+            /^return getNewLiquid(level, pos, state);^/
+            //?}
         }
     }
 }

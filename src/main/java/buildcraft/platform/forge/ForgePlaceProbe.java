@@ -65,7 +65,7 @@ final class ForgePlaceProbe {
                     BlockSnapshot.create(level.dimension(), level, first), level.getBlockState(first.below()), player);
             probeInFlight = event;
             try {
-                cancelled = BlockEvent.EntityPlaceEvent.BUS.post(event);
+                cancelled = ForgeBus.post(event);
             } finally {
                 probeInFlight = outer;
             }
@@ -78,7 +78,7 @@ final class ForgePlaceProbe {
                     level.getBlockState(first.below()), player);
             probeInFlight = event;
             try {
-                cancelled = BlockEvent.EntityMultiPlaceEvent.BUS.post(event);
+                cancelled = ForgeBus.post(event);
             } finally {
                 probeInFlight = outer;
             }

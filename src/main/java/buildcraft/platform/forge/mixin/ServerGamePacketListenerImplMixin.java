@@ -7,6 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -53,4 +54,14 @@ abstract class ServerGamePacketListenerImplMixin {
         return original.call(state, level, pos, includeData);
     }
 }
+//?} else {
+/^import net.minecraft.server.network.ServerGamePacketListenerImpl;
+
+// Forge 1.21.1 has IForgeBlock#getCloneItemStack with the player, which the blocks override, and its pick block is
+// the client's, not this handler's.
+// Empty, so the mixin config names the same classes on both Forge lines.
+@Mixin(ServerGamePacketListenerImpl.class)
+abstract class ServerGamePacketListenerImplMixin {
+}
+^///?}
 *///?}

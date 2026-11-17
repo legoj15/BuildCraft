@@ -43,8 +43,8 @@ import buildcraft.platform.transfer.CapabilityRegistrar;
  * {@code RegisterCapabilitiesEvent} fills and that lookups consult, Forge has no such event on 26.x (the one on 1.21.1
  * is for removal and only names a capability type) and no table. A Forge block entity is itself a capability provider
  * ({@code BlockEntity.getCapability(cap, side)}, the one Forge's own {@code FluidUtil} and hopper hooks call), which a
- * mod extends per instance through {@code AttachCapabilitiesEvent.BlockEntities}, fired from the block entity's
- * constructor. So:
+ * mod extends per instance through {@code AttachCapabilitiesEvent.BlockEntities} (on 1.21.1 the one generic
+ * {@code AttachCapabilitiesEvent} for the {@code BlockEntity} class), fired from the block entity's constructor. So:
  *
  * <ul>
  * <li><b>Registration.</b> The registration callbacks (they call {@code .get()} on deferred block entity types, so they
@@ -101,8 +101,12 @@ final class ForgeTileCapabilities {
         }
         if (!subscribed) {
             subscribed = true;
-            AttachCapabilitiesEvent.BlockEntities.BUS.addListener(ForgeTileCapabilities::attach);
-            FMLCommonSetupEvent.getBus(ForgeModBus.group()).addListener(ForgeTileCapabilities::fire);
+            //? if >=1.21.10 {
+            ForgeBus.listen(AttachCapabilitiesEvent.BlockEntities.class, ForgeTileCapabilities::attach);
+            //?} else {
+            /^ForgeBus.attachCapabilities(BlockEntity.class, ForgeTileCapabilities::attach);
+            ^///?}
+            ForgeBus.listenMod(FMLCommonSetupEvent.class, ForgeTileCapabilities::fire);
         }
         QUEUE.add(registration);
     }
@@ -116,7 +120,11 @@ final class ForgeTileCapabilities {
         QUEUE.clear();
     }
 
+    //? if >=1.21.10 {
     private static void attach(AttachCapabilitiesEvent.BlockEntities event) {
+    //?} else {
+    /^private static void attach(AttachCapabilitiesEvent<BlockEntity> event) {
+    ^///?}
         BlockEntity tile = event.getObject();
         Registrations registrations = TYPES.get(tile.getType());
         if (registrations == null) {

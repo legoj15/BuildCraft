@@ -30,7 +30,8 @@ import net.minecraftforge.common.world.ModifiableBiomeInfo;
  *
  * <p><b>Not NeoForge's 26.3 shape.</b> NeoForge 26.3 gave {@code BiomeModifier#modify} a leading {@code RegistryAccess};
  * Forge 26.3's is still {@code modify(Holder<Biome>, Phase, BiomeInfo.Builder)}, so no Stonecutter branch belongs
- * here. The builder is a record, so the generation settings come from {@code generationSettings()}, not a getter.
+ * here. The builder is a record, so the generation settings come from {@code generationSettings()}, not a getter (on
+ * Forge 1.21.1 a class, with {@code getGenerationSettings()}).
  *^/
 final class ForgeAllBiomesFeatureModifier implements BiomeModifier {
     private final Holder<PlacedFeature> feature;
@@ -57,7 +58,11 @@ final class ForgeAllBiomesFeatureModifier implements BiomeModifier {
     @Override
     public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
         if (phase == Phase.ADD) {
+            //? if >=1.21.10 {
             builder.generationSettings().addFeature(step, feature);
+            //?} else {
+            /^builder.getGenerationSettings().addFeature(step, feature);
+            ^///?}
         }
     }
 

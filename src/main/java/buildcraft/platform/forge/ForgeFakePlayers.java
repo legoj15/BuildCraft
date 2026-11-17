@@ -11,9 +11,12 @@ import java.util.function.Consumer;
 
 import com.mojang.authlib.GameProfile;
 
-import io.netty.channel.ChannelFutureListener;
-
 import net.minecraft.network.Connection;
+//? if >=1.21.10 {
+import io.netty.channel.ChannelFutureListener;
+//?} else {
+/^import net.minecraft.network.PacketSendListener;
+^///?}
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -29,7 +32,11 @@ import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+//?} else {
+/^import net.minecraft.world.entity.animal.horse.AbstractHorse;
+^///?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
@@ -93,8 +100,19 @@ public final class ForgeFakePlayers implements FakePlayers {
             if (online != null && online != this) {
                 level.getServer().getPlayerList().getPlayerAdvancements(online);
             }
+            //? if >=1.21.10 {
             setPermanentlyInvulnerable(true);
+            //?}
         }
+
+        //? if <1.21.10 {
+        /^// 1.21.1 has no permanent-invulnerability flag: the player refuses every damage source instead (NeoForge's
+        // 1.21.1 FakePlayer does the same).
+        @Override
+        public boolean isInvulnerableTo(DamageSource source) {
+            return true;
+        }
+        ^///?}
 
         @Override
         public void sendSystemMessage(Component message, boolean actionBar) {}
@@ -126,10 +144,17 @@ public final class ForgeFakePlayers implements FakePlayers {
         @Override
         public void openHorseInventory(AbstractHorse horse, Container container) {}
 
+        //? if >=1.21.10 {
         @Override
         public boolean startRiding(Entity entityToRide, boolean force, boolean sendEventAndTriggers) {
             return false;
         }
+        //?} else {
+        /^@Override
+        public boolean startRiding(Entity entityToRide, boolean force) {
+            return false;
+        }
+        ^///?}
     }
 
     /^* A {@link MachinePlayer} that can end an item use and reset its living state quietly (see the contract). ^/
@@ -149,7 +174,9 @@ public final class ForgeFakePlayers implements FakePlayers {
             setLivingEntityFlag(2, false); // ...with the off hand
             useItem = ItemStack.EMPTY;
             useItemRemaining = 0;
+            //? if >=1.21.10 {
             recentKineticEnemies = null;
+            //?}
         }
 
         /^* Plain field writes: no event fires. ^/
@@ -160,7 +187,11 @@ public final class ForgeFakePlayers implements FakePlayers {
             deathTime = 0;
             hurtTime = 0;
             hurtDuration = 0;
+            //? if >=1.21.10 {
             setInvulnerableTime(0);
+            //?} else {
+            /^invulnerableTime = 0;
+            ^///?}
             setTicksFrozen(0);
             setPortalCooldown(0);
             portalProcess = null;
@@ -188,8 +219,13 @@ public final class ForgeFakePlayers implements FakePlayers {
         @Override
         public void send(Packet<?> packet) {}
 
+        //? if >=1.21.10 {
         @Override
         public void send(Packet<?> packet, ChannelFutureListener sendListener) {}
+        //?} else {
+        /^@Override
+        public void send(Packet<?> packet, PacketSendListener sendListener) {}
+        ^///?}
     }
 }
 *///?}

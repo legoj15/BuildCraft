@@ -7,6 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Final;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -44,4 +45,14 @@ abstract class ServerChunkCacheMixin {
         ((ForgeSavedDataLevels.LevelAwareStorage) savedDataStorage).buildcraft$setLevel(level);
     }
 }
+//?} else {
+/^import org.spongepowered.asm.mixin.Mixin;
+import net.minecraft.server.level.ServerChunkCache;
+
+// Level-aware saved data is a 26.1+ seam (see SavedDataStorageMixin): nothing to tell the storage on 1.21.1.
+// Empty, so the mixin config names the same classes on both Forge lines.
+@Mixin(ServerChunkCache.class)
+abstract class ServerChunkCacheMixin {
+}
+^///?}
 *///?}

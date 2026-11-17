@@ -1294,16 +1294,22 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
-    // Forge's ServerLevel and ClientLevel patches call it too. Forge 1.21.1 names it onRemovedFromWorld, which a
-    // 1.21.1 Forge node must answer in an arm of its own.
-    //? if neoforge || forge {
+    // Forge's ServerLevel and ClientLevel patches call it too. Forge 1.21.1 names it onRemovedFromWorld (the second arm).
+    //? if neoforge || forge && >=1.21.10 {
     @LoaderHook({"neoforge:IEntityExtension#onRemovedFromLevel", "forge:IForgeEntity#onRemovedFromLevel"})
     @Override
     public void onRemovedFromLevel() {
         onLeftLevel();
         super.onRemovedFromLevel();
     }
-    //?}
+    //?} elif forge {
+    /*@LoaderHook("forge:IForgeEntity#onRemovedFromWorld")
+    @Override
+    public void onRemovedFromWorld() {
+        onLeftLevel();
+        super.onRemovedFromWorld();
+    }
+    *///?}
 
     @Override
     public void onLeftLevel() {

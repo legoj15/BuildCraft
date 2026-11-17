@@ -45,7 +45,9 @@ import buildcraft.platform.menu.MenuOpeningData;
  * at all (its abilities are set from the answer in the constructor, and changing the mode afterwards would broadcast a
  * tab-list update for a player nobody lists). Forge's patch leaves the method as vanilla has it; the head depends on
  * no local, ordinal or call target. The test is made while the vanilla constructor is still running, which is why it
- * asks the machine player's own class and not a field.
+ * asks the machine player's own class and not a field. (The 1.21.1 constructor asks no game mode at all: a machine there
+ * keeps the game-mode manager's survival default, and the head injection, on the same vanilla method, is never reached
+ * for it.)
  *^/
 @Mixin(ServerPlayer.class)
 abstract class ServerPlayerMixin {

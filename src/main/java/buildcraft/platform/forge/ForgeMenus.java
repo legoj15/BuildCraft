@@ -84,7 +84,11 @@ public final class ForgeMenus implements BCMenus {
         player.openMenu(provider, buf -> data.writeOpeningData(new RegistryFriendlyByteBuf(buf, player.registryAccess())));
         if (player.containerMenu == player.inventoryMenu) {
             if (player.isSpectator()) {
+                //? if >=1.21.10 {
                 player.sendOverlayMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED));
+                //?} else {
+                /^player.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
+                ^///?}
             }
             return OptionalInt.empty();
         }

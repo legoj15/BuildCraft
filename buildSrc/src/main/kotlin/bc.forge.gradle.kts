@@ -14,6 +14,8 @@
 
 import buildcraft.gradle.AppendingLogStream
 import buildcraft.gradle.AssembleGameTestMod
+import buildcraft.gradle.DataDownport1211
+import buildcraft.gradle.DataDownportPre263
 import buildcraft.gradle.DataForge
 import buildcraft.gradle.FabricGameTests
 import buildcraft.gradle.WithMods
@@ -27,6 +29,10 @@ plugins {
 }
 
 // Per-node values, resolved from versions/<node>/gradle.properties (inheriting root gradle.properties).
+// The MC-line flags build.gradle.kts worked out from Stonecutter (the 1.21.1 line needs the data down-ports below).
+val bcNode = extensions.getByType<buildcraft.gradle.BcNode>()
+val isPre26_3 = bcNode.isPre26_3
+val isPre1_21_10 = bcNode.isPre1_21_10
 val minecraftVersion = property("minecraft_version") as String
 val forgeVersion = property("forge_version") as String
 val modVersion = property("mod_version") as String
@@ -184,6 +190,8 @@ dependencies {
     // jsr305's javax.annotation (@Nullable/@Nonnull, used throughout BC) along, as ModDevGradle does on NeoForge, so the
     // compile-only line bc.fabric needs for it is not repeated here.
     implementation(minecraft.dependency("net.minecraftforge:forge:$minecraftVersion-$forgeVersion"))
+    // jspecify's @Nullable/@NonNull: Minecraft brings it from 1.21.11; the 1.21.1 compile needs it named (as on bc.fabric).
+    if (bcNode.isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")
 
     // Open Parties and Claims' server API, which lib.compat.claims.OpenPartiesAndClaims names behind a loaded-mod check:
     // compile-only against the jar this node's `withmod.opac` alias names, as bc.neoforge and bc.fabric do.
@@ -229,6 +237,11 @@ tasks.named<ProcessResources>("processTestResources") {
     inputs.files(registrar).optional()
     doLast {
         FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
+    }
+    // The cycle-output tests' fixture recipes are in the modern format, which 1.21.1's ingredient codec rejects: the same
+    // down-port bc.neoforge and bc.fabric run on their test resources.
+    if (isPre1_21_10) {
+        doLast { DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe")) }
     }
 }
 
@@ -287,9 +300,27 @@ tasks.named<ProcessResources>("processResources") {
     }
     // A file present in both resource trees is a mistake, not something to drop silently.
     duplicatesStrategy = DuplicatesStrategy.FAIL
+    // The loot/advancement down-port every pre-26.3 node applies (26.3 only validates), and the 1.21.1 recipe, advancement and
+    // item-model one, exactly as bc.neoforge and bc.fabric run them, and BEFORE the Forge transform, which expects their
+    // output (on 1.21.1 the fluid-container models it rewrites are the classic models/item files the down-port wrote).
+    // Constant branches: a doLast must not capture the script-level flag (configuration cache).
+    if (isPre26_3) {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), true) }
+    } else {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), false) }
+    }
+    if (isPre1_21_10) {
+        doLast {
+            DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
+            DataDownport1211.downportAdvancementBackground1211(destinationDir.resolve("data/buildcraftunofficial/advancement"))
+            DataDownport1211.generateOldItemModels1211(
+                destinationDir.resolve("assets/buildcraftunofficial/items"),
+                destinationDir.resolve("assets/buildcraftunofficial/models/item")
+            )
+        }
+    }
     // The NeoForge -> Forge data transform (conditions, components ingredients, biome modifiers, fluid_container item
-    // models), then the guard that nothing NeoForge-keyed is left. No down-port runs first: 26.3 is the line BC's data is
-    // authored for (a 1.21.1 Forge node would run DataDownport1211 here, as bc.neoforge and bc.fabric do).
+    // models), then the guard that nothing NeoForge-keyed is left.
     doLast {
         DataForge.apply(destinationDir)
         DataForge.verifyNoNeoForgeData(destinationDir)

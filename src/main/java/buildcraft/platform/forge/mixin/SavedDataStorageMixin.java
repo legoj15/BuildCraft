@@ -7,6 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import java.util.Map;
+//? if >=1.21.10 {
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -72,4 +73,14 @@ abstract class SavedDataStorageMixin implements ForgeSavedDataLevels.LevelAwareS
         return ForgeSavedDataLevels.with(buildcraft$level, original::call);
     }
 }
+//?} else {
+/^import org.spongepowered.asm.mixin.Mixin;
+import net.minecraft.world.level.storage.DimensionDataStorage;
+
+// Level-aware saved data is a 26.1+ seam (VanillaExtensions#levelSavedDataType): nothing to feed on 1.21.1.
+// Empty, so the mixin config names the same classes on both Forge lines.
+@Mixin(DimensionDataStorage.class)
+abstract class SavedDataStorageMixin {
+}
+^///?}
 *///?}

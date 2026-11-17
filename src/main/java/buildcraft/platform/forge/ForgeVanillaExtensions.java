@@ -6,13 +6,17 @@
 package buildcraft.platform.forge;
 
 //? if forge {
-/*import java.lang.reflect.Field;
-import java.util.function.Function;
+/*import java.util.function.Function;
+//? if >=1.21.10 {
+import java.lang.reflect.Field;
+//?}
 
+//? if >=26.1 {
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
+//?}
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -20,7 +24,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+//? if >=26.1 {
 import net.minecraft.util.datafix.DataFixTypes;
+//?}
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -35,10 +41,14 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
+//? if >=26.1 {
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 
+//? if >=1.21.10 {
 import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+//?}
 
 import buildcraft.platform.VanillaExtensions;
 
@@ -59,6 +69,9 @@ import buildcraft.platform.VanillaExtensions;
  * <li><b>Level-aware saved data.</b> Forge does not patch the saved-data type; the level reaches the factory and codec
  * through {@link ForgeSavedDataLevels}, as on Fabric, which two Forge mixins feed ({@code SavedDataStorageMixin},
  * {@code ServerChunkCacheMixin}).</li>
+ * <li><b>1.21.1.</b> {@code CustomData} still has its key lookup, the saved data is written inside the save call (nothing
+ * to wait for), burn time and the crafting remainder are Forge's stack-aware methods, and there is no level-aware saved
+ * data to build (the seam is 26.1+).</li>
  * </ul>
  *^/
 public final class ForgeVanillaExtensions implements VanillaExtensions {
@@ -87,6 +100,7 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
         return state.getExpDrop(level, level.getRandom(), pos, fortune, silkTouch);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean customDataContains(CustomData data, String key) {
         try {
@@ -100,6 +114,12 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
     private static final class CustomDataTag {
         static final Field TAG = ObfuscationReflectionHelper.findField(CustomData.class, "tag");
     }
+    //?} else {
+    /^@Override
+    public boolean customDataContains(CustomData data, String key) {
+        return data.contains(key);
+    }
+    ^///?}
 
     @Override
     public boolean canConvertToSource(FluidState fluid, ServerLevel level, BlockPos pos) {
@@ -111,6 +131,27 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
         return entity.getPersistentData();
     }
 
+    //? if <26.3 {
+    /^@Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        // Forge's stack-aware burn time (the item's own override, then the vanilla fuel map); no recipe type is asked for.
+        return stack.getBurnTime(null);
+    }
+    ^///?}
+
+    //? if <1.21.10 {
+    /^@Override
+    public ItemStack craftingRemainder(ItemStack stack) {
+        return stack.getCraftingRemainingItem();
+    }
+
+    // Forge 1.21.1 writes saved data inside DimensionDataStorage.save(): nothing is left to wait for.
+    @Override
+    public void awaitSavedDataWrites() {
+    }
+    ^///?}
+
+    //? if >=26.1 {
     // The level comes from platform/forge/mixin/SavedDataStorageMixin and ServerChunkCacheMixin through
     // ForgeSavedDataLevels; a storage with no level (the server-wide one) hands the factory and the codec null.
     @Override
@@ -128,5 +169,6 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
             }
         }, fixType);
     }
+    //?}
 }
 *///?}

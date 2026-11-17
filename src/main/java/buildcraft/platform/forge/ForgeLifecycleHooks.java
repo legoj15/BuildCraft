@@ -12,7 +12,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 
-import net.minecraftforge.eventbus.api.bus.BusGroup;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
@@ -23,14 +22,11 @@ import buildcraft.platform.event.LifecycleHooks;
 
 /^*
  * {@link LifecycleHooks} on MinecraftForge (not NeoForge). The setup and load-complete hooks are listeners on
- * BuildCraft's mod bus group ({@link ForgeModBus}), added at the call, so they run in the order they were registered;
- * the {@code OnMain} ones are the event's {@code enqueueWork}. The server and save hooks listen on the events' own
- * static buses.
+ * BuildCraft's mod bus ({@link ForgeModBus}), added at the call, so they run in the order they were registered;
+ * the {@code OnMain} ones are the event's {@code enqueueWork}. The server and save hooks listen on the game bus.
  *
- * <p><b>Buses.</b> EventBus 7 has no bus object to hand around: a mod-lifecycle event is reached through
- * {@code FMLCommonSetupEvent.getBus(group)}, a game event through its static {@code BUS} field. NeoForge's listeners
- * on {@code NeoForge.EVENT_BUS} become {@code SomeEvent.BUS.addListener}, and {@code MinecraftForge.EVENT_BUS} (which
- * Forge 26.3 deprecates for removal) is never named.
+ * <p><b>Buses.</b> Every listener goes through {@link ForgeBus}, which hides the two Forge bus generations (EventBus 7
+ * on 26.x, EventBus 6 on 1.21.1): the mod-lifecycle events on the mod bus, the server and save events on the game bus.
  *
  * <p><b>Late blocks.</b> Nothing arrives late, as on NeoForge: FML runs the registry events of every mod before any
  * mod's common setup (the javadoc of {@code FMLCommonSetupEvent} says it is called after {@code RegisterEvent}), so a
@@ -42,25 +38,21 @@ import buildcraft.platform.event.LifecycleHooks;
  *^/
 public final class ForgeLifecycleHooks implements LifecycleHooks {
 
-    private static BusGroup modBus() {
-        return ForgeModBus.group();
-    }
-
     @Override
     public void onCommonSetup(Runnable action) {
-        FMLCommonSetupEvent.getBus(modBus()).addListener(event -> action.run());
+        ForgeBus.listenMod(FMLCommonSetupEvent.class, event -> action.run());
     }
 
     @Override
     public void onCommonSetupOnMain(Runnable action) {
-        FMLCommonSetupEvent.getBus(modBus()).addListener(event -> {
+        ForgeBus.listenMod(FMLCommonSetupEvent.class, event -> {
             event.enqueueWork(action);
         });
     }
 
     @Override
     public void onLoadCompleteOnMain(Runnable action) {
-        FMLLoadCompleteEvent.getBus(modBus()).addListener(event -> {
+        ForgeBus.listenMod(FMLLoadCompleteEvent.class, event -> {
             event.enqueueWork(action);
         });
     }
@@ -71,17 +63,17 @@ public final class ForgeLifecycleHooks implements LifecycleHooks {
 
     @Override
     public void onServerAboutToStart(Consumer<MinecraftServer> listener) {
-        ServerAboutToStartEvent.BUS.addListener(event -> listener.accept(event.getServer()));
+        ForgeBus.listen(ServerAboutToStartEvent.class, event -> listener.accept(event.getServer()));
     }
 
     @Override
     public void onServerStopped(Consumer<MinecraftServer> listener) {
-        ServerStoppedEvent.BUS.addListener(event -> listener.accept(event.getServer()));
+        ForgeBus.listen(ServerStoppedEvent.class, event -> listener.accept(event.getServer()));
     }
 
     @Override
     public void onLevelSave(Consumer<ServerLevel> listener) {
-        LevelEvent.Save.BUS.addListener(event -> {
+        ForgeBus.listen(LevelEvent.Save.class, event -> {
             if (event.getLevel() instanceof ServerLevel level) {
                 listener.accept(level);
             }

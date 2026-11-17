@@ -19,8 +19,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.listener.Priority;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.IForgeRegistry;
@@ -35,7 +33,7 @@ import buildcraft.platform.registry.RegistryServices;
  * {@link RegistryServices} on MinecraftForge: each registrar wraps a {@link DeferredRegister}, and each holder a
  * {@link RegistryObject}. It is the NeoForge twin's shape (entries queue, then register in the loader's register event,
  * so none of Fabric's build-on-first-ask timing applies); {@link BCRegistrar#subscribe()} attaches the deferred
- * register to BuildCraft's mod bus group ({@link ForgeModBus}).
+ * register to BuildCraft's mod bus ({@link ForgeBus#register}).
  *
  * <p><b>Holders.</b> A {@link RegistryObject} is not a vanilla {@link Holder} (NeoForge's {@code DeferredHolder} is), so
  * {@link BCHolder#holder()} is fed by {@link HolderSource}, which asks the object for its holder once and keeps it. Forge
@@ -79,7 +77,7 @@ public final class ForgeRegistryServices implements RegistryServices {
     public boolean contributeToTabLate(ResourceKey<CreativeModeTab> tab, CreativeModeTab.DisplayItemsGenerator contribution) {
         // LOW, as on NeoForge: after every normal and high priority listener of the event. The listeners of one
         // priority run in the order they were added, which is BuildCraft's init order.
-        BuildCreativeModeTabContentsEvent.BUS.addListener(Priority.LOW, event -> {
+        ForgeBus.listenCreativeTabsLow(event -> {
             if (event.getTabKey().equals(tab)) {
                 contribution.accept(event.getParameters(), event);
             }
@@ -141,8 +139,8 @@ public final class ForgeRegistryServices implements RegistryServices {
 
         @Override
         public void subscribe() {
-            register.register(ForgeModBus.group());
-            RegisterEvent.getBus(ForgeModBus.group()).addListener(this::flushAliases);
+            ForgeBus.register(register);
+            ForgeBus.listenMod(RegisterEvent.class, this::flushAliases);
         }
 
         private synchronized void flushAliases(RegisterEvent event) {

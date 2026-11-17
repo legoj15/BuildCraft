@@ -11,7 +11,11 @@ package buildcraft.platform.forge;
 import com.google.common.collect.MapMaker;
 
 import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+//?} else {
+/^import net.minecraft.world.entity.vehicle.Boat;
+^///?}
 import net.minecraft.world.level.Level;
 
 import net.minecraftforge.event.TickEvent;
@@ -50,26 +54,34 @@ final class ForgeBoatFluids {
 
     private ForgeBoatFluids() {}
 
-    /^* Registers the listeners on the three events' own buses; once, however many fluid registrars subscribe. ^/
+    /^* Registers the three listeners ({@link ForgeBus}); once, however many fluid registrars subscribe. ^/
     static synchronized void register() {
         if (registered) {
             return;
         }
         registered = true;
-        EntityJoinLevelEvent.BUS.addListener((EntityJoinLevelEvent event) -> {
+        ForgeBus.listen(EntityJoinLevelEvent.class, event -> {
+            //? if >=1.21.10 {
             if (event.getEntity() instanceof AbstractBoat boat) {
+            //?} else {
+            /^if (event.getEntity() instanceof Boat boat) {
+            ^///?}
                 BOATS.computeIfAbsent(event.getLevel(), level -> new MapMaker().weakKeys().<Entity, Integer>makeMap())
                         .put(boat, boat.tickCount);
             }
         });
-        EntityLeaveLevelEvent.BUS.addListener((EntityLeaveLevelEvent event) -> {
+        ForgeBus.listen(EntityLeaveLevelEvent.class, event -> {
             Map<Entity, Integer> boats = BOATS.get(event.getLevel());
             if (boats != null) {
                 boats.remove(event.getEntity());
             }
         });
-        TickEvent.LevelTickEvent.Post.BUS.addListener((TickEvent.LevelTickEvent.Post event) -> {
+        ForgeBus.listen(TickEvent.LevelTickEvent.Post.class, event -> {
+            //? if >=1.21.10 {
             Map<Entity, Integer> boats = BOATS.get(event.level());
+            //?} else {
+            /^Map<Entity, Integer> boats = BOATS.get(event.level);
+            ^///?}
             if (boats == null) {
                 return;
             }

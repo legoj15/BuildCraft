@@ -6,7 +6,8 @@
 package buildcraft.platform.forge;
 
 //? if forge {
-/*import net.minecraftforge.fml.event.config.ModConfigEvent;
+/*import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 import buildcraft.platform.config.ConfigHooks;
 
@@ -14,18 +15,20 @@ import buildcraft.platform.config.ConfigHooks;
  * {@link ConfigHooks} on MinecraftForge: listeners on the mod bus group for {@code ModConfigEvent.Loading} and
  * {@code Reloading}, filtered to the spec, as the NeoForge twin does on its bus.
  *
- * <p>On Forge's EventBus 7 those events are records reached through their own {@code getBus(BusGroup)}, not an
- * {@code addListener} on a shared bus object. Forge loads a config in its config-load phase, after the mod constructors
+ * <p>The listeners go on the mod bus through {@link ForgeBus#listenMod} (EventBus 7's per-event bus in the mod's group,
+ * EventBus 6's mod bus on 1.21.1). Forge loads a config in its config-load phase, after the mod constructors
  * have run, so a listener subscribed while the constructor runs hears the first load and there is nothing to replay
  * (the Fabric twin has to, as its library reads the file inside the register call).
  *
- * <p>As on NeoForge, {@code Reloading} can fire on any thread (it follows a change of the file on disk).
+ * <p>As on NeoForge, {@code Reloading} can fire on any thread (it follows a change of the file on disk). A spec whose
+ * config is not loaded is not acted on: Forge's file watcher can deliver a reload after the config was closed (seen on
+ * 1.21.1 as a fresh run's corrected file triggered it while the server shut down), and reading a value then throws.
  *^/
 public final class ForgeConfigHooks implements ConfigHooks {
 
     @Override
     public void onLoad(Object spec, Runnable action) {
-        ModConfigEvent.Loading.getBus(ForgeModBus.group()).addListener((ModConfigEvent.Loading event) -> {
+        ForgeBus.listenMod(ModConfigEvent.Loading.class, event -> {
             Object loaded = event.getConfig().getSpec();
             if (loaded == spec) {
                 action.run();
@@ -35,9 +38,9 @@ public final class ForgeConfigHooks implements ConfigHooks {
 
     @Override
     public void onReload(Object spec, Runnable action) {
-        ModConfigEvent.Reloading.getBus(ForgeModBus.group()).addListener((ModConfigEvent.Reloading event) -> {
+        ForgeBus.listenMod(ModConfigEvent.Reloading.class, event -> {
             Object reloaded = event.getConfig().getSpec();
-            if (reloaded == spec) {
+            if (reloaded == spec && ((ForgeConfigSpec) spec).isLoaded()) {
                 action.run();
             }
         });

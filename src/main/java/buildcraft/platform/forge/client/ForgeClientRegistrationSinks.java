@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

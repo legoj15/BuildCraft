@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import java.util.List;
 
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;

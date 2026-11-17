@@ -174,7 +174,8 @@ state.isFlammable(level, pos, face)`), not BuildCraft's hook, which Forge never 
 ## Client on Forge (F6)
 
 The six client holders of `ClientPlatform` are `platform/forge/client/Forge<Seam>`; client mixins are in
-`platform/forge/mixin/client`, listed in the config's `client` array (so a dedicated server never loads them). No access
+`platform/forge/mixin/client`, listed in the config's `client` array (so a dedicated server never loads them). The slice is
+26.3 code: its 19 files are whole-file `forge && >=1.21.10`, so `1.21.1-forge` compiles none of them (see F7b). No access
 transformer line was added: what Forge's own AT leaves private is reached through accessor and invoker mixins, so the
 shared `accesstransformer.cfg` (read raw by every NeoForge node too) is untouched.
 
@@ -304,8 +305,9 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 | F3c | **Done.** The Forge mixins and routes for the hooks Forge 26.3 lacks (table under "Mixins on Forge") | `:26.3-forge:runServer` boots with every mixin applied |
 | F4 | **Done.** Resources: `mods.toml`, `pack.mcmeta`, access transformer check, `DataForge.kt`, jar, dedicated server boots to Done | `:26.3-forge:runServer` |
 | F5 | **Done.** Game tests on Forge; `LoaderTestEvents` forge arms; the run is in `nodeVerification` | `:26.3-forge:runGameTest` green: all 948 registered tests pass, 7 client-class tests not registered (see "Game tests on Forge (F5)") |
-| F6 | **Done to boot.** Client seams, models, renderers; dev client reaches the title screen and a world (see "Client on Forge (F6)") | smoke runner on `26.3-forge` (run 2026-11-16, see "Smoke on Forge") |
-| F7 | `1.21.1-forge` (EventBus 6 arm, 1.21.1 client shapes, `ForgeChunkManager` or vanilla tickets) | same gates on that node |
+| F6 | **Done to boot on 26.3-forge.** Client seams, models, renderers; the dev client reaches the title screen and a world (see "Client on Forge (F6)"). On `1.21.1-forge` the whole slice is compiled out (whole-file `forge && >=1.21.10`) | smoke runner on `26.3-forge` (not run in F6; the boot was checked by hand) |
+| F7 | **Server side done.** `1.21.1-forge`: EventBus 6 arm of `ForgeBus`, 1.21.1 event and API shapes, plain-Mixin arms, data down-ports, vanilla tickets (see "The 1.21.1 line (F7)") | `:1.21.1-forge:nodeVerification` green: boot clean, all 948 game tests pass |
+| F7b | **Not started.** The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders): the six holders throw `not ported (#209)` there until it lands | smoke runner on `1.21.1-forge` |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
 
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
@@ -385,6 +387,120 @@ dedicated server refuses a client class ("Attempted to load class ... for invali
 Forge client game test (F6). No other test had to be left out: none of them needs JEI, REI or Curios, and the FallingTree ones
 pass without the mod, as on the other nodes (`-PwithFallingTree` is not wired on Forge).
 
+## The 1.21.1 line (F7): `1.21.1-forge`
+
+Forge 52.1.21 on Minecraft 1.21.1, Java 21, EventBus 6 (`versions/1.21.1-forge/gradle.properties`; player minimum
+`[52.1.0,53)`). Server side done: `:1.21.1-forge:nodeVerification` is green (compile, transformed resources, jar
+`BuildCraftRedux-<v>+mc1.21.1-forge.jar`, `runGameTest`), `:1.21.1-forge:runServer` boots to Done with no BuildCraft
+warning or error. No client yet (F7b, below). Forge 52 runs Mojang's official names in dev and in production, so there is no
+reobfuscation here either, and the access transformer is written in official names (the 1.21.1 horse line is proof: the
+compile and `entity_item_storage_living_fallback` both read the field it opens).
+
+**The bus (EventBus 6).** `platform/forge/ForgeBus` is the only file that names a bus; every listener and post in
+`platform/forge` and the Forge test arms goes through it, so a file's version arms are about event shapes alone.
+
+- `listen` / `listen(order)` → `MinecraftForge.EVENT_BUS.addListener(priority, false, type, consumer)`: a plain listener
+  never sees a cancelled event, as an EventBus 7 one does not.
+- `refuse` wraps the predicate in a consumer that calls `setCanceled(true)`; `monitor` is `MONITOR` priority with
+  `receiveCanceled = true`, handed `isCanceled()`; `post` answers `EVENT_BUS.post`, which is whether it ended cancelled.
+- `listenRemovable` / `refuseRemovable(type[, order], ...)` register a fresh consumer object and return
+  `EVENT_BUS.unregister(thatObject)` (EventBus 6 keys a lambda listener by the object).
+- `listenMod` and `register(DeferredRegister)` use `ForgeModBus.bus()`, the context's mod `IEventBus` (a `BusGroup` on
+  EventBus 7). `listenCreativeTabsLow` exists because `BuildCreativeModeTabContentsEvent` is a mod-bus event on 1.21.1 and a
+  game-bus one on 26.x.
+- `attachCapabilities(kind, listener)` (1.21.1 only) is `addGenericListener(kind, ..., AttachCapabilitiesEvent.class, ...)`:
+  EventBus 6 has one generic `AttachCapabilitiesEvent<T>` told apart by the object's class, where 26.x has a subclass per kind.
+- A subclass event reaches its parent's listeners on EventBus 6, so the placement listeners (product and tests) listen on
+  `EntityPlaceEvent` alone there; EventBus 7 gives `EntityMultiPlaceEvent` its own bus and needs both.
+- Test-side annotations: `@SubscribeEvent` is `net.minecraftforge.eventbus.api.SubscribeEvent` on 1.21.1 and
+  `...api.listener.SubscribeEvent` on 26.x; `@Mod.EventBusSubscriber(bus = MOD)` is the same on both.
+
+**Per-line differences that cost an arm** (all `//? if >=1.21.10` inside the Forge files unless named):
+
+| Area | 1.21.1 (Forge 52) | Where |
+|---|---|---|
+| Events | Classes with getters and public fields (`TickEvent.*.Pre/Post` with `level` / `player`, `getServer()`), the spawn reason is `MobSpawnType`, a dig speed's position is an `Optional`, use results are `Event.Result`; the entity click is `PlayerInteractEvent.EntityInteract` (26.3: `EntityInteractSpecific`) | `ForgeGameHooks`, `ForgeLifecycleHooks`, `ForgeProtection`, `LoaderTestEvents` |
+| Burn time | `ForgeHooks.getBurnTime(stack, null)`. `ItemStack#getBurnTime` is the item's own override alone, -1 for every vanilla fuel (found by `engine_stirling_fuel` / `engine_stirling_lava_bucket`) | `ForgeVanillaExtensions.burnTime` |
+| Living-entity items | Forge's stock `CombinedInvWrapper` is hands plus HUMANOID and ANIMAL armour (7 slots) on 1.21.1 as on 26.3, so the swap to `ForgeVanillaHandlers.equipment` (hands and humanoid armour) runs on both; the equippability check is 1.21.10+, as NeoForge 1.21.1's wrappers take any item (found by `entity_item_storage_living_fallback`) | `ForgeTransfer.findItem`, `ForgeVanillaHandlers` |
+| Fluids | Forge 52's entity physics already asks each `FluidType`, so the water-like flag needs no mixin; `FlowingFluid` methods take a `Level` (`tick`, `getSpread`, `getNewLiquid`); `ForgeFluidPhysics` is whole-file `forge && >=1.21.10` | `ForgeFlowingFluids`, `ForgeBoatFluids` (`vehicle.Boat`) |
+| Recipes | Vanilla 1.21.1 syncs every recipe, so `ForgeRecipeSync` is whole-file `forge && >=1.21.10` and `syncRecipeTypes` is 1.21.10+; the components ingredient has no `IIngredientSerializer.simple` (codec and stream codec by hand) and shows the variant stacks themselves | `ForgeGameHooks`, `ForgeCraftingServices` |
+| Saved data | Written synchronously inside `DimensionDataStorage.save`, so `awaitSavedDataWrites` is a no-op; no level-aware saved data (a 26.1+ seam) | `ForgeVanillaExtensions` |
+| Crafting remainder | `stack.getCraftingRemainingItem()` | `ForgeVanillaExtensions.craftingRemainder` |
+| Custom data | `CustomData.contains` is public | `ForgeVanillaExtensions` |
+| Fake players | No `setPermanentlyInvulnerable` (refuse every damage source, as NeoForge 1.21.1's `FakePlayer`), `startRiding(Entity, boolean)`, `send(Packet, PacketSendListener)`, `invulnerableTime` is a field, no `recentKineticEnemies`; `displayClientMessage(msg, true)` for the action bar | `ForgeFakePlayers` |
+| Chunk tickets | `ForgeChunkManager` still exists, but the vanilla route (`TicketType.create`, `addRegionTicket`, unsaved) is kept so both lines behave alike and the owner probe holds | `ForgeChunkTickets` |
+| Horse | `animal.horse.AbstractHorse`; the patch sets its handler in `createInventory`, but the container is still read directly (one path) | `ForgeTransfer`, AT line |
+| Loader | `ModList.get()` is an instance; biome builder `getGenerationSettings()`; `IForgeEntity#onRemovedFromWorld` (EntityRobot) | `ForgeLoaderServices`, `ForgeAllBiomesFeatureModifier`, `EntityRobot` |
+| Config | Forge's file watcher can deliver a reload after the config closed at shutdown ("Cannot get config value before config is loaded" on a fresh run dir): `onReload` acts only for `spec.isLoaded()` | `ForgeConfigHooks` |
+| Registries | `NamespacedWrapper`'s lookups are `getHolder(ResourceLocation)` / `getHolder(ResourceKey)`; `key.location()` | `NamespacedWrapperMixin` |
+
+**Mixins.** Forge 52 ships Mixin 0.8.7 and no MixinExtras. The config lists the same 13 names on both lines; the 1.21.1 dev
+run declares it with `--mixin.config` as on 26.3, and the boot's debug log shows 11 applied (the other two target classes a
+dedicated server never loads during a boot).
+
+- Empty 1.21.1 arms (an empty `@Mixin` on the same target, each with its reason): `EntityFluidInteractionMixin`,
+  `EntityFluidTrackerAccessor`, `EntityMixin`, `FloatGoalMixin`, `SwimMixin` (Forge 52 answers through the fluid type),
+  `SavedDataStorageMixin`, `ServerChunkCacheMixin` (no level-aware saved data before 26.1),
+  `ServerGamePacketListenerImplMixin` (1.21.1 has `IForgeBlock#getCloneItemStack` with the player).
+- Plain-Mixin arms: `AnvilMenuMixin` (`@Redirect` on `canEnchant`; extends `ItemCombinerMenu` for `player`, and the holder
+  comes from the enchantment registry's `wrapAsHolder`), `EnchantCommandMixin` (static `@Redirect` that captures the target
+  method's arguments, the holder among them), `LevelChunkMixin` (`@Redirect` on `onLoad`), `NamespacedWrapperMixin`
+  (`getHolder` targets). `ServerPlayerMixin` is the same on both.
+
+**Data composition.** `processResources` runs the same down-ports as `bc.neoforge` and `bc.fabric` before the Forge
+transform: `DataDownportPre263` (loot and advancements), then on 1.21.1 `DataDownport1211` (recipes, advancement
+backgrounds, classic `models/item` files), then `DataForge`. `DataForge` step 5 renames the classic model loaders
+(`neoforge:fluid_container` → `forge:fluid_container`, `neoforge:separate_transforms` → `forge:separate_transforms`; Forge 52
+registers both with the same fields) and the components-ingredient rewrite also reads the down-port's `"type"` key (step 4,
+the `items/` rewrite to `buildcraftunofficial:fluid_container`, runs on this line too and is inert: 1.21.1 reads no `items/`
+file). Pack
+format: `"pack_format": 34`. Forge-only data in `src/main/resources-forge`: `data/c/tags/item/cobblestones/normal.json`
+(Forge 52's tags do not fill `c:cobblestones/normal`; without it the structure-pipe recipe was dead), with
+`#forge:cobblestone/normal` optional. `processTestResources` down-ports the fixture recipes too.
+
+**Game tests on 1.21.1.** `:1.21.1-forge:runGameTest`: all 948 registered tests pass ("All 948 required tests passed"; 1.21.1
+ships no `minecraft:always_pass`), the same 948 as 26.3-forge, in about 33 s of tests. Wiring:
+
+- 1.21.1 has no `TEST_FUNCTION` registry. Forge posts `net.minecraftforge.event.RegisterGameTestsEvent` on the mod buses
+  (`ForgeGameTestHooks.registerGametests`, when `forge.enableGameTest` / `forge.gameTestServer` is set, which the
+  `gameTestServer` run's `Main` does). `platform/forge/ForgeGameTestHooks` answers it with the shared
+  `LegacyGameTestRegistry.registerAll()` (the NeoForge and Fabric 1.21.1 hooks' call), which adds `TestFunction`s against the
+  `buildcraftunofficial:empty` arena and reads each manifest's batch and `max_ticks`. `FMLConstructModEvent` registers
+  `TestOnlyBlocks` (under `forge.gameTestServer`) and `CapabilityOnlyCart.registerLookup()` (a generic
+  `AttachCapabilitiesEvent<Entity>` listener there).
+- `-PbcTests=<glob>` becomes `-Dbuildcraft.gameTestFilter` (1.21.1's server has no `--tests`), as on NeoForge 1.21.1.
+- The pass check and the assembled one-mod directory are F5's, unchanged.
+
+**F7b, the 1.21.1 client (not started).** The F6 client slice is 26.3 code (EventBus 7, the 26.x render and model
+classes), so on this node it is compiled out and its holders throw. What is gated, and how:
+
+- Every file of `platform/forge/client/**` (11) and `platform/forge/mixin/client/**` (8) is whole-file
+  `//? if forge && >=1.21.10 {` (no other directive in them), as `ForgeRecipeSync` is: the class files do not exist on
+  `1.21.1-forge` (not in `build/sourceSets/main`, not in the jar). The 26.3 node compiles them unchanged.
+- The six holders of `ClientPlatform` keep their Forge arm as a flat chain, `elif forge && >=1.21.10` (the implementation)
+  then `elif forge` (throws `forge: <Seam> not ported (#209)`), so a 1.21.1 Forge dev client fails at its first
+  `ClientPlatform` call with that message, and a dedicated server never reaches it. The chain is flat, not a version
+  directive nested in the loader arm: a nested chain needs the inner directive to be the first line inside an inactive arm's
+  block comment, which no file in the tree does.
+- The mixin config is one shared file, `src/main/resources-forge/buildcraftunofficial.forge.mixins.json`, with its
+  `"client"` list. `processResources` on a node below 1.21.10 removes that list after the copy
+  (`DataForge.dropClientMixins`, called from `bc.forge`), so the 1.21.1 jar's config names no mixin it lacks; 26.3's is the
+  file as written. A new client mixin goes into the shared list and is gated like the others.
+- Nothing common calls into the client slice: `ForgeRecipeSync.addClientListener` (whole-file `forge && >=1.21.10`) is
+  reached only from `ForgeClientHooks`, and `ForgeFlowingFluids.Type#attachClientExtensions` compiles on both lines and is
+  reached only from `ForgeClientRegistrationSinks`, so neither needed an arm.
+- `DataForge` serves both: step 4 rewrites the 31 `items/` definitions to `buildcraftunofficial:fluid_container` on every
+  line (1.21.1 never reads `items/`), and step 5 still renames the down-port's classic `models/item` loaders to Forge's own
+  on 1.21.1.
+
+The client slice needs, at least: the 1.21.1 render layer (BCLib's `RenderStateShard`-based types: the three shards are
+already opened in the access transformer), model registration and baking through Forge 52's model events (their 1.21.1
+shapes are not checked yet), menu screens and key mappings on EventBus 6, item tints (and a 1.21.1 answer for the fluid
+container: `ForgeFluidContainerModel` is an item-model type, a 1.21.4+ shape, so the classic `forge:fluid_container` model
+file step 5 leaves is the candidate), the `LoggingOut` clear, and a client game-test or smoke run. A file ported to
+1.21.1 replaces its whole-file `forge && >=1.21.10` with per-version arms, and its mixin joins the node's list. JEI and REI
+stay off this node (no `jei_version` / `rei_version`; JEI has a Forge 1.21.1 build, wiring it is F8).
+
 ## Common-code loader forks (F3b)
 
 Every loader-keyed directive outside `platform/` was walked (`//? if neoforge`, `fabric`, `forge`, bare elses). Evidence
@@ -421,9 +537,8 @@ the call site in its `patches/`.
 - The gitignored release tool rejects any node whose loader is not neoforge or fabric, so it must learn `forge`
   (or skip it) before this branch merges to main, or the next NeoForge/Fabric release run fails at enumeration.
 
-- 1.21.1 mixin declaration: the 26.3 answer is below under "Mixins"; check the same two paths on 1.21.1 (Forge 52's
-  Mixin and FML differ) when F7 starts.
-- Access transformer name form on 1.21.1 (official expected since Forge 50; the Forge docs still say SRG).
+- 1.21.1 mixin declaration: the dev run's `--mixin.config` is measured (F7); the jar manifest's `MixinConfigs` on an installed
+  Forge 52 is the same unproven item as on 26.3 (below).
 - Production-install proof of the two F4 runtime declarations: the jar manifest `MixinConfigs` and the shipped
   `META-INF/accesstransformer.cfg` are read by FML in an installed Forge, but only the dev-run equivalents were booted
   (a Forge server install is a download). Boot the collected jar in `mods/` of a real install before anything ships.

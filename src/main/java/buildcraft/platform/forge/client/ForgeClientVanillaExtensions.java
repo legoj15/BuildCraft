@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;

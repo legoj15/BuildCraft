@@ -11,8 +11,12 @@ package buildcraft.platform.forge.mixin;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
+//? if >=1.21.10 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+//?} else {
+/^import org.spongepowered.asm.mixin.injection.Redirect;
+^///?}
 
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -39,11 +43,13 @@ import buildcraft.platform.hook.LevelLifecycleBlockEntity;
  * <p><b>Injection point.</b> The one {@code onLoad} call in {@code addAndRegisterBlockEntity}, wrapped so the original
  * runs for any other block entity. {@code onLoad} is {@code IForgeBlockEntity}'s default method, and the call's owner in
  * the bytecode is {@code BlockEntity}, the receiver's type. The block entity's level is the chunk's: {@code setBlockEntity}
- * set it just before.
+ * set it just before. Forge 1.21.1's patch makes the same call in the same method; with no MixinExtras there, it is
+ * redirected (plain Mixin) and the original is called directly.
  *^/
 @Mixin(LevelChunk.class)
 abstract class LevelChunkMixin {
 
+    //? if >=1.21.10 {
     @WrapOperation(method = "addAndRegisterBlockEntity", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/BlockEntity;onLoad()V"))
     private void buildcraft$joinAtTheNextBlockEntityTick(BlockEntity blockEntity, Operation<Void> original) {
@@ -54,5 +60,17 @@ abstract class LevelChunkMixin {
             original.call(blockEntity);
         }
     }
+    //?} else {
+    /^@Redirect(method = "addAndRegisterBlockEntity", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/entity/BlockEntity;onLoad()V"))
+    private void buildcraft$joinAtTheNextBlockEntityTick(BlockEntity blockEntity) {
+        Level level = blockEntity.getLevel();
+        if (blockEntity instanceof LevelLifecycleBlockEntity && level != null) {
+            level.addFreshBlockEntities(List.of(blockEntity));
+        } else {
+            blockEntity.onLoad();
+        }
+    }
+    ^///?}
 }
 *///?}

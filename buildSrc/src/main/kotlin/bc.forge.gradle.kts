@@ -1,5 +1,5 @@
 // The MinecraftForge half of the per-node build: applied by build.gradle.kts as `bc.$loader` on every node whose `loader` is
-// forge (today only 26.3-forge). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
+// forge (26.3-forge and 1.21.1-forge today). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
 // different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
 //
 // Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
@@ -8,12 +8,16 @@
 // Forge twin); the shared game tests run through `runGameTest` (slice F5, below), which nodeVerification runs.
 // Its share of the root fullTestSuite is the compile, the transformed resources, the collected jar and the game tests.
 //
-// Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
-// directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
+// Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), and Forge 52 (1.21.1) runs them too in dev and in
+// production, so the shared source compiles against Forge directly and there is no reobfuscation step on either line: the
+// mappings line only tells the mavenizer which names to build Forge in. The two lines differ in the event bus (EventBus 7 on
+// 26.x, EventBus 6 on 1.21.1), which platform.forge.ForgeBus hides, and in the 1.21.1 data down-ports below.
 // ForgeGradle builds that patched Minecraft+Forge artifact itself, on demand, through the repositories below.
 
 import buildcraft.gradle.AppendingLogStream
 import buildcraft.gradle.AssembleGameTestMod
+import buildcraft.gradle.DataDownport1211
+import buildcraft.gradle.DataDownportPre263
 import buildcraft.gradle.DataForge
 import buildcraft.gradle.FabricGameTests
 import buildcraft.gradle.WithMods
@@ -27,6 +31,10 @@ plugins {
 }
 
 // Per-node values, resolved from versions/<node>/gradle.properties (inheriting root gradle.properties).
+// The MC-line flags build.gradle.kts worked out from Stonecutter (the 1.21.1 line needs the data down-ports below).
+val bcNode = extensions.getByType<buildcraft.gradle.BcNode>()
+val isPre26_3 = bcNode.isPre26_3
+val isPre1_21_10 = bcNode.isPre1_21_10
 val minecraftVersion = property("minecraft_version") as String
 val forgeVersion = property("forge_version") as String
 val modVersion = property("mod_version") as String
@@ -68,10 +76,11 @@ minecraft {
     // Mojang's official names, which the shared source is written in (and which Forge runs on, see the header).
     mappings("official", minecraftVersion)
 
-    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:26.3-forge:runServer` and `runClient`.
+    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:<node>:runServer` and `runClient` (the
+    // 1.21.1-forge client is not wired yet: its client platform holders still throw).
     // Both carry the switches every BC run has: the dev workspace flag (BCLib.DEV-gated affordances: debug logging, the
     // /bcsoundtest command) and `-PbcDebug[=tier]` for BCDebugging. A Forge dev run loads no recipe viewer (neither JEI nor
-    // REI has a Forge build for 26.3), so there is no recipe_viewer switch.
+    // REI has a Forge build for 26.3; JEI has one for 1.21.1, not wired yet), so there is no recipe_viewer switch.
     runs {
         configureEach {
             workingDir.convention(layout.projectDirectory.dir("run"))
@@ -108,9 +117,14 @@ minecraft {
         register("gameTestServer") {
             workingDir.set(gameTestRunDir)
             // Optional filter, as on the other nodes: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's own `--tests` selector,
-            // a namespaced glob against the test_instance registry).
+            // a namespaced glob against the test_instance registry). 1.21.1's server has no `--tests` and runs every registered
+            // TestFunction, so there the glob rides a system property and LegacyGameTestRegistry applies it, as on NeoForge.
             if (bcTests != null) {
-                args("--tests", bcTests)
+                if (!isPre1_21_10) {
+                    args("--tests", bcTests)
+                } else {
+                    systemProperty("buildcraft.gameTestFilter", bcTests)
+                }
             }
             // -PbcGameTestTrace logs every test's start and end (buildcraft.lib.test.GameTestTrace): the way to name the tests
             // in flight when a product exception in a level tick crashes the server.
@@ -154,7 +168,7 @@ sourceSets {
             srcDir(rootProject.file("src/main/resources-forge"))
             exclude("META-INF/neoforge.mods.toml")
             // The Curios/Accessories slot tags (and the Curios entity assignment under BC's own namespace) put the goggles
-            // in a slot those mods own; neither has a Forge 26.3 build and ForgeAccessorySlots never looks, so the jar does
+            // in a slot those mods own; ForgeAccessorySlots never looks (and neither has a Forge 26.3 build), so the jar does
             // not advertise a slot BC does not read. (bc.fabric leaves the inert data/buildcraftunofficial/curios in.)
             exclude("data/accessories/**", "data/curios/**", "data/*/accessories/**", "data/*/curios/**")
         }
@@ -184,6 +198,8 @@ dependencies {
     // jsr305's javax.annotation (@Nullable/@Nonnull, used throughout BC) along, as ModDevGradle does on NeoForge, so the
     // compile-only line bc.fabric needs for it is not repeated here.
     implementation(minecraft.dependency("net.minecraftforge:forge:$minecraftVersion-$forgeVersion"))
+    // jspecify's @Nullable/@NonNull: Minecraft brings it from 1.21.11; the 1.21.1 compile needs it named (as on bc.fabric).
+    if (bcNode.isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")
 
     // Open Parties and Claims' server API, which lib.compat.claims.OpenPartiesAndClaims names behind a loaded-mod check:
     // compile-only against the jar this node's `withmod.opac` alias names, as bc.neoforge and bc.fabric do.
@@ -198,10 +214,11 @@ tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 tasks.named("test") { enabled = false }
 
 // ─── Game tests (F5) ─────────────────────────────────────────────────────────
-// `:26.3-forge:runGameTest` runs the SAME game-test bodies the NeoForge and Fabric nodes run, on Forge's own game-test server.
+// `:<node>:runGameTest` runs the SAME game-test bodies the NeoForge and Fabric nodes run, on Forge's own game-test server.
 // - The tests are part of BuildCraft's mod, not a second mod: test_instance manifests, structures and BuildCraft's classes are
 //   one pack, and platform/forge/ForgeGameTestHooks (an automatic @Mod.EventBusSubscriber) calls
-//   BuildCraftGameTests.register from FMLConstructModEvent. Forge finds a mod in dev by the META-INF/mods.toml of a classpath
+//   BuildCraftGameTests.register from FMLConstructModEvent (on 1.21.1, which has no dynamic test registry, it registers the
+//   test-only blocks there and feeds vanilla's GameTestRegistry from RegisterGameTestsEvent). Forge finds a mod in dev by the META-INF/mods.toml of a classpath
 //   directory (there is no way to say "these two directories are one mod": FG7's `mods { sources(a, b) }` is not read by
 //   this FML), and Java refuses two modules that both hold buildcraft.transport.block ("Modules buildcraftunofficial and test
 //   export package ..."), which the tests, sharing packages with the code they test, would be. So the test run's classpath
@@ -229,6 +246,11 @@ tasks.named<ProcessResources>("processTestResources") {
     inputs.files(registrar).optional()
     doLast {
         FabricGameTests.dropUnregisteredManifests(destinationDir, registrar.first { it.isFile })
+    }
+    // The cycle-output tests' fixture recipes are in the modern format, which 1.21.1's ingredient codec rejects: the same
+    // down-port bc.neoforge and bc.fabric run on their test resources.
+    if (isPre1_21_10) {
+        doLast { DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe")) }
     }
 }
 
@@ -287,9 +309,32 @@ tasks.named<ProcessResources>("processResources") {
     }
     // A file present in both resource trees is a mistake, not something to drop silently.
     duplicatesStrategy = DuplicatesStrategy.FAIL
+    // The loot/advancement down-port every pre-26.3 node applies (26.3 only validates), and the 1.21.1 recipe, advancement and
+    // item-model one, exactly as bc.neoforge and bc.fabric run them, and BEFORE the Forge transform, which expects their
+    // output (on 1.21.1 the fluid-container models it rewrites are the classic models/item files the down-port wrote).
+    // Constant branches: a doLast must not capture the script-level flag (configuration cache).
+    if (isPre26_3) {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), true) }
+    } else {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), false) }
+    }
+    if (isPre1_21_10) {
+        doLast {
+            DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
+            DataDownport1211.downportAdvancementBackground1211(destinationDir.resolve("data/buildcraftunofficial/advancement"))
+            DataDownport1211.generateOldItemModels1211(
+                destinationDir.resolve("assets/buildcraftunofficial/items"),
+                destinationDir.resolve("assets/buildcraftunofficial/models/item")
+            )
+        }
+    }
+    // The client mixins (platform/forge/mixin/client) are whole-file `forge && >=1.21.10`: a node below that ships a config
+    // without their list. A constant branch, like the down-ports above (a doLast must not capture the script-level flag).
+    if (isPre1_21_10) {
+        doLast { DataForge.dropClientMixins(destinationDir.resolve("buildcraftunofficial.forge.mixins.json")) }
+    }
     // The NeoForge -> Forge data transform (conditions, components ingredients, biome modifiers, fluid_container item
-    // models), then the guard that nothing NeoForge-keyed is left. No down-port runs first: 26.3 is the line BC's data is
-    // authored for (a 1.21.1 Forge node would run DataDownport1211 here, as bc.neoforge and bc.fabric do).
+    // models), then the guard that nothing NeoForge-keyed is left.
     doLast {
         DataForge.apply(destinationDir)
         DataForge.verifyNoNeoForgeData(destinationDir)

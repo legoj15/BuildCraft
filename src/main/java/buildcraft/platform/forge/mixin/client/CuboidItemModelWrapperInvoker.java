@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import java.util.List;
 
 import org.joml.Matrix4fc;

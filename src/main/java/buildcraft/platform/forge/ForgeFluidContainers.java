@@ -20,7 +20,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+//? if >=26.3 {
 import net.minecraft.util.Prediction;
+//?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -93,7 +95,11 @@ final class ForgeFluidContainers {
             return;
         }
         installed = true;
-        AttachCapabilitiesEvent.ItemStacks.BUS.addListener((AttachCapabilitiesEvent.ItemStacks event) -> {
+        //? if >=1.21.10 {
+        ForgeBus.listen(AttachCapabilitiesEvent.ItemStacks.class, event -> {
+        //?} else {
+        /^ForgeBus.attachCapabilities(ItemStack.class, event -> {
+        ^///?}
             ItemStack stack = event.getObject();
             Item item = stack.getItem();
             DrainOnly drainOnly = DRAIN_ONLY.get(item);
@@ -295,7 +301,11 @@ final class ForgeFluidContainers {
     /^* Gives {@code stack} to the inventory, dropping what does not fit (lib's {@code EntityUtil.dropOverflow}). ^/
     private static void giveOrDrop(Player player, ItemStack stack) {
         if (!stack.isEmpty() && !player.getInventory().add(stack)) {
+            //? if >=26.3 {
             player.drop(stack, false, Prediction.SERVER_ONLY);
+            //?} else {
+            /^player.drop(stack, false);
+            ^///?}
         }
     }
 

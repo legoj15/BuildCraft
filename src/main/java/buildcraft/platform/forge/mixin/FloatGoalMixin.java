@@ -7,6 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.injection.At;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -41,4 +42,13 @@ abstract class FloatGoalMixin {
                 : original.call(mob, depth, tag);
     }
 }
+//?} else {
+/^import net.minecraft.world.entity.ai.goal.FloatGoal;
+
+// Forge 1.21.1's FloatGoal ORs in canSwimInFluidType, which answers from the fluid type's own swim flag.
+// Empty, so the mixin config names the same classes on both Forge lines.
+@Mixin(FloatGoal.class)
+abstract class FloatGoalMixin {
+}
+^///?}
 *///?}

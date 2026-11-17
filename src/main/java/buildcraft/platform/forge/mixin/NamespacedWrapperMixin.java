@@ -41,6 +41,9 @@ import net.minecraftforge.registries.ForgeRegistry;
  * named as a string because the wrapper is package-private; the class is Forge's, hence {@code remap = false}.
  *
  * <p>NeoForge's {@code containsKey} does not follow aliases and Forge's does; that is left as Forge has it.
+ *
+ * <p><b>1.21.1.</b> The two lookups are the wrapper's {@code getHolder(id)} and {@code getHolder(key)} there (vanilla
+ * renamed them {@code get} in 1.21.2); the injections are the same.
  *^/
 @Mixin(targets = "net.minecraftforge.registries.NamespacedWrapper", remap = false)
 abstract class NamespacedWrapperMixin<T> {
@@ -52,8 +55,13 @@ abstract class NamespacedWrapperMixin<T> {
     @Final
     private Map<Identifier, Holder.Reference<T>> holdersByName;
 
+    //? if >=1.21.10 {
     @Inject(method = "get(Lnet/minecraft/resources/Identifier;)Ljava/util/Optional;", at = @At("RETURN"),
             cancellable = true)
+    //?} else {
+    /^@Inject(method = "getHolder(Lnet/minecraft/resources/Identifier;)Ljava/util/Optional;", at = @At("RETURN"),
+            cancellable = true)
+    ^///?}
     private void buildcraft$aliasedHolderById(Identifier id, CallbackInfoReturnable<Optional<Holder.Reference<T>>> cir) {
         if (cir.getReturnValue().isEmpty() && id != null) {
             Holder.Reference<T> holder = buildcraft$resolveAlias(id);
@@ -63,11 +71,20 @@ abstract class NamespacedWrapperMixin<T> {
         }
     }
 
+    //? if >=1.21.10 {
     @Inject(method = "get(Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;", at = @At("RETURN"),
             cancellable = true)
+    //?} else {
+    /^@Inject(method = "getHolder(Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;", at = @At("RETURN"),
+            cancellable = true)
+    ^///?}
     private void buildcraft$aliasedHolderByKey(ResourceKey<T> key, CallbackInfoReturnable<Optional<Holder.Reference<T>>> cir) {
         if (cir.getReturnValue().isEmpty() && key != null) {
+            //? if >=1.21.10 {
             Holder.Reference<T> holder = buildcraft$resolveAlias(key.identifier());
+            //?} else {
+            /^Holder.Reference<T> holder = buildcraft$resolveAlias(key.location());
+            ^///?}
             if (holder != null) {
                 cir.setReturnValue(Optional.of(holder));
             }

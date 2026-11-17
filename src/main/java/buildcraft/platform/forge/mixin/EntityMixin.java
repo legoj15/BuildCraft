@@ -7,6 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -80,4 +81,13 @@ abstract class EntityMixin {
         }
     }
 }
+//?} else {
+/^import net.minecraft.world.entity.Entity;
+
+// Forge 1.21.1's Entity already asks the fluid type where 26.x reads the water tag (see EntityFluidInteractionMixin).
+// Empty, so the mixin config names the same classes on both Forge lines.
+@Mixin(Entity.class)
+abstract class EntityMixin {
+}
+^///?}
 *///?}

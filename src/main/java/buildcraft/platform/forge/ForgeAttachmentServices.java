@@ -18,11 +18,13 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+//? if >=1.21.10 {
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
+//?}
 
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
@@ -42,7 +44,8 @@ import buildcraft.platform.registry.BCAttachmentRegistrar;
  * one capability provider ({@link Slots}) that BuildCraft attaches to each player, and Forge saves it with the entity
  * under its {@code ForgeCaps} key. The payload is the compound its own save method writes, written and read with the
  * registries of the save in progress (the same {@code TagValueOutput}/{@code TagValueInput} route as
- * {@code FabricAttachmentServices}), so a world saved on Forge does not move to the other loaders.
+ * {@code FabricAttachmentServices}; on 1.21.1 the payload's own NBT methods), so a world saved on Forge does not move to
+ * the other loaders.
  *
  * <p><b>Players only.</b> Forge fires its attach event for every entity created, and a provider on all of them costs an
  * allocation (and a capability dispatcher) per item entity and experience orb for attachments that are only ever read
@@ -96,8 +99,12 @@ public final class ForgeAttachmentServices implements AttachmentServices {
         }
         if (!listening) {
             listening = true;
-            AttachCapabilitiesEvent.Entities.BUS.addListener(ForgeAttachmentServices::attach);
-            PlayerEvent.Clone.BUS.addListener(ForgeAttachmentServices::copyToClone);
+            //? if >=1.21.10 {
+            ForgeBus.listen(AttachCapabilitiesEvent.Entities.class, ForgeAttachmentServices::attach);
+            //?} else {
+            /^ForgeBus.attachCapabilities(Entity.class, ForgeAttachmentServices::attach);
+            ^///?}
+            ForgeBus.listen(PlayerEvent.Clone.class, ForgeAttachmentServices::copyToClone);
         }
     }
 
@@ -105,7 +112,11 @@ public final class ForgeAttachmentServices implements AttachmentServices {
         return DEFINITIONS.get(id);
     }
 
+    //? if >=1.21.10 {
     private static void attach(AttachCapabilitiesEvent.Entities event) {
+    //?} else {
+    /^private static void attach(AttachCapabilitiesEvent<Entity> event) {
+    ^///?}
         if (event.getObject() instanceof Player) {
             // No invalidation listener on purpose: Forge asks providers to invalidate their LazyOptionals when the
             // player is removed, but an invalidated one stays invalid, and the clone listener has to read the old
@@ -190,9 +201,13 @@ public final class ForgeAttachmentServices implements AttachmentServices {
         public CompoundTag serializeNBT(HolderLookup.Provider registries) {
             CompoundTag out = unknown.copy();
             for (Map.Entry<Identifier, BCAttachmentData> entry : values.entrySet()) {
+                //? if >=1.21.10 {
                 TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
                 entry.getValue().serialize(output);
                 out.put(entry.getKey().toString(), output.buildResult());
+                //?} else {
+                /^out.put(entry.getKey().toString(), entry.getValue().serializeNBT(registries));
+                ^///?}
             }
             return out;
         }
@@ -200,13 +215,21 @@ public final class ForgeAttachmentServices implements AttachmentServices {
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
             values.clear();
+            //? if >=1.21.10 {
             for (String key : tag.keySet()) {
+            //?} else {
+            /^for (String key : tag.getAllKeys()) {
+            ^///?}
                 Tag saved = tag.get(key);
                 Identifier id = Identifier.tryParse(key);
                 Definition<?> definition = id == null ? null : definition(id);
                 if (definition != null && saved instanceof CompoundTag compound) {
                     BCAttachmentData value = definition.factory.get();
+                    //? if >=1.21.10 {
                     value.deserialize(TagValueInput.create(ProblemReporter.DISCARDING, registries, compound));
+                    //?} else {
+                    /^value.deserializeNBT(registries, compound);
+                    ^///?}
                     values.put(id, value);
                 } else if (saved != null) {
                     unknown.put(key, saved);

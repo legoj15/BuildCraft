@@ -58,7 +58,7 @@ public final class WorkClaimMod implements AutoCloseable {
     private final Consumer<PlayerInteractEvent.RightClickItem> itemListener;
     //?} elif forge {
     /*/^* The handles of this claim's Forge listeners, removed by close. ^/
-    private final net.minecraftforge.eventbus.api.listener.EventListener[] handles;*/
+    private final java.util.List<buildcraft.platform.forge.ForgeBus.Registration> handles = new java.util.ArrayList<>();*/
     //?} elif fabric {
     /*private static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
     private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -132,20 +132,17 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem.class, itemListener);
         //?} elif forge {
-        /*java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock> tool =
-                event -> toolAsk(event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent> place =
-                event -> placeAsk(event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent> placeMulti =
-                event -> placeAsk(event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem> item =
-                event -> itemAsk(event.getPos());
-        handles = new net.minecraftforge.eventbus.api.listener.EventListener[] {
-            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.addListener(tool),
-            net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.addListener(place),
-            net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.addListener(placeMulti),
-            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.addListener(item)
-        };*/
+        /*handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> toolAsk(event.getPos())));
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.class,
+                event -> placeAsk(event.getPos())));
+        // EventBus 7 gives the multi-cell placement its own bus; on EventBus 6 (1.21.1) the parent's listener sees it.
+        //? if >=1.21.10 {
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.class,
+                event -> placeAsk(event.getPos())));
+        //?}
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.class,
+                event -> itemAsk(event.getPos())));*/
         //?} elif fabric {
         /*OPEN.add(this);
         // The placement: a Common Protection API provider, as a Fabric claim mod answers one (it refuses nothing else:
@@ -241,10 +238,7 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.unregister(placeListener);
         NeoForge.EVENT_BUS.unregister(itemListener);
         //?} elif forge {
-        /*net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.removeListener(handles[0]);
-        net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.removeListener(handles[1]);
-        net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.removeListener(handles[2]);
-        net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.removeListener(handles[3]);*/
+        /*handles.forEach(buildcraft.platform.forge.ForgeBus.Registration::remove);*/
         //?} elif fabric {
         /*OPEN.remove(this);
         eu.pb4.common.protection.api.CommonProtection.remove(providerId);*/

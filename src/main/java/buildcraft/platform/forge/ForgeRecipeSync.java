@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -115,7 +115,7 @@ public final class ForgeRecipeSync {
         }
         registered = true;
         Platform.network().clientbound(Batch.TYPE, Batch.STREAM_CODEC, ForgeRecipeSync::receive);
-        OnDatapackSyncEvent.BUS.addListener(event -> {
+        ForgeBus.listen(OnDatapackSyncEvent.class, event -> {
             MinecraftServer server = event.getPlayerList().getServer();
             List<Batch> batches = batches(server, Set.copyOf(TYPES));
             for (ServerPlayer player : event.getPlayers()) {

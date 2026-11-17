@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import org.joml.Vector3f;
 import org.joml.Vector4f;
 

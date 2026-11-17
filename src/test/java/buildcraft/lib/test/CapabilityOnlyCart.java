@@ -75,9 +75,14 @@ public final class CapabilityOnlyCart extends Minecart {
     //?} elif forge {
     /*/^* Forge has no capability registry on 26.x: an entity answers through a provider attached to it as it is made
      *  (AttachCapabilitiesEvent.Entities), here one for the instances of this class alone, handing out the store as
-     *  Forge's own item handler. Called from the game-test hook (platform.forge.ForgeGameTestHooks). ^/
+     *  Forge's own item handler. Called from the game-test hook (platform.forge.ForgeGameTestHooks). On 1.21.1 the
+     *  event is EventBus 6's generic one, listened for by the attached object's class. ^/
     public static void registerLookup() {
-        net.minecraftforge.event.AttachCapabilitiesEvent.Entities.BUS.addListener(event -> {
+        //? if >=1.21.10 {
+        buildcraft.platform.forge.ForgeBus.listen(net.minecraftforge.event.AttachCapabilitiesEvent.Entities.class, event -> {
+        //?} else {
+        /^buildcraft.platform.forge.ForgeBus.attachCapabilities(net.minecraft.world.entity.Entity.class, event -> {
+        ^///?}
             if (event.getObject() instanceof CapabilityOnlyCart cart) {
                 var handler = net.minecraftforge.common.util.LazyOptional.of(
                         () -> buildcraft.platform.forge.ForgeItemStorages.toForge(cart.store));

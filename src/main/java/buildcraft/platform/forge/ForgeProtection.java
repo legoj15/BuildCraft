@@ -20,7 +20,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+//? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
+//?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -32,15 +34,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 
 import net.minecraftforge.common.util.BlockSnapshot;
+//? if >=1.21.10 {
 import net.minecraftforge.common.util.Result;
+//?} else {
+/^import net.minecraftforge.eventbus.api.Event.Result;
+^///?}
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.eventbus.api.listener.EventListener;
 
 import buildcraft.lib.compat.claims.OpenPartiesAndClaims;
 import buildcraft.platform.event.PlatformProtection;
@@ -61,7 +68,8 @@ import buildcraft.platform.event.PlatformProtection;
  * cancellation, and its constructor needs no reflection (NeoForge renamed the class between 26.1.1 and 26.1.2). A probe
  * and a listener's refusal therefore both read and write the result; a probe also counts a cancellation as a refusal,
  * which is the stricter reading and the safe one for a protection check. Forge has no probe flag: the event being posted
- * by {@link #canBreak} is remembered here.
+ * by {@link #canBreak} is remembered here. Forge 1.21.1's break event has no result: its outcome is cancellation alone
+ * (Forge's own pre-checks cancel it before the post), so there a probe reads cancellation and a refusal cancels.
  *
  * <p><b>Harvest.</b> Forge's patched {@code Player.hasCorrectToolForDrops(BlockState)} posts the harvest check itself,
  * starting from vanilla's answer, so {@link #canHarvest} asks it and posts nothing more (posting too would run the check
@@ -80,16 +88,24 @@ public final class ForgeProtection implements PlatformProtection {
 
     @Override
     public boolean canBreak(Level level, BlockPos pos, BlockState state, Player player) {
+        //? if >=1.21.10 {
         BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, state, player, Result.DEFAULT);
+        //?} else {
+        /^BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, state, player);
+        ^///?}
         BlockEvent.BreakEvent outer = breakProbeInFlight;
         breakProbeInFlight = event;
         boolean cancelled;
         try {
-            cancelled = BlockEvent.BreakEvent.BUS.post(event);
+            cancelled = ForgeBus.post(event);
         } finally {
             breakProbeInFlight = outer;
         }
+        //? if >=1.21.10 {
         return !cancelled && !event.getResult().isDenied();
+        //?} else {
+        /^return !cancelled;
+        ^///?}
     }
 
     /^*
@@ -103,25 +119,30 @@ public final class ForgeProtection implements PlatformProtection {
     }
 
     /^*
-     * Registers on {@link BlockEvent.BreakEvent#BUS} as a predicate, so a listener that cancels ends the chain as a
+     * Registers as a refusing listener ({@link ForgeBus#refuseRemovable}), so a listener that cancels ends the chain as a
      * cancelling listener does (the ones after it are not told). A break something before it already refused (result
-     * denied, which is also how Forge marks a break its own pre-checks refused) is not passed on.
+     * denied, which is also how Forge 26.3 marks a break its own pre-checks refused; on 1.21.1 a cancelled event, which
+     * is not delivered at all) is not passed on.
      *^/
     @Override
     public Registration onBreak(Consumer<BlockBreak> listener) {
         Predicate<BlockEvent.BreakEvent> each = event -> {
+            //? if >=1.21.10 {
             if (event.getResult().isDenied()) {
                 return false;
             }
+            //?}
             BreakView view = new BreakView(event);
             listener.accept(view);
             if (!view.cancelled) {
                 return false;
             }
+            //? if >=1.21.10 {
             event.setResult(Result.DENY);
+            //?}
             return true;
         };
-        EventListener registered = BlockEvent.BreakEvent.BUS.addListener(each);
+        ForgeBus.Registration registered = ForgeBus.refuseRemovable(BlockEvent.BreakEvent.class, each);
         return new Registration() {
             private boolean closed;
 
@@ -129,7 +150,7 @@ public final class ForgeProtection implements PlatformProtection {
             public void close() {
                 if (!closed) {
                     closed = true;
-                    BlockEvent.BreakEvent.BUS.removeListener(registered);
+                    registered.remove();
                 }
             }
         };
@@ -141,7 +162,7 @@ public final class ForgeProtection implements PlatformProtection {
      *^/
     @Override
     public boolean canAttack(Player attacker, Entity target) {
-        return !AttackEntityEvent.BUS.post(new AttackEntityEvent(attacker, target));
+        return !ForgeBus.post(new AttackEntityEvent(attacker, target));
     }
 
     // Gap: Forge's HarvestCheck carries no level or position (NeoForge's does), so a claim mod that decides harvest
@@ -155,16 +176,16 @@ public final class ForgeProtection implements PlatformProtection {
     public ClickVerdict rightClickBlock(Player player, InteractionHand hand, BlockHitResult hit) {
         PlayerInteractEvent.RightClickBlock ask = new PlayerInteractEvent.RightClickBlock(player, hand,
                 hit.getBlockPos(), hit);
-        if (PlayerInteractEvent.RightClickBlock.BUS.post(ask) || ask.getUseItem().isDenied()) {
+        if (ForgeBus.post(ask) || ask.getUseItem() == Result.DENY) {
             return ClickVerdict.REFUSED;
         }
-        return ask.getUseItem().isAllowed() ? ClickVerdict.FORCE_ITEM : ClickVerdict.DEFAULT;
+        return ask.getUseItem() == Result.ALLOW ? ClickVerdict.FORCE_ITEM : ClickVerdict.DEFAULT;
     }
 
     /^* The event Forge's {@code ServerPlayerGameMode.useItem} posts before the item is used; nothing cancelled means go on. *^/
     @Override
     public boolean canUseItem(Player player, InteractionHand hand) {
-        return !PlayerInteractEvent.RightClickItem.BUS.post(new PlayerInteractEvent.RightClickItem(player, hand));
+        return !ForgeBus.post(new PlayerInteractEvent.RightClickItem(player, hand));
     }
 
     /^*
@@ -213,7 +234,7 @@ public final class ForgeProtection implements PlatformProtection {
         }
         BlockSnapshot snapshot = ((Captured) replaced).snapshot();
         BlockState placedAgainst = placer.level().getBlockState(snapshot.getPos().relative(face.getOpposite()));
-        return !BlockEvent.EntityPlaceEvent.BUS.post(new BlockEvent.EntityPlaceEvent(snapshot, placedAgainst, placer));
+        return !ForgeBus.post(new BlockEvent.EntityPlaceEvent(snapshot, placedAgainst, placer));
     }
 
     /^*
@@ -251,10 +272,14 @@ public final class ForgeProtection implements PlatformProtection {
             if (tag != null) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
                 if (blockEntity != null) {
+                    //? if >=1.21.10 {
                     try (ProblemReporter.ScopedCollector problems =
                             new ProblemReporter.ScopedCollector(blockEntity.problemPath(), LOGGER)) {
                         blockEntity.loadWithComponents(TagValueInput.create(problems, level.registryAccess(), tag));
                     }
+                    //?} else {
+                    /^blockEntity.loadWithComponents(tag, level.registryAccess());
+                    ^///?}
                     blockEntity.setChanged();
                 }
             }

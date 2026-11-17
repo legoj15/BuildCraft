@@ -29,8 +29,8 @@ import buildcraft.platform.event.HookOrder;
  * event for as long as the returned handle is open; a {@link HookOrder} is the claim's place among the listeners
  * (NeoForge's or Forge's priority, or the Fabric event phase BuildCraft's own hooks use for it). Fabric events cannot
  * be unregistered, so each Fabric claim kind is one callback registered once (per order), handing the click to the open
- * claims. Forge's events are EventBus 7 records or classes posted on their own static {@code BUS}: a listener refuses by
- * being a predicate that answers true, and is removed again through the handle {@code addListener} returned.
+ * claims. Forge's events go through BuildCraft's {@code ForgeBus}, which is EventBus 7 on Forge for 26.x and EventBus 6
+ * on Forge 1.21.1: a claim refuses by answering true, and is removed again through the handle the bus returned.
  */
 public final class LoaderTestEvents {
 
@@ -46,7 +46,7 @@ public final class LoaderTestEvents {
         //?} elif fabric {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.UNLOAD.invoker().onWorldUnload(level.getServer(), level);*/
         //?} elif forge {
-        /*net.minecraftforge.event.level.LevelEvent.Unload.BUS.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
         //?}
     }
 
@@ -64,7 +64,7 @@ public final class LoaderTestEvents {
             buildcraft.platform.fabric.FabricGameHooks.fireClientLevelUnload(level);
         }*/
         //?} elif forge {
-        /*net.minecraftforge.event.level.LevelEvent.Unload.BUS.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
         //?}
     }
 
@@ -99,7 +99,7 @@ public final class LoaderTestEvents {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.AFTER_SAVE.invoker()
                 .onAfterSave(level.getServer(), false, false);*/
         //?} elif forge {
-        /*net.minecraftforge.event.level.LevelEvent.Save.BUS.post(new net.minecraftforge.event.level.LevelEvent.Save(level));*/
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Save(level));*/
         //?}
     }
 
@@ -117,7 +117,7 @@ public final class LoaderTestEvents {
         //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireEntityJoin(entity, level, false);*/
         //?} elif forge {
-        /*net.minecraftforge.event.entity.EntityJoinLevelEvent.BUS.post(new net.minecraftforge.event.entity.EntityJoinLevelEvent(entity, level));*/
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.entity.EntityJoinLevelEvent(entity, level));*/
         //?}
     }
 
@@ -134,7 +134,7 @@ public final class LoaderTestEvents {
         /*buildcraft.platform.fabric.FabricGameHooks.fireLivingDrops(victim, source, recentlyHit,
                 drops instanceof java.util.List<ItemEntity> list ? list : new java.util.ArrayList<>(drops));*/
         //?} elif forge {
-        /*net.minecraftforge.event.entity.living.LivingDropsEvent.BUS.post(
+        /*buildcraft.platform.forge.ForgeBus.post(
                 new net.minecraftforge.event.entity.living.LivingDropsEvent(victim, source, drops, recentlyHit));*/
         //?}
     }
@@ -155,11 +155,16 @@ public final class LoaderTestEvents {
                 net.minecraft.world.entity.MobSpawnType.NATURAL, null, null));*/
         //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireFinalizeSpawn(mob, false);*/
-        //?} elif forge {
-        /*net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn.BUS.post(
+        //?} elif forge && >=1.21.10 {
+        /*buildcraft.platform.forge.ForgeBus.post(
                 new net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn(
                         mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
                         net.minecraft.world.entity.EntitySpawnReason.NATURAL, null, null, null));*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(
+                new net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn(
+                        mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
+                        net.minecraft.world.entity.MobSpawnType.NATURAL, null, null, null));*/
         //?}
     }
 
@@ -179,14 +184,12 @@ public final class LoaderTestEvents {
         return () -> FabricGameEvents.OPEN.remove(listener);*/
         //?} elif forge {
         /*// Forge's event hands over the vanilla event itself, not its holder.
-        java.util.function.Predicate<net.minecraftforge.event.VanillaGameEvent> forge = event -> {
-            listener.onGameEvent(net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT.wrapAsHolder(event.getVanillaEvent()),
-                    event.getEventPosition(), event.getCause());
-            return false;
-        };
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.VanillaGameEvent.BUS.addListener(forge);
-        return () -> net.minecraftforge.event.VanillaGameEvent.BUS.removeListener(registered);*/
+        buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.VanillaGameEvent.class,
+                event -> listener.onGameEvent(
+                        net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT.wrapAsHolder(event.getVanillaEvent()),
+                        event.getEventPosition(), event.getCause()));
+        return registered::remove;*/
         //?}
     }
 
@@ -200,8 +203,7 @@ public final class LoaderTestEvents {
         //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireChunkSent(level, player, chunk.getPos());*/
         //?} elif forge {
-        /*net.minecraftforge.event.level.ChunkWatchEvent.Watch.BUS.post(
-                new net.minecraftforge.event.level.ChunkWatchEvent.Watch(player, chunk, level));*/
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.ChunkWatchEvent.Watch(player, chunk, level));*/
         //?}
     }
 
@@ -225,11 +227,10 @@ public final class LoaderTestEvents {
         /*FabricAttackClaims.OPEN.add(claim);
         return () -> FabricAttackClaims.OPEN.remove(claim);*/
         //?} elif forge {
-        /*java.util.function.Predicate<net.minecraftforge.event.entity.player.AttackEntityEvent> forge =
-                event -> claim.test(event.getEntity(), event.getTarget());
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.entity.player.AttackEntityEvent.BUS.addListener(forge);
-        return () -> net.minecraftforge.event.entity.player.AttackEntityEvent.BUS.removeListener(registered);*/
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.AttackEntityEvent.class,
+                event -> claim.test(event.getEntity(), event.getTarget()));
+        return registered::remove;*/
         //?}
     }
 
@@ -246,7 +247,7 @@ public final class LoaderTestEvents {
 
     /**
      * A claim on players' right-clicks on entities, at {@code order} (NeoForge {@code PlayerInteractEvent.EntityInteract}
-     * and Forge {@code EntityInteractSpecific} at the order's priority; Fabric {@code UseEntityCallback} in the order's phase, which BuildCraft's
+     * and Forge {@code EntityInteractSpecific} (on 1.21.1 {@code EntityInteract}, as NeoForge) at the order's priority; Fabric {@code UseEntityCallback} in the order's phase, which BuildCraft's
      * {@code PlayerMixin} also asks for a fake player's click, where NeoForge posts its event).
      */
     public static Observer claimEntityInteractions(HookOrder order,
@@ -268,22 +269,26 @@ public final class LoaderTestEvents {
         //?} elif fabric {
         /*return FabricInteractClaims.open(order, claim);*/
         //?} elif forge {
-        /*// Forge 26.3's one entity-click event is EntityInteractSpecific, posted from the same vanilla call as NeoForge's.
-        java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific> forge =
-                event -> {
-                    InteractAnswer answer = claim.apply(event.getEntity(), event.getTarget());
-                    if (answer == InteractAnswer.ALLOW) {
-                        return false;
-                    }
-                    if (answer == InteractAnswer.REFUSE_CONSUMING) {
-                        event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
-                    }
-                    return true;
-                };
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific.BUS.addListener(
-                        buildcraft.platform.forge.ForgeGameHooks.priority(order), forge);
-        return () -> net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific.BUS.removeListener(registered);*/
+        /*// Forge 26.3's one entity-click event is EntityInteractSpecific, posted from the same vanilla call as NeoForge's;
+        // Forge 1.21.1 posts EntityInteract from NeoForge 1.21.1's point (ForgeGameHooks#onEntityInteract has the same split).
+        //? if >=1.21.10 {
+        Class<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific> type =
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific.class;
+        //?} else {
+        /^Class<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract> type =
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract.class;
+        ^///?}
+        buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(type, order, event -> {
+            InteractAnswer answer = claim.apply(event.getEntity(), event.getTarget());
+            if (answer == InteractAnswer.ALLOW) {
+                return false;
+            }
+            if (answer == InteractAnswer.REFUSE_CONSUMING) {
+                event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
+            }
+            return true;
+        });
+        return registered::remove;*/
         //?}
     }
 
@@ -306,12 +311,9 @@ public final class LoaderTestEvents {
         //?} elif fabric {
         /*return FabricJoinClaims.open(order, claim);*/
         //?} elif forge {
-        /*java.util.function.Predicate<net.minecraftforge.event.entity.EntityJoinLevelEvent> forge =
-                event -> claim.test(event.getEntity());
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.entity.EntityJoinLevelEvent.BUS.addListener(
-                        buildcraft.platform.forge.ForgeGameHooks.priority(order), forge);
-        return () -> net.minecraftforge.event.entity.EntityJoinLevelEvent.BUS.removeListener(registered);*/
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.EntityJoinLevelEvent.class, order, event -> claim.test(event.getEntity()));
+        return registered::remove;*/
         //?}
     }
 
@@ -337,19 +339,22 @@ public final class LoaderTestEvents {
         eu.pb4.common.protection.api.CommonProtection.register(id, new FabricPlacementClaims(claim));
         return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
         //?} elif forge {
-        /*// A multi-cell placement posts EntityMultiPlaceEvent, which has its own bus: listen on both.
-        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent> single =
-                event -> claim.test(event.getEntity(), event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent> multi =
-                event -> claim.test(event.getEntity(), event.getPos());
-        net.minecraftforge.eventbus.api.listener.EventListener onSingle =
-                net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.addListener(single);
-        net.minecraftforge.eventbus.api.listener.EventListener onMulti =
-                net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.addListener(multi);
+        /*buildcraft.platform.forge.ForgeBus.Registration onSingle = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.class,
+                event -> claim.test(event.getEntity(), event.getPos()));
+        // On EventBus 7 a multi-cell placement posts EntityMultiPlaceEvent, which has its own bus: listen on both. On
+        // EventBus 6 (1.21.1) the parent's listener sees the subclass already.
+        //? if >=1.21.10 {
+        buildcraft.platform.forge.ForgeBus.Registration onMulti = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.class,
+                event -> claim.test(event.getEntity(), event.getPos()));
         return () -> {
-            net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.BUS.removeListener(onSingle);
-            net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.BUS.removeListener(onMulti);
-        };*/
+            onSingle.remove();
+            onMulti.remove();
+        };
+        //?} else {
+        /^return onSingle::remove;
+        ^///?}*/
         //?}
     }
 
@@ -416,23 +421,20 @@ public final class LoaderTestEvents {
                         event.cancel();
                     }
                 });
-        java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock> onClick =
-                event -> interactRefused.test(event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem> onUse =
-                event -> interactRefused.test(event.getPos());
-        java.util.function.Predicate<net.minecraftforge.event.entity.player.AttackEntityEvent> onAttack =
-                event -> damageRefused.test(event.getTarget());
-        net.minecraftforge.eventbus.api.listener.EventListener clickHandle =
-                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.addListener(onClick);
-        net.minecraftforge.eventbus.api.listener.EventListener useHandle =
-                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.addListener(onUse);
-        net.minecraftforge.eventbus.api.listener.EventListener attackHandle =
-                net.minecraftforge.event.entity.player.AttackEntityEvent.BUS.addListener(onAttack);
+        buildcraft.platform.forge.ForgeBus.Registration onClick = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> interactRefused.test(event.getPos()));
+        buildcraft.platform.forge.ForgeBus.Registration onUse = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.class,
+                event -> interactRefused.test(event.getPos()));
+        buildcraft.platform.forge.ForgeBus.Registration onAttack = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.AttackEntityEvent.class,
+                event -> damageRefused.test(event.getTarget()));
         return () -> {
             onBreak.close();
-            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.removeListener(clickHandle);
-            net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.BUS.removeListener(useHandle);
-            net.minecraftforge.event.entity.player.AttackEntityEvent.BUS.removeListener(attackHandle);
+            onClick.remove();
+            onUse.remove();
+            onAttack.remove();
         };*/
         //?}
     }
@@ -453,13 +455,10 @@ public final class LoaderTestEvents {
         /*FabricRightClicks.OPEN.add(listener);
         return () -> FabricRightClicks.OPEN.remove(listener);*/
         //?} elif forge {
-        /*java.util.function.Predicate<net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock> forge = event -> {
-            listener.accept(event.getEntity(), event.getPos());
-            return false;
-        };
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.addListener(forge);
-        return () -> net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.BUS.removeListener(registered);*/
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> listener.accept(event.getEntity(), event.getPos()));
+        return registered::remove;*/
         //?}
     }
 
@@ -479,13 +478,10 @@ public final class LoaderTestEvents {
         /*FabricLivingDrops.OPEN.add(listener);
         return () -> FabricLivingDrops.OPEN.remove(listener);*/
         //?} elif forge {
-        /*java.util.function.Predicate<net.minecraftforge.event.entity.living.LivingDropsEvent> forge = event -> {
-            listener.accept(event.getEntity(), event.getSource());
-            return false;
-        };
-        net.minecraftforge.eventbus.api.listener.EventListener registered =
-                net.minecraftforge.event.entity.living.LivingDropsEvent.BUS.addListener(forge);
-        return () -> net.minecraftforge.event.entity.living.LivingDropsEvent.BUS.removeListener(registered);*/
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.entity.living.LivingDropsEvent.class,
+                event -> listener.accept(event.getEntity(), event.getSource()));
+        return registered::remove;*/
         //?}
     }
 

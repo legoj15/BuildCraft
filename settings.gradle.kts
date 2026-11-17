@@ -37,6 +37,8 @@ stonecutter {
         // port in progress: it builds all of src/main/java bar the recipe-viewer plugins into a jar, boots a dedicated server
         // and runs the shared game tests, and ships nothing yet (see buildSrc bc.forge.gradle.kts).
         version("26.3-forge", "26.3")
+        // 1.21.1-forge is the second Forge node (#209 slice F7): Forge 52 on the 1.21.1 line, EventBus 6, Java 21.
+        version("1.21.1-forge", "1.21.1")
         vcsVersion = "26.3"
     }
 }

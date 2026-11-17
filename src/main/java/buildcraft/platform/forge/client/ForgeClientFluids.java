@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import net.minecraft.resources.Identifier;
 
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;

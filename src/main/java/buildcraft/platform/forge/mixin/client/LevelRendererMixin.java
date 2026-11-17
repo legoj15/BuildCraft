@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge {
+//? if forge && >=1.21.10 {
 /*import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

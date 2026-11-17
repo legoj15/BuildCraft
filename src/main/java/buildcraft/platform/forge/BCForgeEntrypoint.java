@@ -15,13 +15,13 @@ import buildcraft.platform.Platform;
 
 /^*
  * BuildCraft's MinecraftForge entrypoint (not NeoForge), the twin of {@code BCNeoForgeEntrypoint} and the only class FML
- * hands the mod bus group to. It binds the group for the implementations ({@link ForgeModBus}) and then runs
+ * hands the mod bus to. It binds that bus for the implementations ({@link ForgeModBus}) and then runs
  * BuildCraft's loader-neutral init: the common init, then the client init on a physical client. Like the {@code @Mod}
  * constructor it replaces, it runs before FML's automatic event subscribers.
  *
  * <p><b>What differs from NeoForge's.</b> Forge's {@code @Mod} constructor takes the loading context
- * ({@link FMLJavaModLoadingContext}), not a bus and a container, and on EventBus 7 the mod bus is a
- * {@code BusGroup} that mod-lifecycle events are reached through ({@code SomeEvent.getBus(group)}). The capability
+ * ({@link FMLJavaModLoadingContext}), not a bus and a container, and the mod bus is a {@code BusGroup} on EventBus 7
+ * (Forge 26.x) and an {@code IEventBus} on EventBus 6 (Forge 1.21.1); {@link ForgeBus} hides which. The capability
  * registration listener of NeoForge's entrypoint has no Forge 26.x twin (Forge has no {@code RegisterCapabilitiesEvent}
  * there: exposure is {@code AttachCapabilitiesEvent} per object, the transfer seam's concern), and none of Fabric's
  * extra steps is needed: FML runs the registry events and the setup phases itself, so there are no pending registrations
@@ -35,7 +35,11 @@ import buildcraft.platform.Platform;
 public final class BCForgeEntrypoint {
 
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
+        //? if >=1.21.10 {
         ForgeModBus.bind(context.getModBusGroup());
+        //?} else {
+        /^ForgeModBus.bind(context.getModEventBus());
+        ^///?}
         ForgeModBus.bindContext(context);
         // The components ingredient's serializer, ahead of the registry event: the gate recipes name it.
         ForgeCraftingServices.registerSerializers();

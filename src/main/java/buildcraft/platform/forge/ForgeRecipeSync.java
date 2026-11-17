@@ -68,9 +68,13 @@ import buildcraft.platform.network.PacketContext;
  * Clearing the previous server's recipes on logout stays with the client slice ({@code onLoggingOut}).
  *^/
 public final class ForgeRecipeSync {
-    /^* Recipes per payload: a crafting recipe encodes to about a hundred bytes, a gate-recipe components ingredient to a
-     *  few hundred, so a batch stays far under the 1 MiB a clientbound payload may be on Forge 26.3. ^/
+    /^* Recipes per payload at most: a crafting recipe encodes to about a hundred bytes, a gate-recipe components
+     *  ingredient to a few hundred. ^/
     static final int BATCH = 128;
+    /^* Encoded bytes per payload at most. The count alone bounds nothing: the run carries every mod's crafting and
+     *  smelting recipes, and one pack's oversized recipes would push a batch past the 1 MiB a clientbound payload may be
+     *  on Forge 26.3 (no packet splitter), which drops the client at login. Half the cap leaves room for framing. ^/
+    static final int BATCH_BYTES = 512 * 1024;
 
     private static final List<RecipeType<?>> TYPES = new CopyOnWriteArrayList<>();
     private static final List<Consumer<Collection<RecipeHolder<?>>>> CLIENT_LISTENERS = new CopyOnWriteArrayList<>();
@@ -126,41 +130,59 @@ public final class ForgeRecipeSync {
     static List<Batch> batches(MinecraftServer server, Set<RecipeType<?>> types) {
         RegistryAccess registries = server.registryAccess();
         List<RecipeHolder<?>> sendable = new ArrayList<>();
+        List<Integer> sizes = new ArrayList<>();
         List<String> left = new ArrayList<>();
         RuntimeException firstFailure = null;
         for (RecipeHolder<?> holder : server.getRecipeManager().getRecipes()) {
             if (types.contains(holder.value().getType())) {
-                RuntimeException failure = encodeFailure(holder, registries);
-                if (failure == null) {
-                    sendable.add(holder);
-                } else {
+                int size;
+                try {
+                    size = encodedSize(holder, registries);
+                    if (size > BATCH_BYTES) {
+                        throw new IllegalStateException("encodes to " + size + " bytes, over the per-payload budget");
+                    }
+                } catch (RuntimeException failure) {
                     left.add(holder.id().identifier().toString());
                     if (firstFailure == null) {
                         firstFailure = failure;
                     }
+                    continue;
                 }
+                sendable.add(holder);
+                sizes.add(size);
             }
         }
         if (!left.isEmpty()) {
             BCLog.logger.warn("[recipe sync] {} recipes cannot be encoded and are not sent to clients (their guide panels"
                     + " stay empty), first: {}", left.size(), left.subList(0, Math.min(left.size(), 5)), firstFailure);
         }
-        int count = Math.max(1, (sendable.size() + BATCH - 1) / BATCH);
-        List<Batch> out = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            out.add(new Batch(i, count, List.copyOf(sendable.subList(i * BATCH, Math.min(sendable.size(), (i + 1) * BATCH)))));
+        // Cut a batch at the recipe count or the byte budget, whichever comes first. An empty run is still one
+        // (empty) batch, so the client learns the server has none.
+        List<List<RecipeHolder<?>>> cuts = new ArrayList<>();
+        int from = 0;
+        int bytes = 0;
+        for (int i = 0; i < sendable.size(); i++) {
+            if (i > from && (i - from == BATCH || bytes + sizes.get(i) > BATCH_BYTES)) {
+                cuts.add(List.copyOf(sendable.subList(from, i)));
+                from = i;
+                bytes = 0;
+            }
+            bytes += sizes.get(i);
+        }
+        cuts.add(List.copyOf(sendable.subList(from, sendable.size())));
+        List<Batch> out = new ArrayList<>(cuts.size());
+        for (int i = 0; i < cuts.size(); i++) {
+            out.add(new Batch(i, cuts.size(), cuts.get(i)));
         }
         return out;
     }
 
-    /^* Why {@code holder} cannot be encoded, or null when it can. ^/
-    private static RuntimeException encodeFailure(RecipeHolder<?> holder, RegistryAccess registries) {
+    /^* How many bytes {@code holder} encodes to; throws what its codec throws when it cannot be encoded. ^/
+    private static int encodedSize(RecipeHolder<?> holder, RegistryAccess registries) {
         ByteBuf scratch = Unpooled.buffer();
         try {
             Batch.HOLDER.encode(new RegistryFriendlyByteBuf(scratch, registries), holder);
-            return null;
-        } catch (RuntimeException e) {
-            return e;
+            return scratch.readableBytes();
         } finally {
             scratch.release();
         }

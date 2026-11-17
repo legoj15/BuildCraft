@@ -1,5 +1,5 @@
 // The MinecraftForge half of the per-node build: applied by build.gradle.kts as `bc.$loader` on every node whose `loader` is
-// forge (today only 26.3-forge). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
+// forge (26.3-forge and 1.21.1-forge today). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
 // different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
 //
 // Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
@@ -8,8 +8,10 @@
 // Forge twin); the shared game tests run through `runGameTest` (slice F5, below), which nodeVerification runs.
 // Its share of the root fullTestSuite is the compile, the transformed resources, the collected jar and the game tests.
 //
-// Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), so the shared source compiles against Forge
-// directly and there is no reobfuscation step: the mappings line only tells the mavenizer which names to build Forge in.
+// Forge on 26.x runs Mojang's official names (Minecraft ships unobfuscated), and Forge 52 (1.21.1) runs them too in dev and in
+// production, so the shared source compiles against Forge directly and there is no reobfuscation step on either line: the
+// mappings line only tells the mavenizer which names to build Forge in. The two lines differ in the event bus (EventBus 7 on
+// 26.x, EventBus 6 on 1.21.1), which platform.forge.ForgeBus hides, and in the 1.21.1 data down-ports below.
 // ForgeGradle builds that patched Minecraft+Forge artifact itself, on demand, through the repositories below.
 
 import buildcraft.gradle.AppendingLogStream
@@ -74,10 +76,11 @@ minecraft {
     // Mojang's official names, which the shared source is written in (and which Forge runs on, see the header).
     mappings("official", minecraftVersion)
 
-    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:26.3-forge:runServer` and `runClient`.
+    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:<node>:runServer` and `runClient` (the
+    // 1.21.1-forge client is not wired yet: its client platform holders still throw).
     // Both carry the switches every BC run has: the dev workspace flag (BCLib.DEV-gated affordances: debug logging, the
     // /bcsoundtest command) and `-PbcDebug[=tier]` for BCDebugging. A Forge dev run loads no recipe viewer (neither JEI nor
-    // REI has a Forge build for 26.3), so there is no recipe_viewer switch.
+    // REI has a Forge build for 26.3; JEI has one for 1.21.1, not wired yet), so there is no recipe_viewer switch.
     runs {
         configureEach {
             workingDir.convention(layout.projectDirectory.dir("run"))
@@ -165,7 +168,7 @@ sourceSets {
             srcDir(rootProject.file("src/main/resources-forge"))
             exclude("META-INF/neoforge.mods.toml")
             // The Curios/Accessories slot tags (and the Curios entity assignment under BC's own namespace) put the goggles
-            // in a slot those mods own; neither has a Forge 26.3 build and ForgeAccessorySlots never looks, so the jar does
+            // in a slot those mods own; ForgeAccessorySlots never looks (and neither has a Forge 26.3 build), so the jar does
             // not advertise a slot BC does not read. (bc.fabric leaves the inert data/buildcraftunofficial/curios in.)
             exclude("data/accessories/**", "data/curios/**", "data/*/accessories/**", "data/*/curios/**")
         }
@@ -211,10 +214,11 @@ tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 tasks.named("test") { enabled = false }
 
 // ─── Game tests (F5) ─────────────────────────────────────────────────────────
-// `:26.3-forge:runGameTest` runs the SAME game-test bodies the NeoForge and Fabric nodes run, on Forge's own game-test server.
+// `:<node>:runGameTest` runs the SAME game-test bodies the NeoForge and Fabric nodes run, on Forge's own game-test server.
 // - The tests are part of BuildCraft's mod, not a second mod: test_instance manifests, structures and BuildCraft's classes are
 //   one pack, and platform/forge/ForgeGameTestHooks (an automatic @Mod.EventBusSubscriber) calls
-//   BuildCraftGameTests.register from FMLConstructModEvent. Forge finds a mod in dev by the META-INF/mods.toml of a classpath
+//   BuildCraftGameTests.register from FMLConstructModEvent (on 1.21.1, which has no dynamic test registry, it registers the
+//   test-only blocks there and feeds vanilla's GameTestRegistry from RegisterGameTestsEvent). Forge finds a mod in dev by the META-INF/mods.toml of a classpath
 //   directory (there is no way to say "these two directories are one mod": FG7's `mods { sources(a, b) }` is not read by
 //   this FML), and Java refuses two modules that both hold buildcraft.transport.block ("Modules buildcraftunofficial and test
 //   export package ..."), which the tests, sharing packages with the code they test, would be. So the test run's classpath

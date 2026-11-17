@@ -9,7 +9,8 @@
     { "do": "click", "widgetText": "Mods" },
     { "do": "expectScreen", "contains": "Mod", "timeoutSec": 10 },
     { "name": "modlist-widgets", "do": "widgets" },
-    { "label": "select the BuildCraft row: list rows are not widgets, so click by position (alphabetical list, GUI scale 2; the >=26.2 list is icon rows, the older one sorts Minecraft first)", "do": "click", "x": 75, "y": 48, "nodes": ["26.2", "26.3"] },
+    { "label": "select the BuildCraft row: list rows are not widgets, so click by position (alphabetical list, GUI scale 2; the >=26.2 list is icon rows, the older one sorts Minecraft first)", "do": "click", "x": 75, "y": 48, "nodes": ["26.2", "26.3"], "loaders": ["neoforge", "fabric"] },
+    { "label": "select the BuildCraft row on Forge: its own mod list (net.minecraftforge.client.gui.ModListScreen) sorts Minecraft first, rows 26 GUI units tall, BuildCraft Redux the second", "do": "click", "x": 50, "y": 68, "loaders": ["forge"] },
     { "do": "click", "x": 50, "y": 72, "nodes": ["1.21.1", "1.21.10", "1.21.11", "26.1.2"] },
     { "do": "wait", "ms": 1000 },
     { "name": "modlist-banner", "do": "shot", "look": "info panel shows the new banner: crane, BuildCraft wordmark, yellow REDUX in the hazard bar, five gears (no obsidian), 'based on BuildCraft by SpaceToad' readable; name reads BuildCraft Redux; mod-list icon is the gear icon. On Fabric the list is Mod Menu's: it has no banner, so check only the name, the gear icon and the description" }

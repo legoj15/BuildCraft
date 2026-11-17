@@ -15,7 +15,7 @@ read it first. This skill is the procedure around it.
   run is for what only eyes can judge: textures, models, layout, tooltips, animations.
 - **McDevBridge jars**: the runner copies the newest `mcdevbridge-*+mc<node>.jar` from `E:/GitHub/McDevBridge`
   (`versions/<node>/build/libs`, or a McDevBridge worktree). None → `-BuildBridge`, or build it there. McDevBridge
-  uses the same node names: `26.3` is the NeoForge jar, `26.3-fabric` the Fabric one.
+  uses the same node names: `26.3` is the NeoForge jar, `26.3-fabric` the Fabric one, `26.3-forge` the MinecraftForge one.
   `/screenclick` + `/screenhover` need McDevBridge `4f0b536` or later.
 - **Free disk**: each first boot of a node downloads assets and writes a world. A full C: drive fails the boot.
 - **One run per machine.** The runner holds `~/.mcdevbridge/smoke.lock` for the whole run. When another session's run
@@ -33,10 +33,13 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.1.2          # one node wh
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3,26.3-fabric # a line on both loaders
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1                        # all twelve, sequentially (~3-5 min each once warm)
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric         # the six Fabric twins only
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-forge      # MinecraftForge (#209): opt-in, never in the default list
 ```
 
 A visual change is checked on both loaders: the Fabric nodes have their own render and screen glue, so a NeoForge-only
-run does not cover them. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
+run does not cover them (the Forge node has its own too, `platform/forge/client`, and is run by name until it ships).
+A scenario or step that needs what a loader's dev runtime lacks (`"needs"`: a recipe viewer, dev mods; Forge has neither)
+is reported SKIPPED with the reason, not failed. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
 its box (`scenarios/lang-overflow.json` tours the GUIs without clicking by English text).
 
 Run it with `run_in_background` — a node's first boot compiles and can take several minutes. It exits 1 on any

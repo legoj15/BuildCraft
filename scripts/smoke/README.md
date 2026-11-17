@@ -14,9 +14,13 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Lang ru_ru -Scenario sc
 pwsh scripts/smoke/Invoke-SmokeBatch.ps1 -Node 26.3-fabric -Scenarios guide-robot,quarry-pit   # several scenarios, one node, one table
 ```
 
-A node is a Stonecutter node name: `26.3` is the NeoForge node, `26.3-fabric` its Fabric twin. Both loaders run the
-same scenarios; each node needs the McDevBridge jar built for it (`gradlew :<node>:build` in McDevBridge, the same node
-name there).
+A node is a Stonecutter node name: `26.3` is the NeoForge node, `26.3-fabric` its Fabric twin, `26.3-forge` its
+MinecraftForge twin (not NeoForge; #209). The runner reads a node's loader from the `loader=` key of
+`versions/<node>/gradle.properties` (a NeoForge node carries none; the name's suffix is the fallback). The default node
+list is the twelve NeoForge and Fabric nodes: a Forge node runs only when named (`-Nodes 26.3-forge`, or `-Loader forge`
+with a list that holds one) while nothing ships there. All loaders run the same scenarios, except what a loader's dev
+runtime lacks (below); each node needs the McDevBridge jar built for it (`gradlew :<node>:build` in McDevBridge, the same
+node name there).
 
 Output: `build/smoke/<timestamp>/summary.md` (one table per node, screenshot links) and `<node>/report.json`,
 `<node>/NN-<name>.png`, `<node>/NN-<name>.widgets.json`. Exit code 1 when any step failed, any node hit a fatal
@@ -120,7 +124,11 @@ Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset);
 Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
 covers the NeoForge node and its Fabric twin, `"26.2-fabric"` only the twin) and `"loaders": ["neoforge"]` (run only on
 that loader). A top-level `"loaders"` skips the whole scenario on the other loader's nodes (reported as skipped, not as a
-failure): use it when a scenario needs a mod only one loader's dev runtime has. A top-level `"englishOnly": true` skips
+failure): use it when a scenario needs a mod only one loader's dev runtime has. `"needs": ["recipeViewer"]` (top-level or
+on a step) says what the scenario or step asks of the dev runtime instead of naming loaders: a loader that lacks it (the Forge
+node has no recipe viewer, no `-PwithMods` runtime: capability `devMods`, implied by a scenario's `mods`, `-Mods` and
+`gradleProperties`; `recipeViewer` is implied by the `"recipeViewer"` key) skips the scenario, or records the step as `skip`,
+with the reason; `gen_port_26_3.py` marks its JEI steps this way. A top-level `"englishOnly": true` skips
 the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
 widget text.
 

@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mp
 
 NODE = sys.argv[1]
+mp.refuse_unsupported_node(NODE)   # a MinecraftForge node is skipped with a reason (exit 0), as `mp.py` does
 PHASE = sys.argv[2]
 OUT = os.path.join(mp.HERE, NODE, 'shots')
 os.makedirs(OUT, exist_ok=True)

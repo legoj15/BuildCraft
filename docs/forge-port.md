@@ -219,9 +219,56 @@ ones, which the NeoForge and Fabric 26.3 logs carry too. `-PbcQuickPlay=<save>` 
 `run/saves/`) joined (`Dev joined the game`) and ran on with no BuildCraft WARN or ERROR; every client mixin logged
 `Mixing client.*`, `ModelBlockRendererMixin` at the first chunk mesh. `:26.3-forge:runServer` still boots to `Done` and
 loads no `client.*` mixin and no `platform.forge.client` class. Nothing was checked by eye: render correctness (pipes,
-fluids, buckets, outlines, overlays) is for the smoke runner. One oddity, not traced: the quick-play client sat about six
-minutes after its resource load, render thread idling in the frame limiter, before the integrated server started; no
-input was sent to it.
+fluids, buckets, outlines, overlays) is for the smoke runner (run the same day: "Smoke on Forge" below). The quick-play
+client that sat about six minutes after its resource load, render thread idling in the frame limiter, with no integrated
+server, was not a hang: the world was flagged experimental and vanilla's "Worlds using Experimental Settings are not
+supported" confirmation (`BackupConfirmScreen`) was waiting for a click.
+
+## Smoke on Forge (#209, 2026-11-16)
+
+`pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-forge` (one scenario) or `Invoke-SmokeBatch.ps1 -Node 26.3-forge`
+(the default list). The node is opt-in: it is not in the runner's default `-Nodes`, since nothing ships there. The runner reads a
+node's loader from `versions/<node>/gradle.properties` (`loader=`), strips `-forge` for the Minecraft line, and runs
+`:26.3-forge:runClient -PbcRunDir=run-smoke` (bc.forge's own switches; the game directory is the working directory, so the
+McDevBridge `+mc26.3-forge` jar goes in `versions/26.3-forge/run-smoke/mods` as on the other loaders). What a Forge node lacks is
+declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devMods"`, implied by `mods`,
+`-Mods` and `gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and no
+`-PwithMods` runtime), `mp.py` and its scene script skip a Forge node with exit 0, and `mod-list-banner` has a Forge row click
+(Forge's own `ModListScreen` sorts Minecraft first). Two vanilla confirmations that only a Forge-made world raises are
+answered by the runner, with a console note each: "Warning! These settings are using experimental features" when the first-run
+world is created, and `BackupConfirmScreen` when a world not yet confirmed is loaded (a confirmation is stored in `level.dat`
+as `confirmedExperimentalSettings`, so it comes once per world). A first-run world also gets `gamemode creative`, a `tp` to the
+scenario base and a wait for that chunk (a new world's spawn is random and its chunks arrive seconds after the join). No
+`forge-client.toml` edit is needed: its `[client] showLoadWarnings` defaults to true and no loading-warning screen appeared in
+any boot, so the NeoForge `showLoadWarnings = false` edit has no Forge twin.
+
+Result: 53 scenarios in the default list; 39 ran (37 passed), 14 were skipped (3 need a recipe viewer; 6 crossmod-claims,
+`crossmod-energy*` and `crossmod-storage` need dev mods or another loader; `goggles-curios` and `guideme-guide` are NeoForge
+only). The same 39 on `26.3` passed except `line8`, whose `/screenshot` timed out once (it passes on rerun). Both Forge failures
+are the guide (`port-26-3` steps 196-200, `release-2026-2-1` steps 74-78). Time: warm Forge client JVM to joined world about 15 s
+quick-playing, about 22 s to the title screen on a cold first boot; the whole set took 44 minutes on each of the two nodes.
+
+What the screenshots showed against NeoForge 26.3 (worlds differ in seed, so terrain, sky tint and the JEI side panel are not
+differences): pipes, plugs, facades, fluids, engines, machine GUIs, robots, markers, goggles, Zone Planner and particles render
+the same, and the mod list (Forge's own screen) shows the banner. Not the same:
+
+1. **The guide is empty (high).** `[lib.guide] Loaded 0 possible and 0 actual guide pages ... registries 26 ... pages en_us 0`
+   (NeoForge: 202, registries 135, pages 225): 4 of 8 chapters, the cover reads "Everything", entries open as blank spreads,
+   search results do not open, links read as raw ids (`buildcraftunofficial:pipe/iron_power`). Likely root (only the first
+   half is observed): every guide reload logs `[lib.script] Failed to reload scripts` (`UnsupportedOperationException: Path not
+   associated with default file system`) from `Path.toFile()` in `ScriptableRegistry.loadScripts0`, on a path
+   `ForgeLoaderServices.modSourcePaths` returned for a mod whose file is not on the default filesystem (not identified;
+   probably the `minecraft` or `forge` entry, whose dev jar is a union path), and `GuideManager.reload0` reloads its book and
+   page registries through those scripts.
+2. **Worlds are "experimental" (medium).** The warnings above; `level.dat` of the Forge world lists the separate packs
+   `mod:buildcraftunofficial`, `mod:mcdevbridge`, `mod:forge` where NeoForge has one `mod_data`, and the NeoForge world's
+   `confirmedExperimentalSettings` is 0 (it never asked). Inferred cause: registry entries of a data pack without known-pack
+   information get `Lifecycle.experimental` (`ResourceManagerRegistryLoadTask`); not isolated between BuildCraft's worldgen
+   data and Forge's own packs.
+3. Minor: no Config button (known, `ForgeClientConfigScreens`); the Forge pause menu's icon row has one button fewer than
+   NeoForge's (a vanilla-screen difference, not BuildCraft's); after pouring a water bucket into a Tank in creative NeoForge leaves an
+   empty bucket in the hotbar and Forge does not (not traced; `ForgeFluidContainers.swapHeld` returns for creative as the NeoForge
+   arm does).
 
 ## Rules added for the third loader
 
@@ -257,7 +304,7 @@ input was sent to it.
 | F3c | **Done.** The Forge mixins and routes for the hooks Forge 26.3 lacks (table under "Mixins on Forge") | `:26.3-forge:runServer` boots with every mixin applied |
 | F4 | **Done.** Resources: `mods.toml`, `pack.mcmeta`, access transformer check, `DataForge.kt`, jar, dedicated server boots to Done | `:26.3-forge:runServer` |
 | F5 | **Done.** Game tests on Forge; `LoaderTestEvents` forge arms; the run is in `nodeVerification` | `:26.3-forge:runGameTest` green: all 948 registered tests pass, 7 client-class tests not registered (see "Game tests on Forge (F5)") |
-| F6 | **Done to boot.** Client seams, models, renderers; dev client reaches the title screen and a world (see "Client on Forge (F6)") | smoke runner on `26.3-forge` (not run in F6; the boot was checked by hand) |
+| F6 | **Done to boot.** Client seams, models, renderers; dev client reaches the title screen and a world (see "Client on Forge (F6)") | smoke runner on `26.3-forge` (run 2026-11-16, see "Smoke on Forge") |
 | F7 | `1.21.1-forge` (EventBus 6 arm, 1.21.1 client shapes, `ForgeChunkManager` or vanilla tickets) | same gates on that node |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
 

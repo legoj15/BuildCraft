@@ -1,5 +1,6 @@
 {
   "name": "jei-integration-table",
+  "needs": ["recipeViewer"],
   "description": "JEI Integration Table category, opened from the table's energy-bar click area. JEI ignores the bridge's key injection (it listens to NeoForge's key event), so lookups go through mouse clicks.",
   "base": [
     0,

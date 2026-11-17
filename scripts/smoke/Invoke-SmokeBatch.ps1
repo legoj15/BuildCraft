@@ -19,7 +19,8 @@
   those scenarios' folders; -Scenarios picks which.
 
   A scenario the runner skips is shown as SKIPPED, not as a failure: one whose "loaders" leave out this node's loader,
-  and one marked "englishOnly" when -Lang names another language (it clicks by English widget text).
+  one marked "englishOnly" when -Lang names another language (it clicks by English widget text), and one that needs
+  something the node's loader lacks (a recipe viewer or dev-runtime mods on a Forge node); the reason is in the table.
 
   Exit code: 0 when every scenario ran clean or was skipped, 1 when any step failed, a node was fatal, a scenario
   timed out or never got the lock.
@@ -181,8 +182,10 @@ foreach ($name in $Scenarios) {
             $row.status = if ($exit -eq 124) { 'TIMEOUT' } elseif ($row.fatal) { 'FATAL' } elseif ($row.failed -or $row.bcErrors) { 'FAILED' } elseif ($exit -ne 0) { "FAILED (exit $exit)" } else { 'PASS' }
         } elseif ($exit -eq 0 -and (Test-Path -LiteralPath (Join-Path $out 'summary.md')) -and
                 (Get-Content -Raw -LiteralPath (Join-Path $out 'summary.md')) -match 'skipped:') {
-            # The runner's summary says why (Get-SkipReason in Invoke-InClientSmoke.ps1).
-            $row.status = if ((Get-Content -Raw -LiteralPath (Join-Path $out 'summary.md')) -match 'skipped: runs in English only') { 'SKIPPED (English only)' } else { 'SKIPPED (loader filter)' }
+            # The runner's summary says why (Get-SkipReason in Invoke-InClientSmoke.ps1); the reason goes in the table too.
+            $skipText = Get-Content -Raw -LiteralPath (Join-Path $out 'summary.md')
+            $row.status = if ($skipText -match 'skipped: runs in English only') { 'SKIPPED (English only)' } elseif ($skipText -match 'skipped: needs ') { 'SKIPPED (loader lacks a need)' } else { 'SKIPPED (loader filter)' }
+            if ($skipText -match '\| skipped: ([^|\r\n]+?) \|') { $row.firstFailure = $Matches[1] }
         } else {
             $row.status = if ($exit -eq 124) { 'TIMEOUT' } elseif ($exit -eq 3) { 'NO LOCK' } else { "NO REPORT (exit $exit)" }
         }

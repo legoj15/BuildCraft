@@ -177,6 +177,21 @@ def node_dir(node):
     return os.path.join(REPO, 'versions', node)
 
 
+def refuse_unsupported_node(node):
+    """Multiplayer smoke drives NeoForge nodes (mp.init.gradle edits the `neoForge` run extension): a MinecraftForge node
+    (`loader=forge` in its gradle.properties) is skipped, with the reason, and exits 0 so a caller treats it as skipped,
+    not failed. Nothing is booted and the smoke lock is not taken."""
+    try:
+        with open(os.path.join(node_dir(node), 'gradle.properties'), encoding='utf-8') as f:
+            loader = next((m.group(1) for m in (re.match(r'\s*loader\s*=\s*(\w+)', line) for line in f) if m), None)
+    except OSError:
+        loader = None
+    if loader == 'forge':
+        print('SKIPPED: %s is a MinecraftForge node; the two-client multiplayer smoke has no Forge arm '
+              '(mp.init.gradle only extends the NeoForge run extension)' % node)
+        sys.exit(0)
+
+
 def state_file(node):
     os.makedirs(os.path.join(HERE, node), exist_ok=True)
     return os.path.join(HERE, node, 'procs.json')
@@ -373,6 +388,8 @@ def stop(node):
 
 if __name__ == '__main__':
     a = sys.argv[1:]
+    if len(a) > 1:
+        refuse_unsupported_node(a[1])
     if a[0] == 'setup':
         setup(a[1])
     elif a[0] == 'server':

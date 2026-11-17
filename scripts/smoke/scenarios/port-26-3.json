@@ -668,36 +668,43 @@
    "label": "click the flame (JEI click area)",
    "do": "click",
    "x": 213,
-   "y": 69
+   "y": 69,
+   "needs": "recipeViewer"
   },
   {
    "do": "wait",
-   "ms": 1000
+   "ms": 1000,
+   "needs": "recipeViewer"
   },
   {
    "name": "b4-jei-stirling",
    "do": "shot",
-   "look": "B4: JEI Stirling fuel page lists solid fuels with burn times, not empty"
+   "look": "B4: JEI Stirling fuel page lists solid fuels with burn times, not empty",
+   "needs": "recipeViewer"
   },
   {
    "label": "hover the first fuel",
    "do": "hover",
    "x": 140,
    "y": 106,
-   "allowMiss": true
+   "allowMiss": true,
+   "needs": "recipeViewer"
   },
   {
    "name": "b4-jei-stirling-first",
    "do": "shot",
-   "look": "B4: name of the first Stirling fuel (its burn time is beside it)"
+   "look": "B4: name of the first Stirling fuel (its burn time is beside it)",
+   "needs": "recipeViewer"
   },
   {
    "do": "key",
-   "key": "escape"
+   "key": "escape",
+   "needs": "recipeViewer"
   },
   {
    "do": "wait",
-   "ms": 400
+   "ms": 400,
+   "needs": "recipeViewer"
   },
   {
    "do": "close"
@@ -732,40 +739,48 @@
    "label": "click the centre strip (JEI click area)",
    "do": "click",
    "x": 186,
-   "y": 85
+   "y": 85,
+   "needs": "recipeViewer"
   },
   {
    "do": "wait",
-   "ms": 1000
+   "ms": 1000,
+   "needs": "recipeViewer"
   },
   {
    "name": "b4-jei-combustion",
    "do": "shot",
-   "look": "B4: JEI combustion page opens (coolant tab first)"
+   "look": "B4: JEI combustion page opens (coolant tab first)",
+   "needs": "recipeViewer"
   },
   {
    "label": "the combustion FUEL tab (second tab)",
    "do": "click",
    "x": 152,
    "y": 35,
-   "allowMiss": true
+   "allowMiss": true,
+   "needs": "recipeViewer"
   },
   {
    "do": "wait",
-   "ms": 800
+   "ms": 800,
+   "needs": "recipeViewer"
   },
   {
    "name": "b4-jei-combustion-fuel",
    "do": "shot",
-   "look": "B4: JEI combustion fuel tab: BuildCraft fuels with their burn time and MJ/t"
+   "look": "B4: JEI combustion fuel tab: BuildCraft fuels with their burn time and MJ/t",
+   "needs": "recipeViewer"
   },
   {
    "do": "key",
-   "key": "escape"
+   "key": "escape",
+   "needs": "recipeViewer"
   },
   {
    "do": "wait",
-   "ms": 400
+   "ms": 400,
+   "needs": "recipeViewer"
   },
   {
    "do": "close"

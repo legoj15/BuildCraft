@@ -1,5 +1,7 @@
 // Two-client multiplayer smoke (scripts/smoke/multiplayer/mp.py): per-invocation username + quick-play-multiplayer for the client run and a
 // separate game directory for the server run, without touching build.gradle.kts.
+// NeoForge nodes only: it looks up the `neoForge` run extension, which a Fabric or MinecraftForge node does not have (mp.py
+// refuses a Forge node up front, with a reason, before it gets here).
 allprojects { proj ->
     proj.afterEvaluate {
         def nf = proj.extensions.findByName('neoForge')

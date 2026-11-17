@@ -6,7 +6,8 @@
 package buildcraft.platform.forge;
 
 //? if forge {
-/*import net.minecraftforge.fml.event.config.ModConfigEvent;
+/*import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 import buildcraft.platform.config.ConfigHooks;
 
@@ -19,7 +20,9 @@ import buildcraft.platform.config.ConfigHooks;
  * have run, so a listener subscribed while the constructor runs hears the first load and there is nothing to replay
  * (the Fabric twin has to, as its library reads the file inside the register call).
  *
- * <p>As on NeoForge, {@code Reloading} can fire on any thread (it follows a change of the file on disk).
+ * <p>As on NeoForge, {@code Reloading} can fire on any thread (it follows a change of the file on disk). A spec whose
+ * config is not loaded is not acted on: Forge's file watcher can deliver a reload after the config was closed (seen on
+ * 1.21.1 as a fresh run's corrected file triggered it while the server shut down), and reading a value then throws.
  *^/
 public final class ForgeConfigHooks implements ConfigHooks {
 
@@ -37,7 +40,7 @@ public final class ForgeConfigHooks implements ConfigHooks {
     public void onReload(Object spec, Runnable action) {
         ForgeBus.listenMod(ModConfigEvent.Reloading.class, event -> {
             Object reloaded = event.getConfig().getSpec();
-            if (reloaded == spec) {
+            if (reloaded == spec && ((ForgeConfigSpec) spec).isLoaded()) {
                 action.run();
             }
         });

@@ -81,8 +81,8 @@ import net.minecraftforge.items.wrapper.SidedInvWrapper;
  * only what the entity can equip there ({@code isEquippableInSlot}), as NeoForge's fallback provider answers. Forge's
  * own wrapper for a living entity is the same slots plus the body slot, and takes any item in any of them, so the view
  * Forge hands out is swapped for this one ({@link #equipment}, over Forge's own {@code EntityEquipmentInvWrapper} for the
- * slot access and its equip side effects). On 1.21.1 Forge's wrapper is NeoForge's 1.21.1 fallback already (hands and
- * armour, any item), so nothing is swapped there and {@link #equipment} is not built.
+ * slot access and its equip side effects). On 1.21.1 Forge's stock wrapper also has the body slot, and NeoForge's 1.21.1
+ * fallback is hands and humanoid armour taking any item, so the swap is the same there without the equippability check.
  *
  * <p>One handler per position (and side), or per container or entity, is kept while something holds it, so the caches above, which
  * rebuild their BuildCraft view when the handler object changes, do not allocate on each tick.
@@ -182,12 +182,13 @@ final class ForgeVanillaHandlers {
     /^*
      * The hands and humanoid armour of {@code entity} as one handler, NeoForge's fallback: Forge's slot access over
      * exactly those slots (declaration order, so the hands first), with the equippability check Forge's wrapper never
-     * makes: an insert into a slot the item does not belong in is refused, as is a {@code isItemValid} question.
+     * makes: an insert into a slot the item does not belong in is refused, as is a {@code isItemValid} question. On 1.21.1
+     * there is no such check, as in NeoForge's 1.21.1 wrappers.
      ^/
-    //? if >=1.21.10 {
     static IItemHandler equipment(LivingEntity entity) {
         return EQUIPMENT.computeIfAbsent(entity, living -> new EntityEquipmentInvWrapper(living,
                 EquipmentSlot.Type.HAND, EquipmentSlot.Type.HUMANOID_ARMOR) {
+            //? if >=1.21.10 {
             @Override
             public boolean isItemValid(int slot, ItemStack stack) {
                 return entity.isEquippableInSlot(stack, validateSlotIndex(slot));
@@ -197,9 +198,9 @@ final class ForgeVanillaHandlers {
             public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
                 return isItemValid(slot, stack) ? super.insertItem(slot, stack, simulate) : stack;
             }
+            //?}
         });
     }
-    //?}
 
     /^* The composter's container for {@code side}, read from the block as it is now. ^/
     private static final class ComposterHandler implements IItemHandler {

@@ -128,15 +128,12 @@ public final class ForgeTransfer implements TransferServices {
             }
         }
         IItemHandler answer = entity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).resolve().orElse(null);
-        // NeoForge's fallback for a living entity is its hands and four armour slots, each taking only what fits there;
-        // Forge's stock wrapper adds the body slot and takes anything anywhere. On 1.21.1 both loaders' answer is the
-        // same hands-and-armour wrapper that takes anything, so Forge's own stands.
-        //? if >=1.21.10 {
+        // NeoForge's fallback for a living entity is its hands and four armour slots, each taking only what fits there
+        // (on 1.21.1 anything); Forge's stock wrapper adds the body slot on both lines and takes anything anywhere.
         if (answer != null && entity instanceof LivingEntity living && !(entity instanceof Player)
                 && ForgeVanillaHandlers.isStockEquipment(answer)) {
             answer = ForgeVanillaHandlers.equipment(living);
         }
-        //?}
         return ForgeItemStorages.fromForge(answer);
     }
 

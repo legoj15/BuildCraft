@@ -159,8 +159,13 @@ public class PipeBehaviourStripesEntityClaimTester {
         public static void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
             event.enqueueWork(LoadTimeLowestClaim::register);
         }
-        //?} elif forge {
+        //?} elif forge && >=1.21.10 {
         /*@net.minecraftforge.eventbus.api.listener.SubscribeEvent
+        public static void onCommonSetup(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+            event.enqueueWork(LoadTimeLowestClaim::register);
+        }*/
+        //?} elif forge {
+        /*@net.minecraftforge.eventbus.api.SubscribeEvent
         public static void onCommonSetup(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
             event.enqueueWork(LoadTimeLowestClaim::register);
         }*/

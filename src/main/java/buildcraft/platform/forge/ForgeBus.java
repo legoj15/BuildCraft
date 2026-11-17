@@ -101,8 +101,13 @@ public final class ForgeBus {
     }
 
     public static <E extends Event & Cancellable> Registration refuseRemovable(Class<E> type, Predicate<E> refuser) {
+        return refuseRemovable(type, HookOrder.DEFAULT, refuser);
+    }
+
+    public static <E extends Event & Cancellable> Registration refuseRemovable(Class<E> type, HookOrder order,
+            Predicate<E> refuser) {
         CancellableEventBus<E> bus = CancellableEventBus.create(type);
-        EventListener registered = bus.addListener(refuser);
+        EventListener registered = bus.addListener(priority(order), refuser);
         return () -> bus.removeListener(registered);
     }
 
@@ -163,12 +168,16 @@ public final class ForgeBus {
     }
 
     public static <E extends Event> Registration refuseRemovable(Class<E> type, Predicate<E> refuser) {
+        return refuseRemovable(type, HookOrder.DEFAULT, refuser);
+    }
+
+    public static <E extends Event> Registration refuseRemovable(Class<E> type, HookOrder order, Predicate<E> refuser) {
         Consumer<E> registered = event -> {
             if (refuser.test(event)) {
                 event.setCanceled(true);
             }
         };
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, type, registered);
+        MinecraftForge.EVENT_BUS.addListener(priority(order), false, type, registered);
         return () -> MinecraftForge.EVENT_BUS.unregister(registered);
     }
 

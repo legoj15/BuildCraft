@@ -114,9 +114,14 @@ minecraft {
         register("gameTestServer") {
             workingDir.set(gameTestRunDir)
             // Optional filter, as on the other nodes: `-PbcTests=buildcraftunofficial:pipe_*` (vanilla's own `--tests` selector,
-            // a namespaced glob against the test_instance registry).
+            // a namespaced glob against the test_instance registry). 1.21.1's server has no `--tests` and runs every registered
+            // TestFunction, so there the glob rides a system property and LegacyGameTestRegistry applies it, as on NeoForge.
             if (bcTests != null) {
-                args("--tests", bcTests)
+                if (!isPre1_21_10) {
+                    args("--tests", bcTests)
+                } else {
+                    systemProperty("buildcraft.gameTestFilter", bcTests)
+                }
             }
             // -PbcGameTestTrace logs every test's start and end (buildcraft.lib.test.GameTestTrace): the way to name the tests
             // in flight when a product exception in a level tick crashes the server.

@@ -328,6 +328,11 @@ tasks.named<ProcessResources>("processResources") {
             )
         }
     }
+    // The client mixins (platform/forge/mixin/client) are whole-file `forge && >=1.21.10`: a node below that ships a config
+    // without their list. A constant branch, like the down-ports above (a doLast must not capture the script-level flag).
+    if (isPre1_21_10) {
+        doLast { DataForge.dropClientMixins(destinationDir.resolve("buildcraftunofficial.forge.mixins.json")) }
+    }
     // The NeoForge -> Forge data transform (conditions, components ingredients, biome modifiers, fluid_container item
     // models), then the guard that nothing NeoForge-keyed is left.
     doLast {

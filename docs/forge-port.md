@@ -87,7 +87,7 @@ from `.forge-ref/sources-26.3-66.1.8` and Forge's universal jar, then proved by 
 | `neoforge:ingredient_type: neoforge:components` (26 gate recipes) | `{"type": "buildcraftunofficial:components", items, components}` | Forge's ingredient JSON dispatches on `type` through `forge:ingredient_serializers`; it has no component ingredient (its `NBTIngredient` compares `custom_data`). `ForgeCraftingServices.ComponentsIngredient` now has a codec (`items` holder set + `DataComponentPatch`), a stream codec and a registered serializer, called from the entrypoint before `BCCore.init`. Strict mode fails the build, as on Fabric |
 | `data/<ns>/neoforge/biome_modifier/*.json` (3) | moved to `data/<ns>/forge/biome_modifier/` (the `forge:biome_modifier` datapack registry); `neoforge:add_features` becomes `forge:add_features` (same `biomes`/`features`/`step` fields, step names read from `Decoration.CODEC`) | `ForgeMod` registers `forge:add_features` and the datapack registry. `buildcraftunofficial:add_oil` passes through unchanged: `ForgeAllBiomesFeatureModifier`'s type is registered by `registerAllBiomesFeature` under that id with a `feature` field |
 | `data/neoforge/recipe_priorities.json` | dropped | Forge has no recipe priorities (nothing in its sources or patches). The shared 8-glass tank grid falls to vanilla order, as on Fabric |
-| `neoforge:fluid_container` item definitions (31: 30 buckets + `fragile_fluid_container`) | `items/<n>.json` becomes `{"model": {"type": "minecraft:model", "model": "<ns>:item/<n>"}}` and a new `models/item/<n>.json` carries `"loader": "forge:fluid_container"`, `"parent": "forge:item/default"`, the textures and the same four fields | Forge's `DynamicFluidContainerModel.Loader` is a geometry loader (`ClientForgeMod`, `ModelEvent.RegisterGeometryLoaders`) read from a model file, not an item-definition type. `neoforge:item/mask/bucket_fluid_drip` becomes `forge:item/mask/bucket_fluid_drip` (Forge's own mask in its universal jar), so no BC texture is needed. Forge 26.3 ships no item tint for the fluid layer (tint index 1), so the buckets render un-tinted until F6 supplies one |
+| `neoforge:fluid_container` item definitions (31: 30 buckets + `fragile_fluid_container`) | `items/<n>.json` keeps its place and becomes type `buildcraftunofficial:fluid_container` (F6), same fields (`fluid`, `textures`, `flip_gas`, `apply_fluid_luminosity`, `force_opaque_fluid`, `cover_is_mask`) | F4 first wrote a model file with `"loader": "forge:fluid_container"`; F6 replaced it, because Forge's `DynamicFluidContainerModel` bakes per fixed fluid, reads `block/` sprites as `item/` and registers no tint (see "Client on Forge (F6)", Fluid containers). `neoforge:item/mask/bucket_fluid_drip` becomes `forge:item/mask/bucket_fluid_drip` (Forge's own mask in its universal jar), so no BC texture is needed |
 
 ## Running the dedicated server (F4)
 
@@ -171,6 +171,59 @@ mixins below proved the same mechanism: each shows "Mixing <Name> from buildcraf
 `FluidFireTester.lavaIgnites` has a Forge arm that asks what Forge's `LavaFluid` asks (`state.ignitedByLava() &&
 state.isFlammable(level, pos, face)`), not BuildCraft's hook, which Forge never calls and which is true by construction.
 
+## Client on Forge (F6)
+
+The six client holders of `ClientPlatform` are `platform/forge/client/Forge<Seam>`; client mixins are in
+`platform/forge/mixin/client`, listed in the config's `client` array (so a dedicated server never loads them). The slice is
+26.3 code: its 19 files are whole-file `forge && >=1.21.10`, so `1.21.1-forge` compiles none of them (see F7b). No access
+transformer line was added: what Forge's own AT leaves private is reached through accessor and invoker mixins, so the
+shared `accesstransformer.cfg` (read raw by every NeoForge node too) is untouched.
+
+| Seam | Forge hook, vanilla registry or mixin |
+|---|---|
+| `ClientRegistrationSinks` (`ForgeClientRegistrationSinks`) | Queue and replay, as NeoForge, on each event's static `BUS`: `EntityRenderersEvent.RegisterRenderers` (block entity and entity renderers), `RegisterParticleProvidersEvent` (sprite sets), `AddGuiOverlayLayersEvent` (above-all: `add` on the root draw; above the crosshair: `addAbove(PRE_SLEEP_STACK, id, CROSSHAIR, layer)`), `RegisterColorHandlersEvent.Block` (block tint sources), `RegisterClientReloadListenersEvent` (no id), `RegisterPictureInPictureRendererEvent` (keyed by the renderer's own state class), `FMLClientSetupEvent` through `getBus(ForgeModBus.group())` (`clientSetup`, and through it the menu screens, `MenuScreens.register`, which Forge's AT opens). Straight into vanilla's maps at the call, as on Fabric: item tint sources (`ItemTintSources.ID_MAPPER`, opened by Forge's AT), render pipelines (`RenderPipelines.PIPELINES_BY_LOCATION`, Forge's AT), sprite sources (`SpriteSourcesAccessor`). Model hooks are plain listeners: `ModelEvent.ModifyBakingResult` (`onModelsBaking`, `editItemModels`, `pipeBlockModel`), `ModelEvent.BakingCompleted` at `ForgeGameHooks.priority(order)`. `fluidAppearance`: `ForgeFlowingFluids.Type#attachClientExtensions` at client setup (`ForgeFluidTypeExtensions`: textures, no tint, fog colour and distance) plus a `ModelEvent.BakeFluidModels` listener registering the world `FluidModel` for source and flowing. `blockParticles`: `ForgeBlockParticles` asked by `ClientLevelMixin`. `headAccessoryRenderer`: nothing (no Curios on Forge 26.3). The constructor registers `ForgeFluidContainerModel`'s item model type |
+| `ClientHooks` (`ForgeClientHooks`) | `TickEvent.ClientTickEvent.Post`, `ClientPlayerNetworkEvent.LoggingIn` (early: `Priority.HIGH`) and `LoggingOut` (which is where `BCLibClient` clears the guide recipe cache), `ItemTooltipEvent`, `LivingEntityUseItemEvent.Tick` (client side only), `RenderTooltipEvent.Pre`, `RenderHighlightEvent.Block` (a custom renderer drawing `submitShapeOutline` with vanilla's translucency test; misses and air skipped), `LevelEvent.Unload` and `ChunkEvent.Load`/`Unload` filtered to client levels. `onRecipesReceived` is `ForgeRecipeSync.addClientListener`. `onLevelRender` is called by `LevelRendererMixin` |
+| `ClientModels` (`ForgeClientModels`) | Vanilla's `MaterialInfo` constructor; per-vertex colours in a weak identity side table (Fabric's), multiplied into vanilla's `QuadInstance` by `ModelBlockRendererMixin` (blocks, chunk mesh) and `ItemFeatureRendererMixin` (item layers); `setItemQuads` is `ItemQuads.split` |
+| `ClientVanillaExtensions` (`ForgeClientVanillaExtensions`) | Forge's position-aware `Block.shouldRenderFace(level, pos, state, neighbour, face)`; PiP through Forge's public `GuiGraphicsExtractor.getRenderState()`; the scissor peek through `getScissorStack()` and `ScissorStackMixin`'s duck interface (the stack's class is private) |
+| `ClientFluids` (`ForgeClientFluids`) | Sprite from the baked `FluidModel` (as NeoForge 26.x); tint from `IClientFluidTypeExtensions#getTintColor(FluidStack)` (Forge's fluid models carry vanilla's level-only tint source) |
+| `ClientConfigScreens` (`ForgeClientConfigScreens`) | Nothing: Forge has no generated config screen (`TODO(#209 F6)`) |
+
+The pipe block model (`ForgePipeBlockStateModel`) overrides `IForgeBlockStateModel`'s three-argument `collectParts`, which
+Forge's `SectionCompiler` calls with the block entity's model data (`ForgeRenderData.pipe`).
+
+**Fluid containers.** Forge's `forge:fluid_container` (what F4 converted the 31 items to) cannot serve BuildCraft: it is a
+block-model geometry baked for the one fluid in its JSON (the fragile shard cannot show its contents), it rewrites the
+fluid's `block/` sprite to `item/` and looks for it on the item atlas (BuildCraft's fluid sprites are block-atlas only:
+a missing texture per bucket), and Forge registers no tint for its layer. So the Forge node uses the Fabric node's item
+model type, ported as `ForgeFluidContainerModel` (`buildcraftunofficial:fluid_container`, NeoForge's fields), registered
+through `ItemModelsAccessor` and built with `CuboidItemModelWrapperInvoker`; `DataForge` now renames the item model's type
+(and swaps NeoForge's mask for Forge's `forge:item/mask/bucket_fluid_drip`) instead of writing `models/item` files.
+
+### Client mixins (F6)
+
+| Mixin | Stands in for | Injection point |
+|---|---|---|
+| `LevelRendererMixin` | NeoForge `SubmitCustomGeometryEvent` | `@Inject` before the one `finalizeGizmoCollection()` call in `submitFeatures`, with the method's `PoseStack` local (`@Local`) and node collector argument |
+| `ClientLevelMixin` | NeoForge `IClientBlockExtensions#addDestroyEffects` / `#addHitEffects` (Forge's twin is attached by overriding `Block.initializeClient` and its hit hook gets no position) | `@Inject` at the head of `addDestroyBlockEffect` (cancellable); `@WrapWithCondition` on the one `addBreakingParticles` call in `addBreakingBlockEffects` |
+| `ModelBlockRendererMixin` | NeoForge `BakedColors` (block quads) | `@Inject` before the one `BlockQuadOutput.put` call in `putQuadWithTint` |
+| `ItemFeatureRendererMixin` | NeoForge `BakedColors` (item quads) | `@Inject` after the one `QuadInstance.setColor(int)` call in `prepareMainSubmit`, with the loop's `BakedQuad` (`@Local`) |
+| `ScissorStackMixin` | NeoForge `GuiGraphicsExtractor#peekScissorStack` | none (duck interface `ForgeScissorPeek` over the private class's `peek()`) |
+| `SpriteSourcesAccessor` | NeoForge `RegisterSpriteSourcesEvent` | none (static accessor, `SpriteSources.ID_MAPPER`) |
+| `ItemModelsAccessor` | NeoForge `RegisterItemModelsEvent` | none (static accessor, `ItemModels.ID_MAPPER`) |
+| `CuboidItemModelWrapperInvoker` | the Fabric class tweaker's opening of the constructor | none (constructor invoker) |
+
+Gaps left (each a `TODO(#209 F6)` in the source): the config screen (`ForgeClientConfigScreens`).
+
+**What was run (2026-11-16).** `:26.3-forge:runClient` reached the title screen (Realms check, sound engine, every atlas)
+with no BuildCraft exception or WARN; the only missing-texture lines are vanilla's `minecraft:builtin/generated` particle
+ones, which the NeoForge and Fabric 26.3 logs carry too. `-PbcQuickPlay=<save>` (a copy of the dedicated server's world in
+`run/saves/`) joined (`Dev joined the game`) and ran on with no BuildCraft WARN or ERROR; every client mixin logged
+`Mixing client.*`, `ModelBlockRendererMixin` at the first chunk mesh. `:26.3-forge:runServer` still boots to `Done` and
+loads no `client.*` mixin and no `platform.forge.client` class. Nothing was checked by eye: render correctness (pipes,
+fluids, buckets, outlines, overlays) is for the smoke runner. One oddity, not traced: the quick-play client sat about six
+minutes after its resource load, render thread idling in the frame limiter, before the integrated server started; no
+input was sent to it.
+
 ## Rules added for the third loader
 
 - A third constant, `forge`. `constants.match(loader, "neoforge", "fabric", "forge")`.
@@ -205,9 +258,9 @@ state.isFlammable(level, pos, face)`), not BuildCraft's hook, which Forge never 
 | F3c | **Done.** The Forge mixins and routes for the hooks Forge 26.3 lacks (table under "Mixins on Forge") | `:26.3-forge:runServer` boots with every mixin applied |
 | F4 | **Done.** Resources: `mods.toml`, `pack.mcmeta`, access transformer check, `DataForge.kt`, jar, dedicated server boots to Done | `:26.3-forge:runServer` |
 | F5 | **Done.** Game tests on Forge; `LoaderTestEvents` forge arms; the run is in `nodeVerification` | `:26.3-forge:runGameTest` green: all 948 registered tests pass, 7 client-class tests not registered (see "Game tests on Forge (F5)") |
-| F6 | Client seams, models, renderers; dev client | smoke runner on `26.3-forge` |
+| F6 | **Done to boot on 26.3-forge.** Client seams, models, renderers; the dev client reaches the title screen and a world (see "Client on Forge (F6)"). On `1.21.1-forge` the whole slice is compiled out (whole-file `forge && >=1.21.10`) | smoke runner on `26.3-forge` (not run in F6; the boot was checked by hand) |
 | F7 | **Server side done.** `1.21.1-forge`: EventBus 6 arm of `ForgeBus`, 1.21.1 event and API shapes, plain-Mixin arms, data down-ports, vanilla tickets (see "The 1.21.1 line (F7)") | `:1.21.1-forge:nodeVerification` green: boot clean, all 948 game tests pass |
-| F7b | The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders) | smoke runner on `1.21.1-forge` |
+| F7b | **Not started.** The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders): the six holders throw `not ported (#209)` there until it lands | smoke runner on `1.21.1-forge` |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
 
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
@@ -351,7 +404,9 @@ dedicated server never loads during a boot).
 transform: `DataDownportPre263` (loot and advancements), then on 1.21.1 `DataDownport1211` (recipes, advancement
 backgrounds, classic `models/item` files), then `DataForge`. `DataForge` step 5 renames the classic model loaders
 (`neoforge:fluid_container` → `forge:fluid_container`, `neoforge:separate_transforms` → `forge:separate_transforms`; Forge 52
-registers both with the same fields) and the components-ingredient rewrite also reads the down-port's `"type"` key. Pack
+registers both with the same fields) and the components-ingredient rewrite also reads the down-port's `"type"` key (step 4,
+the `items/` rewrite to `buildcraftunofficial:fluid_container`, runs on this line too and is inert: 1.21.1 reads no `items/`
+file). Pack
 format: `"pack_format": 34`. Forge-only data in `src/main/resources-forge`: `data/c/tags/item/cobblestones/normal.json`
 (Forge 52's tags do not fill `c:cobblestones/normal`; without it the structure-pipe recipe was dead), with
 `#forge:cobblestone/normal` optional. `processTestResources` down-ports the fixture recipes too.
@@ -369,14 +424,35 @@ ships no `minecraft:always_pass`), the same 948 as 26.3-forge, in about 33 s of 
 - `-PbcTests=<glob>` becomes `-Dbuildcraft.gameTestFilter` (1.21.1's server has no `--tests`), as on NeoForge 1.21.1.
 - The pass check and the assembled one-mod directory are F5's, unchanged.
 
-**F7b, the 1.21.1 client (not started).** `platform/forge/client/**`, the client mixins and `ClientPlatform`'s Forge holders
-are 26.3 code and still throw on this node; the client slice needs, at least: the 1.21.1 render layer (BCLib's
-`RenderStateShard`-based types: the three shards are already opened in the access transformer), model registration and baking
-through Forge 52's model events (their 1.21.1 shapes are not checked yet), menu screens and key mappings on EventBus 6, item tints (the
-`forge:fluid_container` tint is the 26.3 open item too), the `LoggingOut` clear, and a client game-test or smoke run. Any new
-file under `platform/forge/client/` must compile on 1.21.1-forge or be whole-file `forge && >=1.21.10` (as
-`ForgeRecipeSync` is). JEI and REI stay off this node (no `jei_version` / `rei_version`; JEI has a Forge 1.21.1 build, wiring it
-is F8).
+**F7b, the 1.21.1 client (not started).** The F6 client slice is 26.3 code (EventBus 7, the 26.x render and model
+classes), so on this node it is compiled out and its holders throw. What is gated, and how:
+
+- Every file of `platform/forge/client/**` (11) and `platform/forge/mixin/client/**` (8) is whole-file
+  `//? if forge && >=1.21.10 {` (no other directive in them), as `ForgeRecipeSync` is: the class files do not exist on
+  `1.21.1-forge` (not in `build/sourceSets/main`, not in the jar). The 26.3 node compiles them unchanged.
+- The six holders of `ClientPlatform` keep their Forge arm as a flat chain, `elif forge && >=1.21.10` (the implementation)
+  then `elif forge` (throws `forge: <Seam> not ported (#209)`), so a 1.21.1 Forge dev client fails at its first
+  `ClientPlatform` call with that message, and a dedicated server never reaches it. The chain is flat, not a version
+  directive nested in the loader arm: a nested chain needs the inner directive to be the first line inside an inactive arm's
+  block comment, which no file in the tree does.
+- The mixin config is one shared file, `src/main/resources-forge/buildcraftunofficial.forge.mixins.json`, with its
+  `"client"` list. `processResources` on a node below 1.21.10 removes that list after the copy
+  (`DataForge.dropClientMixins`, called from `bc.forge`), so the 1.21.1 jar's config names no mixin it lacks; 26.3's is the
+  file as written. A new client mixin goes into the shared list and is gated like the others.
+- Nothing common calls into the client slice: `ForgeRecipeSync.addClientListener` (whole-file `forge && >=1.21.10`) is
+  reached only from `ForgeClientHooks`, and `ForgeFlowingFluids.Type#attachClientExtensions` compiles on both lines and is
+  reached only from `ForgeClientRegistrationSinks`, so neither needed an arm.
+- `DataForge` serves both: step 4 rewrites the 31 `items/` definitions to `buildcraftunofficial:fluid_container` on every
+  line (1.21.1 never reads `items/`), and step 5 still renames the down-port's classic `models/item` loaders to Forge's own
+  on 1.21.1.
+
+The client slice needs, at least: the 1.21.1 render layer (BCLib's `RenderStateShard`-based types: the three shards are
+already opened in the access transformer), model registration and baking through Forge 52's model events (their 1.21.1
+shapes are not checked yet), menu screens and key mappings on EventBus 6, item tints (and a 1.21.1 answer for the fluid
+container: `ForgeFluidContainerModel` is an item-model type, a 1.21.4+ shape, so the classic `forge:fluid_container` model
+file step 5 leaves is the candidate), the `LoggingOut` clear, and a client game-test or smoke run. A file ported to
+1.21.1 replaces its whole-file `forge && >=1.21.10` with per-version arms, and its mixin joins the node's list. JEI and REI
+stay off this node (no `jei_version` / `rei_version`; JEI has a Forge 1.21.1 build, wiring it is F8).
 
 ## Common-code loader forks (F3b)
 
@@ -419,20 +495,17 @@ the call site in its `patches/`.
 - Production-install proof of the two F4 runtime declarations: the jar manifest `MixinConfigs` and the shipped
   `META-INF/accesstransformer.cfg` are read by FML in an installed Forge, but only the dev-run equivalents were booted
   (a Forge server install is a download). Boot the collected jar in `mods/` of a real install before anything ships.
-- Fluid-container item tint: Forge 26.3's `forge:fluid_container` model bakes the fluid layer with tint index 1 and registers no
-  item tint for it, so the 31 converted items render un-tinted until F6 supplies a tint source (`items/*.json` `tints`).
 - Settled in F1: the 3-arg `registerConfig(type, spec, fileName)` exists; Forge keeps one config per type per mod.
   `ForgeConfigSpec` lacks only the 4-arg `defineListAllowEmpty` (nine calls in `BCEnergyConfig` and `BCSiliconConfig`):
   they go through `lib.misc.ConfigListUtil.stringList`, whose one directive is the only loader fork.
 - Forge's packet splitter is commented out upstream on 26.3: payloads are held to vanilla's caps (1 MiB clientbound,
   32 KiB serverbound). Measure the snapshot payloads in F5.
-- The recipe sync's client end (`ClientHooks#onRecipesReceived` on Forge, one call to `ForgeRecipeSync.addClientListener`),
-  and the client's `LoggingOut` clear, belong to F6; until then a client of a remote Forge server has no guide recipe panels.
 - Forge 26.3-66.1.8 cannot network-encode a shaped recipe with an empty slot (`Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC`,
   see the recipe sync row). BuildCraft works around it; any other mod syncing `RecipeHolder.STREAM_CODEC` hits it. Worth a
   report upstream (MinecraftForge) when the user wants one filed.
 - Unexercised F3c behaviour (applied and compiled, needs a client or a pipe in a game test): the pick-block wrap, the recipe
-  payload's client receiver, the spectator menu's client half (the factory reading the data).
+  payload's client receiver (F6 wires it through `ForgeClientHooks#onRecipesReceived`; the dev-client join negotiated the
+  `recipe_sync` channel, but no guide panel was opened), the spectator menu's client half (the factory reading the data).
 - `BCEvent` posts to the NeoForge bus only. Whether Forge addons get a bus post is an API decision; until asked, the
   Forge arm is the plain class Fabric uses.
 - McDevBridge has no `1.21.11-forge` node; needed only if that line is taken.

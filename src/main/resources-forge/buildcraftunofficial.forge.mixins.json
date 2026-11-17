@@ -18,6 +18,16 @@
     "ServerPlayerMixin",
     "SwimMixin"
   ],
+  "client": [
+    "client.ClientLevelMixin",
+    "client.CuboidItemModelWrapperInvoker",
+    "client.ItemFeatureRendererMixin",
+    "client.ItemModelsAccessor",
+    "client.LevelRendererMixin",
+    "client.ModelBlockRendererMixin",
+    "client.ScissorStackMixin",
+    "client.SpriteSourcesAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

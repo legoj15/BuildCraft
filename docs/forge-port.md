@@ -253,7 +253,9 @@ What the screenshots showed against NeoForge 26.3 (worlds differ in seed, so ter
 differences): pipes, plugs, facades, fluids, engines, machine GUIs, robots, markers, goggles, Zone Planner and particles render
 the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 
-1. **The guide is empty (high).** `[lib.guide] Loaded 0 possible and 0 actual guide pages ... registries 26 ... pages en_us 0`
+1. **The guide was empty (high; fixed 2026-11-19, #212).** Cause confirmed: `ScriptableRegistry` called `Path.toFile()` on a
+   union-filesystem mod path and the exception aborted every script registry; it now stays on NIO `Path` and skips only an
+   unreadable source. After the fix `release-2026-2-1` passes on 26.3-forge with 202 of 202 pages. Before: `[lib.guide] Loaded 0 possible and 0 actual guide pages ... registries 26 ... pages en_us 0`
    (NeoForge: 202, registries 135, pages 225): 4 of 8 chapters, the cover reads "Everything", entries open as blank spreads,
    search results do not open, links read as raw ids (`buildcraftunofficial:pipe/iron_power`). Likely root (only the first
    half is observed): every guide reload logs `[lib.script] Failed to reload scripts` (`UnsupportedOperationException: Path not

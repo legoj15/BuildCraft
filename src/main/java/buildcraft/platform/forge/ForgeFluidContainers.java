@@ -284,9 +284,14 @@ final class ForgeFluidContainers {
     }
 
     /^* One item of the held stack becomes {@code result}: in place for a single item, else the rest stays and the result
-     *  goes to the inventory. A creative player keeps the item. ^/
+     *  goes to the inventory. A creative player keeps the item and is given the result only when the inventory holds
+     *  none like it (vanilla's {@code ItemUtils.createFilledResult}, which NeoForge's player item access follows). ^/
     private static void swapHeld(Player player, InteractionHand hand, ItemStack held, ItemStack result, boolean creative) {
         if (creative) {
+            if (!result.isEmpty() && !player.getInventory().contains(result)) {
+                player.getInventory().add(result);
+                player.containerMenu.broadcastChanges();
+            }
             return;
         }
         if (held.getCount() == 1) {

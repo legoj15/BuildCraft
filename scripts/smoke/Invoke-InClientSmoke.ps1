@@ -219,7 +219,7 @@ function Wait-InWorld([int]$TimeoutSec = 300) {
     Wait-Until {
         $s = Get-State
         if (($null -ne $s.PSObject.Properties['player']) -and ($null -eq $s.PSObject.Properties['screen'])) { return $true }
-        # A world saved by a Forge client carries the experimental lifecycle (see New-SmokeWorld), so loading it (quick-play, or
+        # A world saved by a Forge client before #213 carries the experimental lifecycle (see New-SmokeWorld), so loading it (quick-play, or
         # Play Selected World) stops at vanilla's "Worlds using Experimental Settings are not supported" confirmation, which
         # waits for a click for ever (the render thread idles in the frame limiter, no server thread ever starts). Load without
         # a backup, as a person making the smoke world would; any other screen is left alone.
@@ -533,7 +533,8 @@ function New-SmokeWorld {
     }
     Invoke-MenuClick 'Create New World'
     # A Forge client answers "Create New World" with vanilla's "Warning! These settings are using experimental features"
-    # confirmation (a non-vanilla data pack's registry entries carry the experimental lifecycle; seen on 26.3-forge only), which
+    # confirmation (a non-vanilla data pack's registry entries carry the experimental lifecycle; 26.3-forge before #213's
+    # MappedRegistryMixin, and still for any other Forge mod with worldgen data), which
     # waits for a click for ever: say Yes to it, as a person making the smoke world would, then wait for the world.
     Wait-Until {
         $s = Get-State

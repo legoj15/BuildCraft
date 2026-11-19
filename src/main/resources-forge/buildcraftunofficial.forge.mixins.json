@@ -11,6 +11,7 @@
     "EntityMixin",
     "FloatGoalMixin",
     "LevelChunkMixin",
+    "MappedRegistryMixin",
     "NamespacedWrapperMixin",
     "SavedDataStorageMixin",
     "ServerChunkCacheMixin",

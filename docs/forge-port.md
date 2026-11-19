@@ -235,7 +235,7 @@ McDevBridge `+mc26.3-forge` jar goes in `versions/26.3-forge/run-smoke/mods` as 
 declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devMods"`, implied by `mods`,
 `-Mods` and `gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and no
 `-PwithMods` runtime), `mp.py` and its scene script skip a Forge node with exit 0, and `mod-list-banner` has a Forge row click
-(Forge's own `ModListScreen` sorts Minecraft first). Two vanilla confirmations that only a Forge-made world raises are
+(Forge's own `ModListScreen` sorts Minecraft first). Two vanilla confirmations that only a Forge-made world raised before #213 (and an older one still does) are
 answered by the runner, with a console note each: "Warning! These settings are using experimental features" when the first-run
 world is created, and `BackupConfirmScreen` when a world not yet confirmed is loaded (a confirmation is stored in `level.dat`
 as `confirmedExperimentalSettings`, so it comes once per world). A first-run world also gets `gamemode creative`, a `tp` to the
@@ -263,15 +263,20 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
    `ForgeLoaderServices.modSourcePaths` returned for a mod whose file is not on the default filesystem (not identified;
    probably the `minecraft` or `forge` entry, whose dev jar is a union path), and `GuideManager.reload0` reloads its book and
    page registries through those scripts.
-2. **Worlds are "experimental" (medium).** The warnings above; `level.dat` of the Forge world lists the separate packs
-   `mod:buildcraftunofficial`, `mod:mcdevbridge`, `mod:forge` where NeoForge has one `mod_data`, and the NeoForge world's
-   `confirmedExperimentalSettings` is 0 (it never asked). Inferred cause: registry entries of a data pack without known-pack
-   information get `Lifecycle.experimental` (`ResourceManagerRegistryLoadTask`); not isolated between BuildCraft's worldgen
-   data and Forge's own packs.
+2. **Worlds were "experimental" (medium; fixed 2026-11-19, #213).** Measured with a dedicated-server probe: the only
+   non-stable registry entries were BuildCraft's 3 configured features, 3 placed features and 3 biome modifiers, each
+   with no known-pack information (Forge gives mod data packs none, and vanilla's `ResourceManagerRegistryLoadTask` makes
+   any entry not from a known vanilla pack `Lifecycle.experimental`); Forge's own packs added none. So every Forge mod
+   with worldgen data raises the warning; BuildCraft now avoids it for its own: `MappedRegistryMixin` registers an entry
+   in BuildCraft's namespace as stable (known-pack information kept). After it the probe lists nothing, and a world made
+   and reloaded on 26.3-forge loads with no confirmation (`confirmedExperimentalSettings` 0, as on NeoForge); both Forge
+   lines boot their game tests with the mixin applied (948 and 949 pass). Worlds made
+   before the fix keep their stored confirmation; the smoke runner still answers both screens for them.
 3. Minor: no Config button (known, `ForgeClientConfigScreens`); the Forge pause menu's icon row has one button fewer than
    NeoForge's (a vanilla-screen difference, not BuildCraft's); after pouring a water bucket into a Tank in creative NeoForge leaves an
-   empty bucket in the hotbar and Forge does not (not traced; `ForgeFluidContainers.swapHeld` returns for creative as the NeoForge
-   arm does).
+   empty bucket in the hotbar and Forge did not: NeoForge's player item access follows vanilla's
+   `ItemUtils.createFilledResult` (a creative player keeps the item and is given the result if the inventory has none like
+   it), and `ForgeFluidContainers.swapHeld` now does the same (#213; compiled, not yet checked in a client).
 
 ## Rules added for the third loader
 
@@ -436,7 +441,7 @@ compile and `entity_item_storage_living_fallback` both read the field it opens).
 | Config | Forge's file watcher can deliver a reload after the config closed at shutdown ("Cannot get config value before config is loaded" on a fresh run dir): `onReload` acts only for `spec.isLoaded()` | `ForgeConfigHooks` |
 | Registries | `NamespacedWrapper`'s lookups are `getHolder(ResourceLocation)` / `getHolder(ResourceKey)`; `key.location()` | `NamespacedWrapperMixin` |
 
-**Mixins.** Forge 52 ships Mixin 0.8.7 and no MixinExtras. The config lists the same 13 names on both lines; the 1.21.1 dev
+**Mixins.** Forge 52 ships Mixin 0.8.7 and no MixinExtras. The config lists the same 14 names on both lines; the 1.21.1 dev
 run declares it with `--mixin.config` as on 26.3, and the boot's debug log shows 11 applied (the other two target classes a
 dedicated server never loads during a boot).
 

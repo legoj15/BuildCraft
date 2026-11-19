@@ -276,7 +276,9 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
    NeoForge's (a vanilla-screen difference, not BuildCraft's); after pouring a water bucket into a Tank in creative NeoForge leaves an
    empty bucket in the hotbar and Forge did not: NeoForge's player item access follows vanilla's
    `ItemUtils.createFilledResult` (a creative player keeps the item and is given the result if the inventory has none like
-   it), and `ForgeFluidContainers.swapHeld` now does the same (#213; compiled, not yet checked in a client).
+   it), and `ForgeFluidContainers.swapHeld` now does the same (#213). The
+   `creative-bucket-tank` smoke scenario checks it (pour, pour again with an empty bucket held, fill) and passes on 26.3-forge
+   and 26.3.
 
 ## Rules added for the third loader
 

@@ -1,0 +1,38 @@
+{
+  "name": "creative-bucket-tank",
+  "description": "A creative player using a bucket on a Tank keeps the bucket and is given the result only when the inventory holds none like it (vanilla ItemUtils.createFilledResult; Forge parity, #213).",
+  "base": [0, 150, 48],
+  "steps": [
+    {
+      "label": "setup",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "difficulty peaceful",
+        "time set 6000",
+        "weather clear",
+        "?clear @p",
+        "?kill @e[type=item]",
+        "fill {X-3} {Y-1} {Z-3} {X+3} {Y-1} {Z+3} minecraft:smooth_stone",
+        "?fill {X-3} {Y} {Z-3} {X+3} {Y+3} {Z+3} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:tank"
+      ]
+    },
+    {"do": "tp", "at": [0, 0, 2], "yaw": 180, "pitch": 30},
+    {"do": "hold", "item": "minecraft:water_bucket"},
+    {"do": "aim", "at": [0, 0, 0]},
+    {"label": "pour the water bucket into the empty tank", "do": "use"},
+    {"label": "the tank took the water", "do": "waitCmd", "run": "data get block {X} {Y} {Z}", "match": "(?i)water", "timeoutSec": 10},
+    {"label": "the water bucket is still in hand", "do": "cmd", "run": "execute if items entity @p weapon.mainhand minecraft:water_bucket"},
+    {"label": "one empty bucket was given", "do": "waitCmd", "run": "execute if items entity @p container.* minecraft:bucket", "match": "count: 1\\b", "timeoutSec": 10},
+    {"label": "pour again, with an empty bucket already held", "do": "use"},
+    {"do": "wait", "ms": 600},
+    {"label": "still exactly one empty bucket", "do": "waitCmd", "run": "execute if items entity @p container.* minecraft:bucket", "match": "count: 1\\b", "timeoutSec": 5},
+    {"label": "only an empty bucket now", "do": "cmd", "run": ["?clear @p", "item replace entity @p weapon.mainhand with minecraft:bucket"]},
+    {"do": "wait", "ms": 400},
+    {"label": "fill the empty bucket from the tank", "do": "use"},
+    {"label": "the empty bucket is still in hand", "do": "cmd", "run": "execute if items entity @p weapon.mainhand minecraft:bucket"},
+    {"label": "one water bucket was given", "do": "waitCmd", "run": "execute if items entity @p container.* minecraft:water_bucket", "match": "count: 1\\b", "timeoutSec": 10},
+    {"name": "after", "do": "shot", "look": "tank with water; hotbar: empty bucket in hand, a water bucket beside it"}
+  ]
+}

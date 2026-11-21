@@ -52,7 +52,14 @@ val mixinConfig = "buildcraftunofficial.forge.mixins.json"
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
+// The two-client multiplayer smoke's switches (scripts/smoke/multiplayer/mp.py): the player's name and the server a client
+// quick-plays into. Both are plain `-P` switches, so a hand-run second client works the same way.
+val bcUser = findProperty("bcUser")?.toString()
+val bcQuickPlayServer = findProperty("bcQuickPlayServer")?.toString()
 val bcTests = findProperty("bcTests")?.toString()
+// Third-party mods for dev runs, opt-in (`-PwithMods=alias[,alias...]`, see buildcraft.gradle.WithMods): the coordinates this
+// node's `withmod.<alias>` properties name, empty without the property. Read once here; a task action must not capture it.
+val withMods = WithMods.coordinates(project)
 // The game-test server's working directory (gitignored, the twin of the NeoForge nodes' run-gameTestServer): the universe,
 // config, logs/latest.log (the pass check below reads it) and console.log all land here.
 val gameTestRunDir = file("run-gameTestServer")
@@ -94,12 +101,17 @@ minecraft {
         }
         register("client") {
             // The dev user is "Dev" on every loader (see bc.fabric): the owner-gated checks name the player by its UUID.
-            args("--username", "Dev")
+            // `-PbcUser=<name>` is the second player of a multiplayer run (it replaces the argument, it is not a second one).
+            args("--username", bcUser ?: "Dev")
             // Optional quick-play and game directory, as on NeoForge: `-PbcQuickPlay=<save>` boots straight into a saved
-            // world, `-PbcRunDir=<node-relative dir>` is the scripted smoke run's own folder. ForgeGradle passes
-            // `--gameDir .`, so moving the working directory moves mods, config, saves and options.txt with it.
+            // world, `-PbcQuickPlayServer=<host:port>` straight into a server, `-PbcRunDir=<node-relative dir>` is the scripted
+            // smoke run's own folder. ForgeGradle passes `--gameDir .`, so moving the working directory moves mods, config,
+            // saves and options.txt with it.
             if (bcQuickPlay != null) {
                 args("--quickPlaySingleplayer", bcQuickPlay)
+            }
+            if (bcQuickPlayServer != null) {
+                args("--quickPlayMultiplayer", bcQuickPlayServer)
             }
             if (bcRunDir != null) {
                 workingDir.set(bcRunDir)
@@ -108,6 +120,10 @@ minecraft {
         register("server") {
             // No console window on the dev server: its console is the Gradle task's, and "stop" on stdin ends it.
             args("--nogui")
+            // `-PbcRunDir=<node-relative dir>` is the multiplayer smoke's own server directory (world, logs, server.properties).
+            if (bcRunDir != null) {
+                workingDir.set(bcRunDir)
+            }
         }
         // Forge's own game-test run type (launch target forge_userdev_server_gametest): net.minecraft.gametest.Main, which Forge
         // patches to set forge.enableGameTest and forge.gameTestServer and to run its mod loader before the server exists. There
@@ -204,6 +220,11 @@ dependencies {
     // Open Parties and Claims' server API, which lib.compat.claims.OpenPartiesAndClaims names behind a loaded-mod check:
     // compile-only against the jar this node's `withmod.opac` alias names, as bc.neoforge and bc.fabric do.
     compileOnly(WithMods.compileCoordinate(project, "opac", "maven.modrinth:open-parties-and-claims")) { isTransitive = false }
+
+    // -PwithMods: the requested third-party mods and the libraries their aliases name, on every Forge run (client, server, game
+    // tests) as on the NeoForge and Fabric nodes. Not transitive: Modrinth's maven carries no dependency metadata, so each alias
+    // lists what its mod needs.
+    withMods.forEach { coordinate -> runtimeOnly(coordinate) { isTransitive = false } }
 }
 
 // Stonecutter has to emit this node's sources before they compile: a compile against a stale or empty generated copy would

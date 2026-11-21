@@ -109,11 +109,22 @@ function Get-NodeLoader([string]$Node) {
 function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '' }
 # What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
 # needs one the node's loader lacks is SKIPPED with the reason (never failed): it asks for something the loader cannot give.
+# devMods is the -PwithMods runtime (bc.forge reads it too since #209: the aliases a node defines load there); devProperties
+# is a scenario's "gradleProperties" (-PwithGuideMe, -PwithFallingTree ...), which only the NeoForge scripts wire.
 $LoaderLacks = @{
     forge = @{
-        recipeViewer = 'a recipe viewer (neither JEI nor REI has a Forge build for 26.3; the Forge dev client loads none)'
-        devMods      = 'the optional dev-runtime mods (-PwithMods / gradleProperties): the Forge node has no such runtime yet'
+        recipeViewer  = 'a recipe viewer (neither JEI nor REI has a Forge build for 26.3; the Forge dev client loads none)'
+        devProperties = 'the optional dev-runtime switches a scenario names in "gradleProperties" (-PwithGuideMe ...): the Forge node wires none of them'
     }
+}
+# True when the node's own gradle.properties defines the -PwithMods alias (`withmod.<alias>=`, empty counts: a deliberate no-op).
+function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    foreach ($line in Get-Content -LiteralPath $props) {
+        if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { return $true }
+    }
+    return $false
 }
 function Get-LackReason($Needs, [string]$Node) {
     # The first capability of $Needs the node's loader lacks, as "needs <what>"; $null when it lacks none.
@@ -586,9 +597,18 @@ function Get-SkipReason([string]$Node) {
     # viewer) and optional dev-runtime mods ("mods" / -Mods, "gradleProperties"). A loader that lacks one skips the scenario.
     $needs = @(if ($ScenarioData.PSObject.Properties['needs']) { $ScenarioData.needs })
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer' }
-    if ($ModAliases.Count -or ($ScenarioData.PSObject.Properties['gradleProperties'] -and @($ScenarioData.gradleProperties).Count)) { $needs += 'devMods' }
+    if ($ModAliases.Count) { $needs += 'devMods' }
+    if ($ScenarioData.PSObject.Properties['gradleProperties'] -and @($ScenarioData.gradleProperties).Count) { $needs += 'devProperties' }
     $lack = Get-LackReason $needs $Node
     if ($lack) { return $lack }
+    # A scenario that names mods ("mods") needs at least one of them on this node: Gradle skips an alias the node does not
+    # define (a lifecycle line only), so a scenario whose every mod is missing would run bare and fail on its first lane.
+    # One defined alias is enough to run: crossmod-energy names Tech Reborn too, which only some nodes have.
+    $own = @()
+    if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
+    if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
+        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias> in versions/$Node/gradle.properties)"
+    }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)
     if ($Lang -ne 'en_us' -and $ScenarioData.PSObject.Properties['englishOnly'] -and $ScenarioData.englishOnly) {
@@ -600,8 +620,9 @@ function Get-SkipReason([string]$Node) {
 function Test-NodeFilter($Step, [string]$Node) {
     if (-not (Test-LoaderFilter $Step $Node)) { return $false }
     if (-not $Step.PSObject.Properties['nodes']) { return $true }
-    # A step's "nodes" names Minecraft lines: "26.3" covers both the NeoForge node and its Fabric twin. Naming the
-    # twin itself ("26.3-fabric") covers that node only.
+    # A step's "nodes" names Minecraft lines: "26.3" covers every loader's node of that line (the NeoForge node, its Fabric
+    # twin and its Forge twin), so a step that only one loader can run says so with "loaders". Naming the twin itself
+    # ("26.3-fabric", "26.3-forge") covers that node only.
     return (@($Step.nodes) -contains $Node) -or (@($Step.nodes) -contains (Get-NodeMcVersion $Node))
 }
 

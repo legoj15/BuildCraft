@@ -16,87 +16,15 @@ gold pipe-sprite crack particles on Watcher's screen (26.3 sends remote destroy-
 import json, os, sys, time, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mp
+from scene_lib import Scene
 
 NODE = sys.argv[1]
-mp.refuse_unsupported_node(NODE)   # a MinecraftForge node is skipped with a reason (exit 0), as `mp.py` does
+mp.refuse_unsupported_node(NODE)   # a Fabric node is skipped with a reason (exit 0), as `mp.py` does
 PHASE = sys.argv[2]
-OUT = os.path.join(mp.HERE, NODE, 'shots')
-os.makedirs(OUT, exist_ok=True)
-X, Y, Z = 0, -60, 0
-ANIM = 'minecraft:interact_animation' if tuple(map(int, NODE.split('.'))) >= (26, 3) else 'minecraft:swing_animation'
-R = mp.Rcon()
-log = open(os.path.join(mp.HERE, NODE, 'scene.log'), 'a', encoding='utf-8')
-
-
-def say(*a):
-    s = ' '.join(str(x) for x in a)
-    print(s)
-    log.write(time.strftime('%H:%M:%S ') + s + '\n')
-    log.flush()
-
-
-def coords(t):
-    import re
-    def rep(m):
-        base = {'X': X, 'Y': Y, 'Z': Z}[m.group(1)]
-        off = int(m.group(2) or 0)
-        return str(base + off)
-    return re.sub(r'\{([XYZ])([+-]\d+)?\}', rep, t)
-
-
-def cmd(*cs):
-    for c in cs:
-        c = coords(c)
-        r = R.cmd(c)
-        say('rcon>', c[:160], '=>', r[:200])
-
-
-def b(side, method, path, body=None, timeout=60):
-    return mp.bridge(NODE, side, method, path, body, timeout)
-
-
-def shot(side, name, look=''):
-    p = os.path.join(OUT, f'{side}-{name}.png').replace('\\', '/')
-    b(side, 'POST', '/screenshot', {'path': p})
-    say('shot', side, name, '-', look)
-    return p
-
-
-def tp(user, x, y, z, yaw=0, pitch=0):
-    cmd(f'tp {user} {x} {y} {z} {yaw} {pitch}')
-
-
-def look(side, yaw, pitch):
-    b(side, 'POST', '/look', {'mode': 'absolute', 'yaw': yaw, 'pitch': pitch})
-    time.sleep(0.2)
-
-
-def aim(side, tx, ty, tz):
-    p = b(side, 'GET', '/state')['player']['pos']
-    dx, dy, dz = tx - p['x'], ty - (p['y'] + 1.62), tz - p['z']
-    yaw = math.degrees(math.atan2(-dx, dz))
-    pitch = -math.degrees(math.atan2(dy, math.hypot(dx, dz)))
-    look(side, yaw, pitch)
-    hit = b(side, 'GET', '/state').get('hit')
-    say('aim', side, round(yaw, 1), round(pitch, 1), json.dumps(hit)[:200])
-    return hit
-
-
-def hold(user, side, item):
-    cmd(f'item replace entity {user} weapon.mainhand with {item}')
-    want = item.split('[')[0]
-    for _ in range(50):
-        h = b(side, 'GET', '/state')['player'].get('selectedItem') or {}
-        if (want == 'minecraft:air' and h.get('empty')) or h.get('id') == want:
-            return
-        time.sleep(0.1)
-    say('WARN hold not seen client-side', side, item)
-
-
-def burst(side, name, n, gap):
-    for i in range(n):
-        shot(side, f'{name}-{i}')
-        time.sleep(gap)
+S = Scene(NODE)
+X, Y, Z = S.X, S.Y, S.Z
+ANIM = 'minecraft:interact_animation' if mp.mc_version(NODE) >= (26, 3) else 'minecraft:swing_animation'
+say, cmd, b, shot, tp, look, aim, hold, burst = S.say, S.cmd, S.b, S.shot, S.tp, S.look, S.aim, S.hold, S.burst
 
 
 A, B = 'Watcher', 'Worker'

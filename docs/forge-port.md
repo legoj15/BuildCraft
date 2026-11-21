@@ -233,10 +233,11 @@ supported" confirmation (`BackupConfirmScreen`) was waiting for a click.
 node's loader from `versions/<node>/gradle.properties` (`loader=`), strips `-forge` for the Minecraft line, and runs
 `:26.3-forge:runClient -PbcRunDir=run-smoke` (bc.forge's own switches; the game directory is the working directory, so the
 McDevBridge `+mc26.3-forge` jar goes in `versions/26.3-forge/run-smoke/mods` as on the other loaders). What a Forge node lacks is
-declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devMods"`, implied by `mods`,
-`-Mods` and `gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and no
-`-PwithMods` runtime), `mp.py` and its scene script skip a Forge node with exit 0, and `mod-list-banner` has a Forge row click
-(Forge's own `ModListScreen` sorts Minecraft first). Two vanilla confirmations that only a Forge-made world raised before #213 (and an older one still does) are
+declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devProperties"`, implied by
+`gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and wires none of the
+`-PwithGuideMe`-style switches; `-PwithMods` aliases work since 2026-11-21, see "Multiplayer smoke and `-PwithMods`" below), and
+`mod-list-banner` has a Forge row click (Forge's own `ModListScreen` sorts Minecraft first). The two-client `mp.py` skipped Forge
+until 2026-11-21 and drives it now (same section). Two vanilla confirmations that only a Forge-made world raised before #213 (and an older one still does) are
 answered by the runner, with a console note each: "Warning! These settings are using experimental features" when the first-run
 world is created, and `BackupConfirmScreen` when a world not yet confirmed is loaded (a confirmation is stored in `level.dat`
 as `confirmedExperimentalSettings`, so it comes once per world). A first-run world also gets `gamemode creative`, a `tp` to the
@@ -280,6 +281,86 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
    it), and `ForgeFluidContainers.swapHeld` now does the same (#213). The
    `creative-bucket-tank` smoke scenario checks it (pour, pour again with an empty bucket held, fill) and passes on 26.3-forge
    and 26.3.
+
+## Multiplayer smoke and `-PwithMods` on Forge (#209, 2026-11-21)
+
+**`-PwithMods` on a Forge run.** `bc.forge` reads it through `WithMods.coordinates` like the other two loaders and puts the
+coordinates on `runtimeOnly` (not transitive), so client, server and game-test runs all see them; an alias the node does not
+define is logged and skipped (`-PwithMods=flan ignored on 26.3-forge: this node defines no withmod.flan`, printed at
+configuration). FML finds a mod on a dev run's classpath without further wiring (`Loading Open Parties and Claims!` on a
+`:26.3-forge:runServer -PwithMods=opac` boot, on the 1.21.1 line's too, and in the client's integrated server). The Forge nodes
+define `opac` only. Two facts about it:
+
+- **OPAC's Forge builds declare Forge Config API Port (`forgeconfigapiport`) as mandatory** (`[26.2.0,)` on 26.3, `[21.0.5,)` on
+  1.21.1) and Forge ships none, so `withmod.opac` on both nodes names its Forge build too (`forge-config-api-port` 26.3.1 / 21.1.6;
+  the first coordinate stays the compile pin, `WithMods.compileCoordinate`). `./gradlew withModsResolve -I
+  scripts/withmods-resolve.init.gradle.kts --no-configuration-cache` resolves every alias of every node, the two Forge ones
+  included (0 FAILED); the script covers every node whatever its loader, so it needed no change beyond its header comment.
+- **A world's first OPAC config write dies on Windows.** With the alias loaded, the first boot of a world with no
+  `serverconfig/openpartiesandclaims-server.toml` (dedicated or integrated) stops at `WritingException: Failed to write
+  (REPLACE_ATOMIC) the config to .\world\serverconfig\openpartiesandclaims-server.toml` (`AccessDeniedException` renaming the
+  `.new.tmp`: Forge Config API Port's NeoForge-spec adapter rewrites the file it has just created, apparently while it is still
+  open). Reproduced on a fresh 26.3-forge world twice and a fresh 1.21.1-forge world once; the second boot of the same world is
+  clean. Not BuildCraft's and not specific to a node. A seeded `<gameDir>/defaultconfigs/openpartiesandclaims-server.toml` (any
+  world's copy of that file) makes Forge copy it instead of creating it, and a fresh world then boots at once (measured). The
+  smoke runner plays a fresh copy of its seed save for `crossmod-claims-opac`, so `versions/<node>/run-smoke/defaultconfigs/`
+  must hold that one file on a Forge node first; the runner does not seed it (follow-up).
+- **Measured on 26.3-forge**, with that file seeded: `crossmod-claims-opac` passes (145 steps, 0 failed, 0 BuildCraft log
+  errors, 1.6 min): rig A (no claim) and rig C (the dev's claim) let every machine place and break, rig B (a stranger's claim)
+  refuses them all (Quarry frame, Builder, Filler, Stripes pipe and Stripes robot), so OPAC's claim check reaches BuildCraft's
+  Forge protection hooks through the real mod. `crossmod-claims-opac-stranger` passes the same way (145 steps, 0 failed).
+  `creative-bucket-tank` passes on the same worktree (the seed world's first
+  run).
+
+The smoke runner no longer lists dev mods as something Forge lacks (`devMods` is gone from its table; `gradleProperties`
+switches, `-PwithGuideMe` and the like, are a separate `devProperties` capability Forge still lacks), and it skips a scenario whose
+own `"mods"` the node defines none of (`crossmod-claims-flan*` on a Forge node: "needs a dev mod this node does not define").
+A step's `"nodes": ["26.3"]` names the Minecraft line and, as it always did for the Fabric twin, also covers the Forge twin; a step
+only one loader can run is `"loaders"`-filtered (decision for #209's runner note; the comment and README now say so).
+
+**Two-client multiplayer smoke on Forge.** `scripts/smoke/multiplayer/mp.py` drives `26.3-forge` (it skipped a Forge node with
+exit 0 because `mp.init.gradle` only extends the NeoForge run extension). `bc.forge`'s client run takes `-PbcUser=<name>` (the
+`--username` value, default `Dev`) and `-PbcQuickPlayServer=<host:port>` (`--quickPlayMultiplayer`), and its server run honours
+`-PbcRunDir` (the game directory, as the client run does); `mp.py` passes those on a Forge node and `-PmpUser` / `-PmpServer` /
+`-PmpServerDir` on a NeoForge one (`run_switches`), and `setup` takes the bridge jar and default options itself on a node no
+single-player run has prepared. A Fabric node has no arm yet and is skipped with a reason. The Forge dedicated server prints
+the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultiplayer` joins it.
+
+- **Scenes.** `scene_swing_particles.py` (every phase) and the new `scene_machines.py` (a Tank poured by one player and opened by
+  both, a Stone Engine's GUI, a creative engine's kinesis rig filmed by the other player; 6 recorded checks) ran on `26.3-forge`
+  and on `26.3`, each against a loopback server and against Server1's (four full cycles: setup, server, client A, client B,
+  both scenes, stop), with the same result every time; the Forge clients' and servers' logs held no BuildCraft error. Swing phases: three robots deployed from
+  their stations and at work in Watcher's shots, Worker's wrench swing is seen on Watcher's client (the
+  raised arm, the "Wrenched!" advancement), and while Worker mined the gold pipe under Mining Fatigue Watcher's screen showed the
+  gold pipe-sprite crack particles and then the break (the 26.3 remote destroy-progress path, served on Forge by
+  `ClientLevelMixin`). `scene_machines.py`: the Tank holds 1000 mB of water on the server after Worker's bucket; the Tank GUI
+  (`GuiTank`) opens on Worker and then on Watcher, who never touched it, with the water gauge on both; the Stone Engine's GUI
+  (`ScreenEngineStone`) opens; the creative engine is still running. That exercises the menu opening data
+  (`ForgeMenus.openWithOpeningData`), the container's fluid sync and the block entity and pipe sync over a real connection. Not
+  exercised: the join's recipe payload (`ForgeRecipeSync`; no scene opens the guide, and nothing in the logs says it was received).
+- **The server on another machine.** `MP_REMOTE_CHECKOUT=bc-forge-mp` (a checkout under `C:\Dev` on Server1, synced from the worktree
+  with `Sync-ToServer1.ps1`, committed state only) runs the server half through McDevBridge's `tools/remote` (`Invoke-OnServer1
+  -NoDesktop`, session 0, JDK 25.0.2.10, scratch ports 25661/25662, a per-run RCON password): the game directory is written by the
+  remote script, `gradlew :<node>:runServer` runs there, the log is fetched over scp for the `Done` wait and RCON `stop` ends it.
+  Both clients ran on the workstation (192.168.0.28 in the server's log) and joined `192.168.0.106:25661` over the LAN. Server1's
+  Windows firewall has Private/Public inbound allow rules for that JDK's `java.exe` on any port (read only, nothing changed), and
+  the workstation's TCP connect and RCON both got through. A cold Gradle compile of the Forge node in the fresh checkout took 3 min
+  52 s; the warm server boot to `Done` about 45 s end to end. `server` writes a per-run nonce into the remote game directory and the
+  waiter trusts the log only once it sees it (an earlier run's `Done` once answered for a new start). Two traps of the remote
+  tools bit while building this, both now handled in `mp.py`: `Invoke-OnServer1.ps1` twice stalled in its own ssh step with no run
+  directory on Server1 (trap 16 of its README; `server` ends a poller with no `-- t+` status line after 150 s and starts again),
+  and ending the LOCAL poller does not stop a remote run that has started (a lost lock race left a Gradle and a server running on
+  Server1 and the next start answered for them, so every kill path now also ends the java processes whose command line names the
+  checkout, over plain ssh, and nothing else).
+- **Forge's RCON never answers a command with an empty reply (found by the scenes).** `gamemode creative Watcher` on a player
+  already in creative prints nothing, and on a Forge dedicated server the RCON client then waits forever (the NeoForge server
+  answers at once). Cause, read in `.forge-ref/sources-26.3-66.1.8/patches/net/minecraft/server/rcon/thread/RconClient.java.patch`:
+  Forge rewrote `sendCmdResponse` as `for (x = 0; x < data.length; x += 4096)`, which sends no packet for an empty string, where
+  vanilla's `do { ... } while (0 != len)` (and NeoForge's copy) sends one empty packet. Any RCON client waiting for a silent
+  command's reply hangs on Forge. The scene helpers give a `gamemode` command a 4 s wait and a fresh connection. Worth a report
+  upstream (MinecraftForge) when the user wants one filed.
+- Shared-lock note: the smoke lock is machine-wide, so every run above queued behind other sessions' runs (`MP_LOCK_WAIT_MINUTES`
+  makes `server` wait; the batch driver always did). The scripts never take a lock they cannot hold for the whole run.
 
 ## Rules added for the third loader
 
@@ -329,7 +410,8 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
 (`Get-NodeLoader`, `Get-NodeMcVersion`, `-Loader`, node list, the `neoforge-client.toml` edit);
-`scripts/smoke/multiplayer/mp.init.gradle`; `release/modules/BcRelease.psm1` and `release/config/release.json`.
+`scripts/smoke/multiplayer/mp.py` (`run_switches`; NeoForge reads `mp.init.gradle`, Forge reads `bc.forge`'s own `-PbcUser` /
+`-PbcQuickPlayServer` / `-PbcRunDir`); `release/modules/BcRelease.psm1` and `release/config/release.json`.
 
 ## Game tests on Forge (F5)
 

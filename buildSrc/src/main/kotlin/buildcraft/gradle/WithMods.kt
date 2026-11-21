@@ -14,8 +14,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
 
 /**
- * `-PwithMods=alias[,alias...]`, the opt-in third-party mods of the dev runtimes (cross-mod checks, #186). Both loader
- * scripts (bc.neoforge, bc.fabric) read it through here, so the alias rules live once.
+ * `-PwithMods=alias[,alias...]`, the opt-in third-party mods of the dev runtimes (cross-mod checks, #186). All three loader
+ * scripts (bc.neoforge, bc.fabric, bc.forge) read it through here, so the alias rules live once.
  *
  * An alias is defined per node in versions/<node>/gradle.properties as `withmod.<alias>=<coordinate>[;<coordinate>...]`:
  * the mod and every library it needs that the dev runtime does not already carry (each coordinate goes on the runtime

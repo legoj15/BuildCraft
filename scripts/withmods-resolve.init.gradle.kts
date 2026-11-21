@@ -6,6 +6,9 @@
 // Run it after a version bump, or when a node's pins change; a FAILED line names the alias to re-pin.
 //   ./gradlew withModsResolve -I scripts/withmods-resolve.init.gradle.kts --no-configuration-cache --console=plain
 //   ./gradlew :26.3-fabric:withModsResolve -I scripts/withmods-resolve.init.gradle.kts --no-configuration-cache --console=plain
+//   ./gradlew :26.3-forge:withModsResolve -I scripts/withmods-resolve.init.gradle.kts --no-configuration-cache --console=plain
+// It covers every node whatever its loader (NeoForge, Fabric and MinecraftForge nodes all read `-PwithMods` through
+// buildcraft.gradle.WithMods), on each node's own repositories.
 // An init script (not a task in the build) so nothing here is part of the normal build; the task closure reads the live
 // project, hence --no-configuration-cache.
 allprojects {

@@ -122,13 +122,17 @@ Traps (each one cost a run):
 
 Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset); `at` arrays are offsets from `base`.
 Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
-covers the NeoForge node and its Fabric twin, `"26.2-fabric"` only the twin) and `"loaders": ["neoforge"]` (run only on
-that loader). A top-level `"loaders"` skips the whole scenario on the other loader's nodes (reported as skipped, not as a
-failure): use it when a scenario needs a mod only one loader's dev runtime has. `"needs": ["recipeViewer"]` (top-level or
-on a step) says what the scenario or step asks of the dev runtime instead of naming loaders: a loader that lacks it (the Forge
-node has no recipe viewer, no `-PwithMods` runtime: capability `devMods`, implied by a scenario's `mods`, `-Mods` and
-`gradleProperties`; `recipeViewer` is implied by the `"recipeViewer"` key) skips the scenario, or records the step as `skip`,
-with the reason; `gen_port_26_3.py` marks its JEI steps this way. A top-level `"englishOnly": true` skips
+covers every loader's node of that line, the NeoForge node, its Fabric twin and its Forge twin; `"26.2-fabric"` or
+`"26.2-forge"` only that twin) and `"loaders": ["neoforge"]` (run only on that loader: a step one loader cannot run says so
+here, not by leaving the other twins out of `nodes`). A top-level `"loaders"` skips the whole scenario on the other loaders'
+nodes (reported as skipped, not as a failure): use it when a scenario needs a mod only one loader's dev runtime has.
+`"needs": ["recipeViewer"]` (top-level or on a step) says what the scenario or step asks of the dev runtime instead of naming
+loaders: a loader that lacks it skips the scenario, or records the step as `skip`, with the reason. The capabilities: `recipeViewer`
+(implied by the `"recipeViewer"` key; the Forge node has none), `devProperties` (implied by `gradleProperties`: `-PwithGuideMe`
+and the like; the Forge node wires none) and `devMods` (implied by `mods` and `-Mods`: the `-PwithMods` aliases, which every
+loader reads). A scenario whose own `"mods"` the node defines none of (no `withmod.<alias>` in its `gradle.properties`) is
+skipped too, with that reason, instead of running bare; one defined alias is enough to run it (the other lanes of
+`crossmod-energy` need aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly": true` skips
 the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
 widget text.
 
@@ -332,8 +336,31 @@ stops only what it started. `server` takes the machine-wide smoke lock described
 process), `client` joins it and `stop` releases it; `b` and the scene scripts fail loudly once a client's pinned process
 is gone. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check built on it; its
 docstring gives the phase order and the expected result, and `multiplayer/grids.py` tiles the shots per node for a
-26.3 vs 26.2 comparison. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server log's `No key layers` ERROR is
-vanilla complaining about the flat world's empty generator settings; the default flat world is used.
+26.3 vs 26.2 comparison. `multiplayer/scene_machines.py` checks machines over the connection (a Tank poured by one player
+and opened by both, a Stone Engine's GUI, a creative engine's power rig filmed by the other player) with recorded pass/fail
+checks; `scene_lib.py` holds the helpers the two scenes share. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server
+log's `No key layers` ERROR is vanilla complaining about the flat world's empty generator settings; the default flat world
+is used.
+
+Loaders: NeoForge nodes take their run switches through `mp.init.gradle` (an init script); a MinecraftForge node (`26.3-forge`)
+through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run carries `--username Dev` from
+the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node has no arm yet:
+`mp.py` and the scene scripts skip it with a reason and exit 0. `setup` also works on a node no single-player run has prepared
+(it takes the newest bridge jar the way the runner does and writes the default `options.txt`).
+
+**The server on another machine.** The two clients always run here (they need a GL context); the server half can run on
+Server1, so the connection is a real network one. Set `MP_REMOTE_CHECKOUT=<name>` (a checkout under `C:\Dev` on Server1, made
+with `E:/GitHub/McDevBridge/tools/remote/Sync-ToServer1.ps1 -Repo <this worktree> -Ref <branch> -Name <name>`; committed state
+only, so commit first) and `server` writes the game directory there, runs `gradlew :<node>:runServer` through
+`Invoke-OnServer1.ps1 -NoDesktop` (the long-lived local process is that poller, which the smoke lock names) and polls the
+server's log over scp for `Done`; the clients quick-play into `MP_SERVER_HOST` (default `Server1`, resolved to IPv4) on the
+scratch ports `MP_PORT`/`MP_RCON_PORT` (25661/25662; the real servers' 25565, 25566 and 25575 are refused), RCON uses a
+password `setup` generates per node (`build/smoke-mp/<node>/rcon.pw`), and `stop` ends the server with RCON `stop`, fetches its
+log to `build/smoke-mp/<node>/server-remote-latest.log` and, only if it will not stop, ends the java processes of that checkout
+alone (also what it does when a start loses the lock race: ending the local poller never stops a remote run). A launch that
+stalls in `Invoke-OnServer1`'s ssh step (no status line after 150 s) is restarted, up to three times. A fresh checkout's first `server` includes a cold Gradle configure (minutes). `MP_LOCK_WAIT_MINUTES=<n>` makes `server`
+wait for another run's smoke lock instead of refusing. Server1's firewall must already allow the JDK that Gradle forks (the
+Microsoft JDK 25 has an any-port inbound rule there); the script changes no firewall or system setting.
 
 ## Resource reload: `sprite-reload`
 
@@ -364,6 +391,12 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 - **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
   (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
 - **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
+- **OPAC on a Forge node needs its server config seeded (Windows).** Open Parties and Claims' first write of a world's
+  `serverconfig/openpartiesandclaims-server.toml` fails with `AccessDeniedException` (Forge Config API Port's adapter renames the file
+  it has just created), which kills the integrated server on the first load of every fresh world copy (`crossmod-claims-opac` plays
+  one each run). Put that one file, taken from any world that has booted once, in `versions/<node>/run-smoke/defaultconfigs/`: Forge
+  copies it instead of creating it and the world loads. `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
+  names both; OPAC requires it there). The Forge nodes define `opac` only: the other `crossmod-*` scenarios skip there.
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
   something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`
   floors it 10 blocks under the y it is given). `flan setAdminClaim` (the claim at the command's position) found nothing there,

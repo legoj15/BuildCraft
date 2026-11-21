@@ -312,14 +312,14 @@ def build(mod):
     for tag in ("A", "B", "C"):
         z0 = RIG_Z[tag]
         S.cmd("%s: the rig's chunks force-loaded" % tag, "?forceload add {X-16} {Z%+d} {X+48} {Z%+d}" % (z0 - 16, z0 + 48))
-    S.tp(8, 4, 8, 0, 20)
-    S.wait(3000)
     # Settle: on a fresh world the three rigs' chunks generate while the first commands run, and a command sent meanwhile can be
-    # given up on by the bridge ("TimeoutException"), which on 26.1.2 failed the blueprint source's fill. A waitCmd poll that times
-    # out just polls again, so gate on the far corner of every rig being loaded.
+    # given up on by the bridge ("TimeoutException"), which on 26.1.2 failed a tp and the blueprint source's fill. A waitCmd poll that
+    # times out just polls again, so gate on the far corner of every rig being loaded before anything else is sent.
     for tag in ("A", "B", "C"):
         z0 = RIG_Z[tag]
         S.wait_cmd("%s: the rig's chunks are loaded" % tag, "execute if loaded {X+47} {Y} {Z%+d}" % (z0 + 47), "passed", 240, 2000)
+    S.tp(8, 4, 8, 0, 20)
+    S.wait(3000)
     for tag in ("A", "B", "C"):
         z0 = RIG_Z[tag]
         for c in mod.clear(tag, area(z0)):

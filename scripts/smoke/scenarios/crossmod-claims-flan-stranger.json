@@ -1053,7 +1053,7 @@
   {
    "label": "the control rig's pump drained the far lava cell",
    "do": "waitCmd",
-   "run": "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava",
+   "run": "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava[level=0]",
    "match": "passed",
    "timeoutSec": 120,
    "pollMs": 2000
@@ -1177,21 +1177,21 @@
    "label": "A: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
    "do": "cmd",
    "run": [
-    "execute unless block {X+15} {Y-1} {Z+7} minecraft:lava"
+    "execute unless block {X+15} {Y-1} {Z+7} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "A: BREAK pump drains the lava inside the claim (X+16): drained",
    "do": "cmd",
    "run": [
-    "execute unless block {X+16} {Y-1} {Z+7} minecraft:lava"
+    "execute unless block {X+16} {Y-1} {Z+7} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "A: BREAK pump drains the lava inside the claim (X+17): drained",
    "do": "cmd",
    "run": [
-    "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava"
+    "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava[level=0]"
    ]
   },
   {
@@ -1362,21 +1362,21 @@
    "label": "B: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
    "do": "cmd",
    "run": [
-    "execute unless block {X+15} {Y-1} {Z+55} minecraft:lava"
+    "execute unless block {X+15} {Y-1} {Z+55} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "B: BREAK pump drains the lava inside the claim (X+16): untouched",
    "do": "cmd",
    "run": [
-    "execute if block {X+16} {Y-1} {Z+55} minecraft:lava"
+    "execute if block {X+16} {Y-1} {Z+55} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "B: BREAK pump drains the lava inside the claim (X+17): untouched",
    "do": "cmd",
    "run": [
-    "execute if block {X+17} {Y-1} {Z+55} minecraft:lava"
+    "execute if block {X+17} {Y-1} {Z+55} minecraft:lava[level=0]"
    ]
   },
   {
@@ -1547,21 +1547,21 @@
    "label": "C: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
    "do": "cmd",
    "run": [
-    "execute unless block {X+15} {Y-1} {Z+103} minecraft:lava"
+    "execute unless block {X+15} {Y-1} {Z+103} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "C: BREAK pump drains the lava inside the claim (X+16): drained",
    "do": "cmd",
    "run": [
-    "execute unless block {X+16} {Y-1} {Z+103} minecraft:lava"
+    "execute unless block {X+16} {Y-1} {Z+103} minecraft:lava[level=0]"
    ]
   },
   {
    "label": "C: BREAK pump drains the lava inside the claim (X+17): drained",
    "do": "cmd",
    "run": [
-    "execute unless block {X+17} {Y-1} {Z+103} minecraft:lava"
+    "execute unless block {X+17} {Y-1} {Z+103} minecraft:lava[level=0]"
    ]
   },
   {

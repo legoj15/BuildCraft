@@ -24,7 +24,8 @@ rig's own offset:
                    whose Work-in-Area zone is the single cell X+17: it flies in from outside the claim and must place there
   Pump     (z+7)   (#208) a Pump on a creative engine at X+15 over a three-cell lava pool X+15..17 (Y-1): the cell under it is
                    outside the claim, the other two inside. A pump drains the farthest cell first and takes a lava source whole,
-                   so "lava still there" is the refusal
+                   so "the source (level=0) is still there" is the refusal (flowing lava from a kept source refills the emptied
+                   cell, which is why the probes name level=0)
   Flood    (z+29)  (#208) a Flood Gate at X+14 fed by a Pump on a three-cell water pool at X+13 (nothing of the pool is near the
                    claim), with a two-cell stone pen in front of it (X+15 outside the claim, X+16 inside): it places a water
                    SOURCE (level=0: a source at X+15 also flows into X+16 as vanilla water, which is not the gate's doing)
@@ -258,7 +259,9 @@ def probes(S, tag, z0, expect):
           "execute %s block %s minecraft:cobblestone" % (yes, p(17, 0, 26)))
     # #208: the Pump (breaks fluid), the Flood Gate (places a fluid source) and a builder with a mixed blueprint across the border.
     zp, zf = PUMP_Z, FLOOD_Z
-    lava = "minecraft:lava"
+    # A lava SOURCE, not any lava: a source left in the pool flows into the cell a pump emptied beside it (in rig B the refused cells
+    # keep their lava, and the cell under the pump, drained, fills with flowing lava from them), so "still lava" would pass there.
+    lava = "minecraft:lava[level=0]"
     S.cmd("%s: the pump drained the lava cell under it (X+15, outside the claim), in every rig" % tag,
           "execute unless block %s %s" % (p(15, -1, zp), lava))
     S.cmd("%s: BREAK pump drains the lava inside the claim (X+16): %s" % (tag, "drained" if works else "untouched"),
@@ -397,7 +400,7 @@ def build(mod):
                "execute unless block %s minecraft:stone" % at(17, -1, A + 3), "passed", 240, 2000)
     S.wait_cmd("the control rig's robot placed its block (the other slow one)",
                "execute if block %s minecraft:cobblestone" % at(17, 0, A + 26), "passed", 180, 2000)
-    S.wait_cmd("the control rig's pump drained the far lava cell", "execute unless block %s minecraft:lava" % at(17, -1, A + PUMP_Z),
+    S.wait_cmd("the control rig's pump drained the far lava cell", "execute unless block %s minecraft:lava[level=0]" % at(17, -1, A + PUMP_Z),
                "passed", 120, 2000)
     S.wait_cmd("the control rig's flood gate placed the second water source",
                "execute if block %s minecraft:water[level=0]" % at(16, 0, A + FLOOD_Z), "passed", 120, 2000)

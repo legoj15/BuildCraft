@@ -314,6 +314,12 @@ def build(mod):
         S.cmd("%s: the rig's chunks force-loaded" % tag, "?forceload add {X-16} {Z%+d} {X+48} {Z%+d}" % (z0 - 16, z0 + 48))
     S.tp(8, 4, 8, 0, 20)
     S.wait(3000)
+    # Settle: on a fresh world the three rigs' chunks generate while the first commands run, and a command sent meanwhile can be
+    # given up on by the bridge ("TimeoutException"), which on 26.1.2 failed the blueprint source's fill. A waitCmd poll that times
+    # out just polls again, so gate on the far corner of every rig being loaded.
+    for tag in ("A", "B", "C"):
+        z0 = RIG_Z[tag]
+        S.wait_cmd("%s: the rig's chunks are loaded" % tag, "execute if loaded {X+47} {Y} {Z%+d}" % (z0 + 47), "passed", 240, 2000)
     for tag in ("A", "B", "C"):
         z0 = RIG_Z[tag]
         for c in mod.clear(tag, area(z0)):
@@ -493,16 +499,17 @@ def ftb_teams_setup(S):
         with S.only_on(nodes):
             S.cmd("FTB Teams: the outsider and the teammate get teams of their own (dev command)",
                   "%s %s" % (fake, FTB_OUTSIDER), "%s %s" % (fake, FTB_TEAMMATE))
+            # `ftbteams info <player>` names the player's team id, which for a personal team is the player's UUID: the UUID a machine
+            # owned by that name carries is the one the team is under. Checked before the force add: a player in a party answers
+            # `info <name>` with the party.
+            S.wait_cmd("the outsider's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_OUTSIDER,
+                       offline_uuid(FTB_OUTSIDER), 10, 500)
+            S.wait_cmd("the teammate's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_TEAMMATE,
+                       offline_uuid(FTB_TEAMMATE), 10, 500)
             # `party create` is a requirement on the source's entity, read before `execute as` applies: it must be typed by the player.
             S.player_cmd("FTB Teams: the dev opens a party (typed by the player)", "ftbteams party create %s" % FTB_PARTY)
             S.wait_cmd("the dev is in a party of his own now", "ftbteams info @p", r"\[party\]", 10, 500)
             S.cmd("FTB Teams: the teammate is forced into the dev's party", "%s @p %s" % (force, FTB_TEAMMATE))
-    # `ftbteams info <player>` names the player's team id, which for a personal team is the player's UUID: the UUID a machine
-    # owned by that name carries is the one the team is under.
-    S.wait_cmd("the outsider's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_OUTSIDER,
-               offline_uuid(FTB_OUTSIDER), 10, 500)
-    S.wait_cmd("the teammate's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_TEAMMATE,
-               offline_uuid(FTB_TEAMMATE), 10, 500)
     S.wait_cmd("the dev's party lists the teammate", "ftbteams info @p", FTB_TEAMMATE, 10, 500)
     S.echo("the dev's party (expect the teammate listed and not the outsider)", "ftbteams info @p")
 

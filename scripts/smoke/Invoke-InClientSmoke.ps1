@@ -684,8 +684,15 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $deadline = (Get-Date).AddSeconds($timeout)
             $last = ''
             do {
-                $r = Invoke-Bridge POST '/command' @{ command = $c }
-                $last = @($r.output) -join ' | '
+                # A poll the bridge gave up on (the server thread was busy, a world still generating chunks) is a poll that
+                # did not match yet, not a failed step.
+                try {
+                    $r = Invoke-Bridge POST '/command' @{ command = $c }
+                    $last = @($r.output) -join ' | '
+                } catch {
+                    if ("$_" -notmatch 'TimeoutException') { throw }
+                    $last = 'the bridge timed out (the server thread is busy)'
+                }
                 if ($last -match $Step.match) { break }
                 Start-Sleep -Milliseconds $poll
             } while ((Get-Date) -lt $deadline)

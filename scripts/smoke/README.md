@@ -151,7 +151,7 @@ widget text.
 | `close` | — | close the open screen (releases container menus server-side) |
 | `wait` | `ms` | sleep |
 | `window` | `width`, `height` | resize the game window so its client area (the framebuffer) is exactly that size — options.txt `overrideWidth` is ignored. Pair with a top-level `"guiScale"` (written to options.txt each run, default 2; the game clamps it to what the window fits, so a big scale only shows after the resize) |
-| `waitCmd` | `run` (one command), `match` (regex on its reply), `timeoutSec` (default 60), `pollMs` (default 1000) | re-runs the command until its reply matches: gates on observed state (a machine finishing) instead of a fixed wait; the last reply goes in the report |
+| `waitCmd` | `run` (one command), `match` (regex on its reply), `timeoutSec` (default 60), `pollMs` (default 1000) | re-runs the command until its reply matches: gates on observed state (a machine finishing) instead of a fixed wait; the last reply goes in the report. A poll the bridge gives up on (`TimeoutException`: the server thread is busy, e.g. a fresh world generating chunks) counts as no match yet |
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |

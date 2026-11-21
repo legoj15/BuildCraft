@@ -62,6 +62,30 @@
    "ms": 3000
   },
   {
+   "label": "A: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+47}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
+   "label": "B: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+95}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
+   "label": "C: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+143}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
    "label": "blueprint source: a 3x3x3 cobblestone cube and the architect table scanning it",
    "do": "cmd",
    "run": [
@@ -133,6 +157,28 @@
    ]
   },
   {
+   "label": "the outsider's own team is under the UUID his machines carry",
+   "do": "waitCmd",
+   "run": "ftbteams info bcclaimoutsider",
+   "match": "46e9dd69-fc65-3e0c-a136-863fb3ccc15f",
+   "timeoutSec": 10,
+   "pollMs": 500,
+   "nodes": [
+    "1.21.1"
+   ]
+  },
+  {
+   "label": "the teammate's own team is under the UUID his machines carry",
+   "do": "waitCmd",
+   "run": "ftbteams info bcclaimteammate",
+   "match": "459d0710-af16-3480-aabe-ead6b3859613",
+   "timeoutSec": 10,
+   "pollMs": 500,
+   "nodes": [
+    "1.21.1"
+   ]
+  },
+  {
    "label": "FTB Teams: the dev opens a party (typed by the player)",
    "do": "playerCmd",
    "run": [
@@ -176,6 +222,30 @@
    ]
   },
   {
+   "label": "the outsider's own team is under the UUID his machines carry",
+   "do": "waitCmd",
+   "run": "ftbteams info bcclaimoutsider",
+   "match": "46e9dd69-fc65-3e0c-a136-863fb3ccc15f",
+   "timeoutSec": 10,
+   "pollMs": 500,
+   "nodes": [
+    "1.21.11",
+    "26.1.2"
+   ]
+  },
+  {
+   "label": "the teammate's own team is under the UUID his machines carry",
+   "do": "waitCmd",
+   "run": "ftbteams info bcclaimteammate",
+   "match": "459d0710-af16-3480-aabe-ead6b3859613",
+   "timeoutSec": 10,
+   "pollMs": 500,
+   "nodes": [
+    "1.21.11",
+    "26.1.2"
+   ]
+  },
+  {
    "label": "FTB Teams: the dev opens a party (typed by the player)",
    "do": "playerCmd",
    "run": [
@@ -208,22 +278,6 @@
     "1.21.11",
     "26.1.2"
    ]
-  },
-  {
-   "label": "the outsider's own team is under the UUID his machines carry",
-   "do": "waitCmd",
-   "run": "ftbteams info bcclaimoutsider",
-   "match": "46e9dd69-fc65-3e0c-a136-863fb3ccc15f",
-   "timeoutSec": 10,
-   "pollMs": 500
-  },
-  {
-   "label": "the teammate's own team is under the UUID his machines carry",
-   "do": "waitCmd",
-   "run": "ftbteams info bcclaimteammate",
-   "match": "459d0710-af16-3480-aabe-ead6b3859613",
-   "timeoutSec": 10,
-   "pollMs": 500
   },
   {
    "label": "the dev's party lists the teammate",

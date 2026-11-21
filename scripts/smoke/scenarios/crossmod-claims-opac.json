@@ -59,6 +59,30 @@
    "ms": 3000
   },
   {
+   "label": "A: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+47}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
+   "label": "B: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+95}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
+   "label": "C: the rig's chunks are loaded",
+   "do": "waitCmd",
+   "run": "execute if loaded {X+47} {Y} {Z+143}",
+   "match": "passed",
+   "timeoutSec": 240,
+   "pollMs": 2000
+  },
+  {
    "label": "blueprint source: a 3x3x3 cobblestone cube and the architect table scanning it",
    "do": "cmd",
    "run": [

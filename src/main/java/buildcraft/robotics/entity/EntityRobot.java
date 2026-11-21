@@ -1295,7 +1295,10 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
     // Forge's ServerLevel and ClientLevel patches call it too. Forge 1.21.1 names it onRemovedFromWorld (the second arm).
-    //? if neoforge || forge && >=1.21.10 {
+    // NeoForge names it onRemovedFromLevel on every line, so its term goes last: Stonecutter reads && and || left to
+    // right at one rank, and `neoforge || forge && >=1.21.10` was off on NeoForge 1.21.1 (the robot never deregistered
+    // on a chunk unload there); this order reads the same under either rule.
+    //? if forge && >=1.21.10 || neoforge {
     @LoaderHook({"neoforge:IEntityExtension#onRemovedFromLevel", "forge:IForgeEntity#onRemovedFromLevel"})
     @Override
     public void onRemovedFromLevel() {

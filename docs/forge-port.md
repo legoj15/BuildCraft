@@ -291,7 +291,13 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
   instead: `elif <1.21.10`.
 - Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (measured on a scratch probe: `neoforge || forge &&
   >=1.21.10` is off on NeoForge 1.21.1). A mixed condition repeats the version term after each loader:
-  `neoforge && >=1.21.10 || forge && >=1.21.10`. The guard and the census evaluate left to right to match.
+  `neoforge && >=1.21.10 || forge && >=1.21.10`; a loader that serves every line with one that serves only the newer
+  ones puts the all-lines loader last, `forge && >=1.21.10 || neoforge`, which reads the same under either rule. The
+  guard and the census evaluate left to right to match, and the guard fails a condition whose value on any node differs from the usual
+  precedence (`scannerFlagsAConditionWhoseReadingOrderMatters`; the old `EntityRobot` arm
+  `neoforge || forge && >=1.21.10` was the one such condition in the tree: it silently dropped the NeoForge
+  `onRemovedFromLevel` override on 1.21.1, so a robot whose chunk unloaded kept its reservations, and
+  `robot_removal_unload_releases_what_it_does_not_keep` failed there, alone and in the full run; fixed 2026-11-21).
 - `@LoaderHook` takes one entry per loader that calls the method. An override both NeoForge and Forge call under one
   name opens `//? if neoforge || forge {` and lists both; a Forge signature that differs is an `//?} elif forge {` arm
   beside the NeoForge one (commented in-tree, like every inactive arm).

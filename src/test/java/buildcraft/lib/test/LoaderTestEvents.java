@@ -270,8 +270,9 @@ public final class LoaderTestEvents {
         /*return FabricInteractClaims.open(order, claim);*/
         //?} elif forge {
         /*// Forge 26.3's one entity-click event is EntityInteractSpecific, posted from the same vanilla call as NeoForge's;
-        // Forge 1.21.1 posts EntityInteract from NeoForge 1.21.1's point (ForgeGameHooks#onEntityInteract has the same split).
-        //? if >=1.21.10 {
+        // Forge 1.21.1 and 1.21.11 post EntityInteract from NeoForge 1.21.1's point (ForgeGameHooks#onEntityInteract has the
+        // same split).
+        //? if >=26.1 {
         Class<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific> type =
                 net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific.class;
         //?} else {

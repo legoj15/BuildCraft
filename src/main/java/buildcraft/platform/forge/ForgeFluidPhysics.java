@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge;
 
-//? if forge && >=1.21.10 {
+//? if forge && >=26.1 {
 /*import javax.annotation.Nullable;
 
 import net.minecraft.core.Holder;

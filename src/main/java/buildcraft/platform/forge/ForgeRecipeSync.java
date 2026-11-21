@@ -92,7 +92,11 @@ public final class ForgeRecipeSync {
         /^* A recipe as its id and the data codec's NBT (see the class comment). ^/
         static final StreamCodec<RegistryFriendlyByteBuf, RecipeHolder<?>> HOLDER = StreamCodec.composite(
                 ResourceKey.streamCodec(Registries.RECIPE), RecipeHolder::id,
+                //? if >=26.3 {
                 ByteBufCodecs.fromCodecWithRegistries(Recipe.DIRECT_CODEC), RecipeHolder::value,
+                //?} else {
+                /^ByteBufCodecs.fromCodecWithRegistries(Recipe.CODEC), RecipeHolder::value,
+                ^///?}
                 RecipeHolder::new);
 
         public static final StreamCodec<RegistryFriendlyByteBuf, Batch> STREAM_CODEC = StreamCodec.composite(

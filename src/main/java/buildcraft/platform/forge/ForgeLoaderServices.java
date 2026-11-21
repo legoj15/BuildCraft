@@ -47,7 +47,7 @@ public final class ForgeLoaderServices implements LoaderServices {
     }
 
     private static List<IModInfo> mods() {
-        //? if >=1.21.10 {
+        //? if >=26.1 {
         return ModList.getMods();
         //?} else {
         /^return ModList.get().getMods();
@@ -56,7 +56,7 @@ public final class ForgeLoaderServices implements LoaderServices {
 
     @Override
     public boolean isModLoaded(String modId) {
-        //? if >=1.21.10 {
+        //? if >=26.1 {
         return ModList.getModFileById(modId) != null;
         //?} else {
         /^return ModList.get().getModFileById(modId) != null;
@@ -84,7 +84,7 @@ public final class ForgeLoaderServices implements LoaderServices {
 
     @Override
     public List<Path> modSourcePaths(String modId) {
-        //? if >=1.21.10 {
+        //? if >=26.1 {
         IModFileInfo modFile = ModList.getModFileById(modId);
         //?} else {
         /^IModFileInfo modFile = ModList.get().getModFileById(modId);

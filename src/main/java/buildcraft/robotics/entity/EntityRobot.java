@@ -1294,8 +1294,9 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
-    // Forge's ServerLevel and ClientLevel patches call it too. Forge 1.21.1 names it onRemovedFromWorld (the second arm).
-    //? if neoforge || forge && >=1.21.10 {
+    // Forge's ServerLevel and ClientLevel patches call it too. Forge before 64 (1.21.1, 1.21.11) names it onRemovedFromWorld
+    // (the second arm). Stonecutter reads the condition left to right: ((forge && >=26.1) || neoforge) && >=1.21.10.
+    //? if forge && >=26.1 || neoforge && >=1.21.10 {
     @LoaderHook({"neoforge:IEntityExtension#onRemovedFromLevel", "forge:IForgeEntity#onRemovedFromLevel"})
     @Override
     public void onRemovedFromLevel() {

@@ -207,6 +207,18 @@ function Wait-Until([scriptblock]$Condition, [int]$TimeoutSec, [string]$What, [i
     throw "timed out after ${TimeoutSec}s waiting for $What" + $(if ($lastError) { " (last error: $lastError)" } else { '' })
 }
 
+# Remove-Item -Recurse races with whatever else touches the folder (a virus scan, the indexer, a Gradle file watcher): "The
+# directory is not empty" on a folder that was empty a moment later. Retried; a folder that is gone by then is a success.
+function Remove-TreeWithRetry([string]$Path) {
+    for ($try = 1; $try -le 6; $try++) {
+        try { Remove-Item -Recurse -Force -LiteralPath $Path -ErrorAction Stop; return } catch {
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            if ($try -eq 6) { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 function Get-State { Invoke-Bridge GET '/state' }
 
 function Wait-NoOverlay {
@@ -969,7 +981,7 @@ try {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
                 # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
                 if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
-                    Remove-Item -Recurse -Force -LiteralPath $playPath
+                    Remove-TreeWithRetry $playPath
                 } elseif ($WantFresh -and (Test-Path -LiteralPath $playPath)) {
                     throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
                 }

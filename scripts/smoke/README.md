@@ -391,6 +391,12 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 - **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
   (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
 - **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
+- **OPAC on a Forge node needs its server config seeded (Windows).** Open Parties and Claims' first write of a world's
+  `serverconfig/openpartiesandclaims-server.toml` fails with `AccessDeniedException` (Forge Config API Port's adapter renames the file
+  it has just created), which kills the integrated server on the first load of every fresh world copy (`crossmod-claims-opac` plays
+  one each run). Put that one file, taken from any world that has booted once, in `versions/<node>/run-smoke/defaultconfigs/`: Forge
+  copies it instead of creating it and the world loads. `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
+  names both; OPAC requires it there). The Forge nodes define `opac` only: the other `crossmod-*` scenarios skip there.
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
   something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`
   floors it 10 blocks under the y it is given). `flan setAdminClaim` (the claim at the command's position) found nothing there,

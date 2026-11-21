@@ -307,7 +307,8 @@ define `opac` only. Two facts about it:
 - **Measured on 26.3-forge**, with that file seeded: `crossmod-claims-opac` passes (145 steps, 0 failed, 0 BuildCraft log
   errors, 1.6 min): rig A (no claim) and rig C (the dev's claim) let every machine place and break, rig B (a stranger's claim)
   refuses them all (Quarry frame, Builder, Filler, Stripes pipe and Stripes robot), so OPAC's claim check reaches BuildCraft's
-  Forge protection hooks through the real mod. `creative-bucket-tank` passes on the same worktree (the seed world's first
+  Forge protection hooks through the real mod. `crossmod-claims-opac-stranger` passes the same way (145 steps, 0 failed).
+  `creative-bucket-tank` passes on the same worktree (the seed world's first
   run).
 
 The smoke runner no longer lists dev mods as something Forge lacks (`devMods` is gone from its table; `gradleProperties`

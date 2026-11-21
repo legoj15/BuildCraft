@@ -398,13 +398,16 @@ def wait_log(path, pattern, timeout, since_size=0):
 # is fetched back over scp for the "Done" wait, and `stop` ends the server with RCON `stop` (Gradle then exits, the poller
 # returns). Server1's checkout must be synced first and holds COMMITTED state only (Sync-ToServer1.ps1 -Name <checkout>).
 
-def remote_script(node):
-    """The PowerShell 7 text run on Server1: the game directory's files (base64, so no quoting), then the server."""
+def remote_script(node, nonce):
+    """The PowerShell 7 text run on Server1: the game directory's files (base64, so no quoting), the old log removed and this
+    run's nonce written (the waiter trusts the log only once the nonce is there, so an earlier run's `Done` never counts), then
+    the server."""
     lines = ["$ErrorActionPreference = 'Stop'", f"$d = 'versions/{node}/{SERVER_DIR}'",
              "New-Item -ItemType Directory -Force -Path $d | Out-Null", "$d = (Resolve-Path $d).Path"]
     for name, data in server_files(node).items():
         lines.append(f"[IO.File]::WriteAllBytes((Join-Path $d '{name}'), [Convert]::FromBase64String('{base64.b64encode(data).decode()}'))")
-    lines += ["Remove-Item (Join-Path $d 'logs/latest.log') -ErrorAction SilentlyContinue", "$ErrorActionPreference = 'Continue'",
+    lines += ["Remove-Item (Join-Path $d 'logs/latest.log') -ErrorAction SilentlyContinue",
+              f"Set-Content -LiteralPath (Join-Path $d 'mp-nonce') -Value '{nonce}' -NoNewline", "$ErrorActionPreference = 'Continue'",
               f"./gradlew.bat --no-daemon --console=plain -I scripts/smoke/multiplayer/mp.init.gradle :{node}:runServer "
               + ' '.join(run_switches(node, 'server'))]
     return '\n'.join(lines) + '\n'
@@ -429,12 +432,17 @@ def remote_fetch_log(node, rel='logs/latest.log'):
     return os.path.exists(local)
 
 
-def remote_wait_done(node, poller, timeout):
-    """Poll the fetched server log for vanilla's `Done (...)!`. Fails early when the poller (the remote command) ended."""
+def remote_wait_done(node, poller, timeout, nonce):
+    """Poll the fetched server log for vanilla's `Done (...)!`, once the game directory carries this run's nonce. Fails early
+    when the poller (the remote command) ended."""
     end = time.time() + timeout
     rx = re.compile(r'Done \(([0-9.]+)s\)!')
     while time.time() < end:
-        if remote_fetch_log(node):
+        mine = False
+        if remote_fetch_log(node, 'mp-nonce'):
+            with open(os.path.join(os.path.dirname(remote_server_log(node)), 'mp-nonce'), encoding='utf-8', errors='replace') as f:
+                mine = f.read().strip() == nonce
+        if mine and remote_fetch_log(node):
             with open(remote_server_log(node), encoding='utf-8', errors='replace') as f:
                 m = rx.search(f.read())
             if m:
@@ -452,17 +460,38 @@ def remote_wait_done(node, poller, timeout):
     raise SystemExit(f'timeout waiting for the server on {REMOTE} to print Done')
 
 
-def remote_start(node, timeout_minutes=240):
+def remote_start(node, nonce, timeout_minutes=240):
     """Start the server half on Server1; returns the local poller's pid."""
     script = os.path.join(HERE, node, 'remote-server.ps1')
     with open(script, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(remote_script(node))
+        f.write(remote_script(node, nonce))
     out = open(os.path.join(HERE, node, 'server.remote.log'), 'w')
     p = subprocess.Popen(['pwsh', '-NoProfile', '-File', os.path.join(REMOTE_TOOLS, 'Invoke-OnServer1.ps1'), '-Name', REMOTE,
                           '-NoDesktop', '-TimeoutMinutes', str(timeout_minutes), '-ScriptFile', script],
                          stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                          creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
     return p.pid
+
+
+def remote_launched(node, pid, launch_seconds=150):
+    """True once the remote command is running (its poller's output has a `-- t+` status line) or the poller ended on its own
+    (remote_wait_done reports why); False when neither happened in `launch_seconds`. `Invoke-OnServer1.ps1` sometimes sits for
+    good in its ssh step with no run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one
+    session): its output ends at the `=== run <id> ===` header. The caller ends that poller (this script's own process) and
+    starts again."""
+    log = os.path.join(HERE, node, 'server.remote.log')
+    end = time.time() + launch_seconds
+    while time.time() < end:
+        if proc_start(pid) is None:
+            return True
+        try:
+            with open(log, encoding='utf-8', errors='replace') as f:
+                if '-- t+' in f.read():
+                    return True
+        except OSError:
+            pass
+        time.sleep(3)
+    return False
 
 
 def remote_kill_stragglers():
@@ -497,7 +526,8 @@ def server(node):
     if REMOTE:
         if not os.path.exists(os.path.join(HERE, node, 'rcon.pw')) and not os.environ.get('MP_RCON_PASSWORD'):
             raise SystemExit('run `python -I mp.py setup %s` first (it writes the RCON password)' % node)
-        st['server'] = remote_start(node)
+        nonce = uuid.uuid4().hex
+        st['server'] = remote_start(node, nonce)
     else:
         log = os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')
         if os.path.exists(log):
@@ -510,7 +540,18 @@ def server(node):
         subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
         raise
     if REMOTE:
-        m = remote_wait_done(node, st['server'], 3600)  # a fresh checkout configures every node first
+        for attempt in range(1, 4):
+            if remote_launched(node, st['server']):
+                break
+            subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
+            if attempt == 3:
+                raise SystemExit('the remote launch stalled 3 times; see build/smoke-mp/%s/server.remote.log' % node)
+            print('the remote launch stalled (no status line); starting it again (attempt %d of 3)' % (attempt + 1), flush=True)
+            lock_release(node)
+            st['server'] = remote_start(node, nonce)
+            save_state(node, st)
+            lock_acquire(node, st['server'])
+        m = remote_wait_done(node, st['server'], 3600, nonce)  # a fresh checkout configures every node first
     else:
         m = wait_log(log, r'Done \(([0-9.]+)s\)!', 900)
     print('server up', m.group(0), ('on ' + SERVER_HOST) if REMOTE else '')

@@ -288,7 +288,7 @@ public final class ForgeGameHooks implements GameHooks {
     @Override
     public void onBreakSpeed(BreakSpeed listener) {
         ForgeBus.listen(PlayerEvent.BreakSpeed.class, event -> {
-            //? if >=1.21.10 {
+            //? if >=26.3 {
             BlockPos pos = event.getPosition();
             //?} else {
             /^BlockPos pos = event.getPosition().orElse(null);

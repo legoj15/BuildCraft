@@ -154,6 +154,7 @@ public final class ForgeClientHooks implements ClientHooks {
             boolean translucent = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state)
                     .hasMaterialFlag(1);
             BlockPos outlinePos = pos.immutable();
+            //? if >=26.2 {
             event.setCustomRenderer((collector, poseStack, levelRenderState) -> {
                 Vec3 cam = levelRenderState.cameraRenderState.pos;
                 poseStack.pushPose();
@@ -162,6 +163,20 @@ public final class ForgeClientHooks implements ClientHooks {
                         translucent);
                 poseStack.popPose();
             });
+            //?} else {
+            /^// Forge 64 (26.1) calls the renderer in both outline passes, with the buffer source, as vanilla's own outline
+            // draw (LevelRenderer.renderBlockOutline) is: draw in the pass the block belongs to, then flush as vanilla does.
+            event.setCustomRenderer((source, poseStack, onlyTranslucent, levelRenderState) -> {
+                if (onlyTranslucent != translucent) {
+                    return;
+                }
+                Vec3 cam = levelRenderState.cameraRenderState.pos;
+                net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack,
+                        source.getBuffer(BCLibRenderTypes.blockOutline()), shape, outlinePos.getX() - cam.x,
+                        outlinePos.getY() - cam.y, outlinePos.getZ() - cam.z, ARGB.black(102), 2.5F);
+                source.endLastBatch();
+            });
+            ^///?}
         });
     }
 

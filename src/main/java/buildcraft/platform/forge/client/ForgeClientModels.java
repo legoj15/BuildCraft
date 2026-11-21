@@ -17,8 +17,10 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//? if >=26.3 {
 import net.minecraft.client.resources.model.geometry.ItemQuads;
 import net.minecraft.core.Direction;
+//?}
 import net.minecraft.util.ARGB;
 
 import buildcraft.platform.client.ClientModels;
@@ -40,6 +42,7 @@ public final class ForgeClientModels implements ClientModels {
      *^/
     private static final ConcurrentMap<BakedQuad, int[]> VERTEX_COLOURS = new MapMaker().weakKeys().makeMap();
 
+    //? if >=26.3 {
     @Override
     public BakedQuad.MaterialInfo materialInfo(TextureAtlasSprite sprite, ChunkSectionLayer layer, RenderType itemSheet,
             RenderType glintSheet, RenderType glintSpecialSheet, int tintIndex, Direction shadeOverride,
@@ -48,6 +51,14 @@ public final class ForgeClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission);
     }
+    //?} else {
+    /^@Override
+    public BakedQuad.MaterialInfo materialInfo(TextureAtlasSprite sprite, ChunkSectionLayer layer, RenderType itemSheet,
+            int tintIndex, boolean shade, int lightEmission) {
+        // Vanilla's six-component constructor (26.1, 26.2): Forge adds nothing to the material.
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, tintIndex, shade, lightEmission);
+    }
+    ^///?}
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
@@ -67,7 +78,11 @@ public final class ForgeClientModels implements ClientModels {
     @Override
     public void setItemQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
         // The colours go on when the quads are drawn (ItemFeatureRendererMixin).
+        //? if >=26.3 {
         layer.setQuads(ItemQuads.split(quads));
+        //?} else {
+        /^layer.prepareQuadList().addAll(quads);
+        ^///?}
     }
 
     /^*

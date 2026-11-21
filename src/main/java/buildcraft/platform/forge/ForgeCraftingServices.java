@@ -125,8 +125,6 @@ public final class ForgeCraftingServices implements CraftingServices {
                 ByteBufCodecs.holderSet(Registries.ITEM), i -> i.values,
                 DataComponentPatch.STREAM_CODEC, i -> i.patch,
                 ComponentsIngredient::new);
-
-        static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = IIngredientSerializer.simple(CODEC, STREAM_CODEC);
         //?} else {
         /^static final MapCodec<ComponentsIngredient> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                 RegistryCodecs.homogeneousList(Registries.ITEM).fieldOf("items").forGetter(i -> i.items),
@@ -138,7 +136,14 @@ public final class ForgeCraftingServices implements CraftingServices {
                 DataComponentPatch.STREAM_CODEC, i -> i.patch,
                 ComponentsIngredient::new);
 
-        // Forge 52 has no IIngredientSerializer.simple: the serializer is the codec and the stream codec by hand.
+        private final HolderSet<Item> items;
+        ^///?}
+
+        //? if >=26.3 {
+        static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = IIngredientSerializer.simple(CODEC, STREAM_CODEC);
+        //?} else {
+        /^// Forge 52, 64 and 65 have no IIngredientSerializer.simple (their serializer is codec, write and read): the
+        // codec and the stream codec by hand.
         static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = new IIngredientSerializer<>() {
             @Override
             public MapCodec<? extends ComponentsIngredient> codec() {
@@ -155,8 +160,6 @@ public final class ForgeCraftingServices implements CraftingServices {
                 return STREAM_CODEC.decode(buffer);
             }
         };
-
-        private final HolderSet<Item> items;
         ^///?}
 
         private final DataComponentPatch patch;

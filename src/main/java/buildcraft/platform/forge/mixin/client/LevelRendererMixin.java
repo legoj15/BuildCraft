@@ -32,6 +32,7 @@ import buildcraft.platform.forge.client.ForgeClientHooks;
  *^/
 @Mixin(LevelRenderer.class)
 abstract class LevelRendererMixin {
+    //? if >=26.2 {
     @Inject(method = "submitFeatures", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/LevelRenderer;finalizeGizmoCollection()V"))
     private void buildcraft$submitCustomGeometry(LevelRenderState levelRenderState,
@@ -39,5 +40,16 @@ abstract class LevelRendererMixin {
             @Local PoseStack poseStack) {
         ForgeClientHooks.submitLevelRender(poseStack, levelRenderState.cameraRenderState.pos, submitNodeCollector);
     }
+    //?} else {
+    /^// 26.1 (Forge 64) submits inside the main frame pass's lambda, with no submitFeatures method: the tail of
+    // submitBlockDestroyAnimation, the last submit before the solid features are drawn and the point NeoForge 26.1 posts
+    // SubmitCustomGeometryEvent right after. Its only caller is that lambda (once a frame), and its three parameters are
+    // the pass's own pose stack, node collector (the level's submit storage) and render state.
+    @Inject(method = "submitBlockDestroyAnimation", at = @At("TAIL"))
+    private void buildcraft$submitCustomGeometry(PoseStack poseStack, SubmitNodeCollector submitNodeCollector,
+            LevelRenderState levelRenderState, CallbackInfo ci) {
+        ForgeClientHooks.submitLevelRender(poseStack, levelRenderState.cameraRenderState.pos, submitNodeCollector);
+    }
+    ^///?}
 }
 *///?}

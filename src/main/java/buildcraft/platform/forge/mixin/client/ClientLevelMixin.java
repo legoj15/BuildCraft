@@ -48,10 +48,25 @@ abstract class ClientLevelMixin {
         }
     }
 
+    //? if >=26.3 {
     @WrapWithCondition(method = "addBreakingBlockEffects", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/multiplayer/ClientLevel;addBreakingParticles(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;)V"))
     private boolean buildcraft$hitEffects(ClientLevel level, BlockPos pos, Direction face, BlockState state) {
         return !ForgeBlockParticles.addHitEffects(state, level, pos, face, minecraft.particleEngine);
     }
+    //?} else {
+    /^// Forge 64/65 (26.1, 26.2): the head of Forge's own addBreakingBlockEffect(BlockPos, BlockHitResult), the overload
+    // Minecraft#continueAttack calls (with the crosshair hit), before Forge's IClientBlockExtensions test and vanilla's
+    // particles (the deprecated (BlockPos, Direction) overload it then calls). The hit sound plays elsewhere on these lines.
+    @Inject(method = "addBreakingBlockEffect(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/BlockHitResult;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void buildcraft$hitEffects(BlockPos pos, net.minecraft.world.phys.BlockHitResult hit, CallbackInfo ci) {
+        ClientLevel level = (ClientLevel) (Object) this;
+        BlockState state = level.getBlockState(pos);
+        if (!state.isAir() && ForgeBlockParticles.addHitEffects(state, level, hit, minecraft.particleEngine)) {
+            ci.cancel();
+        }
+    }
+    ^///?}
 }
 *///?}

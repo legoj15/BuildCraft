@@ -131,7 +131,15 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
         return entity.getPersistentData();
     }
 
-    //? if <26.3 {
+    //? if >=1.21.10 && <26.3 {
+    /^@Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        // Forge 64/65 patch FuelValues#burnDuration into the stack-aware answer (the item's own override, then the vanilla
+        // fuel map, then the burn-time event); their ForgeHooks has no getBurnTime.
+        return level.fuelValues().burnDuration(stack);
+    }
+    ^///?}
+    //? if <1.21.10 {
     /^@Override
     public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
         // Forge's stack-aware burn time (the item's own override, then the vanilla fuel map, then the burn-time event); no

@@ -42,11 +42,21 @@ public final class ForgeBlockParticles {
         return particles != null && particles.addDestroyEffects(state, level, pos, engine);
     }
 
+    //? if >=26.3 {
     /^* True when the block's override spawned its own hit particles, so vanilla's are skipped. *^/
     public static boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face,
             ParticleEngine engine) {
         BlockParticleOverride particles = OVERRIDES.get(state.getBlock());
         return particles != null && particles.addHitEffects(state, level, pos, face, engine);
     }
+    //?} else {
+    /^// True when the block's override spawned its own hit particles, so vanilla's are skipped. Before 26.3 the override
+    // takes the hit itself, which Forge 64/65 hand to ClientLevel#addBreakingBlockEffect(BlockPos, BlockHitResult).
+    public static boolean addHitEffects(BlockState state, Level level, net.minecraft.world.phys.BlockHitResult hit,
+            ParticleEngine engine) {
+        BlockParticleOverride particles = OVERRIDES.get(state.getBlock());
+        return particles != null && particles.addHitEffects(state, level, hit, engine);
+    }
+    ^///?}
 }
 *///?}

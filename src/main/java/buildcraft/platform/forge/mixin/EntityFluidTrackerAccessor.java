@@ -7,7 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
-//? if >=1.21.10 {
+//? if >=26.3 {
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import net.minecraft.core.Holder;
@@ -32,7 +32,20 @@ public interface EntityFluidTrackerAccessor {
     @Accessor("eyesInside")
     boolean buildcraft$eyesInside();
 }
-//?} else {
+//?} elif >=1.21.10 {
+/^import org.spongepowered.asm.mixin.gen.Accessor;
+
+// The 26.1 and 26.2 form of the tracker (Forge 64 and 65): no {@code fluidType} field (no tracker carries its fluid there,
+// see {@code EntityFluidInteractionMixin}), so only the height and the eyes flag. An accessor, so no injection point.
+@Mixin(targets = "net.minecraft.world.entity.EntityFluidInteraction$Tracker")
+public interface EntityFluidTrackerAccessor {
+    @Accessor("height")
+    double buildcraft$height();
+
+    @Accessor("eyesInside")
+    boolean buildcraft$eyesInside();
+}
+^///?} else {
 /^import net.minecraft.world.entity.Entity;
 
 // 1.21.1 has no EntityFluidInteraction tracker to read (see EntityFluidInteractionMixin).

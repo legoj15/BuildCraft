@@ -7,7 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
-//? if >=1.21.10 {
+//? if >=26.3 {
 import org.spongepowered.asm.mixin.injection.At;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -45,8 +45,10 @@ abstract class FloatGoalMixin {
 //?} else {
 /^import net.minecraft.world.entity.ai.goal.FloatGoal;
 
-// Forge 1.21.1's FloatGoal ORs in canSwimInFluidType, which answers from the fluid type's own swim flag.
-// Empty, so the mixin config names the same classes on both Forge lines.
+// Forge 1.21.1's FloatGoal ORs in canSwimInFluidType, which answers from the fluid type's own swim flag. Forge 64/65's
+// (26.1, 26.2) does too, and its tag test is isInWater() && getFluidHeight(WATER), which EntityFluidInteractionMixin
+// already answers per type there (a fluid that is not water-like never joins the water tracker). Before 26.3 the
+// floatable tag does not exist. Empty, so the mixin config names the same classes on every Forge line.
 @Mixin(FloatGoal.class)
 abstract class FloatGoalMixin {
 }

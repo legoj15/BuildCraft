@@ -164,6 +164,7 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
                 event -> event.register(sources.get(), block.get()));
     }
 
+    //? if >=26.3 {
     @Override
     public void renderPipeline(Supplier<com.mojang.renderpearl.api.pipeline.RenderPipeline> pipeline) {
         // Vanilla's own registration (RenderPipelines.register) is one put into this map, which the shader reload
@@ -171,6 +172,14 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         com.mojang.renderpearl.api.pipeline.RenderPipeline resolved = pipeline.get();
         RenderPipelines.PIPELINES_BY_LOCATION.put(resolved.getLocation(), resolved);
     }
+    //?} else {
+    /^@Override
+    public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
+        // The same map before 26.3 moved RenderPipeline to renderpearl.
+        com.mojang.blaze3d.pipeline.RenderPipeline resolved = pipeline.get();
+        RenderPipelines.PIPELINES_BY_LOCATION.put(resolved.getLocation(), resolved);
+    }
+    ^///?}
 
     @Override
     public void spriteSource(Identifier id, MapCodec<? extends SpriteSource> codec) {
@@ -215,6 +224,7 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         });
     }
 
+    //? if >=26.2 {
     @Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
             Supplier<PictureInPictureRenderer<S>> factory) {
@@ -222,6 +232,16 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         queue(RegisterPictureInPictureRendererEvent.class, RegisterPictureInPictureRendererEvent.BUS::addListener,
                 event -> event.register(factory.get()));
     }
+    //?} else {
+    /^@Override
+    public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
+            java.util.function.Function<net.minecraft.client.renderer.MultiBufferSource.BufferSource,
+                    PictureInPictureRenderer<S>> factory) {
+        // 26.1: a renderer is built over the GUI's buffer source, which Forge 64's event hands out.
+        queue(RegisterPictureInPictureRendererEvent.class, RegisterPictureInPictureRendererEvent.BUS::addListener,
+                event -> event.register(factory.apply(event.getBufferSource())));
+    }
+    ^///?}
 
     @Override
     public void clientSetup(Runnable work) {

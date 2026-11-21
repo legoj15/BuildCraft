@@ -38,7 +38,9 @@ import buildcraft.platform.Platform;
  * deprecated tag paths are.
  *
  * <p>The answers read vanilla's per-fluid trackers of the entity's {@code EntityFluidInteraction}, through
- * {@code EntityFluidInteractionMixin}, which implements {@link Interaction}.
+ * {@code EntityFluidInteractionMixin}, which implements {@link Interaction}. On 26.1 and 26.2 (Forge 64, 65) those trackers
+ * are per tag and carry no fluid, so the mixin keeps a fluid that is not water-like out of the water tag's tracker instead,
+ * and reads Forge's per-type trackers for the fall distance.
  *^/
 public final class ForgeFluidPhysics {
     private ForgeFluidPhysics() {}
@@ -69,6 +71,26 @@ public final class ForgeFluidPhysics {
     @Nullable
     static FluidProperties declared(Fluid fluid) {
         return Platform.fluids().declared(fluid);
+    }
+
+    /^* The properties of a BuildCraft fluid type, or null for any other type (26.1 and 26.2 track by type, not fluid). ^/
+    @Nullable
+    public static FluidProperties declared(net.minecraftforge.fluids.FluidType type) {
+        return type instanceof ForgeFlowingFluids.Type bcType ? bcType.properties() : null;
+    }
+
+    /^* Whether {@code fluid}, already in the water tag, counts as water: false only for a BuildCraft fluid declared not
+     *  water-like (26.1 and 26.2, where it is kept out of the water tag's tracker). ^/
+    public static boolean isWaterLike(Fluid fluid) {
+        FluidProperties declared = declared(fluid);
+        return declared == null || declared.waterLike();
+    }
+
+    /^* The fall-distance modifier of a tracked fluid type for {@code entity}: its own for a BuildCraft type that is not
+     *  water-like, else 1 (26.1 and 26.2). ^/
+    public static float fallDistanceModifier(net.minecraftforge.fluids.FluidType type, Entity entity) {
+        FluidProperties declared = declared(type);
+        return declared != null && !declared.waterLike() ? entity.getFluidFallDistanceModifier(type) : 1.0F;
     }
 
     /^* Whether a tracked fluid counts as water for the entity: its declared flag for a BuildCraft fluid, else the tag. ^/

@@ -111,7 +111,7 @@ function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '
 # needs one the node's loader lacks is SKIPPED with the reason (never failed): it asks for something the loader cannot give.
 $LoaderLacks = @{
     forge = @{
-        recipeViewer = 'a recipe viewer (neither JEI nor REI has a Forge build for 26.3; the Forge dev client loads none)'
+        recipeViewer = 'a recipe viewer (no JEI or REI is wired on a Forge node; the Forge dev client loads none)'
         devMods      = 'the optional dev-runtime mods (-PwithMods / gradleProperties): the Forge node has no such runtime yet'
     }
 }

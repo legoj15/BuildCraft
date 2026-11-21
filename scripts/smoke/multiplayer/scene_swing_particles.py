@@ -23,7 +23,7 @@ mp.refuse_unsupported_node(NODE)   # a Fabric node is skipped with a reason (exi
 PHASE = sys.argv[2]
 S = Scene(NODE)
 X, Y, Z = S.X, S.Y, S.Z
-ANIM = 'minecraft:interact_animation' if tuple(map(int, NODE.split('.'))) >= (26, 3) else 'minecraft:swing_animation'
+ANIM = 'minecraft:interact_animation' if mp.mc_version(NODE) >= (26, 3) else 'minecraft:swing_animation'
 say, cmd, b, shot, tp, look, aim, hold, burst = S.say, S.cmd, S.b, S.shot, S.tp, S.look, S.aim, S.hold, S.burst
 
 

@@ -6,7 +6,7 @@
   S.shot / tp / look / aim / hold / burst   what the scenes do with a client
   S.check(name, ok, detail)       a recorded pass/fail; S.finish() prints the tally and exits 1 on any failure
 """
-import json, math, os, re, sys, time
+import json, math, os, re, socket, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mp
@@ -39,7 +39,16 @@ class Scene:
         r = ''
         for c in cs:
             c = self.coords(c)
-            r = self.R.cmd(c)
+            # `gamemode <mode> <player>` on a player already in that mode answers nothing at all on the 26.3 servers measured
+            # (Forge: the RCON reply never comes), so it gets a short wait and a fresh connection instead of a 30 s stall.
+            quiet = c.startswith('gamemode ')
+            try:
+                r = self.R.cmd(c, timeout=4 if quiet else None)
+            except (TimeoutError, socket.timeout):
+                if not quiet:
+                    raise
+                r = '(no reply)'
+                self.R = mp.Rcon(self.node)
             self.say('rcon>', c[:160], '=>', r[:200])
         return r
 

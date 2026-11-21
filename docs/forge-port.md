@@ -232,10 +232,11 @@ supported" confirmation (`BackupConfirmScreen`) was waiting for a click.
 node's loader from `versions/<node>/gradle.properties` (`loader=`), strips `-forge` for the Minecraft line, and runs
 `:26.3-forge:runClient -PbcRunDir=run-smoke` (bc.forge's own switches; the game directory is the working directory, so the
 McDevBridge `+mc26.3-forge` jar goes in `versions/26.3-forge/run-smoke/mods` as on the other loaders). What a Forge node lacks is
-declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devMods"`, implied by `mods`,
-`-Mods` and `gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and no
-`-PwithMods` runtime), `mp.py` and its scene script skip a Forge node with exit 0, and `mod-list-banner` has a Forge row click
-(Forge's own `ModListScreen` sorts Minecraft first). Two vanilla confirmations that only a Forge-made world raised before #213 (and an older one still does) are
+declared, not special-cased by name: a scenario or step with `"needs": ["recipeViewer"]` (or `"devProperties"`, implied by
+`gradleProperties`) is reported SKIPPED with the reason on a loader that lacks it (Forge has no recipe viewer and wires none of the
+`-PwithGuideMe`-style switches; `-PwithMods` aliases work since 2026-11-21, see "Multiplayer smoke and `-PwithMods`" below), and
+`mod-list-banner` has a Forge row click (Forge's own `ModListScreen` sorts Minecraft first). The two-client `mp.py` skipped Forge
+until 2026-11-21 and drives it now (same section). Two vanilla confirmations that only a Forge-made world raised before #213 (and an older one still does) are
 answered by the runner, with a console note each: "Warning! These settings are using experimental features" when the first-run
 world is created, and `BackupConfirmScreen` when a world not yet confirmed is loaded (a confirmation is stored in `level.dat`
 as `confirmedExperimentalSettings`, so it comes once per world). A first-run world also gets `gamemode creative`, a `tp` to the
@@ -322,7 +323,8 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
 (`Get-NodeLoader`, `Get-NodeMcVersion`, `-Loader`, node list, the `neoforge-client.toml` edit);
-`scripts/smoke/multiplayer/mp.init.gradle`; `release/modules/BcRelease.psm1` and `release/config/release.json`.
+`scripts/smoke/multiplayer/mp.py` (`run_switches`; NeoForge reads `mp.init.gradle`, Forge reads `bc.forge`'s own `-PbcUser` /
+`-PbcQuickPlayServer` / `-PbcRunDir`); `release/modules/BcRelease.psm1` and `release/config/release.json`.
 
 ## Game tests on Forge (F5)
 

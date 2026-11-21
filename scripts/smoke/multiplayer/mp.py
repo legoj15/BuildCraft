@@ -236,6 +236,11 @@ def node_loader(node):
     return 'fabric' if node.endswith('-fabric') else 'forge' if node.endswith('-forge') else 'neoforge'
 
 
+def mc_version(node):
+    """The Minecraft line of a node name as a tuple: '26.3-forge' -> (26, 3), '1.21.1' -> (1, 21, 1)."""
+    return tuple(int(x) for x in re.match(r'\d+(?:\.\d+)*', node).group(0).split('.'))
+
+
 def refuse_unsupported_node(node):
     """NeoForge nodes (mp.init.gradle) and MinecraftForge nodes (bc.forge's own switches) are driven; a Fabric node has no
     arm yet and is skipped, with the reason, and exits 0 so a caller treats it as skipped, not failed. Nothing is booted
@@ -581,9 +586,17 @@ class Rcon:
         rid, kind = struct.unpack('<ii', data[:8])
         return rid, kind, data[8:-2].decode(errors='replace')
 
-    def cmd(self, c):
-        self._send(2, c)
-        return self._recv()[2]
+    def cmd(self, c, timeout=None):
+        """Run a console command. `timeout` (seconds) bounds the wait for the reply, else the connection's 30 s; a late
+        reply after a timeout would answer the next command, so a connection that timed out must be replaced."""
+        if timeout is not None:
+            self.s.settimeout(timeout)
+        try:
+            self._send(2, c)
+            return self._recv()[2]
+        finally:
+            if timeout is not None:
+                self.s.settimeout(30)
 
 
 def stop(node):

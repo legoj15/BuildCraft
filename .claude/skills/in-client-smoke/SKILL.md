@@ -38,12 +38,24 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-forge      # MinecraftFo
 
 A visual change is checked on both loaders: the Fabric nodes have their own render and screen glue, so a NeoForge-only
 run does not cover them (the Forge node has its own too, `platform/forge/client`, and is run by name until it ships).
-A scenario or step that needs what a loader's dev runtime lacks (`"needs"`: a recipe viewer, dev mods; Forge has neither)
-is reported SKIPPED with the reason, not failed. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
+A scenario or step that needs what a loader's dev runtime lacks (`"needs"`: a recipe viewer, `gradleProperties` switches; Forge has
+neither) is reported SKIPPED with the reason, not failed, and so is a `"mods"` scenario whose aliases the node does not define
+(Forge nodes define `opac` only, so `crossmod-claims-opac*` run there and the flan ones skip). A step's `"nodes": ["26.3"]` names the
+Minecraft line and covers every loader's node of it (NeoForge, Fabric and Forge twins), as it always did for the Fabric twin; a step
+one loader cannot run is `"loaders"`-filtered. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
 its box (`scenarios/lang-overflow.json` tours the GUIs without clicking by English text).
 
 Run it with `run_in_background` — a node's first boot compiles and can take several minutes. It exits 1 on any
 failed step, fatal error or BuildCraft ERROR log line, and 3 when another run holds the smoke lock.
+
+## Two players, and a server on another machine
+
+What another player sees, and anything that only crosses a real connection (menu opening data, recipe and fluid sync, entity
+sync), needs a dedicated server and two clients: `scripts/smoke/multiplayer/mp.py` with the scenes beside it (`setup`, `server`,
+`client A`, `client B`, a scene, `stop`; the README's "Two players" section has the commands). It drives NeoForge and Forge nodes
+(a Fabric node is skipped with a reason). The server half can run on Server1 so the clients join over the LAN:
+`MP_REMOTE_CHECKOUT=<checkout>` (committed state synced with `Sync-ToServer1.ps1 -Name <checkout>`), `MP_LOCK_WAIT_MINUTES` to
+queue behind another run's smoke lock; scratch ports 25661/25662 only, never the real servers' 25565, 25566 or 25575.
 
 ## On Server1 (the default for anything long)
 

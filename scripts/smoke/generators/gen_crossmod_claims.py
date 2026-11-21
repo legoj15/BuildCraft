@@ -22,13 +22,24 @@ rig's own offset:
   Stripes  (z+21)  a stripes pipe at X+15 facing east, fed cobblestone by a wooden pipe, places at X+16
   Robot    (z+26)  a Stripes robot on a docking station at X+12 (a chest of cobblestone under it, the pipe owned by the dev)
                    whose Work-in-Area zone is the single cell X+17: it flies in from outside the claim and must place there
+  Pump     (z+7)   (#208) a Pump on a creative engine at X+15 over a three-cell lava pool X+15..17 (Y-1): the cell under it is
+                   outside the claim, the other two inside. A pump drains the farthest cell first and takes a lava source whole,
+                   so "lava still there" is the refusal
+  Flood    (z+29)  (#208) a Flood Gate at X+14 fed by a Pump on a three-cell water pool at X+13 (nothing of the pool is near the
+                   claim), with a two-cell stone pen in front of it (X+15 outside the claim, X+16 inside): it places a water
+                   SOURCE (level=0: a source at X+15 also flows into X+16 as vanilla water, which is not the gate's doing)
+  Builder 2 (z+12..14, builder at X+10, z+13)  (#208) a 6x2x3 blueprint of mixed blocks (cobblestone, a stair, a chest with a block
+                   entity) whose box X+13..18 straddles the claim border: X+13..15 outside, X+16..18 inside, with a dirt block in
+                   the way on each side of the border
 
 Probes are `execute if/unless block` commands run as plain `cmd` steps: a `cmd` step fails when the condition is false,
 so a probe that is not what the rig expects is a failed step and a screenshot of it. The rigs run side by side, so one
 wait (gated on the control rig's slowest machine, the quarry) covers all three.
 """
+import hashlib
 import os
 import sys
+import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
 from xmod import BC, DEV_UUID, Scenario, at, pipe  # noqa: E402
@@ -42,13 +53,25 @@ BASE = [2048, 150, 2048]    # chunk aligned (2048 = 128 * 16) so every rig start
 ARCH = (6, 0, -7)           # architect table facing west, like every builder: the blueprint then keeps its orientation
 CUBE = (8, 0, -8)           # the 3x3x3 cobblestone cube it scans (x+8..10, z-8..-6): the builders' target box relative to
 CHEST = (6, 0, -5)          # a builder (x+2..4, z-1..+1) is this relative to the architect. The chest carries the blueprint
+PUMP_Z = 7                  # the pump lane of every rig (#208)
+FLOOD_Z = 29                # the flood-gate lane
+BLD2 = (10, 0, 13)          # the second builder (its blueprint box is X+13..18, Z+12..14: base = builder + 1 in x, plus the
+ARCH2 = (6, 0, -11)         # snapshot's offset, which is architect-relative: box min (9, -12) - (arch + 1 in x = 7, -11) = (2, -1))
+CHEST2 = (6, 0, -9)         # and this chest carries the second blueprint
+MIXED_BOX = ((9, 0, -12), (14, 1, -10))     # the source structure the second architect scans (6 x 2 x 3)
 
 
 class Mod:
     """What differs between the claim mods: how a claim is made (commands, run in order) and removed."""
 
-    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None, verify=None, gap_ms=0):
+    def __init__(self, name, loaders, foreign, own, clear, notes="", stranger_owner=False, alias=None, verify=None, gap_ms=0,
+                 owners=None, setup=None):
         self.name, self.loaders = name, loaders
+        # owners: {"B": owner NBT, "C": owner NBT} overrides of who owns each rig's machines (default: the dev, or the stranger in
+        # rig B when stranger_owner). setup(S): steps run once before the claims (a mod whose claim owner is a team needs the team
+        # and its members first).
+        self.owners = dict(owners or {})
+        self.setup = setup
         # Milliseconds waited after each claim command (OPaC drops a player's second claim command in the same server tick)
         self.gap_ms = gap_ms
         self.alias = alias or name      # the -PwithMods alias (a variant of a mod's scenario has a name of its own)
@@ -60,6 +83,11 @@ class Mod:
         # A mod with no way to make a claim that is not the dev's from a command: rig B is claimed by the dev's own
         # command like rig C, and its machines are owned by a stranger instead (the claim is still not their owner's).
         self.stranger_owner = stranger_owner
+
+
+def owner_name(owner):
+    """The ownerName of an owner NBT string, for labels."""
+    return owner.split('ownerName:"')[1].rstrip('"')
 
 
 def area(z0):
@@ -118,7 +146,7 @@ def robot(S, tag, z0, station_owner):
     # owner is "[BuildCraft]", a stranger in the dev's own claim, so the pipe gets an owner: the dev, or in a rig whose
     # machines belong to a stranger the stranger (the dev still deploys the robot, so it is refused for the stranger's sake).
     S.cmd("%s: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by %s" % (
-              tag, "a stranger" if station_owner == STRANGER else "the dev"),
+              tag, owner_name(station_owner)),
           *robotrig.station(12, z0 + 26, ["minecraft:cobblestone 16"], "buildcraft:station.provide_items",
                             (17, 0, z0 + 26, 17, 0, z0 + 26)),
           "data merge block %s {%s}" % (at(12, 1, z0 + 26), station_owner))
@@ -149,6 +177,61 @@ def builder(S, tag, z0, OWNER):
     S.echo("%s: the builder holds it (expect snapshotType 1)" % tag, "data get block %s snapshotType" % p(14, 0, 10))
 
 
+def fluids(S, tag, z0, OWNER):
+    """The Pump and Flood Gate lanes (#208), both owned by the rig's owner."""
+    def p(x, y, z):
+        return at(x, y, z0 + z)
+    zp, zf = PUMP_Z, FLOOD_Z
+    # Pump over a lava pool across the claim border. Lava, not water: a pump leaves a water pool alone (pumpsConsumeWater is off
+    # by default, "infinite" water), a lava source it takes whole, so "still lava" is the refusal.
+    S.cmd("%s: pump lane z+%d: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it" % (
+              tag, zp),
+          "fill %s %s minecraft:lava" % (p(15, -1, zp), p(17, -1, zp)),
+          "setblock %s %spump" % (p(15, 0, zp), BC),
+          "data merge block %s {%s}" % (p(15, 0, zp), OWNER),
+          "setblock %s minecraft:redstone_block" % p(14, -1, zp),
+          "setblock %s %sengine_creative[facing=east]" % (p(14, 0, zp), BC))
+    # Flood Gate: the water comes from a Pump on a three-cell pool (infinite) that pushes into the gate beside it. The gate's pen
+    # is two cells long (X+15, X+16), walled in so the water it places cannot flow anywhere else.
+    S.cmd("%s: flood lane z+%d: water pool, a Pump on it, a Flood Gate beside the Pump, a stone pen in front of the gate" % (tag, zf),
+          "fill %s %s minecraft:water" % (p(13, -1, zf - 1), p(13, -1, zf + 1)),
+          "fill %s %s minecraft:stone" % (p(14, 0, zf - 1), p(17, 0, zf - 1)),
+          "fill %s %s minecraft:stone" % (p(14, 0, zf + 1), p(17, 0, zf + 1)),
+          "setblock %s minecraft:stone" % p(17, 0, zf),
+          "setblock %s %spump" % (p(13, 0, zf), BC),
+          "data merge block %s {%s}" % (p(13, 0, zf), OWNER),
+          "setblock %s %sflood_gate" % (p(14, 0, zf), BC),
+          "data merge block %s {%s}" % (p(14, 0, zf), OWNER),
+          "setblock %s minecraft:redstone_block" % p(12, -1, zf),
+          "setblock %s %sengine_creative[facing=east]" % (p(12, 0, zf), BC))
+
+
+def builder_mixed(S, tag, z0, OWNER):
+    """A second builder whose 6x2x3 blueprint mixes blocks and straddles the claim border (#208)."""
+    def p(x, y, z):
+        return at(x, y, z0 + z)
+    S.cmd("%s: dirt where the mixed blueprint wants cobblestone (one each side of the border), builder 2 facing west with "
+          "cobblestone, stairs and chests, no blueprint yet" % tag,
+          "setblock %s minecraft:dirt" % p(13, 1, 12),
+          "setblock %s minecraft:dirt" % p(16, 1, 13),
+          "setblock %s %sbuilder[facing=west]" % (p(*BLD2), BC),
+          'data merge block %s {%s,battery_mj:16000000000L,items:{resources:{items:['
+          '{stack:{id:"minecraft:cobblestone",count:64}},{stack:{id:"minecraft:oak_stairs",count:8}},'
+          '{stack:{id:"minecraft:chest",count:8}}]}}}' % (p(*BLD2), OWNER))
+    S.hold("minecraft:air")
+    S.cmd("%s: the mixed blueprint into the player's inventory, standing west of builder 2" % tag,
+          "item replace entity @p inventory.0 from block %s container.0" % at(*CHEST2))
+    S.tp(BLD2[0] - 3, 0, z0 + BLD2[2], -90, 0)
+    S.aim(BLD2[0], 0, z0 + BLD2[2])
+    S.wait(300)
+    S.step(label="%s: open builder 2" % tag, do="use")
+    S.step(do="expectScreen", contains="GuiBuilder", timeoutSec=10)
+    S.step(label="%s: pick the blueprint up" % tag, do="click", slotIndex=52)
+    S.step(label="%s: into the snapshot slot" % tag, do="click", slotIndex=0)
+    S.step(do="close")
+    S.echo("%s: builder 2 holds it (expect snapshotType 1)" % tag, "data get block %s snapshotType" % p(*BLD2))
+
+
 def probes(S, tag, z0, expect):
     """Assertions after the rig has had time to run, one per machine and per kind of act (a claim mod may guard breaking
     and placing differently). `execute if block` fails the step when it is false."""
@@ -173,6 +256,37 @@ def probes(S, tag, z0, expect):
           "execute %s block %s minecraft:cobblestone" % (yes, p(16, 0, 21)))
     S.cmd("%s: PLACE Stripes robot sets cobblestone in its zone inside the claim: %s" % (tag, "placed" if works else "refused"),
           "execute %s block %s minecraft:cobblestone" % (yes, p(17, 0, 26)))
+    # #208: the Pump (breaks fluid), the Flood Gate (places a fluid source) and a builder with a mixed blueprint across the border.
+    zp, zf = PUMP_Z, FLOOD_Z
+    lava = "minecraft:lava"
+    S.cmd("%s: the pump drained the lava cell under it (X+15, outside the claim), in every rig" % tag,
+          "execute unless block %s %s" % (p(15, -1, zp), lava))
+    S.cmd("%s: BREAK pump drains the lava inside the claim (X+16): %s" % (tag, "drained" if works else "untouched"),
+          "execute %s block %s %s" % (no, p(16, -1, zp), lava))
+    S.cmd("%s: BREAK pump drains the lava inside the claim (X+17): %s" % (tag, "drained" if works else "untouched"),
+          "execute %s block %s %s" % (no, p(17, -1, zp), lava))
+    source = "minecraft:water[level=0]"
+    S.cmd("%s: the flood gate placed its water source outside the claim (X+15), in every rig" % tag,
+          "execute if block %s %s" % (p(15, 0, zf), source))
+    S.cmd("%s: PLACE flood gate puts a water source inside the claim (X+16): %s" % (tag, "placed" if works else "refused"),
+          "execute %s block %s %s" % (yes, p(16, 0, zf), source))
+    # The mixed blueprint: box X+13..18 x Y..Y+1 x z+12..14, blueprint cell (ix, iy, iz) at (13+ix, iy, 12+iz).
+    S.cmd("%s: mixed blueprint outside the claim (X+13), built in every rig: cobblestone" % tag,
+          "execute if block %s minecraft:cobblestone" % p(13, 0, 12))
+    S.cmd("%s: mixed blueprint outside the claim (X+14), built in every rig: stair, orientation kept" % tag,
+          "execute if block %s minecraft:oak_stairs[facing=east]" % p(14, 0, 13))
+    S.cmd("%s: mixed blueprint outside the claim (X+15), built in every rig: chest" % tag,
+          "execute if block %s minecraft:chest[facing=south]" % p(15, 0, 14))
+    S.cmd("%s: mixed blueprint outside the claim (X+13), built in every rig: the dirt in its way replaced by cobblestone" % tag,
+          "execute if block %s minecraft:cobblestone" % p(13, 1, 12))
+    S.cmd("%s: PLACE mixed blueprint cobblestone inside the claim (X+16): %s" % (tag, "placed" if works else "refused"),
+          "execute %s block %s minecraft:cobblestone" % (yes, p(16, 0, 12)))
+    S.cmd("%s: PLACE mixed blueprint stair inside the claim, orientation kept: %s" % (tag, "placed" if works else "refused"),
+          "execute %s block %s minecraft:oak_stairs[facing=east]" % (yes, p(17, 0, 13)))
+    S.cmd("%s: PLACE mixed blueprint chest (a block entity) inside the claim: %s" % (tag, "placed" if works else "refused"),
+          "execute %s block %s minecraft:chest[facing=south]" % (yes, p(18, 0, 14)))
+    S.cmd("%s: BREAK mixed blueprint removes the dirt in its way inside the claim: %s" % (tag, "broken" if works else "left"),
+          "execute %s block %s minecraft:dirt" % (no, p(16, 1, 13)))
 
 
 def build(mod):
@@ -200,8 +314,8 @@ def build(mod):
 
     # The blueprint: a cobblestone cube scanned by an architect table, carried through a chest into the player's inventory.
     S.cmd("blueprint source: a 3x3x3 cobblestone cube and the architect table scanning it",
-          "fill {X-4} {Y-4} {Z-12} {X+12} {Y-1} {Z-3} minecraft:stone",
-          "fill {X-4} {Y} {Z-12} {X+12} {Y+8} {Z-3} minecraft:air",
+          "fill {X-4} {Y-4} {Z-12} {X+16} {Y-1} {Z-3} minecraft:stone",
+          "fill {X-4} {Y} {Z-12} {X+16} {Y+8} {Z-3} minecraft:air",
           "fill %s %s minecraft:cobblestone" % (at(*CUBE), at(CUBE[0] + 2, 2, CUBE[2] + 2)),
           "setblock %s %sarchitect[facing=west]" % (at(*ARCH), BC),
           'data merge block %s {box_initialized:1b,box_minX:{X+%d},box_minY:{Y},box_minZ:{Z%+d},box_maxX:{X+%d},box_maxY:{Y+2},'
@@ -214,6 +328,33 @@ def build(mod):
           'data merge block %s {Items:[{Slot:0b,id:"minecraft:stone",count:1}]}' % at(*CHEST),
           "data modify block %s Items[{Slot:0b}] merge from block %s items.out.items[0].stack" % (at(*CHEST), at(*ARCH)))
 
+    # The second blueprint (#208): 6x2x3 of mixed blocks, scanned by a second architect, carried in a second chest. Index (ix, iy, iz)
+    # of the structure is at (9 + ix, iy, -12 + iz); a stair and a chest sit on each side of the border the builder's box will
+    # straddle (ix 0..2 land outside the claim, 3..5 inside), and a cobblestone block on the layer above each side (the builder
+    # finds dirt there).
+    (x0, y0, z0m), (x1, y1, z1m) = MIXED_BOX
+    S.cmd("blueprint source 2: a 6x2x3 structure of cobblestone, stairs and chests and the architect table scanning it",
+          "fill %s %s minecraft:cobblestone" % (at(x0, y0, z0m), at(x1, y0, z1m)),
+          "setblock %s minecraft:oak_stairs[facing=east]" % at(x0 + 1, 0, z0m + 1),
+          "setblock %s minecraft:chest[facing=south]" % at(x0 + 2, 0, z0m + 2),
+          "setblock %s minecraft:oak_stairs[facing=east]" % at(x0 + 4, 0, z0m + 1),
+          "setblock %s minecraft:chest[facing=south]" % at(x0 + 5, 0, z0m + 2),
+          "setblock %s minecraft:cobblestone" % at(x0, 1, z0m),
+          "setblock %s minecraft:cobblestone" % at(x0 + 3, 1, z0m + 1),
+          "setblock %s %sarchitect[facing=west]" % (at(*ARCH2), BC),
+          'data merge block %s {box_initialized:1b,box_minX:{X+%d},box_minY:{Y},box_minZ:{Z%+d},box_maxX:{X+%d},box_maxY:{Y+%d},'
+          'box_maxZ:{Z%+d},isValid:1b,name:"claims-mixed",items:{in:{items:[{stack:{id:"%sblueprint_clean",count:1}}]},'
+          'out:{items:[]}}}' % (at(*ARCH2), x0, z0m, x1, y1, z1m, BC))
+    S.wait_cmd("the second architect finished its blueprint", "data get block %s items.out.items[0].stack.id" % at(*ARCH2),
+               "blueprint_used", 90)
+    S.cmd("chest 2: the used mixed blueprint in slot 0",
+          "setblock %s minecraft:chest[facing=south]" % at(*CHEST2),
+          'data merge block %s {Items:[{Slot:0b,id:"minecraft:stone",count:1}]}' % at(*CHEST2),
+          "data modify block %s Items[{Slot:0b}] merge from block %s items.out.items[0].stack" % (at(*CHEST2), at(*ARCH2)))
+
+    if mod.setup:
+        mod.setup(S)
+
     # Claims first, then the machines: nothing may start before the rig it belongs to is claimed.
     for tag, make in (("B", mod.foreign), ("C", mod.own)):
         S.tp(20, 4, RIG_Z[tag] + 8, 0, 20)
@@ -222,19 +363,26 @@ def build(mod):
             S.cmd("%s: the claim over the target chunks" % tag, c)
             if mod.gap_ms:
                 S.wait(mod.gap_ms)
-        check = mod.verify(tag, area(RIG_Z[tag])) if mod.verify else None
-        if check:
+        checks = mod.verify(tag, area(RIG_Z[tag])) if mod.verify else None
+        if checks and isinstance(checks, tuple):
+            checks = [checks]
+        for check in checks or []:
             S.wait_cmd("%s: the claim is what the rig needs (reply matches '%s')" % (tag, check[1]), check[0], check[1], 10, 500)
         S.wait(2500)
     S.tp(8, 4, 8, 0, 20)
 
     def owner(tag):
+        if tag in mod.owners:
+            return mod.owners[tag]
         return STRANGER if (tag == "B" and mod.stranger_owner) else OWNER
 
     for tag, z0 in RIG_Z.items():
         machines(S, tag, z0, owner(tag))
+        fluids(S, tag, z0, owner(tag))
     for tag, z0 in RIG_Z.items():
         builder(S, tag, z0, owner(tag))
+    for tag, z0 in RIG_Z.items():
+        builder_mixed(S, tag, z0, owner(tag))
     for tag, z0 in RIG_Z.items():
         robot(S, tag, z0, owner(tag))
 
@@ -248,6 +396,12 @@ def build(mod):
                "execute unless block %s minecraft:stone" % at(17, -1, A + 3), "passed", 240, 2000)
     S.wait_cmd("the control rig's robot placed its block (the other slow one)",
                "execute if block %s minecraft:cobblestone" % at(17, 0, A + 26), "passed", 180, 2000)
+    S.wait_cmd("the control rig's pump drained the far lava cell", "execute unless block %s minecraft:lava" % at(17, -1, A + PUMP_Z),
+               "passed", 120, 2000)
+    S.wait_cmd("the control rig's flood gate placed the second water source",
+               "execute if block %s minecraft:water[level=0]" % at(16, 0, A + FLOOD_Z), "passed", 120, 2000)
+    S.wait_cmd("the control rig's mixed blueprint chest inside the claim area was built",
+               "execute if block %s minecraft:chest" % at(18, 0, A + 14), "passed", 120, 2000)
     S.wait(15000, "let the other rigs go on as long as the control did")
     for tag, z0 in RIG_Z.items():
         S.tp(20, 25, z0 + 16, 0, 90)
@@ -280,6 +434,53 @@ def ftbc_claims(a):
     x1, z1, x2, z2 = a
     return ["execute as @p positioned %d %d %d run ftbchunks claim" % (x, BASE[1], z)
             for x in range(x1, x2, 16) for z in range(z1, z2, 16)]
+
+
+def offline_uuid(name):
+    """The UUID Minecraft gives a player name with no account behind it: UUID.nameUUIDFromBytes("OfflinePlayer:" + name), which is
+    what the profile cache hands out for a name it has never seen (DEV_UUID is this, for "Dev")."""
+    b = bytearray(hashlib.md5(("OfflinePlayer:" + name).encode("utf-8")).digest())
+    b[6] = (b[6] & 0x0F) | 0x30
+    b[8] = (b[8] & 0x3F) | 0x80
+    return str(uuid.UUID(bytes=bytes(b)))
+
+
+assert offline_uuid("Dev") == DEV_UUID
+
+
+def player_owner(name):
+    return 'ownerUUID:"%s",ownerName:"%s"' % (offline_uuid(name), name)
+
+
+FTB_OUTSIDER = "BCClaimOutsider"     # a player with a team of his own, in no party
+FTB_TEAMMATE = "BCClaimTeammate"     # a player forced into the dev's party
+FTB_PARTY = "BCClaimParty"           # the dev's party: the claim owner of the teams scenario
+
+
+def ftb_teams_setup(S):
+    """FTB Teams: two players the world has never seen get a team each (`ftbteams add_fake_player`, a dev-runtime-only command: it
+    is what the mod's own tests use), the dev opens a party and the teammate is put into it by `ftbteams force add`. Nothing here
+    needs a second client: a team is data keyed by a UUID, and a machine's fake player carries its owner's UUID."""
+    S.cmd("FTB Teams: the outsider and the teammate get teams of their own (dev command), the dev opens a party, the teammate is "
+          "forced into it",
+          "ftbteams add_fake_player %s" % FTB_OUTSIDER,
+          "ftbteams add_fake_player %s" % FTB_TEAMMATE,
+          "execute as @p run ftbteams party create %s" % FTB_PARTY,
+          "ftbteams force add @p %s" % FTB_TEAMMATE)
+    # `ftbteams info <player>` names the player's team id, which for a personal team is the player's UUID: the UUID a machine
+    # owned by that name carries is the one the team is under.
+    S.wait_cmd("the outsider's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_OUTSIDER,
+               offline_uuid(FTB_OUTSIDER), 10, 500)
+    S.wait_cmd("the teammate's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_TEAMMATE,
+               offline_uuid(FTB_TEAMMATE), 10, 500)
+    S.wait_cmd("the dev's party lists the teammate", "ftbteams info @p", FTB_TEAMMATE, 10, 500)
+    S.echo("the dev's party (expect the teammate listed and not the outsider)", "ftbteams info @p")
+
+
+def ftb_claim_owner(tag, a):
+    """verify hook: `ftbchunks info` at each chunk of the rig's claim must name the dev's party as the owner."""
+    x1, z1, x2, z2 = a
+    return [("ftbchunks info %d %d" % (x1, z), FTB_PARTY) for z in range(z1, z2, 16)]
 
 
 def flan_at(a):
@@ -355,6 +556,14 @@ MODS = [
     Mod("ftbchunks", ["neoforge"], foreign=ftbc_claims, own=ftbc_claims, clear=lambda tag, a: [], stranger_owner=True,
         notes="Rig B's claim is the dev's team's like rig C's, and rig B's machines are owned by a stranger (its robot is "
               "deployed by the dev but its station pipe is the stranger's)."),
+    # FTB Chunks with real teams (#208): the claim belongs to the dev's party in both rigs. Rig B's machines are owned by a player
+    # who has a team of his own and is in no party ("foreign team"), rig C's by a player forced into the dev's party who is not
+    # the claimer ("teammate": it must work, or the check is only "owner == claimer").
+    Mod("ftbchunks-teams", ["neoforge"], alias="ftbchunks", foreign=ftbc_claims, own=ftbc_claims, clear=lambda tag, a: [],
+        owners={"B": player_owner(FTB_OUTSIDER), "C": player_owner(FTB_TEAMMATE)}, setup=ftb_teams_setup, verify=ftb_claim_owner,
+        notes="Both claims are the dev's party's. Rig B's machines belong to a player with a team of his own (%s), rig C's to a "
+              "player in the dev's party (%s); the dev is the party's owner and the robot's deployer in both." % (
+                  FTB_OUTSIDER, FTB_TEAMMATE)),
 ]
 
 

@@ -65,8 +65,8 @@
    "label": "blueprint source: a 3x3x3 cobblestone cube and the architect table scanning it",
    "do": "cmd",
    "run": [
-    "fill {X-4} {Y-4} {Z-12} {X+12} {Y-1} {Z-3} minecraft:stone",
-    "fill {X-4} {Y} {Z-12} {X+12} {Y+8} {Z-3} minecraft:air",
+    "fill {X-4} {Y-4} {Z-12} {X+16} {Y-1} {Z-3} minecraft:stone",
+    "fill {X-4} {Y} {Z-12} {X+16} {Y+8} {Z-3} minecraft:air",
     "fill {X+8} {Y} {Z-8} {X+10} {Y+2} {Z-6} minecraft:cobblestone",
     "setblock {X+6} {Y} {Z-7} buildcraftunofficial:architect[facing=west]",
     "data merge block {X+6} {Y} {Z-7} {box_initialized:1b,box_minX:{X+8},box_minY:{Y},box_minZ:{Z-8},box_maxX:{X+10},box_maxY:{Y+2},box_maxZ:{Z-6},isValid:1b,name:\"claims-cube\",items:{in:{items:[{stack:{id:\"buildcraftunofficial:blueprint_clean\",count:1}}]},out:{items:[]}}}"
@@ -87,6 +87,38 @@
     "setblock {X+6} {Y} {Z-5} minecraft:chest[facing=south]",
     "data merge block {X+6} {Y} {Z-5} {Items:[{Slot:0b,id:\"minecraft:stone\",count:1}]}",
     "data modify block {X+6} {Y} {Z-5} Items[{Slot:0b}] merge from block {X+6} {Y} {Z-7} items.out.items[0].stack"
+   ]
+  },
+  {
+   "label": "blueprint source 2: a 6x2x3 structure of cobblestone, stairs and chests and the architect table scanning it",
+   "do": "cmd",
+   "run": [
+    "fill {X+9} {Y} {Z-12} {X+14} {Y} {Z-10} minecraft:cobblestone",
+    "setblock {X+10} {Y} {Z-11} minecraft:oak_stairs[facing=east]",
+    "setblock {X+11} {Y} {Z-10} minecraft:chest[facing=south]",
+    "setblock {X+13} {Y} {Z-11} minecraft:oak_stairs[facing=east]",
+    "setblock {X+14} {Y} {Z-10} minecraft:chest[facing=south]",
+    "setblock {X+9} {Y+1} {Z-12} minecraft:cobblestone",
+    "setblock {X+12} {Y+1} {Z-11} minecraft:cobblestone",
+    "setblock {X+6} {Y} {Z-11} buildcraftunofficial:architect[facing=west]",
+    "data merge block {X+6} {Y} {Z-11} {box_initialized:1b,box_minX:{X+9},box_minY:{Y},box_minZ:{Z-12},box_maxX:{X+14},box_maxY:{Y+1},box_maxZ:{Z-10},isValid:1b,name:\"claims-mixed\",items:{in:{items:[{stack:{id:\"buildcraftunofficial:blueprint_clean\",count:1}}]},out:{items:[]}}}"
+   ]
+  },
+  {
+   "label": "the second architect finished its blueprint",
+   "do": "waitCmd",
+   "run": "data get block {X+6} {Y} {Z-11} items.out.items[0].stack.id",
+   "match": "blueprint_used",
+   "timeoutSec": 90,
+   "pollMs": 1000
+  },
+  {
+   "label": "chest 2: the used mixed blueprint in slot 0",
+   "do": "cmd",
+   "run": [
+    "setblock {X+6} {Y} {Z-9} minecraft:chest[facing=south]",
+    "data merge block {X+6} {Y} {Z-9} {Items:[{Slot:0b,id:\"minecraft:stone\",count:1}]}",
+    "data modify block {X+6} {Y} {Z-9} Items[{Slot:0b}] merge from block {X+6} {Y} {Z-11} items.out.items[0].stack"
    ]
   },
   {
@@ -207,6 +239,33 @@
    ]
   },
   {
+   "label": "A: pump lane z+7: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it",
+   "do": "cmd",
+   "run": [
+    "fill {X+15} {Y-1} {Z+7} {X+17} {Y-1} {Z+7} minecraft:lava",
+    "setblock {X+15} {Y} {Z+7} buildcraftunofficial:pump",
+    "data merge block {X+15} {Y} {Z+7} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+14} {Y-1} {Z+7} minecraft:redstone_block",
+    "setblock {X+14} {Y} {Z+7} buildcraftunofficial:engine_creative[facing=east]"
+   ]
+  },
+  {
+   "label": "A: flood lane z+29: water pool, a Pump on it, a Flood Gate beside the Pump, a stone pen in front of the gate",
+   "do": "cmd",
+   "run": [
+    "fill {X+13} {Y-1} {Z+28} {X+13} {Y-1} {Z+30} minecraft:water",
+    "fill {X+14} {Y} {Z+28} {X+17} {Y} {Z+28} minecraft:stone",
+    "fill {X+14} {Y} {Z+30} {X+17} {Y} {Z+30} minecraft:stone",
+    "setblock {X+17} {Y} {Z+29} minecraft:stone",
+    "setblock {X+13} {Y} {Z+29} buildcraftunofficial:pump",
+    "data merge block {X+13} {Y} {Z+29} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+14} {Y} {Z+29} buildcraftunofficial:flood_gate",
+    "data merge block {X+14} {Y} {Z+29} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+12} {Y-1} {Z+29} minecraft:redstone_block",
+    "setblock {X+12} {Y} {Z+29} buildcraftunofficial:engine_creative[facing=east]"
+   ]
+  },
+  {
    "label": "B: platform and air",
    "do": "cmd",
    "run": [
@@ -250,6 +309,33 @@
    ]
   },
   {
+   "label": "B: pump lane z+7: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it",
+   "do": "cmd",
+   "run": [
+    "fill {X+15} {Y-1} {Z+55} {X+17} {Y-1} {Z+55} minecraft:lava",
+    "setblock {X+15} {Y} {Z+55} buildcraftunofficial:pump",
+    "data merge block {X+15} {Y} {Z+55} {ownerUUID:\"00000000-0000-4000-8000-0000000000ee\",ownerName:\"Stranger\"}",
+    "setblock {X+14} {Y-1} {Z+55} minecraft:redstone_block",
+    "setblock {X+14} {Y} {Z+55} buildcraftunofficial:engine_creative[facing=east]"
+   ]
+  },
+  {
+   "label": "B: flood lane z+29: water pool, a Pump on it, a Flood Gate beside the Pump, a stone pen in front of the gate",
+   "do": "cmd",
+   "run": [
+    "fill {X+13} {Y-1} {Z+76} {X+13} {Y-1} {Z+78} minecraft:water",
+    "fill {X+14} {Y} {Z+76} {X+17} {Y} {Z+76} minecraft:stone",
+    "fill {X+14} {Y} {Z+78} {X+17} {Y} {Z+78} minecraft:stone",
+    "setblock {X+17} {Y} {Z+77} minecraft:stone",
+    "setblock {X+13} {Y} {Z+77} buildcraftunofficial:pump",
+    "data merge block {X+13} {Y} {Z+77} {ownerUUID:\"00000000-0000-4000-8000-0000000000ee\",ownerName:\"Stranger\"}",
+    "setblock {X+14} {Y} {Z+77} buildcraftunofficial:flood_gate",
+    "data merge block {X+14} {Y} {Z+77} {ownerUUID:\"00000000-0000-4000-8000-0000000000ee\",ownerName:\"Stranger\"}",
+    "setblock {X+12} {Y-1} {Z+77} minecraft:redstone_block",
+    "setblock {X+12} {Y} {Z+77} buildcraftunofficial:engine_creative[facing=east]"
+   ]
+  },
+  {
    "label": "C: platform and air",
    "do": "cmd",
    "run": [
@@ -290,6 +376,33 @@
     "data merge block {X+15} {Y} {Z+117} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
     "setblock {X+12} {Y+1} {Z+117} minecraft:redstone_block",
     "setblock {X+13} {Y+1} {Z+117} buildcraftunofficial:engine_creative[facing=down]"
+   ]
+  },
+  {
+   "label": "C: pump lane z+7: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it",
+   "do": "cmd",
+   "run": [
+    "fill {X+15} {Y-1} {Z+103} {X+17} {Y-1} {Z+103} minecraft:lava",
+    "setblock {X+15} {Y} {Z+103} buildcraftunofficial:pump",
+    "data merge block {X+15} {Y} {Z+103} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+14} {Y-1} {Z+103} minecraft:redstone_block",
+    "setblock {X+14} {Y} {Z+103} buildcraftunofficial:engine_creative[facing=east]"
+   ]
+  },
+  {
+   "label": "C: flood lane z+29: water pool, a Pump on it, a Flood Gate beside the Pump, a stone pen in front of the gate",
+   "do": "cmd",
+   "run": [
+    "fill {X+13} {Y-1} {Z+124} {X+13} {Y-1} {Z+126} minecraft:water",
+    "fill {X+14} {Y} {Z+124} {X+17} {Y} {Z+124} minecraft:stone",
+    "fill {X+14} {Y} {Z+126} {X+17} {Y} {Z+126} minecraft:stone",
+    "setblock {X+17} {Y} {Z+125} minecraft:stone",
+    "setblock {X+13} {Y} {Z+125} buildcraftunofficial:pump",
+    "data merge block {X+13} {Y} {Z+125} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+14} {Y} {Z+125} buildcraftunofficial:flood_gate",
+    "data merge block {X+14} {Y} {Z+125} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\"}",
+    "setblock {X+12} {Y-1} {Z+125} minecraft:redstone_block",
+    "setblock {X+12} {Y} {Z+125} buildcraftunofficial:engine_creative[facing=east]"
    ]
   },
   {
@@ -512,7 +625,229 @@
    "echo": true
   },
   {
-   "label": "A: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by the dev",
+   "label": "A: dirt where the mixed blueprint wants cobblestone (one each side of the border), builder 2 facing west with cobblestone, stairs and chests, no blueprint yet",
+   "do": "cmd",
+   "run": [
+    "setblock {X+13} {Y+1} {Z+12} minecraft:dirt",
+    "setblock {X+16} {Y+1} {Z+13} minecraft:dirt",
+    "setblock {X+10} {Y} {Z+13} buildcraftunofficial:builder[facing=west]",
+    "data merge block {X+10} {Y} {Z+13} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}},{stack:{id:\"minecraft:oak_stairs\",count:8}},{stack:{id:\"minecraft:chest\",count:8}}]}}}"
+   ]
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:air"
+  },
+  {
+   "label": "A: the mixed blueprint into the player's inventory, standing west of builder 2",
+   "do": "cmd",
+   "run": [
+    "item replace entity @p inventory.0 from block {X+6} {Y} {Z-9} container.0"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    7,
+    0,
+    13
+   ],
+   "yaw": -90,
+   "pitch": 0
+  },
+  {
+   "do": "aim",
+   "at": [
+    10,
+    0,
+    13
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
+  },
+  {
+   "label": "A: open builder 2",
+   "do": "use"
+  },
+  {
+   "do": "expectScreen",
+   "contains": "GuiBuilder",
+   "timeoutSec": 10
+  },
+  {
+   "label": "A: pick the blueprint up",
+   "do": "click",
+   "slotIndex": 52
+  },
+  {
+   "label": "A: into the snapshot slot",
+   "do": "click",
+   "slotIndex": 0
+  },
+  {
+   "do": "close"
+  },
+  {
+   "label": "A: builder 2 holds it (expect snapshotType 1)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+10} {Y} {Z+13} snapshotType"
+   ],
+   "allowFail": true,
+   "echo": true
+  },
+  {
+   "label": "B: dirt where the mixed blueprint wants cobblestone (one each side of the border), builder 2 facing west with cobblestone, stairs and chests, no blueprint yet",
+   "do": "cmd",
+   "run": [
+    "setblock {X+13} {Y+1} {Z+60} minecraft:dirt",
+    "setblock {X+16} {Y+1} {Z+61} minecraft:dirt",
+    "setblock {X+10} {Y} {Z+61} buildcraftunofficial:builder[facing=west]",
+    "data merge block {X+10} {Y} {Z+61} {ownerUUID:\"00000000-0000-4000-8000-0000000000ee\",ownerName:\"Stranger\",battery_mj:16000000000L,items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}},{stack:{id:\"minecraft:oak_stairs\",count:8}},{stack:{id:\"minecraft:chest\",count:8}}]}}}"
+   ]
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:air"
+  },
+  {
+   "label": "B: the mixed blueprint into the player's inventory, standing west of builder 2",
+   "do": "cmd",
+   "run": [
+    "item replace entity @p inventory.0 from block {X+6} {Y} {Z-9} container.0"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    7,
+    0,
+    61
+   ],
+   "yaw": -90,
+   "pitch": 0
+  },
+  {
+   "do": "aim",
+   "at": [
+    10,
+    0,
+    61
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
+  },
+  {
+   "label": "B: open builder 2",
+   "do": "use"
+  },
+  {
+   "do": "expectScreen",
+   "contains": "GuiBuilder",
+   "timeoutSec": 10
+  },
+  {
+   "label": "B: pick the blueprint up",
+   "do": "click",
+   "slotIndex": 52
+  },
+  {
+   "label": "B: into the snapshot slot",
+   "do": "click",
+   "slotIndex": 0
+  },
+  {
+   "do": "close"
+  },
+  {
+   "label": "B: builder 2 holds it (expect snapshotType 1)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+10} {Y} {Z+61} snapshotType"
+   ],
+   "allowFail": true,
+   "echo": true
+  },
+  {
+   "label": "C: dirt where the mixed blueprint wants cobblestone (one each side of the border), builder 2 facing west with cobblestone, stairs and chests, no blueprint yet",
+   "do": "cmd",
+   "run": [
+    "setblock {X+13} {Y+1} {Z+108} minecraft:dirt",
+    "setblock {X+16} {Y+1} {Z+109} minecraft:dirt",
+    "setblock {X+10} {Y} {Z+109} buildcraftunofficial:builder[facing=west]",
+    "data merge block {X+10} {Y} {Z+109} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}},{stack:{id:\"minecraft:oak_stairs\",count:8}},{stack:{id:\"minecraft:chest\",count:8}}]}}}"
+   ]
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:air"
+  },
+  {
+   "label": "C: the mixed blueprint into the player's inventory, standing west of builder 2",
+   "do": "cmd",
+   "run": [
+    "item replace entity @p inventory.0 from block {X+6} {Y} {Z-9} container.0"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    7,
+    0,
+    109
+   ],
+   "yaw": -90,
+   "pitch": 0
+  },
+  {
+   "do": "aim",
+   "at": [
+    10,
+    0,
+    109
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 300
+  },
+  {
+   "label": "C: open builder 2",
+   "do": "use"
+  },
+  {
+   "do": "expectScreen",
+   "contains": "GuiBuilder",
+   "timeoutSec": 10
+  },
+  {
+   "label": "C: pick the blueprint up",
+   "do": "click",
+   "slotIndex": 52
+  },
+  {
+   "label": "C: into the snapshot slot",
+   "do": "click",
+   "slotIndex": 0
+  },
+  {
+   "do": "close"
+  },
+  {
+   "label": "C: builder 2 holds it (expect snapshotType 1)",
+   "do": "cmd",
+   "run": [
+    "data get block {X+10} {Y} {Z+109} snapshotType"
+   ],
+   "allowFail": true,
+   "echo": true
+  },
+  {
+   "label": "A: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by Dev",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+26} buildcraftunofficial:pipe_holder",
@@ -550,7 +885,7 @@
    "ms": 500
   },
   {
-   "label": "B: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by a stranger",
+   "label": "B: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by Stranger",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+74} buildcraftunofficial:pipe_holder",
@@ -588,7 +923,7 @@
    "ms": 500
   },
   {
-   "label": "C: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by the dev",
+   "label": "C: docking station X+12 with a cobblestone chest, zone = the cell X+17, the pipe owned by Dev",
    "do": "cmd",
    "run": [
     "setblock {X+12} {Y+1} {Z+122} buildcraftunofficial:pipe_holder",
@@ -703,6 +1038,30 @@
    "pollMs": 2000
   },
   {
+   "label": "the control rig's pump drained the far lava cell",
+   "do": "waitCmd",
+   "run": "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava",
+   "match": "passed",
+   "timeoutSec": 120,
+   "pollMs": 2000
+  },
+  {
+   "label": "the control rig's flood gate placed the second water source",
+   "do": "waitCmd",
+   "run": "execute if block {X+16} {Y} {Z+29} minecraft:water[level=0]",
+   "match": "passed",
+   "timeoutSec": 120,
+   "pollMs": 2000
+  },
+  {
+   "label": "the control rig's mixed blueprint chest inside the claim area was built",
+   "do": "waitCmd",
+   "run": "execute if block {X+18} {Y} {Z+14} minecraft:chest",
+   "match": "passed",
+   "timeoutSec": 120,
+   "pollMs": 2000
+  },
+  {
    "label": "let the other rigs go on as long as the control did",
    "do": "wait",
    "ms": 15000
@@ -802,6 +1161,97 @@
    ]
   },
   {
+   "label": "A: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+15} {Y-1} {Z+7} minecraft:lava"
+   ]
+  },
+  {
+   "label": "A: BREAK pump drains the lava inside the claim (X+16): drained",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y-1} {Z+7} minecraft:lava"
+   ]
+  },
+  {
+   "label": "A: BREAK pump drains the lava inside the claim (X+17): drained",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+17} {Y-1} {Z+7} minecraft:lava"
+   ]
+  },
+  {
+   "label": "A: the flood gate placed its water source outside the claim (X+15), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+29} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "A: PLACE flood gate puts a water source inside the claim (X+16): placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y} {Z+29} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "A: mixed blueprint outside the claim (X+13), built in every rig: cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y} {Z+12} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "A: mixed blueprint outside the claim (X+14), built in every rig: stair, orientation kept",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+14} {Y} {Z+13} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "A: mixed blueprint outside the claim (X+15), built in every rig: chest",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+14} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "A: mixed blueprint outside the claim (X+13), built in every rig: the dirt in its way replaced by cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y+1} {Z+12} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "A: PLACE mixed blueprint cobblestone inside the claim (X+16): placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y} {Z+12} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "A: PLACE mixed blueprint stair inside the claim, orientation kept: placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+17} {Y} {Z+13} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "A: PLACE mixed blueprint chest (a block entity) inside the claim: placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+18} {Y} {Z+14} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "A: BREAK mixed blueprint removes the dirt in its way inside the claim: broken",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y+1} {Z+13} minecraft:dirt"
+   ]
+  },
+  {
    "do": "tp",
    "at": [
     20,
@@ -896,6 +1346,97 @@
    ]
   },
   {
+   "label": "B: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+15} {Y-1} {Z+55} minecraft:lava"
+   ]
+  },
+  {
+   "label": "B: BREAK pump drains the lava inside the claim (X+16): untouched",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y-1} {Z+55} minecraft:lava"
+   ]
+  },
+  {
+   "label": "B: BREAK pump drains the lava inside the claim (X+17): untouched",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+17} {Y-1} {Z+55} minecraft:lava"
+   ]
+  },
+  {
+   "label": "B: the flood gate placed its water source outside the claim (X+15), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+77} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "B: PLACE flood gate puts a water source inside the claim (X+16): refused",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y} {Z+77} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "B: mixed blueprint outside the claim (X+13), built in every rig: cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y} {Z+60} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "B: mixed blueprint outside the claim (X+14), built in every rig: stair, orientation kept",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+14} {Y} {Z+61} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "B: mixed blueprint outside the claim (X+15), built in every rig: chest",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+62} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "B: mixed blueprint outside the claim (X+13), built in every rig: the dirt in its way replaced by cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y+1} {Z+60} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "B: PLACE mixed blueprint cobblestone inside the claim (X+16): refused",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y} {Z+60} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "B: PLACE mixed blueprint stair inside the claim, orientation kept: refused",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+17} {Y} {Z+61} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "B: PLACE mixed blueprint chest (a block entity) inside the claim: refused",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+18} {Y} {Z+62} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "B: BREAK mixed blueprint removes the dirt in its way inside the claim: left",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y+1} {Z+61} minecraft:dirt"
+   ]
+  },
+  {
    "do": "tp",
    "at": [
     20,
@@ -987,6 +1528,97 @@
    "do": "cmd",
    "run": [
     "execute if block {X+17} {Y} {Z+122} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "C: the pump drained the lava cell under it (X+15, outside the claim), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+15} {Y-1} {Z+103} minecraft:lava"
+   ]
+  },
+  {
+   "label": "C: BREAK pump drains the lava inside the claim (X+16): drained",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y-1} {Z+103} minecraft:lava"
+   ]
+  },
+  {
+   "label": "C: BREAK pump drains the lava inside the claim (X+17): drained",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+17} {Y-1} {Z+103} minecraft:lava"
+   ]
+  },
+  {
+   "label": "C: the flood gate placed its water source outside the claim (X+15), in every rig",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+125} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "C: PLACE flood gate puts a water source inside the claim (X+16): placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y} {Z+125} minecraft:water[level=0]"
+   ]
+  },
+  {
+   "label": "C: mixed blueprint outside the claim (X+13), built in every rig: cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y} {Z+108} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "C: mixed blueprint outside the claim (X+14), built in every rig: stair, orientation kept",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+14} {Y} {Z+109} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "C: mixed blueprint outside the claim (X+15), built in every rig: chest",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+15} {Y} {Z+110} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "C: mixed blueprint outside the claim (X+13), built in every rig: the dirt in its way replaced by cobblestone",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+13} {Y+1} {Z+108} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "C: PLACE mixed blueprint cobblestone inside the claim (X+16): placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+16} {Y} {Z+108} minecraft:cobblestone"
+   ]
+  },
+  {
+   "label": "C: PLACE mixed blueprint stair inside the claim, orientation kept: placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+17} {Y} {Z+109} minecraft:oak_stairs[facing=east]"
+   ]
+  },
+  {
+   "label": "C: PLACE mixed blueprint chest (a block entity) inside the claim: placed",
+   "do": "cmd",
+   "run": [
+    "execute if block {X+18} {Y} {Z+110} minecraft:chest[facing=south]"
+   ]
+  },
+  {
+   "label": "C: BREAK mixed blueprint removes the dirt in its way inside the claim: broken",
+   "do": "cmd",
+   "run": [
+    "execute unless block {X+16} {Y+1} {Z+109} minecraft:dirt"
    ]
   }
  ]

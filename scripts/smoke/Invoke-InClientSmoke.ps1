@@ -219,6 +219,19 @@ function Remove-TreeWithRetry([string]$Path) {
     }
 }
 
+# POST /command, repeated when the bridge gave up on it ("TimeoutException": the server thread stayed busy for longer than the bridge
+# waits, on a loaded machine or while a fresh world generates chunks). The first attempt either ran or runs when the thread frees,
+# and a scenario's commands are idempotent in effect (setblock, fill, data merge, item replace, tp, queries), so the repeat finds the
+# work done: its "did not change" / "could not set the block" replies are the ones the cmd step already forgives.
+function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
+    for ($attempt = 1; ; $attempt++) {
+        try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
+            if ($attempt -ge $Attempts -or "$_" -notmatch 'TimeoutException') { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 function Get-State { Invoke-Bridge GET '/state' }
 
 function Wait-NoOverlay {
@@ -648,9 +661,9 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
                 try {
-                    $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
+                    $r = Invoke-ServerCommand (Expand-Coords $c)
                 } catch {
-                    # An optional command the bridge gave up waiting for (the server thread was busy: a forceload over chunks
+                    # An optional command the bridge kept giving up on (the server thread was busy: a forceload over chunks
                     # that were still generating) is not an error: the command was handed over and runs when the thread frees.
                     if ($optional -and "$_" -match 'TimeoutException') { continue }
                     throw
@@ -716,7 +729,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $yaw = if ($Step.PSObject.Properties['yaw']) { $Step.yaw } else { 0 }
             $pitch = if ($Step.PSObject.Properties['pitch']) { $Step.pitch } else { 0 }
             # A bare server-context tp does not move the player; running it AS the player does.
-            Invoke-Bridge POST '/command' @{ command = "execute as @p at @p run tp @p $x $y $z $yaw $pitch" } | Out-Null
+            Invoke-ServerCommand "execute as @p at @p run tp @p $x $y $z $yaw $pitch" | Out-Null
             Wait-Until { $p = (Get-State).player.pos; [math]::Abs($p.x - $x) -lt 0.6 -and [math]::Abs($p.z - $z) -lt 0.6 } 30 "the player to reach $x $y $z" | Out-Null
             Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $yaw; pitch = $pitch } | Out-Null
             $detail = "at $x $y $z"

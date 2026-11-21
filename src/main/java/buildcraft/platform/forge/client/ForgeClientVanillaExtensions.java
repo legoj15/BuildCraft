@@ -6,7 +6,8 @@
 package buildcraft.platform.forge.client;
 
 //? if forge && >=1.21.10 {
-/*//? if >=26.1 {
+/*
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
 /^import net.minecraft.client.gui.GuiGraphics;

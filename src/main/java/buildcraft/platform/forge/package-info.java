@@ -9,10 +9,12 @@
  * its {@code package} line live and holds its whole body in a {@code //? if forge} arm, so on a node for another loader it
  * is an empty compilation unit. Only the binder in {@code buildcraft.platform} names these classes (and the {@code @Mod}
  * entrypoint, which FML finds). The {@code 26.3-forge} and {@code 1.21.1-forge} nodes build them, beside the rest of
- * BuildCraft's source (each compiles all of {@code src/main/java} bar the recipe-viewer plugins, and ships nothing yet).
- * The common seams are implemented on both; the client ones ({@code platform.forge.client} and
- * {@code platform.forge.mixin.client}, F6) are 26.3 code, whole-file {@code forge && >=1.21.10}, so {@code 1.21.1-forge}
- * compiles them out and its client holders throw "not ported (#209)" until F7b. A known gap inside an implementation that
+ * BuildCraft's source (each compiles all of {@code src/main/java} bar the recipe-viewer plugins it has no viewer for,
+ * and ships nothing yet). The common seams and the client ones ({@code platform.forge.client} and
+ * {@code platform.forge.mixin.client}: F6 on 26.3, F7b on 1.21.1) are implemented on both, with per-version arms where
+ * the two lines differ; a few classes serve one line only and are whole-file {@code forge && >=1.21.10} or
+ * {@code forge && <1.21.10}, and a client mixin with nothing to do on a line keeps an empty arm there so the one mixin
+ * config names the same classes on both. A known gap inside an implementation that
  * exists is recorded in {@code docs/forge-port.md} (the hooks Forge lacks are served by the mixins in
  * {@code platform.forge.mixin}).
  */

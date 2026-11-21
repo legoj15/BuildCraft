@@ -56,6 +56,15 @@ val bcTests = findProperty("bcTests")?.toString()
 // The game-test server's working directory (gitignored, the twin of the NeoForge nodes' run-gameTestServer): the universe,
 // config, logs/latest.log (the pass check below reads it) and console.log all land here.
 val gameTestRunDir = file("run-gameTestServer")
+// The node's JEI pin, if it has one (1.21.1-forge: JEI's 1.21.1 LTS branch has a Forge build; 26.3 has none), and the viewer
+// the dev runs load: JEI by default where it is pinned, `-Precipe_viewer=none` for none. REI has no Forge build on either
+// line, so `rei` is refused, as is any viewer on a node that pins none.
+val jeiVersion = findProperty("jei_version")?.toString()
+val recipeViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: (if (jeiVersion != null) "jei" else "none")
+if (recipeViewer != "none" && (recipeViewer != "jei" || jeiVersion == null)) {
+    throw GradleException("recipe_viewer on this Forge node must be 'none'" +
+            (if (jeiVersion != null) " or 'jei'" else "") + ", not '$recipeViewer'")
+}
 
 repositories {
     // ForgeGradle's repository helpers: the mavenizer (builds the patched, mapped Minecraft+Forge artifact on demand), Forge's
@@ -64,6 +73,11 @@ repositories {
     minecraft.mavenizer(this)
     maven(fg.forgeMaven)
     maven(fg.minecraftLibsMaven)
+    // JEI's own Maven, for a node that pins jei_version (see the dependencies below); filtered to JEI's group.
+    exclusiveContent {
+        forRepository { maven("https://maven.blamejared.com") }
+        filter { includeGroup("mezz.jei") }
+    }
     // Modrinth's maven, for the compile-only Open Parties and Claims jar alone (see the dependency below).
     exclusiveContent {
         forRepository { maven("https://api.modrinth.com/maven") }
@@ -76,11 +90,10 @@ minecraft {
     // Mojang's official names, which the shared source is written in (and which Forge runs on, see the header).
     mappings("official", minecraftVersion)
 
-    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:<node>:runServer` and `runClient` (the
-    // 1.21.1-forge client is not wired yet: its client platform holders still throw).
+    // Dev runs, in the node's run/ directory like the NeoForge and Fabric ones: `:<node>:runServer` and `runClient`.
     // Both carry the switches every BC run has: the dev workspace flag (BCLib.DEV-gated affordances: debug logging, the
-    // /bcsoundtest command) and `-PbcDebug[=tier]` for BCDebugging. A Forge dev run loads no recipe viewer (neither JEI nor
-    // REI has a Forge build for 26.3; JEI has one for 1.21.1, not wired yet), so there is no recipe_viewer switch.
+    // /bcsoundtest command) and `-PbcDebug[=tier]` for BCDebugging. The recipe viewer is JEI where the node pins it
+    // (1.21.1-forge) and none elsewhere (neither JEI nor REI has a Forge build for 26.3); see recipeViewer above.
     runs {
         configureEach {
             workingDir.convention(layout.projectDirectory.dir("run"))
@@ -145,10 +158,10 @@ minecraft {
 minecraft.getAccessTransformer().from(rootProject.file("src/main/resources/META-INF/accesstransformer.cfg"))
 
 // A recipe viewer's plugin packages (compat/jei, compat/rei in every subsystem) are compiled only on a node that pins that
-// viewer: the pin is the node's `jei_version` / `rei_version` property, which the other loaders' nodes all carry and this
-// node does not (neither JEI nor REI has a Forge build for 26.3). Nothing outside those packages names them (the viewers
-// find their plugins themselves), so leaving them out costs nothing here. A Forge node that gains a viewer sets the
-// property and adds the matching compile-only dependencies, as bc.neoforge does; the exclusion then stops on its own.
+// viewer: the pin is the node's `jei_version` / `rei_version` property, which the other loaders' nodes all carry. Of the
+// Forge nodes only 1.21.1-forge pins one (JEI); neither viewer has a Forge build for 26.3, and REI has none for 1.21.1
+// either. Nothing outside those packages names them (the viewers find their plugins themselves), so leaving them out
+// costs nothing. A node that pins a viewer gets its compile-only APIs below, and the exclusion stops on its own.
 val viewerlessExcludes = buildList {
     if (findProperty("jei_version") == null) add("**/compat/jei/**")
     if (findProperty("rei_version") == null) add("**/compat/rei/**")
@@ -204,6 +217,15 @@ dependencies {
     // Open Parties and Claims' server API, which lib.compat.claims.OpenPartiesAndClaims names behind a loaded-mod check:
     // compile-only against the jar this node's `withmod.opac` alias names, as bc.neoforge and bc.fabric do.
     compileOnly(WithMods.compileCoordinate(project, "opac", "maven.modrinth:open-parties-and-claims")) { isTransitive = false }
+
+    // JEI on a node that pins it: its common and Forge APIs to compile the compat/jei plugins against, as bc.neoforge does,
+    // and its Forge jar in the dev runtime unless `-Precipe_viewer=none`. FML finds a mod jar on the dev classpath by its
+    // mods.toml; JEI's Forge build runs on Mojang's names, as Forge 52 does, so it needs no remapping.
+    if (jeiVersion != null) {
+        compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
+        compileOnly("mezz.jei:jei-$minecraftVersion-forge-api:$jeiVersion")
+        if (recipeViewer == "jei") runtimeOnly("mezz.jei:jei-$minecraftVersion-forge:$jeiVersion")
+    }
 }
 
 // Stonecutter has to emit this node's sources before they compile: a compile against a stale or empty generated copy would
@@ -327,11 +349,6 @@ tasks.named<ProcessResources>("processResources") {
                 destinationDir.resolve("assets/buildcraftunofficial/models/item")
             )
         }
-    }
-    // The client mixins (platform/forge/mixin/client) are whole-file `forge && >=1.21.10`: a node below that ships a config
-    // without their list. A constant branch, like the down-ports above (a doLast must not capture the script-level flag).
-    if (isPre1_21_10) {
-        doLast { DataForge.dropClientMixins(destinationDir.resolve("buildcraftunofficial.forge.mixins.json")) }
     }
     // The NeoForge -> Forge data transform (conditions, components ingredients, biome modifiers, fluid_container item
     // models), then the guard that nothing NeoForge-keyed is left.

@@ -5,13 +5,14 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import buildcraft.platform.client.ClientConfigScreens;
 
 /^*
- * {@link ClientConfigScreens} on MinecraftForge (not NeoForge). Gap: Forge 26.3 ships no screen generated from a config
- * spec (NeoForge has {@code ConfigurationScreen}, Fabric gets the same one from Forge Config API Port), only the hook to
- * register a hand-built one, so the mod list shows no config button and the configs are edited as files.
+ * {@link ClientConfigScreens} on MinecraftForge (not NeoForge). Gap: Forge ships no screen generated from a config spec on
+ * either line, 26.3 or 1.21.1 (NeoForge has {@code ConfigurationScreen}, Fabric gets the same one from Forge Config API
+ * Port), only the hook to register a hand-built one, so the mod list shows no config button and the configs are edited as
+ * files.
  *^/
 public final class ForgeClientConfigScreens implements ClientConfigScreens {
     @Override

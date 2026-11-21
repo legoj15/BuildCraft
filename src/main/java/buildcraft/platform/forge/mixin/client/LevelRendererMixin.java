@@ -5,8 +5,9 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +20,9 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 
 import buildcraft.platform.forge.client.ForgeClientHooks;
+//?} else {
+/^import net.minecraft.client.renderer.LevelRenderer;
+^///?}
 
 /^*
  * NeoForge's {@code SubmitCustomGeometryEvent}, for {@code ClientHooks#onLevelRender}: Forge 26.3 has no level-render
@@ -29,7 +33,10 @@ import buildcraft.platform.forge.client.ForgeClientHooks;
  * NeoForge posts its event from the same method. Forge's patch of {@code submitFeatures} only widens the outline test
  * before it, and the call is the method's only one. The listeners get the method's own {@code PoseStack} (its one local
  * of that type) and node collector, as on NeoForge.
+ *
+ * <p>On 1.21.1 it carries nothing: Forge 52's {@code RenderLevelStageEvent} is the hook there, as on NeoForge 1.21.1.
  *^/
+//? if >=1.21.10 {
 @Mixin(LevelRenderer.class)
 abstract class LevelRendererMixin {
     @Inject(method = "submitFeatures", at = @At(value = "INVOKE",
@@ -40,4 +47,9 @@ abstract class LevelRendererMixin {
         ForgeClientHooks.submitLevelRender(poseStack, levelRenderState.cameraRenderState.pos, submitNodeCollector);
     }
 }
+//?} else {
+/^@Mixin(LevelRenderer.class)
+abstract class LevelRendererMixin {
+}
+^///?}
 *///?}

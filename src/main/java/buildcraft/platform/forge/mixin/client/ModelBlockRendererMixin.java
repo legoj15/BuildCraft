@@ -5,9 +5,10 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
-/*import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
+//? if forge {
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,6 +24,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.platform.forge.client.ForgeClientModels;
+//?} else {
+/^import net.minecraft.client.renderer.block.ModelBlockRenderer;
+^///?}
 
 /^*
  * The per-vertex colours BuildCraft bakes into its block quads (NeoForge: the quad's own {@code BakedColors}; Fabric:
@@ -33,7 +37,10 @@ import buildcraft.platform.forge.client.ForgeClientModels;
  * <p><b>Injection point.</b> The call to {@code BlockQuadOutput.put} in {@code putQuadWithTint}, where every block quad
  * leaves the renderer (flat and smooth lighting both end there), after the lighting and the tint are in the instance.
  * Forge does not patch {@code putQuadWithTint}, and the call is its only one.
+ *
+ * <p>On 1.21.1 it carries nothing: the chunk mesher reads a quad's colours from the vertex data itself there.
  *^/
+//? if >=1.21.10 {
 @Mixin(ModelBlockRenderer.class)
 abstract class ModelBlockRendererMixin {
     @Shadow
@@ -47,4 +54,9 @@ abstract class ModelBlockRendererMixin {
         ForgeClientModels.applyVertexColours(quad, quadInstance);
     }
 }
+//?} else {
+/^@Mixin(ModelBlockRenderer.class)
+abstract class ModelBlockRendererMixin {
+}
+^///?}
 *///?}

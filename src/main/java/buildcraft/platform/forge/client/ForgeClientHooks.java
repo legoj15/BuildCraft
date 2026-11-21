@@ -5,10 +5,12 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import java.util.Collection;
 import java.util.List;
+//? if >=1.21.10 {
 import java.util.concurrent.CopyOnWriteArrayList;
+//?}
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -16,13 +18,22 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+//? if >=1.21.10 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/^import net.minecraft.client.gui.GuiGraphics;
+^///?}
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.core.BlockPos;
 import net.minecraft.util.ARGB;
+//?} else {
+/^import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+^///?}
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ChunkPos;
@@ -42,33 +53,45 @@ import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.event.level.ChunkEvent;
 import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.listener.Priority;
+//? if <1.21.10 {
+/^import net.minecraftforge.client.event.RecipesUpdatedEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+^///?}
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.platform.client.BCLevelRenderContext;
 import buildcraft.platform.client.BCTooltipPreContext;
 import buildcraft.platform.client.ClientHooks;
+import buildcraft.platform.event.HookOrder;
+import buildcraft.platform.forge.ForgeBus;
+//? if >=1.21.10 {
 import buildcraft.platform.forge.ForgeRecipeSync;
+//?}
 
 /^*
- * {@link ClientHooks} on MinecraftForge (not NeoForge): each call adds one listener to the event's own static
- * {@code BUS} at the call, so listeners keep the order (and the normal priority) of NeoForge's twin. What differs:
+ * {@link ClientHooks} on MinecraftForge (not NeoForge): each call adds one listener through {@link ForgeBus} at the
+ * call, so listeners keep the order (and the normal priority) of NeoForge's twin. What differs:
  *
  * <ul>
- * <li>{@link #onLevelRender}: Forge has no submit-pass level hook, so {@code LevelRendererMixin} calls
- * {@link #submitLevelRender} where NeoForge posts {@code SubmitCustomGeometryEvent}.</li>
- * <li>{@link #onRecipesReceived}: Forge has no recipe sync to the client (vanilla 26.x sends none), so the listener is
- * fed by BuildCraft's own payload ({@link ForgeRecipeSync}), whose client cache is cleared on logout there.</li>
- * <li>{@link #onBlockOutline}: Forge's {@code RenderHighlightEvent.Block} takes a custom renderer for the frame, the twin
- * of NeoForge's outline render-state event; it is posted for a missed hit too, so a miss is skipped here, and the
- * custom outline does not get vanilla's translucency flag, so it is read from the block's model.</li>
- * <li>Cancellable events ({@code LivingEntityUseItemEvent.Tick}, {@code RenderTooltipEvent.Pre},
- * {@code RenderHighlightEvent.Block}): a plain listener, which never cancels (EventBus 7; see {@code ForgeGameHooks}),
- * and so never sees an event an earlier listener cancelled. None of these contracts needs either.</li>
+ * <li>{@link #onLevelRender}: Forge 26.3 has no submit-pass level hook, so {@code LevelRendererMixin} calls
+ * {@code submitLevelRender} where NeoForge posts {@code SubmitCustomGeometryEvent}. On 1.21.1 Forge 52's
+ * {@code RenderLevelStageEvent} after the translucent blocks is the hook, as on NeoForge 1.21.1, with an identity pose
+ * (the level's view rotation is already on the render system's model-view stack there).</li>
+ * <li>{@link #onRecipesReceived}: Forge 26.3 has no recipe sync to the client (vanilla 26.x sends none), so the listener
+ * is fed by BuildCraft's own payload ({@code ForgeRecipeSync}), whose client cache is cleared on logout there. 1.21.1's
+ * vanilla still sends every recipe, and Forge 52 posts {@code RecipesUpdatedEvent} once they have arrived.</li>
+ * <li>{@link #onBlockOutline}: Forge 26.3's {@code RenderHighlightEvent.Block} takes a custom renderer for the frame, the
+ * twin of NeoForge's outline render-state event; it is posted for a missed hit too, so a miss is skipped here, and the
+ * custom outline does not get vanilla's translucency flag, so it is read from the block's model. On 1.21.1 the shape is
+ * drawn inline and the vanilla outline cancelled, as on NeoForge 1.21.1.</li>
+ * <li>Cancellable events ({@code LivingEntityUseItemEvent.Tick}, {@code RenderTooltipEvent.Pre}, and on 26.3
+ * {@code RenderHighlightEvent.Block}): a plain listener, which never cancels and so never sees an event an earlier
+ * listener cancelled. None of these contracts needs either.</li>
  * </ul>
  *^/
 public final class ForgeClientHooks implements ClientHooks {
 
+    //? if >=1.21.10 {
     /^* The {@link #onLevelRender} renderers, called by {@code LevelRendererMixin} on the render thread. *^/
     private static final List<Consumer<BCLevelRenderContext>> LEVEL_RENDERERS = new CopyOnWriteArrayList<>();
 
@@ -87,41 +110,56 @@ public final class ForgeClientHooks implements ClientHooks {
     public void onLevelRender(Consumer<BCLevelRenderContext> renderer) {
         LEVEL_RENDERERS.add(renderer);
     }
+    //?} else {
+    /^@Override
+    public void onLevelRender(Consumer<BCLevelRenderContext> renderer) {
+        ForgeBus.listen(RenderLevelStageEvent.class, event -> {
+            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+                renderer.accept(new LevelContext(new PoseStack(), event.getCamera().getPosition(),
+                        Minecraft.getInstance().renderBuffers().bufferSource()));
+            }
+        });
+    }
+    ^///?}
 
     @Override
     public void onClientTick(Runnable listener) {
-        TickEvent.ClientTickEvent.Post.BUS.addListener(event -> listener.run());
+        ForgeBus.listen(TickEvent.ClientTickEvent.Post.class, event -> listener.run());
     }
 
     @Override
     public void onLoggingIn(Runnable listener) {
-        ClientPlayerNetworkEvent.LoggingIn.BUS.addListener(event -> listener.run());
+        ForgeBus.listen(ClientPlayerNetworkEvent.LoggingIn.class, event -> listener.run());
     }
 
     @Override
     public void onLoggingInEarly(Runnable listener) {
-        ClientPlayerNetworkEvent.LoggingIn.BUS.addListener(Priority.HIGH, event -> listener.run());
+        ForgeBus.listen(ClientPlayerNetworkEvent.LoggingIn.class, HookOrder.EARLY, event -> listener.run());
     }
 
     @Override
     public void onLoggingOut(Runnable listener) {
-        ClientPlayerNetworkEvent.LoggingOut.BUS.addListener(event -> listener.run());
+        ForgeBus.listen(ClientPlayerNetworkEvent.LoggingOut.class, event -> listener.run());
     }
 
     @Override
     public void onRecipesReceived(Consumer<Collection<RecipeHolder<?>>> listener) {
+        //? if >=1.21.10 {
         ForgeRecipeSync.addClientListener(listener);
+        //?} else {
+        /^ForgeBus.listen(RecipesUpdatedEvent.class, event -> listener.accept(event.getRecipeManager().getRecipes()));
+        ^///?}
     }
 
     @Override
     public void onItemTooltip(ItemTooltipListener listener) {
-        ItemTooltipEvent.BUS.addListener(
+        ForgeBus.listen(ItemTooltipEvent.class,
                 event -> listener.onTooltip(event.getItemStack(), event.getEntity(), event.getToolTip()));
     }
 
     @Override
     public void onClientItemUseTick(ItemUseTickListener listener) {
-        LivingEntityUseItemEvent.Tick.BUS.addListener((LivingEntityUseItemEvent.Tick event) -> {
+        ForgeBus.listen(LivingEntityUseItemEvent.Tick.class, event -> {
             if (event.getEntity().level().isClientSide()) {
                 listener.onUseTick(event.getEntity(), event.getItem(), event.getDuration());
             }
@@ -130,12 +168,13 @@ public final class ForgeClientHooks implements ClientHooks {
 
     @Override
     public void onTooltipPre(Consumer<BCTooltipPreContext> listener) {
-        RenderTooltipEvent.Pre.BUS.addListener((RenderTooltipEvent.Pre event) -> listener.accept(new TooltipContext(event)));
+        ForgeBus.listen(RenderTooltipEvent.Pre.class, event -> listener.accept(new TooltipContext(event)));
     }
 
+    //? if >=1.21.10 {
     @Override
     public void onBlockOutline(BlockOutlineOverride override) {
-        RenderHighlightEvent.Block.BUS.addListener((RenderHighlightEvent.Block event) -> {
+        ForgeBus.listen(RenderHighlightEvent.Block.class, event -> {
             BlockHitResult hit = event.getTarget();
             ClientLevel level = Minecraft.getInstance().level;
             if (hit.getType() == HitResult.Type.MISS || level == null) {
@@ -164,11 +203,38 @@ public final class ForgeClientHooks implements ClientHooks {
             });
         });
     }
+    //?} else {
+    /^@Override
+    public void onBlockOutline(BlockOutlineOverride override) {
+        // 1.21.1 has no outline render state: the shape is drawn inline and the vanilla outline cancelled.
+        ForgeBus.refuse(RenderHighlightEvent.Block.class, event -> {
+            BlockHitResult hit = event.getTarget();
+            ClientLevel level = Minecraft.getInstance().level;
+            if (hit.getType() == HitResult.Type.MISS || level == null) {
+                return false;
+            }
+            BlockPos pos = hit.getBlockPos();
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir()) {
+                return false;
+            }
+            VoxelShape shape = override.outline(level, pos, state, hit);
+            if (shape == null) {
+                return false;
+            }
+            Vec3 cam = event.getCamera().getPosition();
+            LevelRenderer.renderVoxelShape(event.getPoseStack(),
+                    event.getMultiBufferSource().getBuffer(BCLibRenderTypes.lines()), shape, pos.getX() - cam.x,
+                    pos.getY() - cam.y, pos.getZ() - cam.z, 0.0F, 0.0F, 0.0F, 0.4F, false);
+            return true;
+        });
+    }
+    ^///?}
 
     @Override
     public void onClientLevelUnload(Runnable listener) {
         // Client levels only: an integrated server's levels post the same event.
-        LevelEvent.Unload.BUS.addListener(event -> {
+        ForgeBus.listen(LevelEvent.Unload.class, event -> {
             if (event.getLevel().isClientSide()) {
                 listener.run();
             }
@@ -177,12 +243,13 @@ public final class ForgeClientHooks implements ClientHooks {
 
     @Override
     public void onClientChunkLoad(BiConsumer<Level, ChunkPos> listener) {
-        ChunkEvent.Load.BUS.addListener(event -> acceptClientChunk(listener, event.getLevel(), event.getChunk().getPos()));
+        ForgeBus.listen(ChunkEvent.Load.class,
+                event -> acceptClientChunk(listener, event.getLevel(), event.getChunk().getPos()));
     }
 
     @Override
     public void onClientChunkUnload(BiConsumer<Level, ChunkPos> listener) {
-        ChunkEvent.Unload.BUS.addListener(
+        ForgeBus.listen(ChunkEvent.Unload.class,
                 event -> acceptClientChunk(listener, event.getLevel(), event.getChunk().getPos()));
     }
 
@@ -192,8 +259,13 @@ public final class ForgeClientHooks implements ClientHooks {
         }
     }
 
+    //? if >=1.21.10 {
     private record LevelContext(PoseStack poseStack, Vec3 cameraPos, SubmitNodeCollector collector)
             implements BCLevelRenderContext {}
+    //?} else {
+    /^private record LevelContext(PoseStack poseStack, Vec3 cameraPos, MultiBufferSource.BufferSource bufferSource)
+            implements BCLevelRenderContext {}
+    ^///?}
 
     /^* {@link BCTooltipPreContext} over the event, read live (another listener may move or re-font the tooltip). *^/
     private record TooltipContext(RenderTooltipEvent.Pre event) implements BCTooltipPreContext {
@@ -203,7 +275,11 @@ public final class ForgeClientHooks implements ClientHooks {
         }
 
         @Override
+        //? if >=1.21.10 {
         public GuiGraphicsExtractor graphics() {
+        //?} else {
+        /^public GuiGraphics graphics() {
+        ^///?}
             return event.getGraphics();
         }
 

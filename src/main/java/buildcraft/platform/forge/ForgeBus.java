@@ -45,6 +45,7 @@ import buildcraft.platform.event.HookOrder;
  * monitor stage; EventBus 6's {@code MONITOR} priority with cancelled events received).</li>
  * <li>{@link #post} posts on the game bus and answers whether the event ended cancelled.</li>
  * <li>{@link #listenMod} and {@link #register} are the mod bus ({@link ForgeModBus} holds it).</li>
+ * <li>{@link #listenClient} is a client registration or model event, which moved off the mod bus with EventBus 7.</li>
  * </ul>
  *
  * <p>On EventBus 7 an event's bus is found by its class ({@code EventBus.create(type)} answers the bus the event's own
@@ -124,6 +125,19 @@ public final class ForgeBus {
         EventBus.create(ForgeModBus.group(), type).addListener(listener);
     }
 
+    /^*
+     * A client registration or model event (the renderer, colour, particle, HUD-layer, reload-listener and model events):
+     * each on its own bus on EventBus 7, where its static {@code BUS} is {@code EventBus.create} of its class; mod-bus
+     * events on EventBus 6.
+     *^/
+    public static <E extends Event> void listenClient(Class<E> type, Consumer<E> listener) {
+        listen(type, listener);
+    }
+
+    public static <E extends Event> void listenClient(Class<E> type, HookOrder order, Consumer<E> listener) {
+        listen(type, order, listener);
+    }
+
     public static void register(DeferredRegister<?> register) {
         register.register(ForgeModBus.group());
     }
@@ -192,6 +206,14 @@ public final class ForgeBus {
 
     public static <E extends Event> void listenMod(Class<E> type, Consumer<E> listener) {
         ForgeModBus.bus().addListener(EventPriority.NORMAL, false, type, listener);
+    }
+
+    public static <E extends Event> void listenClient(Class<E> type, Consumer<E> listener) {
+        listenMod(type, listener);
+    }
+
+    public static <E extends Event> void listenClient(Class<E> type, HookOrder order, Consumer<E> listener) {
+        ForgeModBus.bus().addListener(priority(order), false, type, listener);
     }
 
     public static void register(DeferredRegister<?> register) {

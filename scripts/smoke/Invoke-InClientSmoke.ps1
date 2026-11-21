@@ -107,19 +107,47 @@ function Get-NodeLoader([string]$Node) {
     $script:NodeLoaders[$Node]
 }
 function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '' }
+# Whether a node pins a recipe viewer: the `jei_version` / `rei_version` key of its own versions/<node>/gradle.properties,
+# the pin the build compiles that viewer's plugins and puts it in the dev runtime by (every NeoForge and Fabric node pins
+# both; of the Forge nodes only 1.21.1-forge pins one, JEI).
+$script:NodeViewers = @{}
+function Test-NodeViewer([string]$Node, [string]$Viewer) {
+    if (-not $script:NodeViewers.ContainsKey($Node)) {
+        $pinned = @()
+        $props = Join-Path $Repo "versions/$Node/gradle.properties"
+        if (Test-Path -LiteralPath $props) {
+            foreach ($line in Get-Content -LiteralPath $props) {
+                if ($line -match '^\s*(jei|rei)_version\s*=\s*\S') { $pinned += $Matches[1].ToLowerInvariant() }
+            }
+        }
+        $script:NodeViewers[$Node] = $pinned
+    }
+    if ($Viewer) { return @($script:NodeViewers[$Node]) -contains $Viewer.ToLowerInvariant() }
+    return @($script:NodeViewers[$Node]).Count -gt 0
+}
 # What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
-# needs one the node's loader lacks is SKIPPED with the reason (never failed): it asks for something the loader cannot give.
+# needs one the node lacks is SKIPPED with the reason (never failed): it asks for something the node cannot give. The
+# recipe viewers are per node, not per loader: "recipeViewer" is any viewer (the node's default one), "viewer:<name>" the
+# one a scenario's "recipeViewer" boots.
 $LoaderLacks = @{
     forge = @{
-        recipeViewer = 'a recipe viewer (neither JEI nor REI has a Forge build for 26.3; the Forge dev client loads none)'
         devMods      = 'the optional dev-runtime mods (-PwithMods / gradleProperties): the Forge node has no such runtime yet'
     }
 }
 function Get-LackReason($Needs, [string]$Node) {
-    # The first capability of $Needs the node's loader lacks, as "needs <what>"; $null when it lacks none.
+    # The first capability of $Needs the node lacks, as "needs <what>"; $null when it lacks none.
     $lacks = $LoaderLacks[(Get-NodeLoader $Node)]
-    if (-not $lacks) { return $null }
-    foreach ($n in @($Needs)) { if ($lacks.ContainsKey([string]$n)) { return "needs $($lacks[[string]$n])" } }
+    foreach ($n in @($Needs)) {
+        $need = [string]$n
+        if ($need -eq 'recipeViewer' -and -not (Test-NodeViewer $Node)) {
+            return "needs a recipe viewer (this node pins neither JEI nor REI: neither has a Forge build for its line)"
+        }
+        if ($need -like 'viewer:*') {
+            $viewer = $need.Substring(7)
+            if (-not (Test-NodeViewer $Node $viewer)) { return "needs $viewer (this node does not pin it: no build of it for its line and loader)" }
+        }
+        if ($lacks -and $lacks.ContainsKey($need)) { return "needs $($lacks[$need])" }
+    }
     return $null
 }
 if ($Loader) { $Nodes = @($Nodes | Where-Object { (Get-NodeLoader $_) -eq $Loader }) }
@@ -346,8 +374,8 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
         $gradleArgs += @($ScenarioData.gradleProperties | ForEach-Object { "-P$_" })
     }
     # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI. A NeoForge dev client has JEI
-    # without being asked; a Fabric one loads a viewer only when told to, so it is always named there. A Forge node has no
-    # viewer at all (Get-SkipReason keeps a scenario that names one off it) and its run task has no such switch.
+    # without being asked, as has a Forge node that pins it (1.21.1-forge); a Fabric one loads a viewer only when told to,
+    # so it is always named there. Get-SkipReason keeps a scenario off a node that does not pin the viewer it names.
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
     elseif ((Get-NodeLoader $Node) -eq 'fabric') { $gradleArgs += '-Precipe_viewer=jei' }
     # A scenario's "mods" and -Mods name optional dev-runtime mods by alias; the Gradle side resolves them.
@@ -585,7 +613,7 @@ function Get-SkipReason([string]$Node) {
     # What the scenario needs from the loader's dev runtime: its own top-level "needs" list, a "recipeViewer" (it boots that
     # viewer) and optional dev-runtime mods ("mods" / -Mods, "gradleProperties"). A loader that lacks one skips the scenario.
     $needs = @(if ($ScenarioData.PSObject.Properties['needs']) { $ScenarioData.needs })
-    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer' }
+    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer'; $needs += "viewer:$($ScenarioData.recipeViewer)" }
     if ($ModAliases.Count -or ($ScenarioData.PSObject.Properties['gradleProperties'] -and @($ScenarioData.gradleProperties).Count)) { $needs += 'devMods' }
     $lack = Get-LackReason $needs $Node
     if ($lack) { return $lack }

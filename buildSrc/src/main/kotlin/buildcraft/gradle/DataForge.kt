@@ -33,12 +33,13 @@ import java.io.File
 //      (the fragile shard could not show its contents), it looks for the fluid's sprite on the item atlas, and Forge
 //      26.3 ships no tint for its fluid layer.
 //   5. 1.21.1 only (after DataDownport1211): the classic models/item files that down-port writes name NeoForge model
-//      loaders (neoforge:fluid_container for the 31 fluid containers, neoforge:separate_transforms for the Goggles). Forge 52
-//      registers both under its own namespace with the same fields (ClientForgeMod: fluid_container, separate_transforms;
-//      SeparateTransformsModel reads base and perspectives, as NeoForge's does), so the loader id is renamed. The fluid
-//      containers' classic models stay Forge's own forge:fluid_container loader (the 1.21.1 client, F7b, decides whether
-//      that stays); step 4 still rewrites the down-port's items/ definitions, which 1.21.1 never reads, so the guard
-//      below holds the same on every line.
+//      loaders (neoforge:fluid_container for the 31 fluid containers, neoforge:separate_transforms for the Goggles).
+//      neoforge:separate_transforms becomes Forge 52's forge:separate_transforms (same fields: base, perspectives).
+//      neoforge:fluid_container becomes buildcraftunofficial:fluid_container, ForgeFluidContainerGeometry: Forge 52's own
+//      DynamicFluidContainerModel (same fields, read by Forge's own reader) but with the contained fluid read through
+//      BuildCraft's transfer layer, as Forge 52's FluidUtil never finds an item's fluid handler (the fragile shard would
+//      show no fluid). Its mask texture becomes Forge's mask of the same name, as in step 4. Step 4 still rewrites the
+//      down-port's items/ definitions, which 1.21.1 never reads, so the guard below holds the same on every line.
 // Anything it cannot translate fails the build with the file named, rather than shipping data Forge would ignore or
 // reject. verifyNoNeoForgeData then fails on any "neoforge:" left in the output.
 
@@ -86,9 +87,9 @@ object DataForge {
         }
     }
 
-    // NeoForge model loaders a classic (pre-1.21.4) model file may name, and Forge 52's id for each (step 5).
+    // NeoForge model loaders a classic (pre-1.21.4) model file may name, and the id each becomes on Forge 52 (step 5).
     private val CLASSIC_MODEL_LOADERS = mapOf(
-        "neoforge:fluid_container" to "forge:fluid_container",
+        "neoforge:fluid_container" to "buildcraftunofficial:fluid_container",
         "neoforge:separate_transforms" to "forge:separate_transforms",
     )
 
@@ -278,20 +279,6 @@ object DataForge {
         val mask = tex.removePrefix(prefix)
         if (!tex.startsWith(prefix) || mask !in FORGE_MASKS) fail(f, "no Forge twin of fluid-container texture $tex")
         return "forge:item/mask/$mask"
-    }
-
-    // ─── The mixin config's client list ──────────────────────────────────────
-
-    /**
-     * Removes the "client" mixin list from [config]. The classes it names (platform/forge/mixin/client) are whole-file
-     * `forge && >=1.21.10`, so a node below that has none of them to name: a config naming a mixin that does not exist is
-     * a mismatch the 1.21.1 client slice would otherwise trip over.
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun dropClientMixins(config: File) {
-        val root = parse(config) as? Map<String, Any?> ?: fail(config, "the mixin config is not an object")
-        if (!root.containsKey("client")) fail(config, "the mixin config has no \"client\" list to drop")
-        write(config, LinkedHashMap(root).also { it.remove("client") })
     }
 
     // ─── The guard ───────────────────────────────────────────────────────────

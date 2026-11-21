@@ -5,23 +5,30 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
-/*import java.util.List;
+//? if forge {
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
+import java.util.List;
 
 import org.joml.Matrix4fc;
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
+//?} else {
+/^import net.minecraft.client.Minecraft;
+^///?}
 
 /^*
  * Vanilla's private {@code CuboidItemModelWrapper} constructor, for {@code ForgeFluidContainerModel}'s layers (the Fabric
  * twin has it from the class tweaker; Forge's access transformer leaves it private). An invoker has no injection point,
  * so nothing here can drift with Forge's patches.
+ *
+ * <p>1.21.1 has no such class (its item models are classic baked models): there it targets {@code Minecraft} and carries nothing.
  *^/
+//? if >=1.21.10 {
 @Mixin(CuboidItemModelWrapper.class)
 public interface CuboidItemModelWrapperInvoker {
     @Invoker("<init>")
@@ -30,4 +37,9 @@ public interface CuboidItemModelWrapperInvoker {
         throw new AssertionError("mixin invoker");
     }
 }
+//?} else {
+/^@Mixin(Minecraft.class)
+public interface CuboidItemModelWrapperInvoker {
+}
+^///?}
 *///?}

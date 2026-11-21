@@ -84,7 +84,7 @@ public class AdvancementUtilFakePlayerTester {
      * owner. The vanilla {@code ServerPlayer} constructor asks the player list for the tracker of its profile's UUID,
      * and the list answers by re-pointing the cached tracker at whoever asked; a machine that took it over would
      * collect the owner's advancement rewards (recipe unlocks, experience) and fire the advancement events for a dead
-     * entity until the owner relogged. NeoForge's player list skips fake players, Fabric API's mixin cancels the
+     * entity until the owner relogged. NeoForge's player list never re-points it at a fake player, Fabric API's mixin cancels the
      * re-pointing, and Forge's machine player re-asks for the owner: this pins the outcome on every loader.
      * <p>
      * The reward is read off the owner, never the tracker's own accessor: asking the player list for the tracker of
@@ -131,7 +131,8 @@ public class AdvancementUtilFakePlayerTester {
             FakePlayerUtil.onPlayerLoggedOut(owner);
         }
 
-        // The other order: the machine exists before its owner logs in; the login binds the owner's own tracker.
+        // The other order: the machine exists before its owner logs in; the login binds the owner's own tracker. This is
+        // vanilla's own behaviour (the last constructor wins), kept as a sanity check: no loader's defence is what makes it pass.
         GameProfile laterProfile = new GameProfile(UUID.randomUUID(), "bc_adv_tracker_later");
         ServerPlayer earlyMachine = Platform.fakePlayers().create(level, laterProfile);
         ServerPlayer later = new ServerPlayer(level.getServer(), level, laterProfile, ClientInformation.createDefault());

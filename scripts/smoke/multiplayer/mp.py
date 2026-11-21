@@ -495,12 +495,17 @@ def remote_launched(node, pid, launch_seconds=150):
 
 
 def remote_kill_stragglers():
-    """Last resort when a server will not stop: end the java processes whose command line names this checkout's directory
-    on Server1, and nothing else (the rule the remote runner itself applies on a timeout)."""
+    """Last resort when a server will not stop or its poller was ended: end the java processes whose command line names this
+    checkout's directory on Server1, and nothing else (Gradle's wrapper JVM and the server's). Ending the LOCAL poller does not
+    stop a remote run that has started, so every path that kills a poller of a started run needs this. Plain ssh with an
+    encoded command (the tools/remote scripts sometimes stall in their own launch)."""
     script = ("Get-CimInstance Win32_Process -Filter \"Name = 'java.exe'\" | Where-Object { $_.CommandLine -like '*"
               + f"{REMOTE_ROOT}\\{REMOTE}\\*" + "' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; \"stopped $($_.ProcessId)\" }")
-    return subprocess.run(['pwsh', '-NoProfile', '-File', os.path.join(REMOTE_TOOLS, 'Invoke-OnServer1.ps1'), '-Name', REMOTE,
-                           '-NoDesktop', '-TimeoutMinutes', '5', '-Command', script], capture_output=True, text=True).stdout
+    enc = base64.b64encode(script.encode('utf-16-le')).decode()
+    r = subprocess.run(['ssh', '-o', 'BatchMode=yes', os.environ.get('MP_REMOTE_SSH') or 'server1',
+                        'powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ' + enc],
+                       capture_output=True, text=True, timeout=180)
+    return r.stdout.strip() or '(nothing of this checkout was running)'
 
 
 def lock_wait_if_busy():
@@ -538,6 +543,8 @@ def server(node):
         lock_acquire(node, st['server'])
     except SystemExit:  # lost a race for the lock: take down what was just started
         subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
+        if REMOTE:
+            print(remote_kill_stragglers())
         raise
     if REMOTE:
         for attempt in range(1, 4):
@@ -661,7 +668,7 @@ def stop(node):
                 time.sleep(5)
         if remote_fetch_log(node):  # keep the server's side of the run beside the clients' logs
             shutil.copy2(remote_server_log(node), os.path.join(HERE, node, 'server-remote-latest.log'))
-        if poller and proc_start(poller) is not None:  # still going: the server did not stop on RCON
+        if not stopped or (poller and proc_start(poller) is not None):  # the server did not stop on RCON
             print('remote server did not stop; ending the java processes of this checkout on the server machine')
             print(remote_kill_stragglers())
     else:

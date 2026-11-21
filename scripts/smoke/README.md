@@ -357,7 +357,8 @@ server's log over scp for `Done`; the clients quick-play into `MP_SERVER_HOST` (
 scratch ports `MP_PORT`/`MP_RCON_PORT` (25661/25662; the real servers' 25565, 25566 and 25575 are refused), RCON uses a
 password `setup` generates per node (`build/smoke-mp/<node>/rcon.pw`), and `stop` ends the server with RCON `stop`, fetches its
 log to `build/smoke-mp/<node>/server-remote-latest.log` and, only if it will not stop, ends the java processes of that checkout
-alone. A fresh checkout's first `server` includes a cold Gradle configure (minutes). `MP_LOCK_WAIT_MINUTES=<n>` makes `server`
+alone (also what it does when a start loses the lock race: ending the local poller never stops a remote run). A launch that
+stalls in `Invoke-OnServer1`'s ssh step (no status line after 150 s) is restarted, up to three times. A fresh checkout's first `server` includes a cold Gradle configure (minutes). `MP_LOCK_WAIT_MINUTES=<n>` makes `server`
 wait for another run's smoke lock instead of refusing. Server1's firewall must already allow the JDK that Gradle forks (the
 Microsoft JDK 25 has an any-port inbound rule there); the script changes no firewall or system setting.
 

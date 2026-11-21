@@ -326,7 +326,8 @@ the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultipl
 
 - **Scenes.** `scene_swing_particles.py` (every phase) and the new `scene_machines.py` (a Tank poured by one player and opened by
   both, a Stone Engine's GUI, a creative engine's kinesis rig filmed by the other player; 6 recorded checks) ran on `26.3-forge`
-  and on `26.3`: identical results on the two, on a loopback server and on Server1's. Swing phases: three robots deployed from
+  and on `26.3`, each against a loopback server and against Server1's (four full cycles: setup, server, client A, client B,
+  both scenes, stop), with the same result every time; the Forge clients' and servers' logs held no BuildCraft error. Swing phases: three robots deployed from
   their stations and at work in Watcher's shots, Worker's wrench swing is seen on Watcher's client (the
   raised arm, the "Wrenched!" advancement), and while Worker mined the gold pipe under Mining Fatigue Watcher's screen showed the
   gold pipe-sprite crack particles and then the break (the 26.3 remote destroy-progress path, served on Forge by
@@ -343,8 +344,12 @@ the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultipl
   Windows firewall has Private/Public inbound allow rules for that JDK's `java.exe` on any port (read only, nothing changed), and
   the workstation's TCP connect and RCON both got through. A cold Gradle compile of the Forge node in the fresh checkout took 3 min
   52 s; the warm server boot to `Done` about 45 s end to end. `server` writes a per-run nonce into the remote game directory and the
-  waiter trusts the log only once it sees it (an earlier run's `Done` once answered for a new start; the first Forge run on Server1
-  predates that fix and was unaffected only because the server was up).
+  waiter trusts the log only once it sees it (an earlier run's `Done` once answered for a new start). Two traps of the remote
+  tools bit while building this, both now handled in `mp.py`: `Invoke-OnServer1.ps1` twice stalled in its own ssh step with no run
+  directory on Server1 (trap 16 of its README; `server` ends a poller with no `-- t+` status line after 150 s and starts again),
+  and ending the LOCAL poller does not stop a remote run that has started (a lost lock race left a Gradle and a server running on
+  Server1 and the next start answered for them, so every kill path now also ends the java processes whose command line names the
+  checkout, over plain ssh, and nothing else).
 - **Forge's RCON never answers a command with an empty reply (found by the scenes).** `gamemode creative Watcher` on a player
   already in creative prints nothing, and on a Forge dedicated server the RCON client then waits forever (the NeoForge server
   answers at once). Cause, read in `.forge-ref/sources-26.3-66.1.8/patches/net/minecraft/server/rcon/thread/RconClient.java.patch`:

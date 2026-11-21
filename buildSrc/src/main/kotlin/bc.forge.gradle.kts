@@ -101,7 +101,7 @@ minecraft {
         }
         register("client") {
             // The dev user is "Dev" on every loader (see bc.fabric): the owner-gated checks name the player by its UUID.
-            // `-PbcUser=<name>` is the second player of a multiplayer run (a username twice on the command line is an error).
+            // `-PbcUser=<name>` is the second player of a multiplayer run (it replaces the argument, it is not a second one).
             args("--username", bcUser ?: "Dev")
             // Optional quick-play and game directory, as on NeoForge: `-PbcQuickPlay=<save>` boots straight into a saved
             // world, `-PbcQuickPlayServer=<host:port>` straight into a server, `-PbcRunDir=<node-relative dir>` is the scripted

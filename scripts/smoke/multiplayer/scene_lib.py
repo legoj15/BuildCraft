@@ -39,8 +39,9 @@ class Scene:
         r = ''
         for c in cs:
             c = self.coords(c)
-            # `gamemode <mode> <player>` on a player already in that mode answers nothing at all on the 26.3 servers measured
-            # (Forge: the RCON reply never comes), so it gets a short wait and a fresh connection instead of a 30 s stall.
+            # `gamemode <mode> <player>` on a player already in that mode prints nothing, and Forge's patch of
+            # RconClient.sendCmdResponse sends no packet at all for an empty reply (vanilla and NeoForge send one empty packet), so the
+            # reply never comes: it gets a short wait and a fresh connection instead of a 30 s stall.
             quiet = c.startswith('gamemode ')
             try:
                 r = self.R.cmd(c, timeout=4 if quiet else None)

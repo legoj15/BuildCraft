@@ -343,8 +343,8 @@ log's `No key layers` ERROR is vanilla complaining about the flat world's empty 
 is used.
 
 Loaders: NeoForge nodes take their run switches through `mp.init.gradle` (an init script); a MinecraftForge node (`26.3-forge`)
-through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run already carries
-`--username Dev`, and a second one is an error, so the init-script route is not available there). A Fabric node has no arm yet:
+through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run carries `--username Dev` from
+the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node has no arm yet:
 `mp.py` and the scene scripts skip it with a reason and exit 0. `setup` also works on a node no single-player run has prepared
 (it takes the newest bridge jar the way the runner does and writes the default `options.txt`).
 

@@ -635,7 +635,14 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
-                $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
+                try {
+                    $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
+                } catch {
+                    # An optional command the bridge gave up waiting for (the server thread was busy: a forceload over chunks
+                    # that were still generating) is not an error: the command was handed over and runs when the thread frees.
+                    if ($optional -and "$_" -match 'TimeoutException') { continue }
+                    throw
+                }
                 # The world persists between runs, so "already so" replies are success for a rig builder. The reply TEXT is
                 # translated under -Lang, so the English wording is read in English runs only; a scenario meant for -Lang
                 # says it with "benign" or '?'.
@@ -655,6 +662,18 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $detail = "$(@($Step.run).Count) command(s)"
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
+        }
+        # Runs each command AS the player (the bridge's /chat command: the player's own permission level and an entity as the
+        # source). For a command whose requirements read the source's entity at parse time: `execute as @p run ...` does not
+        # pass them, because Brigadier checks a requirement against the ORIGINAL source, before the execute modifiers apply
+        # (FTB Teams' `party create`). The reply goes to the client's chat, not back here: gate on observed state with a
+        # waitCmd afterwards.
+        'playerCmd' {
+            foreach ($c in @($Step.run)) {
+                Invoke-Bridge POST '/chat' @{ action = 'command'; text = (Expand-Coords $c).TrimStart('/') } | Out-Null
+                Start-Sleep -Milliseconds 800
+            }
+            $detail = "$(@($Step.run).Count) player command(s)"
         }
         # Re-runs one command until its reply matches `match` (a regex): gates on observed state instead of a fixed
         # wait (a machine finishing its work). The reply is in the report either way.

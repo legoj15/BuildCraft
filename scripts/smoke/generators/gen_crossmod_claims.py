@@ -475,8 +475,10 @@ def player_owner(name):
     return 'ownerUUID:"%s",ownerName:"%s"' % (offline_uuid(name), name)
 
 
-FTB_OUTSIDER = "BCClaimOutsider"     # a player with a team of his own, in no party
-FTB_TEAMMATE = "BCClaimTeammate"     # a player forced into the dev's party
+# The names are lower case on purpose: the profile cache lower-cases a name before it makes the offline profile (`get(name)` looks up
+# name.toLowerCase), so a name with capitals gets the UUID of its lower-case spelling and a different one from offline_uuid(name).
+FTB_OUTSIDER = "bcclaimoutsider"     # a player with a team of his own, in no party
+FTB_TEAMMATE = "bcclaimteammate"     # a player forced into the dev's party
 FTB_PARTY = "BCClaimParty"           # the dev's party: the claim owner of the teams scenario
 
 
@@ -489,12 +491,12 @@ def ftb_teams_setup(S):
     for nodes, fake, force in ((["1.21.1"], "ftbteams_add_fake_player", "ftbteams force-add"),
                                (["1.21.11", "26.1.2"], "ftbteams add_fake_player", "ftbteams force add")):
         with S.only_on(nodes):
-            S.cmd("FTB Teams: the outsider and the teammate get teams of their own (dev command), the dev opens a party, the "
-                  "teammate is forced into it",
-                  "%s %s" % (fake, FTB_OUTSIDER),
-                  "%s %s" % (fake, FTB_TEAMMATE),
-                  "execute as @p run ftbteams party create %s" % FTB_PARTY,
-                  "%s @p %s" % (force, FTB_TEAMMATE))
+            S.cmd("FTB Teams: the outsider and the teammate get teams of their own (dev command)",
+                  "%s %s" % (fake, FTB_OUTSIDER), "%s %s" % (fake, FTB_TEAMMATE))
+            # `party create` is a requirement on the source's entity, read before `execute as` applies: it must be typed by the player.
+            S.player_cmd("FTB Teams: the dev opens a party (typed by the player)", "ftbteams party create %s" % FTB_PARTY)
+            S.wait_cmd("the dev is in a party of his own now", "ftbteams info @p", r"\[party\]", 10, 500)
+            S.cmd("FTB Teams: the teammate is forced into the dev's party", "%s @p %s" % (force, FTB_TEAMMATE))
     # `ftbteams info <player>` names the player's team id, which for a personal team is the player's UUID: the UUID a machine
     # owned by that name carries is the one the team is under.
     S.wait_cmd("the outsider's own team is under the UUID his machines carry", "ftbteams info %s" % FTB_OUTSIDER,

@@ -16,11 +16,22 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/^import net.minecraft.client.gui.GuiGraphics;
+^///?}
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if >=26.1 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?} else {
+/^import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.util.RandomSource;
+^///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
@@ -37,6 +48,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderHighlightEvent;
 import net.minecraftforge.client.event.RenderTooltipEvent;
+//? if <26.1 {
+/^import net.minecraftforge.client.model.data.ModelData;
+^///?}
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
@@ -72,6 +86,7 @@ public final class ForgeClientHooks implements ClientHooks {
     /^* The {@link #onLevelRender} renderers, called by {@code LevelRendererMixin} on the render thread. *^/
     private static final List<Consumer<BCLevelRenderContext>> LEVEL_RENDERERS = new CopyOnWriteArrayList<>();
 
+    //? if >=26.1 {
     /^* Called by {@code LevelRendererMixin} once a frame, in the level's submit pass. *^/
     public static void submitLevelRender(PoseStack poseStack, Vec3 cameraPos, SubmitNodeCollector collector) {
         if (LEVEL_RENDERERS.isEmpty()) {
@@ -82,6 +97,19 @@ public final class ForgeClientHooks implements ClientHooks {
             renderer.accept(context);
         }
     }
+    //?} else {
+    /^// Called by LevelRendererMixin once a frame, after the translucent terrain; the renderers draw into the main buffer
+    // source and flush it themselves, as on NeoForge's and Fabric's 1.21.11 twins.
+    public static void submitLevelRender(PoseStack poseStack, Vec3 cameraPos, MultiBufferSource.BufferSource buffers) {
+        if (LEVEL_RENDERERS.isEmpty()) {
+            return;
+        }
+        LevelContext context = new LevelContext(poseStack, cameraPos, buffers);
+        for (Consumer<BCLevelRenderContext> renderer : LEVEL_RENDERERS) {
+            renderer.accept(context);
+        }
+    }
+    ^///?}
 
     @Override
     public void onLevelRender(Consumer<BCLevelRenderContext> renderer) {
@@ -150,6 +178,7 @@ public final class ForgeClientHooks implements ClientHooks {
             if (shape == null) {
                 return;
             }
+            //? if >=26.1 {
             // Vanilla's own test for drawing the outline after the translucent terrain (LevelExtractor.extractBlockOutline).
             boolean translucent = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state)
                     .hasMaterialFlag(1);
@@ -162,6 +191,26 @@ public final class ForgeClientHooks implements ClientHooks {
                         translucent);
                 poseStack.popPose();
             });
+            //?} else {
+            /^// 1.21.11: the custom renderer is called in both of the main pass's outline slots (before and after the
+            // translucent terrain), immediate-mode; it draws in the one vanilla's own outline would take and is a no-op
+            // in the other, which also keeps vanilla's out. Vanilla's test (LevelRenderer.extractBlockOutline) is the
+            // block's sorted layer, which Forge deprecates for the layers its model draws on.
+            boolean translucent = Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
+                    .getRenderTypes(state, RandomSource.create(42L), ModelData.EMPTY).stream()
+                    .anyMatch(ChunkSectionLayer::sortOnUpload);
+            BlockPos outlinePos = pos.immutable();
+            event.setCustomRenderer((buffers, poseStack, translucentPass, levelRenderState) -> {
+                if (translucentPass != translucent) {
+                    return;
+                }
+                Vec3 cam = levelRenderState.cameraRenderState.pos;
+                ShapeRenderer.renderShape(poseStack, buffers.getBuffer(BCLibRenderTypes.blockOutline()), shape,
+                        outlinePos.getX() - cam.x, outlinePos.getY() - cam.y, outlinePos.getZ() - cam.z, ARGB.black(102),
+                        2.5F);
+                buffers.endLastBatch();
+            });
+            ^///?}
         });
     }
 
@@ -192,8 +241,13 @@ public final class ForgeClientHooks implements ClientHooks {
         }
     }
 
+    //? if >=26.1 {
     private record LevelContext(PoseStack poseStack, Vec3 cameraPos, SubmitNodeCollector collector)
             implements BCLevelRenderContext {}
+    //?} else {
+    /^private record LevelContext(PoseStack poseStack, Vec3 cameraPos, MultiBufferSource.BufferSource bufferSource)
+            implements BCLevelRenderContext {}
+    ^///?}
 
     /^* {@link BCTooltipPreContext} over the event, read live (another listener may move or re-font the tooltip). *^/
     private record TooltipContext(RenderTooltipEvent.Pre event) implements BCTooltipPreContext {
@@ -202,10 +256,17 @@ public final class ForgeClientHooks implements ClientHooks {
             return event.getItemStack();
         }
 
+        //? if >=26.1 {
         @Override
         public GuiGraphicsExtractor graphics() {
             return event.getGraphics();
         }
+        //?} else {
+        /^@Override
+        public GuiGraphics graphics() {
+            return event.getGraphics();
+        }
+        ^///?}
 
         @Override
         public int x() {

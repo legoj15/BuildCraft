@@ -17,7 +17,11 @@ import java.util.function.Supplier;
 
 import com.mojang.serialization.MapCodec;
 
+//? if >=26.1 {
 import net.minecraft.client.color.block.BlockTintSource;
+//?} else {
+/^import net.minecraft.client.color.block.BlockColor;
+^///?}
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.color.item.ItemTintSources;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
@@ -25,13 +29,22 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.renderer.RenderPipelines;
+//? if >=26.1 {
 import net.minecraft.client.renderer.block.FluidModel;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+//?} else {
+/^import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
+import net.minecraft.client.renderer.MultiBufferSource;
+^///?}
 import net.minecraft.client.renderer.texture.atlas.SpriteSource;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.sprite.Material;
+//?}
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.resources.Identifier;
@@ -101,7 +114,11 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
      * own model types go: Forge needs no client entrypoint of its own (Fabric's registers the same type there).
      *^/
     public ForgeClientRegistrationSinks() {
+        //? if >=26.1 {
         ForgeFluidContainerModel.register();
+        //?} else {
+        /^ForgeLegacyFluidContainerModel.register();
+        ^///?}
     }
 
     @Override
@@ -158,12 +175,21 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         ItemTintSources.ID_MAPPER.put(id, codec);
     }
 
+    //? if >=26.1 {
     @Override
     public void blockTintSources(Supplier<? extends Block> block, Supplier<List<BlockTintSource>> sources) {
         queue(RegisterColorHandlersEvent.Block.class, RegisterColorHandlersEvent.Block.BUS::addListener,
                 event -> event.register(sources.get(), block.get()));
     }
+    //?} else {
+    /^@Override
+    public void blockColor(BlockColor color, Supplier<? extends Block> block) {
+        queue(RegisterColorHandlersEvent.Block.class, RegisterColorHandlersEvent.Block.BUS::addListener,
+                event -> event.register(color, block.get()));
+    }
+    ^///?}
 
+    //? if >=26.3 {
     @Override
     public void renderPipeline(Supplier<com.mojang.renderpearl.api.pipeline.RenderPipeline> pipeline) {
         // Vanilla's own registration (RenderPipelines.register) is one put into this map, which the shader reload
@@ -171,6 +197,14 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         com.mojang.renderpearl.api.pipeline.RenderPipeline resolved = pipeline.get();
         RenderPipelines.PIPELINES_BY_LOCATION.put(resolved.getLocation(), resolved);
     }
+    //?} else {
+    /^@Override
+    public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
+        // As on 26.3: vanilla's registration is one put into the map the shader reload compiles.
+        com.mojang.blaze3d.pipeline.RenderPipeline resolved = pipeline.get();
+        RenderPipelines.PIPELINES_BY_LOCATION.put(resolved.getLocation(), resolved);
+    }
+    ^///?}
 
     @Override
     public void spriteSource(Identifier id, MapCodec<? extends SpriteSource> codec) {
@@ -215,6 +249,7 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         });
     }
 
+    //? if >=26.2 {
     @Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
             Supplier<PictureInPictureRenderer<S>> factory) {
@@ -222,6 +257,16 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
         queue(RegisterPictureInPictureRendererEvent.class, RegisterPictureInPictureRendererEvent.BUS::addListener,
                 event -> event.register(factory.get()));
     }
+    //?} else {
+    /^@Override
+    public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
+            java.util.function.Function<MultiBufferSource.BufferSource, PictureInPictureRenderer<S>> factory) {
+        // Forge keys the renderer by its own render-state class, which is stateClass; the renderer draws into the
+        // GUI's buffer source, which the event hands over.
+        queue(RegisterPictureInPictureRendererEvent.class, RegisterPictureInPictureRendererEvent.BUS::addListener,
+                event -> event.register(factory.apply(event.getBufferSource())));
+    }
+    ^///?}
 
     @Override
     public void clientSetup(Runnable work) {
@@ -249,6 +294,9 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
             type.attachClientExtensions(new ForgeFluidTypeExtensions(stillTexture, flowingTexture, fogColor,
                     fogDistance));
         });
+        // The world model, from 26.1. 1.21.11 has none: Forge's fluid renderer reads the still and flowing textures from
+        // the client extensions attached above.
+        //? if >=26.1 {
         // Posted on every model bake (a worker thread), so a listener, not a queue. Forge puts vanilla's water and lava
         // models over the ones registered here, which never name those fluids.
         FluidModel.Unbaked unbaked = new FluidModel.Unbaked(new Material(stillTexture), new Material(flowingTexture),
@@ -259,6 +307,7 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
             event.register(still, model);
             event.register(flowing.get(), model);
         });
+        //?}
     }
 
     private synchronized <E> void queue(Class<E> type, Consumer<Consumer<E>> subscribe, Consumer<E> registration) {

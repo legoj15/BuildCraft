@@ -6,7 +6,8 @@
 package buildcraft.platform.forge.mixin.client;
 
 //? if forge && >=1.21.10 {
-/*import java.util.List;
+/*//? if >=26.1 {
+import java.util.List;
 
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,4 +31,15 @@ public interface CuboidItemModelWrapperInvoker {
         throw new AssertionError("mixin invoker");
     }
 }
+//?} else {
+/^import org.spongepowered.asm.mixin.Mixin;
+import net.minecraft.client.renderer.item.BlockModelWrapper;
+
+// 1.21.11 has no CuboidItemModelWrapper: its fluid container model (ForgeLegacyFluidContainerModel) draws its own
+// layers, as the Fabric twin does. Empty, on that line's item-layer model, so the mixin config names the same classes on
+// every Forge line.
+@Mixin(BlockModelWrapper.class)
+public interface CuboidItemModelWrapperInvoker {
+}
+^///?}
 *///?}

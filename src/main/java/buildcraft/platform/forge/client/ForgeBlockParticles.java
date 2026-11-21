@@ -11,7 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.BlockPos;
+//? if >=26.3 {
 import net.minecraft.core.Direction;
+//?}
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -42,11 +44,20 @@ public final class ForgeBlockParticles {
         return particles != null && particles.addDestroyEffects(state, level, pos, engine);
     }
 
+    //? if >=26.3 {
     /^* True when the block's override spawned its own hit particles, so vanilla's are skipped. *^/
     public static boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face,
             ParticleEngine engine) {
         BlockParticleOverride particles = OVERRIDES.get(state.getBlock());
         return particles != null && particles.addHitEffects(state, level, pos, face, engine);
     }
+    //?} else {
+    /^// True when the block's override spawned its own hit particles, so vanilla's are skipped.
+    public static boolean addHitEffects(BlockState state, Level level, net.minecraft.world.phys.HitResult target,
+            ParticleEngine engine) {
+        BlockParticleOverride particles = OVERRIDES.get(state.getBlock());
+        return particles != null && particles.addHitEffects(state, level, target, engine);
+    }
+    ^///?}
 }
 *///?}

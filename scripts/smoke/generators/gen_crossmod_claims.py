@@ -1,7 +1,7 @@
 """Claims cross-mod pass (issue #186): BuildCraft machines owned by the dev player, standing just OUTSIDE a claim that is
 not theirs and aimed INTO it. Writes scripts/smoke/scenarios/crossmod-claims-<mod>.json for each claim mod.
 
-Run: python scripts/smoke/generators/gen_crossmod_claims.py            (--noclaim opac: the negative control, see without_claim_b)
+Run: python scripts/smoke/generators/gen_crossmod_claims.py            (--noclaim opac, --swap ftbchunks-teams: negative controls)
      pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-fabric -Scenario scripts/smoke/scenarios/crossmod-claims-opac.json
 
 The same rig is built three times, 48 blocks apart along Z, each rig two chunks deep (Z offsets 0-31 of its own start):
@@ -183,6 +183,9 @@ def fluids(S, tag, z0, OWNER):
     def p(x, y, z):
         return at(x, y, z0 + z)
     zp, zf = PUMP_Z, FLOOD_Z
+    # barriers for the camera to stand on, straight above each lane's border cells
+    S.cmd("%s: camera footholds over the two fluid lanes" % tag,
+          "setblock %s minecraft:barrier" % p(15, 11, zp), "setblock %s minecraft:barrier" % p(15, 11, zf))
     # Pump over a lava pool across the claim border. Lava, not water: a pump leaves a water pool alone (pumpsConsumeWater is off
     # by default, "infinite" water), a lava source it takes whole, so "still lava" is the refusal.
     S.cmd("%s: pump lane z+%d: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it" % (
@@ -423,6 +426,19 @@ def build(mod):
                  "inside the claim, water only in the pen cell outside it, the mixed blueprint built only on the west three "
                  "columns (X+13..15) with the dirt untouched inside the claim",
             "C": "rig C, a claim whose owner the machines answer to: identical to rig A"}[tag])
+        for lane, z, look in (
+                ("pump", PUMP_Z, {"A": "rig A, no claim: the pool's three cells empty (the pump took all of them)",
+                                  "B": "rig B, claimed by someone else: the pool cell under the pump empty, the two cells on the "
+                                       "claim side (right, X+16..17) still lava",
+                                  "C": "rig C, a claim the machines answer to: identical to rig A"}),
+                ("flood", FLOOD_Z, {"A": "rig A, no claim: water in both cells of the stone pen in front of the flood gate",
+                                    "B": "rig B, claimed by someone else: water only in the pen cell outside the claim, the cell "
+                                         "on the claim side (right) empty or with flowing water only",
+                                    "C": "rig C, a claim the machines answer to: identical to rig A"})):
+            S.tp(15, 12, z0 + z, 0, 90)
+            S.wait(1500)
+            S.shot("%s-%s" % (tag.lower(), lane), "straight down on the %s lane at the claim border (X+16 is the first claimed column): %s" % (
+                lane, look[tag]))
         probes(S, tag, z0, "blocked" if tag == "B" else "works")
     return S
 
@@ -592,12 +608,26 @@ def without_claim_b(mod):
     return ctl
 
 
+def with_swapped_owners(mod):
+    """The negative control of a team scenario: rig B's machines belong to rig C's player and the other way round. Every probe of
+    rigs B and C that depends on the owner must FAIL (the teammate is refused where it was let through and the outsider let through
+    where it was refused is not what happens either: both rigs run as the other's expectation), which shows the owner's team, and
+    nothing else about the rigs, decides. Delete the JSON after the run."""
+    import copy
+    ctl = copy.copy(mod)
+    ctl.name = mod.name + "-swapped"
+    ctl.owners = {"B": mod.owners["C"], "C": mod.owners["B"]}
+    return ctl
+
+
 def main(argv):
-    """No arguments: every scenario. `--noclaim <mod> ...`: the negative controls of the named mods (e.g. opac) instead."""
-    if argv[:1] == ["--noclaim"]:
+    """No arguments: every scenario. `--noclaim <mod> ...` (e.g. opac) or `--swap <mod> ...` (a mod with owners, ftbchunks-teams):
+    the negative controls of the named mods instead."""
+    if argv[:1] in (["--noclaim"], ["--swap"]):
+        make = without_claim_b if argv[0] == "--noclaim" else with_swapped_owners
         for mod in MODS:
             if mod.name in argv[1:]:
-                build(without_claim_b(mod)).write()
+                build(make(mod)).write()
         return
     for mod in MODS:
         build(mod).write()

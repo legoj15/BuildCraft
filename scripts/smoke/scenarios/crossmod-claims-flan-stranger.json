@@ -252,6 +252,14 @@
    ]
   },
   {
+   "label": "A: camera footholds over the two fluid lanes",
+   "do": "cmd",
+   "run": [
+    "setblock {X+15} {Y+11} {Z+7} minecraft:barrier",
+    "setblock {X+15} {Y+11} {Z+29} minecraft:barrier"
+   ]
+  },
+  {
    "label": "A: pump lane z+7: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it",
    "do": "cmd",
    "run": [
@@ -322,6 +330,14 @@
    ]
   },
   {
+   "label": "B: camera footholds over the two fluid lanes",
+   "do": "cmd",
+   "run": [
+    "setblock {X+15} {Y+11} {Z+55} minecraft:barrier",
+    "setblock {X+15} {Y+11} {Z+77} minecraft:barrier"
+   ]
+  },
+  {
    "label": "B: pump lane z+7: lava pool X+15..17 (X+15 outside the claim), a Pump on its west cell, a creative engine behind it",
    "do": "cmd",
    "run": [
@@ -389,6 +405,14 @@
     "data merge block {X+15} {Y} {Z+117} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",pipe:{def:\"buildcraftunofficial:stripes_item\",beh:{direction:\"EAST\"}}}",
     "setblock {X+12} {Y+1} {Z+117} minecraft:redstone_block",
     "setblock {X+13} {Y+1} {Z+117} buildcraftunofficial:engine_creative[facing=down]"
+   ]
+  },
+  {
+   "label": "C: camera footholds over the two fluid lanes",
+   "do": "cmd",
+   "run": [
+    "setblock {X+15} {Y+11} {Z+103} minecraft:barrier",
+    "setblock {X+15} {Y+11} {Z+125} minecraft:barrier"
    ]
   },
   {
@@ -1118,6 +1142,44 @@
    "look": "rig A, no claim: the quarry's frame and a pit in the stone, cobblestone cube at the builder and filler boxes, cobblestone beside the stripes pipe, the lava pool drained, a water source at both cells of the flood gate's pen, the mixed blueprint (cobblestone, stairs, chests) complete across X+13..18"
   },
   {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    7
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "a-pump",
+   "do": "shot",
+   "look": "straight down on the pump lane at the claim border (X+16 is the first claimed column): rig A, no claim: the pool's three cells empty (the pump took all of them)"
+  },
+  {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    29
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "a-flood",
+   "do": "shot",
+   "look": "straight down on the flood lane at the claim border (X+16 is the first claimed column): rig A, no claim: water in both cells of the stone pen in front of the flood gate"
+  },
+  {
    "label": "A: quarry's frame west of the claim (X+15) is built, in every rig",
    "do": "cmd",
    "run": [
@@ -1303,6 +1365,44 @@
    "look": "rig B, claimed by someone else: the quarry's frame only on its west face, no pit, the builder and filler boxes empty, nothing beside the stripes pipe, the dirt block untouched, lava left in the two pool cells inside the claim, water only in the pen cell outside it, the mixed blueprint built only on the west three columns (X+13..15) with the dirt untouched inside the claim"
   },
   {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    55
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "b-pump",
+   "do": "shot",
+   "look": "straight down on the pump lane at the claim border (X+16 is the first claimed column): rig B, claimed by someone else: the pool cell under the pump empty, the two cells on the claim side (right, X+16..17) still lava"
+  },
+  {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    77
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "b-flood",
+   "do": "shot",
+   "look": "straight down on the flood lane at the claim border (X+16 is the first claimed column): rig B, claimed by someone else: water only in the pen cell outside the claim, the cell on the claim side (right) empty or with flowing water only"
+  },
+  {
    "label": "B: quarry's frame west of the claim (X+15) is built, in every rig",
    "do": "cmd",
    "run": [
@@ -1486,6 +1586,44 @@
    "name": "c-late",
    "do": "shot",
    "look": "rig C, a claim whose owner the machines answer to: identical to rig A"
+  },
+  {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    103
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "c-pump",
+   "do": "shot",
+   "look": "straight down on the pump lane at the claim border (X+16 is the first claimed column): rig C, a claim the machines answer to: identical to rig A"
+  },
+  {
+   "do": "tp",
+   "at": [
+    15,
+    12,
+    125
+   ],
+   "yaw": 0,
+   "pitch": 90
+  },
+  {
+   "do": "wait",
+   "ms": 1500
+  },
+  {
+   "name": "c-flood",
+   "do": "shot",
+   "look": "straight down on the flood lane at the claim border (X+16 is the first claimed column): rig C, a claim the machines answer to: identical to rig A"
   },
   {
    "label": "C: quarry's frame west of the claim (X+15) is built, in every rig",

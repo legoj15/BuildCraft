@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "experience": 7
+  },
+  "criteria": {
+    "go": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

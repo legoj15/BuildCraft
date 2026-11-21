@@ -51,10 +51,13 @@ import buildcraft.platform.FakePlayers;
  * <p><b>Gap:</b> {@link #isFakePlayer} is true only for players made here. Another mod's fake player has no Forge
  * base class to be recognised by, where NeoForge and Fabric share one.
  *
- * <p><b>Gap (as on Fabric):</b> vanilla's {@code ServerPlayer} constructor asks the player list for the advancement
- * tracker of the profile's UUID, so a machine acting for an owner shares the owner's tracker. BuildCraft never awards
- * through a fake player's own tracker for that reason ({@code AdvancementUtil}); NeoForge's per-line patch that hands a
- * fake player a no-op one is not reproduced.
+ * <p><b>Advancement tracker.</b> Vanilla's {@code ServerPlayer} constructor asks the player list for the advancement
+ * tracker of the profile's UUID, and the list answers by re-pointing the cached tracker at the player who asked. A
+ * machine built for an online owner would take the owner's tracker over, and the owner's rewards would go to it. The
+ * constructor below asks again for the online owner, which points the tracker back (NeoForge's player list skips a
+ * fake player before that lookup and Fabric API's mixin refuses the re-pointing; Forge has neither). The machine still
+ * <i>shares</i> the owner's tracker, so BuildCraft never awards through a fake player's own one ({@code
+ * AdvancementUtil}); {@code fake_player_keeps_online_owners_tracker} pins the owner side on every loader.
  *
  * <p><b>Game mode.</b> A machine is always in survival, whatever the server's default is (NeoForge's patch and Fabric
  * API's mixin do the same): {@code ServerPlayerMixin} answers survival where the player constructor asks which mode a

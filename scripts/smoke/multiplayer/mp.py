@@ -26,7 +26,9 @@ Loaders: NeoForge nodes pass the run switches through mp.init.gradle (an init sc
 a MinecraftForge node (`loader=forge`) reads the build's own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (bc.forge).
 A Fabric node has no arm yet and is skipped with a reason (exit 0).
 
-The server may run on another machine, so the two clients join over a real network. Environment (read by every command):
+The server may run on another machine, so the two clients join over a real network; when that machine's firewall does not let the
+server's JVM in (a Java-21 line on Server1), `server` forwards the game and RCON ports over ssh (`ensure_reachable`) and the clients
+and RCON use this machine's loopback, `stop` ending the tunnel. Environment (read by every command):
   MP_REMOTE_CHECKOUT  the Server1 checkout (C:\\Dev\\<name>, synced with tools/remote/Sync-ToServer1.ps1 -Name <name>; COMMITTED
                       state only) the server half runs in, started and read through McDevBridge's tools/remote. Unset: the server
                       runs on this machine (the default, loopback, as before). With it set `server` blocks for the whole
@@ -75,8 +77,12 @@ if PORT in FORBIDDEN_PORTS or RCON_PORT in FORBIDDEN_PORTS:
     sys.exit('refusing MP_PORT/MP_RCON_PORT %d/%d: 25565, 25566 and 25575 belong to real servers' % (PORT, RCON_PORT))
 
 
-def server_ip():
-    """SERVER_HOST as an IPv4 address (the game connects the same one RCON does, whatever name resolution would pick)."""
+def server_ip(node=None):
+    """Where this run's clients and RCON connect, as an IPv4 address (the game connects the same one RCON does, whatever
+    name resolution would pick): SERVER_HOST, or this machine's loopback when `node`'s run has an ssh tunnel to the server
+    machine (see ensure_reachable)."""
+    if node and REMOTE and tunnel_alive(node):
+        return '127.0.0.1'
     return socket.getaddrinfo(SERVER_HOST, None, socket.AF_INET)[0][4][0]
 
 
@@ -273,7 +279,7 @@ def run_switches(node, role, side=None):
     forge = node_loader(node) == 'forge'
     if role == 'server':
         return [f'-PbcRunDir={SERVER_DIR}'] if forge else [f'-PmpServerDir={SERVER_DIR}']
-    target = f'{server_ip()}:{PORT}'
+    target = f'{server_ip(node)}:{PORT}'
     if forge:
         return [f'-PbcRunDir=run-smoke/mp-{side.lower()}', f'-PbcUser={USERS[side]}', f'-PbcQuickPlayServer={target}']
     return [f'-PbcRunDir=run-smoke/mp-{side.lower()}', f'-PmpUser={USERS[side]}', f'-PmpServer={target}']
@@ -499,21 +505,23 @@ def remote_start(node, nonce, timeout_minutes=240):
 
 def remote_launched(node, pid, launch_seconds=150):
     """True once the remote command is running (its poller's output has a `-- t+` status line) or the poller ended on its own
-    (remote_wait_done reports why); False when neither happened in `launch_seconds`. `Invoke-OnServer1.ps1` sometimes sits for
-    good in its ssh step with no run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one
-    session): its output ends at the `=== run <id> ===` header. The caller ends that poller (this script's own process) and
-    starts again."""
+    (remote_wait_done reports why); False when neither happened in `launch_seconds`, or when the poller ended without ever
+    reaching Server1 because its own ssh failed (`remote script on server1 exited 255` before any status line: a transient
+    refusal, seen once when Server1's sshd was busy). `Invoke-OnServer1.ps1` also sometimes sits for good in its ssh step with no
+    run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one session): its output ends at
+    the `=== run <id> ===` header. The caller ends that poller (this script's own process) and starts again."""
     log = os.path.join(HERE, node, 'server.remote.log')
     end = time.time() + launch_seconds
     while time.time() < end:
-        if proc_start(pid) is None:
-            return True
         try:
             with open(log, encoding='utf-8', errors='replace') as f:
-                if '-- t+' in f.read():
-                    return True
+                text = f.read()
         except OSError:
-            pass
+            text = ''
+        if '-- t+' in text:
+            return True
+        if proc_start(pid) is None:
+            return 'exited 255' not in text  # the poller ended on its own: a failed ssh is retried, anything else is reported
         time.sleep(3)
     return False
 
@@ -562,6 +570,74 @@ def lock_wait_if_busy():
         time.sleep(2)
 
 
+# -- Reaching a server whose JVM the server machine's firewall does not let in ---------------------------------------------
+# Server1's inbound allow rules name specific java.exe paths (the Microsoft JDK 25.0.2.10 yes; the Adoptium 21 that Gradle's
+# toolchain provisions for the Java-21 lines, 1.21.1 and 1.21.11, no: measured 2026-11-22, the clients' connect and RCON both
+# timed out). Changing a firewall is not this script's business, so a server that is up (`Done`) yet unreachable on its two
+# ports is reached through `ssh -L`: both ports forwarded to the server machine's loopback (the firewall does not filter
+# loopback), the clients and RCON then connect to this machine's own 127.0.0.1:<port>. Traffic still crosses the LAN, inside ssh.
+
+def tcp_open(host, port, timeout=6):
+    try:
+        socket.create_connection((host, port), timeout=timeout).close()
+        return True
+    except OSError:
+        return False
+
+
+def tunnel_alive(node):
+    pid = load_state(node).get('tunnel')
+    return bool(pid) and proc_start(pid) is not None
+
+
+def tunnel_start(node):
+    """`ssh -N -L` for the game and RCON ports; the pid goes into the run's state so `stop` ends it. ExitOnForwardFailure: a
+    local port already in use ends ssh at once instead of leaving a tunnel that forwards nothing."""
+    log = open(os.path.join(HERE, node, 'tunnel.log'), 'w')
+    cmd = ['ssh', '-N', '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=15',
+           '-o', 'ServerAliveCountMax=4']
+    for p in (PORT, RCON_PORT):
+        cmd += ['-L', f'127.0.0.1:{p}:127.0.0.1:{p}']
+    cmd.append(os.environ.get('MP_REMOTE_SSH') or 'server1')
+    proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+    log.close()
+    st = load_state(node)
+    st['tunnel'] = proc.pid
+    save_state(node, st)
+    return proc
+
+
+def ensure_reachable(node):
+    """After the remote server printed `Done`: the game and RCON ports answer directly, or a tunnel is started and RCON logs
+    in through it (the server itself answering, not just the local end accepting)."""
+    direct = server_ip(node)
+    if all(tcp_open(direct, p) for p in (PORT, RCON_PORT)):
+        print('server reachable directly at %s:%d' % (direct, PORT))
+        return
+    print('server on %s is up but %s:%d / %d do not answer (no inbound firewall rule for its java.exe); '
+          'forwarding both ports over ssh' % (SERVER_HOST, direct, PORT, RCON_PORT), flush=True)
+    proc = tunnel_start(node)
+    end = time.time() + 30
+    while time.time() < end and proc.poll() is None and not all(tcp_open('127.0.0.1', p, 2) for p in (PORT, RCON_PORT)):
+        time.sleep(1)
+    if proc.poll() is not None:
+        try:
+            with open(os.path.join(HERE, node, 'tunnel.log'), encoding='utf-8', errors='replace') as f:
+                why = f.read().strip()[-300:]
+        except OSError:
+            why = ''
+        raise SystemExit('the ssh tunnel ended at once (exit %s): %s' % (proc.returncode, why))
+    Rcon(node).s.close()  # logs in through the tunnel: the server answered
+    print('server reachable through the ssh tunnel at 127.0.0.1:%d (ssh pid %d)' % (PORT, proc.pid))
+
+
+def tunnel_stop(node):
+    pid = load_state(node).get('tunnel')
+    if pid:
+        print('tunnel', subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+
+
 def server(node):
     lock_wait_if_busy()
     st = load_state(node)
@@ -600,6 +676,8 @@ def server(node):
     else:
         m = wait_log(log, r'Done \(([0-9.]+)s\)!', 900)
     print('server up', m.group(0), ('on ' + SERVER_HOST) if REMOTE else '')
+    if REMOTE:
+        ensure_reachable(node)
 
 
 def client(node, side):
@@ -646,7 +724,7 @@ def bridge(node, side, method, path, body=None, timeout=60):
 
 class Rcon:
     def __init__(self, node):
-        self.s = socket.create_connection((server_ip(), RCON_PORT), timeout=30)
+        self.s = socket.create_connection((server_ip(node), RCON_PORT), timeout=30)
         self.i = 0
         self._send(3, rcon_password(node))
         rid, _, _ = self._recv()
@@ -719,10 +797,12 @@ def stop(node):
             print(k, subprocess.run(['taskkill', '/PID', str(st[k]), '/T', '/F'], capture_output=True, text=True).stdout.strip())
     if remote_unconfirmed:
         # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry
-        save_state(node, {'server': st['server']} if 'server' in st else {})
+        save_state(node, {k: st[k] for k in ('server', 'tunnel') if k in st})  # the tunnel too: a retry's RCON may need it
         print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
               'run `python -I mp.py stop %s` again' % node)
         return
+    if 'tunnel' in st:
+        tunnel_stop(node)
     save_state(node, {})
     lock_release(node)
 

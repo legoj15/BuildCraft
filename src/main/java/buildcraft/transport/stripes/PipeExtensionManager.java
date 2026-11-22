@@ -43,6 +43,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeExtensionManager;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
+import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.InventoryUtil;
@@ -284,8 +285,14 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         w.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }
 
-    /** Asks protection about the block just placed where {@code before} was, as the owner; true if refused. */
+    /**
+     * Asks protection about the block just placed where {@code before} was, as the owner; true if refused. Never refused
+     * with {@link BCCoreConfig#minePlayerProtected} on: the option skips every machine's own claim ask (#221).
+     */
     private static boolean placeRefused(ServerLevel w, CapturedBlock before, GameProfile owner, Direction direction) {
+        if (BCCoreConfig.minePlayerProtected.get()) {
+            return false;
+        }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(w, owner, before.pos())) {
             return !Platform.protection().canPlaceOver(lease.player(), before, direction);
         }

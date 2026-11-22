@@ -20,7 +20,8 @@
 
   A scenario the runner skips is shown as SKIPPED, not as a failure: one whose "loaders" leave out this node's loader,
   one marked "englishOnly" when -Lang names another language (it clicks by English widget text), and one that needs
-  something the node's loader lacks (a recipe viewer on a Forge node) or whose mod aliases the node does not define; the reason is in the table.
+  something the node lacks (a recipe viewer it does not pin, or dev-runtime switches on a Forge node) or whose mod aliases
+  the node does not define; the reason is in the table.
 
   Exit code: 0 when every scenario ran clean or was skipped, 1 when any step failed, a node was fatal, a scenario
   timed out or never got the lock.

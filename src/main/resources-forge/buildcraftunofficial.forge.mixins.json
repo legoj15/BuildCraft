@@ -22,10 +22,12 @@
   "client": [
     "client.ClientLevelMixin",
     "client.CuboidItemModelWrapperInvoker",
+    "client.EditBoxMixin",
     "client.ItemFeatureRendererMixin",
     "client.ItemModelsAccessor",
     "client.LevelRendererMixin",
     "client.ModelBlockRendererMixin",
+    "client.ParticleEngineMixin",
     "client.ScissorStackMixin",
     "client.SpriteSourcesAccessor"
   ],

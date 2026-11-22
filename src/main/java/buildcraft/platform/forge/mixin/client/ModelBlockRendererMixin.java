@@ -5,13 +5,11 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
-/*
+//? if forge {
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 //? if >=26.1 {
 import org.spongepowered.asm.mixin.Final;
-//?}
-import org.spongepowered.asm.mixin.Mixin;
-//? if >=26.1 {
 import org.spongepowered.asm.mixin.Shadow;
 //?}
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,6 +37,16 @@ import net.minecraft.world.level.block.state.BlockState;
 ^///?}
 
 import buildcraft.platform.forge.client.ForgeClientModels;
+//?} else {
+/^import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+^///?}
 
 /^*
  * The per-vertex colours BuildCraft bakes into its block quads (NeoForge: the quad's own {@code BakedColors}; Fabric:
@@ -57,7 +65,15 @@ import buildcraft.platform.forge.client.ForgeClientModels;
  * the private static {@code renderQuadList} (the eight-argument call, its only one) is the model draw with no level
  * ({@code renderModel}: block-entity renderers, {@code renderSingleBlock}). Forge patches neither method (its
  * {@code renderModel} patch only adds the model data and layer that reach {@code collectParts}).
+ *
+ * <p>On 1.21.1 the quad carries its colours in its own vertex data and vanilla reads their RGB, but not their alpha:
+ * {@code putQuadData} hands {@code putBulkData} one alpha (1) for the whole quad, and Forge 52 leaves both as vanilla has
+ * them, where NeoForge 1.21.1's {@code putBulkData} multiplies in each vertex's baked alpha. BuildCraft's painted-pipe
+ * mask quads (alpha 76, {@code PipeBaseModelGenStandard.generateMaskMutable}) then drew opaque. The redirect scales the
+ * call's alpha by the quad's baked alpha, for a quad on one of BuildCraft's own sprites only (another mod's rendering
+ * stays Forge's). One alpha per quad: BuildCraft's translucent block quads carry the same alpha on all four vertices.
  *^/
+//? if >=1.21.10 {
 @Mixin(ModelBlockRenderer.class)
 abstract class ModelBlockRendererMixin {
     //? if >=26.1 {
@@ -93,4 +109,23 @@ abstract class ModelBlockRendererMixin {
     }
     ^///?}
 }
+//?} else {
+/^@Mixin(ModelBlockRenderer.class)
+abstract class ModelBlockRendererMixin {
+    @Redirect(method = "putQuadData", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;putBulkData(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/minecraft/client/renderer/block/model/BakedQuad;[FFFFF[IIZ)V"))
+    private void buildcraft$bakedAlpha(VertexConsumer consumer, PoseStack.Pose pose, BakedQuad quad, float[] brightness,
+            float red, float green, float blue, float alpha, int[] lights, int overlay, boolean readExistingColor) {
+        float scaled = alpha;
+        int[] vertices = quad.getVertices();
+        // The BLOCK format's colour is the fourth int of each 8-int vertex, ABGR: alpha in the top byte.
+        int baked = vertices.length >= 4 ? (vertices[3] >>> 24) : 0xFF;
+        if (readExistingColor && baked != 0xFF
+                && "buildcraftunofficial".equals(quad.getSprite().contents().name().getNamespace())) {
+            scaled = alpha * baked / 255.0F;
+        }
+        consumer.putBulkData(pose, quad, brightness, red, green, blue, scaled, lights, overlay, readExistingColor);
+    }
+}
+^///?}
 *///?}

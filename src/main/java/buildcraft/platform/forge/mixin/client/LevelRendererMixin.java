@@ -5,8 +5,9 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -29,6 +30,9 @@ import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 ^///?}
 
 import buildcraft.platform.forge.client.ForgeClientHooks;
+//?} else {
+/^import net.minecraft.client.renderer.LevelRenderer;
+^///?}
 
 /^*
  * NeoForge's {@code SubmitCustomGeometryEvent}, for {@code ClientHooks#onLevelRender}: Forge 26.3 has no level-render
@@ -49,7 +53,10 @@ import buildcraft.platform.forge.client.ForgeClientHooks;
  * translucent and the tripwire groups (no other caller). The pose stack is a fresh one, as the main pass's own is (the
  * camera rotation is on the model-view stack); the camera position is the main camera's, which the level render state
  * was extracted from. Forge does not patch {@code ChunkSectionsToRender}.
+ *
+ * <p>On 1.21.1 it carries nothing: Forge 52's {@code RenderLevelStageEvent} is the hook there, as on NeoForge 1.21.1.
  *^/
+//? if >=1.21.10 {
 //? if >=26.1 {
 @Mixin(LevelRenderer.class)
 //?} else {
@@ -86,4 +93,9 @@ abstract class LevelRendererMixin {
     }
     ^///?}
 }
+//?} else {
+/^@Mixin(LevelRenderer.class)
+abstract class LevelRendererMixin {
+}
+^///?}
 *///?}

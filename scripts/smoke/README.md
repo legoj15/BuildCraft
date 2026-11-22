@@ -127,12 +127,15 @@ covers every loader's node of that line, the NeoForge node, its Fabric twin and 
 here, not by leaving the other twins out of `nodes`). A top-level `"loaders"` skips the whole scenario on the other loaders'
 nodes (reported as skipped, not as a failure): use it when a scenario needs a mod only one loader's dev runtime has.
 `"needs": ["recipeViewer"]` (top-level or on a step) says what the scenario or step asks of the dev runtime instead of naming
-loaders: a loader that lacks it skips the scenario, or records the step as `skip`, with the reason. The capabilities: `recipeViewer`
-(implied by the `"recipeViewer"` key; the Forge node has none), `devProperties` (implied by `gradleProperties`: `-PwithGuideMe`
-and the like; the Forge node wires none) and `devMods` (implied by `mods` and `-Mods`: the `-PwithMods` aliases, which every
-loader reads). A scenario whose own `"mods"` the node defines none of (no `withmod.<alias>` in its `gradle.properties`) is
-skipped too, with that reason, instead of running bare; one defined alias is enough to run it (the other lanes of
-`crossmod-energy` need aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly": true` skips
+loaders: a node that lacks it skips the scenario, or records the step as `skip`, with the reason. The capabilities:
+`recipeViewer` (any viewer, implied by the `"recipeViewer"` key, which also asks for that viewer by name), `devProperties`
+(implied by `gradleProperties`: `-PwithGuideMe` and the like; the Forge nodes wire none) and `devMods` (implied by `mods`
+and `-Mods`: the `-PwithMods` aliases, which every loader reads). A recipe viewer is per node, not per loader: a node has
+one when its `versions/<node>/gradle.properties` pins `jei_version` or `rei_version` (every NeoForge and Fabric node pins
+both; `1.21.1-forge` pins JEI alone; the other Forge nodes pin neither), so `rei-parity` skips on every Forge node. A
+scenario whose own `"mods"` the node defines none of (no `withmod.<alias>` in its `gradle.properties`) is skipped too, with
+that reason, instead of running bare; one defined alias is enough to run it (the other lanes of `crossmod-energy` need
+aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly": true` skips
 the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
 widget text.
 
@@ -183,8 +186,9 @@ A top-level `"options": {"renderDistance": 4}` pins keys of the run's `options.t
 back to 6 on every run that names none, so a pinned value never reaches the next scenario.
 
 A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`-Precipe_viewer=rei`); see `scenarios/rei-parity.json`.
-A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
-runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
+A NeoForge dev client has JEI without being asked, as has `1.21.1-forge` (`-Precipe_viewer=none` turns it off there). A
+Fabric one loads a viewer only when told to, so on Fabric nodes the runner always passes `-Precipe_viewer` (the scenario's,
+else `jei`).
 
 A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run (the seed must be present and be another save; the runner refuses and keeps the save otherwise); `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
 

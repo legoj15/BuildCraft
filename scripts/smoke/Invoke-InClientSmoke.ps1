@@ -107,13 +107,43 @@ function Get-NodeLoader([string]$Node) {
     $script:NodeLoaders[$Node]
 }
 function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '' }
+# Whether a node pins a recipe viewer: the `jei_version` / `rei_version` key of its own versions/<node>/gradle.properties,
+# the pin the build compiles that viewer's plugins and puts it in the dev runtime by (every NeoForge and Fabric node pins
+# both; of the Forge nodes only 1.21.1-forge pins one, JEI).
+$script:NodeViewers = @{}
+function Test-NodeViewer([string]$Node, [string]$Viewer) {
+    if (-not $script:NodeViewers.ContainsKey($Node)) {
+        $pinned = @()
+        $props = Join-Path $Repo "versions/$Node/gradle.properties"
+        if (Test-Path -LiteralPath $props) {
+            foreach ($line in Get-Content -LiteralPath $props) {
+                if ($line -match '^\s*(jei|rei)_version\s*=\s*\S') { $pinned += $Matches[1].ToLowerInvariant() }
+            }
+        }
+        $script:NodeViewers[$Node] = $pinned
+    }
+    if ($Viewer) { return @($script:NodeViewers[$Node]) -contains $Viewer.ToLowerInvariant() }
+    return @($script:NodeViewers[$Node]).Count -gt 0
+}
+# Whether a node's quick-play is defective: `quickplay_drops_game_events=true` in its gradle.properties (1.21.1-forge: Forge
+# 52 loads a quick-played world before it starts its game event bus, and the integrated server crashes at the first loot
+# roll). Such a node boots to the title screen and its save is opened through Singleplayer (Open-SaveFromMenu).
+function Test-QuickPlayDefective([string]$Node) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    foreach ($line in Get-Content -LiteralPath $props) {
+        if ($line -match '^\s*quickplay_drops_game_events\s*=\s*true\s*$') { return $true }
+    }
+    return $false
+}
 # What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
-# needs one the node's loader lacks is SKIPPED with the reason (never failed): it asks for something the loader cannot give.
-# devMods is the -PwithMods runtime (bc.forge reads it too since #209: the aliases a node defines load there); devProperties
-# is a scenario's "gradleProperties" (-PwithGuideMe, -PwithFallingTree ...), which only the NeoForge scripts wire.
+# needs one the node lacks is SKIPPED with the reason (never failed): it asks for something the node cannot give. The
+# recipe viewers are per node, not per loader: "recipeViewer" is any viewer (the node's default one), "viewer:<name>" the
+# one a scenario's "recipeViewer" boots (Test-NodeViewer). devMods is the -PwithMods runtime (bc.forge reads it too since
+# #209: the aliases a node defines load there); devProperties is a scenario's "gradleProperties" (-PwithGuideMe,
+# -PwithFallingTree ...), which only the NeoForge scripts wire.
 $LoaderLacks = @{
     forge = @{
-        recipeViewer  = 'a recipe viewer (no JEI or REI is wired on a Forge node; the Forge dev client loads none)'
         devProperties = 'the optional dev-runtime switches a scenario names in "gradleProperties" (-PwithGuideMe ...): the Forge node wires none of them'
     }
 }
@@ -127,10 +157,19 @@ function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
     return $false
 }
 function Get-LackReason($Needs, [string]$Node) {
-    # The first capability of $Needs the node's loader lacks, as "needs <what>"; $null when it lacks none.
+    # The first capability of $Needs the node lacks, as "needs <what>"; $null when it lacks none.
     $lacks = $LoaderLacks[(Get-NodeLoader $Node)]
-    if (-not $lacks) { return $null }
-    foreach ($n in @($Needs)) { if ($lacks.ContainsKey([string]$n)) { return "needs $($lacks[[string]$n])" } }
+    foreach ($n in @($Needs)) {
+        $need = [string]$n
+        if ($need -eq 'recipeViewer' -and -not (Test-NodeViewer $Node)) {
+            return "needs a recipe viewer (this node pins neither JEI nor REI: no jei_version or rei_version in versions/$Node/gradle.properties)"
+        }
+        if ($need -like 'viewer:*') {
+            $viewer = $need.Substring(7)
+            if (-not (Test-NodeViewer $Node $viewer)) { return "needs $viewer (this node does not pin it: no ${viewer}_version in versions/$Node/gradle.properties)" }
+        }
+        if ($lacks -and $lacks.ContainsKey($need)) { return "needs $($lacks[$need])" }
+    }
     return $null
 }
 if ($Loader) { $Nodes = @($Nodes | Where-Object { (Get-NodeLoader $_) -eq $Loader }) }
@@ -392,8 +431,8 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
         $gradleArgs += @($ScenarioData.gradleProperties | ForEach-Object { "-P$_" })
     }
     # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI. A NeoForge dev client has JEI
-    # without being asked; a Fabric one loads a viewer only when told to, so it is always named there. A Forge node has no
-    # viewer at all (Get-SkipReason keeps a scenario that names one off it) and its run task has no such switch.
+    # without being asked, as has a Forge node that pins it (1.21.1-forge); a Fabric one loads a viewer only when told to,
+    # so it is always named there. Get-SkipReason keeps a scenario off a node that does not pin the viewer it names.
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
     elseif ((Get-NodeLoader $Node) -eq 'fabric') { $gradleArgs += '-Precipe_viewer=jei' }
     # A scenario's "mods" and -Mods name optional dev-runtime mods by alias; the Gradle side resolves them.
@@ -604,6 +643,38 @@ function New-SmokeWorld {
     }
 }
 
+function Open-SaveFromMenu([string]$Save) {
+    # The quick-play path by hand, for a node whose quick-play is defective (Test-QuickPlayDefective): Singleplayer, the
+    # save's folder name typed into the search box (focused when the screen opens) so it is the only entry, a click on the
+    # entry's row to select it, then "Play Selected World". The row is the world list's first: its top is the list's top
+    # plus 4, and it is 36 high (vanilla WorldSelectionList, 1.21.1); the click lands right of the 32-pixel icon, which
+    # would join on its own and bypass the button this path checks.
+    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
+    Wait-NoOverlay
+    Invoke-MenuClick 'Singleplayer'
+    Wait-Until { (Get-ScreenClass) -match 'SelectWorldScreen' } 120 'the world list' 1000 | Out-Null
+    Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Save } | Out-Null
+    # The list reads the saves off the game thread, so the row may not exist at the first click: click it until the
+    # button turns active (it is inactive while nothing is selected).
+    $script:listing = $null
+    try { Wait-Until {
+        $script:listing = Invoke-Bridge POST '/screenclick' @{ list = $true }
+        if (@($script:listing.widgets | Where-Object { "$($_.text)" -eq 'Play Selected World' -and $_.active }).Count) { return $true }
+        $list = @($script:listing.widgets | Where-Object { $_.class -match 'WorldSelectionList' }) | Select-Object -First 1
+        if ($list) { $top = [int]$list.y; $mid = [int]$list.x + [int]([int]$list.width / 2) }
+        else { $top = 48; $mid = [int]([int]$script:listing.width / 2) }
+        Invoke-Bridge POST '/screenclick' @{ x = $mid; y = $top + 4 + 18 } | Out-Null
+        Start-Sleep -Milliseconds 400   # past the list's 250 ms double-click window: the next click selects, never joins
+        $false
+    } 60 "'Play Selected World' to turn active" 1000 | Out-Null }
+    catch {
+        $seen = @($script:listing.widgets | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
+        throw "could not select '$Save' on the world list: $($_.Exception.Message) (widgets: $seen)"
+    }
+    Invoke-MenuClick 'Play Selected World'
+    Write-Host "note: opened '$Save' through Singleplayer (this node's quick-play is defective)"
+}
+
 # ── Scenario steps ───────────────────────────────────────────────────────────
 
 $Base = @($ScenarioData.base)   # the rig's origin; step coordinates are relative to it
@@ -631,7 +702,7 @@ function Get-SkipReason([string]$Node) {
     # What the scenario needs from the loader's dev runtime: its own top-level "needs" list, a "recipeViewer" (it boots that
     # viewer) and optional dev-runtime mods ("mods" / -Mods, "gradleProperties"). A loader that lacks one skips the scenario.
     $needs = @(if ($ScenarioData.PSObject.Properties['needs']) { $ScenarioData.needs })
-    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer' }
+    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer'; $needs += "viewer:$($ScenarioData.recipeViewer)" }
     if ($ModAliases.Count) { $needs += 'devMods' }
     if ($ScenarioData.PSObject.Properties['gradleProperties'] -and @($ScenarioData.gradleProperties).Count) { $needs += 'devProperties' }
     $lack = Get-LackReason $needs $Node
@@ -1053,8 +1124,10 @@ try {
                 }
             }
             Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
-            $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
+            $menuPlay = $quickPlay -and (Test-QuickPlayDefective $node)
+            $client = Start-Client $node $prep.RunDir ($quickPlay -and -not $menuPlay) $nodeOut
             $report.bridgeVersion = $client.BridgeVersion
+            if ($menuPlay) { Open-SaveFromMenu $PlaySave }
             if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
             $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
 

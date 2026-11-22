@@ -5,8 +5,9 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import java.util.List;
+//? if >=1.21.10 {
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
@@ -24,8 +25,6 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 //? if >=26.1 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-//?}
-//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /^import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -35,6 +34,12 @@ import net.minecraft.client.resources.model.geometry.ItemQuads;
 import net.minecraft.core.Direction;
 //?}
 import net.minecraft.util.ARGB;
+//?} else {
+/^import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.BakedModel;
+^///?}
 
 import buildcraft.platform.client.ClientModels;
 
@@ -45,8 +50,13 @@ import buildcraft.platform.client.ClientModels;
  * API, the Forge node multiplies the colours into vanilla's per-quad {@code QuadInstance} at the two places a quad is
  * drawn ({@code ModelBlockRendererMixin} for block models and the chunk mesh, {@code ItemFeatureRendererMixin} for item
  * layers), so the quad lists themselves stay plain.
+ *
+ * <p>On 1.21.1 (Forge 52) a quad keeps its colours in its vertex data, as on NeoForge 1.21.1, and the item models are
+ * classic baked models: {@link ForgeQuadItemModel} for BuildCraft's fixed item quads and {@link ForgeFluidShardModel}
+ * for the fragile fluid shard, the twins of NeoForge 1.21.1's.
  *^/
 public final class ForgeClientModels implements ClientModels {
+    //? if >=1.21.10 {
     /^*
      * Per-vertex colours (0xAARRGGBB x4) of the quads {@link #withVertexColours} was given. Weak identity keys (a record's
      * {@code equals} is by value, so equal quads would share one entry): an entry lives exactly as long as its quad, so a
@@ -145,6 +155,18 @@ public final class ForgeClientModels implements ClientModels {
             float green, float blue, float alpha, int light, int overlay) {
         return VERTEX_COLOURS.containsKey(quad) && putColouredQuad(consumer, pose, quad, new float[] {1.0F, 1.0F, 1.0F,
                 1.0F}, red, green, blue, alpha, new int[] {light, light, light, light}, overlay);
+    }
+    ^///?}
+    //?} else {
+    /^@Override
+    public BakedModel fixedQuadItemModel(List<BakedQuad> quads, TextureAtlasSprite particle, boolean gui3d,
+            RenderType renderType) {
+        return new ForgeQuadItemModel(quads, particle, gui3d, renderType);
+    }
+
+    @Override
+    public BakedModel layeredFluidContainerModel(BakedModel vanilla) {
+        return new ForgeFluidShardModel(vanilla);
     }
     ^///?}
 }

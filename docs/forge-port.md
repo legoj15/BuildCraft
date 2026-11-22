@@ -392,9 +392,10 @@ also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.
   on both clients, Watcher never having touched it. Engine (`engine-gui-worker`): the "Stirling Engine" GUI; `engine-rig-0..2`: the
   creative engine on its redstone block pushing power into the kinesis pipes. On `1.21.1-forge` JEI's item list is drawn beside
   every GUI (it is that node's default viewer).
-- **1.21.1 has no swing component.** `swing_animation` exists from 1.21.11 and `interact_animation` on 26.3; on 1.21.1 the item
-  command fails, so `scene_swing_particles.py` branches on the line and gives Worker Mining Fatigue (amplifier 9, a 26-tick swing)
-  instead. Watcher's frames catch the raised arm on that line too. On 26.1.2 to 1.21.11 the scene is unchanged.
+- **1.21.1 and 1.21.10 have no swing component.** `swing_animation` exists from 1.21.11 and `interact_animation` on 26.3; on
+  every line below 1.21.11 the item command fails, so `scene_swing_particles.py` branches on the line and gives Worker Mining
+  Fatigue (amplifier 9, a 26-tick swing) instead. Watcher's frames catch the raised arm on 1.21.1 too. On 26.1.2 to 1.21.11
+  the scene is unchanged.
 - **`--quickPlayMultiplayer` works on 1.21.1-forge** although its quick-play of a SAVED world is defective
   (`quickplay_drops_game_events`). Both clients joined by quick-play (Watcher 02:20:01, Worker 02:20:59 in the server's log), render at
   120 fps, and every scene check passed with no client error: the join only starts an asynchronous connection before Forge's game bus

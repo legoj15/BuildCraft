@@ -7,13 +7,15 @@ as Worker) that quick-play into it, and records each client's bridge url+token a
 holds the newest client). Commands go through RCON; per-client actions through each bridge. Output and process ids
 live in build/smoke-mp/<node>/. Gradle runs with --no-daemon, so `stop` takes down the trees it started; on the server
 machine its last resort ends every java process of the remote checkout (the server's JVM and Gradle's alike), so
-nothing of that checkout may keep running there mid-run.
+nothing of that checkout may keep running there mid-run. A kill there that cannot be confirmed keeps the run's state
+and smoke lock until a later `stop` confirms it, so nothing else starts on that checkout meanwhile.
 From Git Bash set MSYS_NO_PATHCONV=1, or bridge paths like /state get rewritten.
 
 One run per machine: `server` takes the smoke lock (~/.mcdevbridge/smoke.lock, the file Invoke-InClientSmoke.ps1 takes
 too, so the two refuse each other) held by the server's Gradle process, `client` checks it is still this run's, and `stop`
 releases it; a lock whose process is gone is taken over. Each client's pid and start time are pinned along with its
-bridge, so `b` and the scene scripts fail loudly once that client is gone instead of answering for another one.
+bridge, so `b` and the scene scripts fail loudly once that client is gone instead of answering for another one. The
+ssh tunnel's pid is pinned the same way; a tunnel key the older mp.py wrote (a bare pid) is dropped, never killed.
 
   python -I mp.py setup <node>            game dirs, server.properties, ops, bridge jar + options from run-smoke
   python -I mp.py server <node>            start the dedicated server, wait for "Done"
@@ -80,8 +82,15 @@ if PORT in FORBIDDEN_PORTS or RCON_PORT in FORBIDDEN_PORTS:
 def server_ip(node=None):
     """Where this run's clients and RCON connect, as an IPv4 address (the game connects the same one RCON does, whatever
     name resolution would pick): SERVER_HOST, or this machine's loopback when `node`'s run has an ssh tunnel to the server
-    machine (see ensure_reachable)."""
-    if node and REMOTE and tunnel_alive(node):
+    machine (see ensure_reachable). A tunnel key whose process is gone, or that cannot be proved ours, is an error and
+    not a silent fall-back to SERVER_HOST: that address is the one the tunnel exists to avoid."""
+    if node and REMOTE and load_state(node).get('tunnel'):
+        pid, start, pinned = tunnel_state(node)
+        if not pinned or not same_process(proc_start(pid), start):
+            raise SystemExit('the ssh tunnel of the run on %s (pid %s) is gone or not provably this rig\'s, so this '
+                             'machine\'s loopback no longer reaches the server and SERVER_HOST (%s) is the address the '
+                             'firewall blocks: run `python -I mp.py stop %s` and `server` again'
+                             % (node, pid, SERVER_HOST, node))
         return '127.0.0.1'
     return socket.getaddrinfo(SERVER_HOST, None, socket.AF_INET)[0][4][0]
 
@@ -509,7 +518,9 @@ def remote_launched(node, pid, launch_seconds=150):
     reaching Server1 because its own ssh failed (`remote script on server1 exited 255` before any status line: a transient
     refusal, seen once when Server1's sshd was busy). `Invoke-OnServer1.ps1` also sometimes sits for good in its ssh step with no
     run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one session): its output ends at
-    the `=== run <id> ===` header. The caller ends that poller (this script's own process) and starts again."""
+    the `=== run <id> ===` header. The caller ends that poller (this script's own process) and starts again. The log is
+    re-read once an exit is seen: a poller that wrote `exited 255` and ended between the loop's read and its exit check is
+    a failed ssh (False, retry), not a launch."""
     log = os.path.join(HERE, node, 'server.remote.log')
     end = time.time() + launch_seconds
     while time.time() < end:
@@ -521,6 +532,11 @@ def remote_launched(node, pid, launch_seconds=150):
         if '-- t+' in text:
             return True
         if proc_start(pid) is None:
+            try:
+                with open(log, encoding='utf-8', errors='replace') as f:
+                    text = f.read()  # its last lines may have landed after the read above
+            except OSError:
+                pass
             return 'exited 255' not in text  # the poller ended on its own: a failed ssh is retried, anything else is reported
         time.sleep(3)
     return False
@@ -585,14 +601,30 @@ def tcp_open(host, port, timeout=6):
         return False
 
 
+def tunnel_state(node):
+    """The run's ssh tunnel from state as (pid, start, pinned). `pinned` is True only for the form this rig writes now:
+    a pid with its start time, like a bridge's. A key the older mp.py wrote (a bare pid) carries no start time, so the
+    number cannot be proved this rig's tunnel (it may have been reused): nothing kills it or connects through it, and
+    `stop` drops the key. (None, None, False) when state has no tunnel key."""
+    t = load_state(node).get('tunnel')
+    if isinstance(t, dict) and isinstance(t.get('pid'), int):
+        return t['pid'], t.get('start'), True
+    if isinstance(t, int) and t:
+        return t, None, False
+    return None, None, False
+
+
 def tunnel_alive(node):
-    pid = load_state(node).get('tunnel')
-    return bool(pid) and proc_start(pid) is not None
+    """True when the run's ssh tunnel is a live process this rig started: the pid pinned by its recorded start time
+    (a pid the OS has handed to another process answers False), the way a bridge is pinned."""
+    pid, start, pinned = tunnel_state(node)
+    return pinned and same_process(proc_start(pid), start)
 
 
 def tunnel_start(node):
-    """`ssh -N -L` for the game and RCON ports; the pid goes into the run's state so `stop` ends it. ExitOnForwardFailure: a
-    local port already in use ends ssh at once instead of leaving a tunnel that forwards nothing."""
+    """`ssh -N -L` for the game and RCON ports; pid and start time go into the run's state, so `stop` ends only a
+    process provably this rig's. ExitOnForwardFailure: a local port already in use ends ssh at once instead of leaving
+    a tunnel that forwards nothing."""
     log = open(os.path.join(HERE, node, 'tunnel.log'), 'w')
     cmd = ['ssh', '-N', '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=15',
            '-o', 'ServerAliveCountMax=4']
@@ -603,39 +635,73 @@ def tunnel_start(node):
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
     log.close()
     st = load_state(node)
-    st['tunnel'] = proc.pid
+    st['tunnel'] = {'pid': proc.pid, 'start': proc_start(proc.pid)}
     save_state(node, st)
     return proc
 
 
+def tunnel_log_tail(node):
+    """The last of the tunnel's own log, for the message when ssh will not forward."""
+    try:
+        with open(os.path.join(HERE, node, 'tunnel.log'), encoding='utf-8', errors='replace') as f:
+            return f.read().strip()[-300:]
+    except OSError:
+        return ''
+
+
 def ensure_reachable(node):
-    """After the remote server printed `Done`: the game and RCON ports answer directly, or a tunnel is started and RCON logs
+    """After the remote server printed `Done`: the game port answers directly AND RCON logs in there (a port that merely
+    accepts is not yet this run's server), or a tunnel is started onto ports nothing else listens on and RCON logs
     in through it (the server itself answering, not just the local end accepting)."""
     direct = server_ip(node)
-    if all(tcp_open(direct, p) for p in (PORT, RCON_PORT)):
+    if tcp_open(direct, PORT):
+        try:
+            Rcon(node).s.close()  # logs in on the direct address: the server answered
+        except (Exception, SystemExit) as e:
+            raise SystemExit('%s:%d answers but RCON cannot log in there (%r): not this run\'s server, or its RCON is '
+                             'broken; not forwarding past it to another host' % (direct, PORT, e))
         print('server reachable directly at %s:%d' % (direct, PORT))
         return
+    busy = [p for p in (PORT, RCON_PORT) if tcp_open('127.0.0.1', p)]
+    if busy:
+        # a listener that was there before ssh would answer for the server, so the readiness loop below would lie
+        raise SystemExit('cannot start the ssh tunnel: 127.0.0.1:%s already accept%s a connection, which is not this '
+                         'run\'s forward; free %s or set MP_PORT/MP_RCON_PORT to free ones'
+                         % (' and 127.0.0.1:'.join(str(p) for p in busy), 's' if len(busy) > 1 else '',
+                            'those ports' if len(busy) > 1 else 'that port'))
     print('server on %s is up but %s:%d / %d do not answer (no inbound firewall rule for its java.exe); '
           'forwarding both ports over ssh' % (SERVER_HOST, direct, PORT, RCON_PORT), flush=True)
     proc = tunnel_start(node)
     end = time.time() + 30
     while time.time() < end and proc.poll() is None and not all(tcp_open('127.0.0.1', p, 2) for p in (PORT, RCON_PORT)):
         time.sleep(1)
-    if proc.poll() is not None:
-        try:
-            with open(os.path.join(HERE, node, 'tunnel.log'), encoding='utf-8', errors='replace') as f:
-                why = f.read().strip()[-300:]
-        except OSError:
-            why = ''
-        raise SystemExit('the ssh tunnel ended at once (exit %s): %s' % (proc.returncode, why))
-    Rcon(node).s.close()  # logs in through the tunnel: the server answered
+    if proc.poll() is None and not all(tcp_open('127.0.0.1', p, 2) for p in (PORT, RCON_PORT)):
+        tunnel_stop(node)
+        raise SystemExit('the ssh tunnel (pid %d) still accepted nothing on 127.0.0.1:%d / %d after 30 s: %s'
+                         % (proc.pid, PORT, RCON_PORT, tunnel_log_tail(node) or 'see build/smoke-mp/%s/tunnel.log' % node))
+    if proc.poll() is not None:  # whatever accepted on the ports, ssh itself is gone: the forward is not ours
+        tunnel_stop(node)
+        raise SystemExit('the ssh tunnel ended at once (exit %s): %s' % (proc.returncode, tunnel_log_tail(node)))
+    try:
+        Rcon(node).s.close()  # logs in through the tunnel: the server answered
+    except (Exception, SystemExit) as e:
+        tunnel_stop(node)  # a forward that cannot reach this run's server is no tunnel to keep
+        raise SystemExit('the ssh tunnel is up (127.0.0.1:%d) but RCON cannot log in through it (%r): %s'
+                         % (PORT, e, tunnel_log_tail(node) or 'see build/smoke-mp/%s/tunnel.log' % node))
     print('server reachable through the ssh tunnel at 127.0.0.1:%d (ssh pid %d)' % (PORT, proc.pid))
 
 
 def tunnel_stop(node):
-    pid = load_state(node).get('tunnel')
-    if pid:
-        print('tunnel', subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+    """End the run's ssh tunnel — only a process provably this rig's, the pid pinned by its recorded start time as a
+    bridge's is (a pid the OS has handed to another process in the meantime is left alone), and never a bare-pid key
+    the older mp.py wrote."""
+    pid, start, pinned = tunnel_state(node)
+    if not pinned:
+        return
+    if not same_process(proc_start(pid), start):
+        print('the ssh tunnel (pid %s) is gone or its pid was reused: nothing to kill' % pid)
+        return
+    print('tunnel', subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
 
 
 def server(node):
@@ -663,8 +729,17 @@ def server(node):
         for attempt in range(1, 4):
             if remote_launched(node, st['server']):
                 break
-            print(remote_kill_stragglers()[1])  # killing the poller must not leave a started remote run going
+            confirmed, line = remote_kill_stragglers()  # killing the poller must not leave a started remote run going
+            print(line)
             subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
+            if not confirmed:
+                # never two servers on one remote checkout: an unconfirmed kill keeps the state and the lock for `stop`
+                st['remote_kill_unconfirmed'] = True
+                save_state(node, st)
+                raise SystemExit('the remote kill of the stalled launch could not be confirmed, so nothing may be '
+                                 'started on that checkout yet; the run\'s state and the smoke lock were kept: run '
+                                 '`python -I mp.py stop %s`, which repeats the kill and clears them once it is '
+                                 'confirmed' % node)
             if attempt == 3:
                 raise SystemExit('the remote launch stalled 3 times; see build/smoke-mp/%s/server.remote.log' % node)
             print('the remote launch stalled (no status line); starting it again (attempt %d of 3)' % (attempt + 1), flush=True)
@@ -765,6 +840,11 @@ class Rcon:
 
 def stop(node):
     st = load_state(node)
+    t = st.get('tunnel')
+    if isinstance(t, int) and t:  # the older mp.py's bare tunnel pid: not provably this rig's (the number may be reused)
+        print('dropping the tunnel key the older mp.py wrote (pid %d, no start time): it is not provably this rig\'s '
+              'tunnel, so it is not killed' % t)
+        del st['tunnel']
     for side in ('B', 'A'):
         b = st.get('bridge' + side)
         if b:
@@ -774,18 +854,22 @@ def stop(node):
         r = Rcon(node)
         print('rcon stop:', r.cmd('stop'))
         stopped = True
-    except (Exception, SystemExit) as e:  # SystemExit too: refused login or missing rcon.pw, so no stop was asked
+    except (Exception, SystemExit) as e:  # SystemExit too: refused login, a missing rcon.pw or a gone tunnel, so no stop was asked
         print('rcon stop failed (%s): the server was not asked to stop' % e)
     remote_unconfirmed = False
     if REMOTE:
         poller = st.get('server')
-        if stopped and poller:  # the server's Gradle ends, the remote command with it, then the poller returns
+        unconfirmed_before = bool(st.pop('remote_kill_unconfirmed', None))  # an earlier stop's kill was never confirmed
+        if unconfirmed_before:
+            print('an earlier stop could not confirm the remote kill: repeating it whatever the local poller says '
+                  '(the first stop already ended that poller)')
+        if stopped and poller and not unconfirmed_before:  # the server's Gradle ends, the remote command with it, then the poller returns
             end = time.time() + 240
             while time.time() < end and proc_start(poller) is not None:
                 time.sleep(5)
         if remote_fetch_log(node):  # keep the server's side of the run beside the clients' logs
             shutil.copy2(remote_server_log(node), os.path.join(HERE, node, 'server-remote-latest.log'))
-        if not stopped or (poller and proc_start(poller) is not None):  # the server did not stop on RCON
+        if not stopped or unconfirmed_before or (poller and proc_start(poller) is not None):  # did not stop on RCON, or a kill still needs confirming
             print('remote server did not stop; ending the java processes of this checkout on the server machine')
             confirmed, line = remote_kill_stragglers()
             print(line)
@@ -796,8 +880,10 @@ def stop(node):
         if k in st:
             print(k, subprocess.run(['taskkill', '/PID', str(st[k]), '/T', '/F'], capture_output=True, text=True).stdout.strip())
     if remote_unconfirmed:
-        # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry
-        save_state(node, {k: st[k] for k in ('server', 'tunnel') if k in st})  # the tunnel too: a retry's RCON may need it
+        # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry,
+        # marked so the retry forces the kill again instead of trusting a poller the first stop already ended
+        st['remote_kill_unconfirmed'] = True
+        save_state(node, {k: st[k] for k in ('server', 'tunnel', 'remote_kill_unconfirmed') if k in st})
         print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
               'run `python -I mp.py stop %s` again' % node)
         return

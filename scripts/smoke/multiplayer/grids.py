@@ -1,4 +1,4 @@
-"""Tile scene_swing_particles.py shots per node: python grids.py <node> -> build/smoke-mp/<node>/*-grid.png (needs Pillow)."""
+"""Tile scene_swing_particles.py shots per node: python grids.py <node> -> build/smoke-mp/<node>/*-grid.png (needs Pillow: run it as plain `python`, not `python -I`, which hides the user site Pillow lives in)."""
 import sys, os
 from PIL import Image
 node = sys.argv[1]

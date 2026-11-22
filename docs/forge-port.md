@@ -368,6 +368,62 @@ the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultipl
 - Shared-lock note: the smoke lock is machine-wide, so every run above queued behind other sessions' runs (`MP_LOCK_WAIT_MINUTES`
   makes `server` wait; the batch driver always did). The scripts never take a lock they cannot hold for the whole run.
 
+**The other four Forge lines (2026-11-22).** `26.2-forge`, `26.1.2-forge`, `1.21.11-forge` and `1.21.1-forge` each ran one full cycle
+(setup, `server` on Server1 to `Done`, client A and B joined, `scene_swing_particles.py` prep, deploy, watchrobots, wrench,
+robotclick, dismantle and mine, `scene_machines.py all`, `stop`), the server on Server1's checkout `bc-forge-mp`, both clients on the
+workstation. Result on every line: `scene_machines.py` 6 checks, 0 failed (Worker aims at the Tank; the server's `data get` holds
+1000 mB of water; `GuiTank` opens on Worker and then on Watcher; `ScreenEngineStone` opens; the creative engine is still there); all
+swing phases ran with no command error; the server and both clients' logs held no BuildCraft ERROR (the only ERROR lines are
+vanilla's: the offline client's `Failed to fetch Realms feature flags`, and on a server's first boot of a world
+`DedicatedServerProperties: No key layers in MapLike[{}]`, the rig's `level-type=minecraft:flat` with no `generator-settings`; both
+also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.1.2), 0.52 s (1.21.11), 0.89 s (1.21.1); a Server1 pre-build of the four nodes in the fresh checkout took 4 min 03 s, the workstation's in a fresh worktree
+7 min 36 s (`gradlew --no-daemon :<node>:compileJava` for the four nodes).
+
+- **What the screenshots show, identical on all four lines.** Robots (`robots-*s`): the Lumberjack and Picker work from their stations
+  (the server: the tree's base log gone, the three item stacks gone, the axe chest holds one axe of two), the Knight stands idle,
+  all seen from Watcher. Wrench (`wrench-*`): Worker's arm rises with the wrench in the frames after the click, on both the slow swing and
+  the plain 6-tick one. Helmet and dismantle: Worker's arm raised at the idle robot, the helmet appears on it, then the
+  sneak-wrench takes the helmet off and the next click dismantles the robot (the server's `data get ... wearables` answers
+  `Found no elements` and then `No entity was found`). Mine: Worker mines the gold pipe under Mining Fatigue: the pipe is intact
+  while it is being mined, and the break shows gold pipe-sprite fragments and the dropped pipe item on Watcher's screen (no crack
+  particles on 26.2, 26.1.2 and 1.21.1, as on NeoForge 26.2; the server confirms the pipe holder is gone). `1.21.11-forge` also
+  shows one tiny white speck at the pipe's lower edge in every progress frame (not seen on the other lines, unexplained, not compared
+  with NeoForge 1.21.11). Tank (`tank-gui-worker`, `tank-gui-watcher`): the Tank GUI with a blue sliver at the bottom of its gauge
+  on both clients, Watcher never having touched it. Engine (`engine-gui-worker`): the "Stirling Engine" GUI; `engine-rig-0..2`: the
+  creative engine on its redstone block pushing power into the kinesis pipes. On `1.21.1-forge` JEI's item list is drawn beside
+  every GUI (it is that node's default viewer).
+- **1.21.1 has no swing component.** `swing_animation` exists from 1.21.11 and `interact_animation` on 26.3; on 1.21.1 the item
+  command fails, so `scene_swing_particles.py` branches on the line and gives Worker Mining Fatigue (amplifier 9, a 26-tick swing)
+  instead. Watcher's frames catch the raised arm on that line too. On 26.1.2 to 1.21.11 the scene is unchanged.
+- **`--quickPlayMultiplayer` works on 1.21.1-forge** although its quick-play of a SAVED world is defective
+  (`quickplay_drops_game_events`). Both clients joined by quick-play (Watcher 02:20:01, Worker 02:20:59 in the server's log), render at
+  120 fps, and every scene check passed with no client error: the join only starts an asynchronous connection before Forge's game bus
+  starts a moment later, so no event that matters is lost, and the single-player world load (the part that crashes at its first loot
+  roll) never happens. `mp.py` therefore needed no menu path for it (`Open-SaveFromMenu` stays the way to open a save there).
+- **The Java 21 lines are not reachable from the workstation directly.** Server1's inbound allow rules (read only) name specific
+  `java.exe` files: `Microsoft\jdk-25.0.2.10-hotspot`, `Java\jdk-17`, `jdk-22`, `jdk-24` and two JREs 1.8. The 26.x servers run on the
+  first, so the clients connect straight to `192.168.0.106:25661`. `1.21.11-forge` and `1.21.1-forge` build for Java 21, so Gradle's
+  toolchain starts their server on `C:\Users\Administrator\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2\bin\java.exe`, which has
+  no rule: the game port and RCON both timed out (`Couldn't connect to server ... Connection timed out`). Opening that is a
+  firewall change on Server1, not done. Instead `mp.py server` probes both ports once `Done` is printed and, when they do not
+  answer, runs `ssh -N -L` for both to the server machine's loopback (Windows Firewall does not filter loopback): the clients and RCON
+  then use `127.0.0.1:25661` / `:25662` and `stop` ends the tunnel. The traffic still crosses the LAN, inside ssh, so a Java 21 line
+  is checked with a real server on another machine, not with the direct client-to-server path (not exercised for them).
+- **`stop`, observed for real.** Normal path (RCON `stop` answered): `stop` took 15 s (26.2), 86 s (26.1.2), 29 s (1.21.11) and 16 s (1.21.1) to return, no java process of
+  `C:\Dev\bc-forge-mp` was left on Server1 (the wrapper JVM and the server JVM both gone, ports 25661/25662 no longer listening),
+  no local client or Gradle of the worktree was left, the lock was released and `procs.json` emptied (26.2, 26.1.2, and the
+  tunnelled 1.21.11 and 1.21.1, after which the ssh tunnel was gone too). Kill path (first `1.21.11-forge` attempt, whose RCON
+  could not connect): `rcon stop failed` was reported, the straggler kill printed `stopped <wrapper pid>` and `stopped <server
+  pid>`, and a read-only look afterwards found no java process of the checkout (only another run's, whose command line names
+  another checkout, were there). Gradle's single-use daemon JVM does not name the checkout; it was not left behind either.
+- **Two launch failures of the remote command, both handled.** The first `Invoke-OnServer1` start of `26.2-forge` sat at its
+  `=== run ... ===` header (trap 16); `mp.py` ended it after 150 s and the second start ran. One start of `1.21.11-forge` ended at once
+  with `remote script on server1 exited 255` (ssh itself failed, Server1 busy with another run's connections); `mp.py` now treats
+  that, seen before any status line, like a stalled launch and starts again (checked with a stub log, no real 255 since).
+- Not exercised on these four lines: the direct client-to-server path of the two Java 21 lines (see the tunnel above); the join's
+  recipe payload (as on 26.3-forge); `26.3-forge` itself on this commit (the earlier cycles ran before the tunnel and retry code,
+  which a direct-reachable server never starts); the 255 retry against a real ssh failure.
+
 ## Rules added for the third loader
 
 - A third constant, `forge`. `constants.match(loader, "neoforge", "fabric", "forge")`.

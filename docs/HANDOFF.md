@@ -23,6 +23,6 @@ The standing record is [forge-port.md](forge-port.md): toolchain, what each Forg
 
 #215 to #231 hold everything found along the way. The ones that limit testing: #228 (Open Parties and Claims cannot boot on 26.2, 26.1.2 and 1.21.11 Forge, so the claims scenarios are skipped there), #225 (no config screen on Forge 1.21.1), #227 (Server1 cannot focus the 26.3 Forge window), #224 (three NeoForge 1.21.1 smoke failures that predate this work).
 
-The gitignored release test matrix (`testing/config/runtimes.json`) still has the 26.2, 26.1.2 and 1.21.11 Forge rows disabled and 1.21.1-forge marked server-only. Enable them before the next release run. Server1 has no McDevBridge jar for `1.21.11-forge`; build it there before running that line's client batch remotely.
+The gitignored release test matrix (`testing/config/runtimes.json`) now has all five Forge rows enabled with clients (edited on this machine after the merge; the release rig was not run with them). Server1 has no McDevBridge jar for `1.21.11-forge`; build it there before running that line's client batch remotely.
 
 Nothing is in progress.

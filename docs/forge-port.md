@@ -994,8 +994,8 @@ the call site in its `patches/`.
   rest of that test is shared.
 - The gitignored release tool knows `forge` and holds it back (`heldBack` in `release/config/release.json`): Forge nodes
   are built and verified but not published until the user lifts the hold. The release test matrix
-  (`testing/config/runtimes.json`) still has the 26.2, 26.1.2 and 1.21.11 Forge rows disabled and 1.21.1-forge as
-  server-only; enable them once this branch is on main.
+  (`testing/config/runtimes.json`) has all five Forge rows enabled with clients since the merge; the release rig has
+  not been run with them.
 
 - 1.21.1 mixin declaration: the dev run's `--mixin.config` is measured (F7); the jar manifest's `MixinConfigs` on an installed
   Forge 52 is the same unproven item as on 26.3 (below).

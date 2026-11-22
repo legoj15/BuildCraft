@@ -185,6 +185,16 @@ $ScenarioData = Get-Content -Raw -LiteralPath $Scenario | ConvertFrom-Json
 # it needs no OS focus, where leaving a world takes the `pause` step's Esc, which an unfocused SDL3 window (26.3, Server1) drops.
 $StartAt = if ($ScenarioData.PSObject.Properties['startAt']) { ([string]$ScenarioData.startAt).Trim().ToLowerInvariant() } else { 'world' }
 if ($StartAt -notin @('world', 'title')) { throw "scenario '$($ScenarioData.name)': startAt must be 'title' or 'world', not '$($ScenarioData.startAt)'" }
+if ($StartAt -eq 'title') {
+    # The title screen has no world: a pause step would fall back to the OS focus path this flag exists to avoid, inWorld
+    # waits for a world that never loads, and coordinates are relative to a rig origin there is none of.
+    foreach ($s in @($ScenarioData.steps)) {
+        $why = if ($s.do -in @('pause', 'inWorld')) { "'$($s.do)' needs a world" }
+               elseif ($s.PSObject.Properties['at']) { "'at' coordinates need a world" }
+               elseif (($s | ConvertTo-Json -Compress -Depth 8) -match '\{[XYZ]\}') { 'coordinate tokens need a world' }
+        if ($why) { throw "scenario '$($ScenarioData.name)' starts at the title screen, but a step ($($s | ConvertTo-Json -Compress -Depth 8)): $why" }
+    }
+}
 $StartAtTitle = $StartAt -eq 'title'
 if (-not $OutDir) { $OutDir = Join-Path $Repo ("build/smoke/" + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
 # Absolute: screenshot paths are handed to the CLIENT, whose working directory is its run folder, not this one.

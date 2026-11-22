@@ -541,8 +541,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 BlockPos pos = indexToPos(i);
                 // The break queue's own filters, in its order: fluid the mode never removes, then a block that cannot
                 // be broken.
-                tally.note(!shouldBreakQueueAcceptFluid(pos) ? EnumStallReason.FLUID
-                    : isBreakBlocked(pos) ? EnumStallReason.UNBREAKABLE : null, pos);
+                tally.note(!shouldBreakQueueAcceptFluid(pos) ? EnumStallReason.FLUID : breakStallReason(pos), pos);
             }
         }
         EnumFluidHandlingMode fluidMode = getFluidMode();
@@ -588,6 +587,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         boolean has = hasEnoughToPlaceItems(indexToPos(i));
         requiredCache[i] = has ? REQUIRED_TRUE : REQUIRED_FALSE;
         return has;
+    }
+
+    /**
+     * Why the break queue leaves the cell at {@code pos} alone, or {@code null} when it does not: {@code UNBREAKABLE}
+     * for a block that cannot be broken at all (bedrock), {@code REFUSED} for one a protection mod forbids breaking
+     * ({@link #isBreakBlocked} has it parked in {@link #breakRefusals}, whether the ask or the break itself was
+     * refused), as the place side reports a parked placement.
+     */
+    private EnumStallReason breakStallReason(BlockPos pos) {
+        if (BlockUtil.isUnbreakableBlock(tile.getWorldBC(), pos, tile.getOwner())) {
+            return EnumStallReason.UNBREAKABLE;
+        }
+        return isBreakBlocked(pos) ? EnumStallReason.REFUSED : null;
     }
 
     /**

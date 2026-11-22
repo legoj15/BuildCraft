@@ -6,6 +6,8 @@
 
 package buildcraft.factory.tile;
 
+import java.util.Optional;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -24,6 +26,7 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.MachineEnchantments;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.tile.IPumpHost;
 
 /**
@@ -40,6 +43,10 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
      *  a Pump standing on the well. Not saved: a loaded well scans on its first tick. */
     @Nullable
     private BlockPos blockingFluid;
+    /** Cells whose break the world refused although the well's own ask passed (policy {@link RefusalMemory#DRAIN}):
+     *  {@link #nextPos} steps past them until the window ends or the block changes. Not saved, like every refusal
+     *  memory: a loaded well finds out once more. */
+    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
 
     public TileMiningWell(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.MINING_WELL.get(), pos, state);
@@ -90,12 +97,14 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
                     // sees them as on a player's pickaxe.
                     // breakBlockAndGetDropsWithXp captures the BlockEntity + BlockState
                     // BEFORE destroying so XP / container-drops are computed correctly.
-                    BlockUtil.breakBlockAndGetDropsWithXp(
+                    Optional<BlockUtil.BreakResult> broken = BlockUtil.breakBlockAndGetDropsWithXp(
                         serverLevel,
                         currentPos,
                         MachineEnchantments.tool(Items.IRON_PICKAXE, this),
                         getOwner()
-                    ).ifPresent(result -> {
+                    );
+                    if (broken.isPresent()) {
+                        BlockUtil.BreakResult result = broken.get();
                         result.drops().forEach(stack ->
                             InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
                         // Spawn XP at the well itself rather than the broken position. The orb
@@ -106,7 +115,15 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
                         if (result.xp() > 0) {
                             getBlockState().getBlock().popExperience(serverLevel, worldPosition, result.xp());
                         }
-                    });
+                    } else {
+                        // The block still stands although canBreak said yes: a protection mod cancelled the destroy
+                        // itself (the ask in nextPos is skipped under minePlayerProtected, so this is the one place
+                        // that refusal shows). Park the cell: nextPos steps past it like a claimed block, so the
+                        // well neither re-aims at it nor draws power toward it until the window ends. If it is the
+                        // only cell in reach the well goes idle, and the first column scan after the window (the
+                        // idle well rescans every 256 ticks) tries it once more.
+                        refusals.remember(serverLevel, currentPos, getOwner());
+                    }
                 }
                 nextPos();
             } else {
@@ -180,8 +197,11 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
                 // break this position, skip past it instead of stopping — claims are usually
                 // small and there may be unclaimed terrain further down. The tube leaves the
                 // skipped block where it is (see TileMiner#extendTubes).
+                // A cell whose break came back empty (a mod that cancels the destroy itself, which the ask cannot
+                // see) is skipped the same way, until its refusal window ends.
                 if (level instanceof ServerLevel serverLevel
-                        && !BlockUtil.canMachineBreak(serverLevel, currentPos, getOwner())) {
+                        && (refusals.isRefused(serverLevel, currentPos, getOwner())
+                                || !BlockUtil.canMachineBreak(serverLevel, currentPos, getOwner()))) {
                     continue;
                 }
                 updateLength();

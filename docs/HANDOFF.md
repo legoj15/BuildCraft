@@ -17,7 +17,6 @@ The standing record is [forge-port.md](forge-port.md): toolchain, what each Forg
 - Server1's firewall has no rule for the Java 21 runtime, so the 1.21.x multiplayer servers are reached through an ssh tunnel (#230).
 - `versions/1.21.1-forge/run` has no accepted EULA, so `:1.21.1-forge:runServer` was never run by hand (the game tests and the multiplayer rig cover the server).
 - Two Forge defects worth reporting upstream are the user's to file: the 1.21.1 quick-play crash (#226) and the shaped-recipe network encoding on 26.3 (forge-port.md, Open).
-- #221 and #231 are open questions.
 
 ## Open follow-ups
 

@@ -294,7 +294,8 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
    before the fix keep their stored confirmation; the smoke runner still answers both screens for them.
 3. Minor: no Config button (known then; a hand-built screen since F8, "Config screen (every Forge node)"); the Forge pause menu's icon row has one button fewer than
    NeoForge's (a vanilla-screen difference, not BuildCraft's); after pouring a water bucket into a Tank in creative NeoForge leaves an
-   empty bucket in the hotbar and Forge did not: NeoForge's player item access follows vanilla's
+   empty bucket in the hotbar and Forge did not: NeoForge's player item access (from 1.21.10; on 1.21.1 BuildCraft's own
+   `NeoForgeFluidContainers.giveCreativeResult`, #224) follows vanilla's
    `ItemUtils.createFilledResult` (a creative player keeps the item and is given the result if the inventory has none like
    it), and `ForgeFluidContainers.swapHeld` now does the same (#213). The
    `creative-bucket-tank` smoke scenario checks it (pour, pour again with an empty bucket held, fill) and passes on 26.3-forge
@@ -322,7 +323,9 @@ define `opac` only. Two facts about it:
   clean. Not BuildCraft's and not specific to a node. A seeded `<gameDir>/defaultconfigs/openpartiesandclaims-server.toml` (any
   world's copy of that file) makes Forge copy it instead of creating it, and a fresh world then boots at once (measured). The
   smoke runner plays a fresh copy of its seed save for `crossmod-claims-opac`, so `versions/<node>/run-smoke/defaultconfigs/`
-  must hold that one file on a Forge node first; the runner does not seed it (follow-up).
+  must hold that one file on a Forge node first. Since #232 the runner copies it there from `scripts/smoke/seeds/` when the
+  `opac` alias is used and none is present (a per-MC-version seed first, then the generic one); the claims scenarios then
+  passed 256/256 from a fresh run dir on 26.3, 26.2, 26.1.2 and 1.21.11 Forge (2026-11-22).
 - **Measured on 26.3-forge**, with that file seeded: `crossmod-claims-opac` passes (145 steps, 0 failed, 0 BuildCraft log
   errors, 1.6 min): rig A (no claim) and rig C (the dev's claim) let every machine place and break, rig B (a stranger's claim)
   refuses them all (Quarry frame, Builder, Filler, Stripes pipe and Stripes robot), so OPAC's claim check reaches BuildCraft's
@@ -341,10 +344,12 @@ exit 0 because `mp.init.gradle` only extends the NeoForge run extension). `bc.fo
 `--username` value, default `Dev`) and `-PbcQuickPlayServer=<host:port>` (`--quickPlayMultiplayer`), and its server run honours
 `-PbcRunDir` (the game directory, as the client run does); `mp.py` passes those on a Forge node and `-PmpUser` / `-PmpServer` /
 `-PmpServerDir` on a NeoForge one (`run_switches`), and `setup` takes the bridge jar and default options itself on a node no
-single-player run has prepared. A Fabric node has no arm yet and is skipped with a reason. The Forge dedicated server prints
+single-player run has prepared. A Fabric node takes the same three switches from `bc.fabric` (#217). The Forge dedicated server prints
 the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultiplayer` joins it.
 
-- **Scenes.** `scene_swing_particles.py` (every phase) and the new `scene_machines.py` (a Tank poured by one player and opened by
+- **Scenes.** `scene_guide.py` (#218: the guide book on a client of the remote server, a page with a crafting recipe, and the
+  `[recipe sync] received <n> recipes` line on the Forge nodes that carry `ForgeRecipeSync`) is described in the smoke README;
+  its live result is recorded under #218. `scene_swing_particles.py` (every phase) and the new `scene_machines.py` (a Tank poured by one player and opened by
   both, a Stone Engine's GUI, a creative engine's kinesis rig filmed by the other player; 6 recorded checks) ran on `26.3-forge`
   and on `26.3`, each against a loopback server and against Server1's (four full cycles: setup, server, client A, client B,
   both scenes, stop), with the same result every time; the Forge clients' and servers' logs held no BuildCraft error. Swing phases: three robots deployed from
@@ -739,15 +744,16 @@ through the same head to no effect (their join is asynchronous and was never aff
 method is named by name alone, so 26.3's `connect(GameConfig.QuickPlayVariant)` is no concern: from 1.21.11 up (EventBus
 7, no shut bus) the class is the empty `@Mixin`. **Guard.** Forge starts the bus in `ClientModLoader.completeModLoading`
 only when its private `error` field is null, and a failed load must still end on the error screen as today, so the mixin
-applies the same test. No public accessor for that field was identified when the mixin was written (the container
-that wrote it had no FML jar or sources, so `ClientModLoader`'s and `ModLoader`'s public members could not be read), so
-the field is read reflectively (`getDeclaredField` + `setAccessible`, the way `ClassicSlotLedger` reads
-`SidedInvWrapper`'s), and a field it cannot read leaves the bus alone with one `[platform] cannot read
-ClientModLoader.error` WARN: a renamed field falls back on the workaround, never on a started bus for a half-loaded game.
-If the 52 sources show a public accessor (`ClientModLoader`'s or `ModLoader`'s), it should replace the reflection.
-**Proof pending**, since the mixin was written without the node's toolchain: a `:1.21.1-forge:runClient -PbcQuickPlay=<save>`
-whose `debug.log` shows `Mixing client.QuickPlayMixin from buildcraftunofficial.forge.mixins.json into
-net.minecraft.client.quickplay.QuickPlay` and whose world joins and runs (a squid drowning, water over pipes and a `fill`,
+applies the same test. The field is final by then: the 52.1.21 sources write it only in `begin` and in the mod-loading
+tasks of the resource reload, which ends before `onResourceLoadFinished` calls `connect`. It is read reflectively
+(`getDeclaredField` + `setAccessible`, the way `ClassicSlotLedger` reads `SidedInvWrapper`'s). `ModLoader.isLoadingStateValid()`
+is public, but it has not been traced to match `error == null` on every failure path. A field the mixin cannot read leaves the
+bus alone with one `[platform] cannot read ClientModLoader.error` WARN, and the join then drops events as before (the smoke
+runner's menu detour is what `quickplay_drops_game_events` gives; a player's quick-play has no fallback); a start logs
+`[platform] quick-play: started MinecraftForge.EVENT_BUS before the join (#226)`. The 26.x immunity (EventBus 7) is inferred
+from the sources, not measured. **Proof pending**, since the mixin was written without the node's toolchain: a `:1.21.1-forge:runClient -PbcQuickPlay=<save>`
+whose log shows the INFO start line (and `debug.log` `Mixing client.QuickPlayMixin from buildcraftunofficial.forge.mixins.json into
+net.minecraft.client.quickplay.QuickPlay`) and whose world joins and runs (a squid drowning, water over pipes and a `fill`,
 each of which crashed before). Until that run the workaround above stays as it is (`quickplay_drops_game_events`, the
 `-PbcQuickPlay` warning in `bc.forge.gradle.kts`, the runner's `Test-QuickPlayDefective` and `Open-SaveFromMenu`), and
 is retired only after it: the key gone or false, the warning deleted, the runner's menu path dropped, AGENTS.md's note.
@@ -767,7 +773,9 @@ is retired only after it: the key gone or false, the warning deleted, the runner
   except the 9 skipped on Forge by design: `crossmod-claims-{flan,flan-stranger,flan-admin-stranger,ftbchunks,opac,
   opac-stranger}`, `crossmod-energy`, `crossmod-storage` (no `-PwithMods` runtime on Forge) and `guideme-guide` (NeoForge
   only). `creative-bucket-tank` passed on Forge and failed on NeoForge 1.21.1 (no empty bucket after a creative pour);
-  `goggles-curios` and `rei-parity` fail on NeoForge 1.21.1 and are skipped on Forge.
+  `goggles-curios` and `rei-parity` fail on NeoForge 1.21.1 and are skipped on Forge. All three were fixed under #224 (the
+  1.21.1 creative bucket rule; Curios now loaded through a `withmod.curios` alias on every NeoForge node; the REI viewer
+  no longer aborts the Forge nodes' configuration).
 - The 520 Forge screenshots were ranked by pixel difference against their NeoForge twins and read pair by pair across
   pipes (painted, translucent), fluids in tanks and the world, engines, the heat exchanger, buckets and the fragile shard
   in hand and in GUIs, machine GUIs, facades (shading), plugs (lens), robots, markers, the guide, JEI, tooltips, outlines
@@ -856,7 +864,7 @@ inside those, or an `elif >=1.21.10` arm between the 26.x and the 1.21.1 one. An
 | `ItemModelsAccessor`, `SpriteSourcesAccessor` | Unchanged: `ItemModels.ID_MAPPER` and `SpriteSources.ID_MAPPER` are private static on 1.21.11 too |
 | `CuboidItemModelWrapperInvoker` | Empty 1.21.11 arm on `BlockModelWrapper` (the legacy fluid container model draws its own layers) |
 
-**Deprecations (#220, #223).** Forge deprecates three vanilla-facing APIs that shared code used: `Block.BLOCK_STATE_REGISTRY`
+**Deprecations (#220).** Forge deprecates three vanilla-facing APIs that shared code used: `Block.BLOCK_STATE_REGISTRY`
 (for `GameData.BlockCallbacks.getBlockStateIDMap()`), the `LiquidBlock(FlowingFluid, Properties)` constructor and the
 `BucketItem(Fluid, Properties)` constructor (both for the twin that takes a `Supplier`). All three are on every Forge line
 (52, 61, 64, 65, 66; the Forge sources of each were read), and none has a NeoForge or Fabric form, so each is a `Platform`
@@ -983,8 +991,8 @@ the screen uses); the screen has two version arms for it. `StringWidget` has no 
 read-only text wider than its column is cut by hand with a trailing ellipsis (`Font#plainSubstrByWidth`) instead of scrolling,
 and the cycle button of an enum takes its start value through `withInitialValue` (the builder that takes it is 1.21.11's).
 Since the merge with the 1.21.11 line (2026-11-21) `1.21.11-forge` compiles the same file unchanged (its `>=26.2` / else
-arm takes `setScreen`, as 26.1 does). The screen compiles on 1.21.1-forge, 1.21.11-forge and 26.3-forge; it is not exercised
-in a 1.21.1-forge or 1.21.11-forge client yet (`forge-config-screen` not run there).
+arm takes `setScreen`, as 26.1 does). The screen compiles on 1.21.1-forge, 1.21.11-forge and 26.3-forge; an earlier revision of `forge-config-screen` passed
+on 26.3-forge and 1.21.11-forge, and 1.21.1-forge (#225) is the one not yet run in a client.
 
 ### Smoke on 26.2-forge and 26.1.2-forge (Server1, 2026-11-21)
 
@@ -1020,8 +1028,9 @@ from 26.2). 0 BuildCraft log errors in every scenario.
 | 1.21.1-forge | Server1 | all pass but two: `zone-planner-zoom` (the same refused `setblock`) and `crossmod-claims-opac-stranger` (no world after 10 minutes); both passed when rerun alone |
 | 1.21.11-forge | workstation | all 40 that ran passed (45.6 min; the two OPAC claims scenarios left out, see below). Server1 has no McDevBridge jar for this line, so its batch there never started |
 
-On 26.2, 26.1.2 and 1.21.11 the OPAC pin is compile-only (the mod wants a Forge Config API Port build those lines have no pin
-for, #228): `withmods_compile_only=opac` in the node's `gradle.properties` makes the runner skip the claims scenarios there. That skip was seen in a Server1 batch.
+On 26.2, 26.1.2 and 1.21.11 the OPAC pin was compile-only until #228 (the mod wants Forge Config API Port, which those lines'
+`withmod.opac` alias did not load). The alias now carries Forge Config API Port too (26.2.1, 26.1.5 and 21.11.1), and
+`crossmod-claims-opac` and `-stranger` passed 256/256 on all three (2026-11-22, workstation).
 
 ## Common-code loader forks (F3b)
 
@@ -1068,11 +1077,12 @@ the call site in its `patches/`.
 - Production-install proof of the two F4 runtime declarations: the jar manifest `MixinConfigs` and the shipped
   `META-INF/accesstransformer.cfg` are read by FML in an installed Forge, but only the dev-run equivalents were booted
   (a Forge server install is a download). Boot the collected jar in `mods/` of a real install before anything ships. The
-  access transformer half now has its observable (the boot probe, "Toolchain" above): the install shows it as the
+  access transformer half now has its observable (the boot probe, "Toolchain" above): an install would show it as the
   `BuildCraft access transformer applied` line, but no install has been booted with it yet. Still open there: FML's
-  tolerance of the `animal.horse` line on a 26.x/1.21.11 install (a target class absent there), and that Forge 52 and 61 name
-  members officially at runtime in production (the probe reads `inventory` by that name; an SRG-named install would log the
-  `(cannot read it: ...)` form, and nothing else of BuildCraft's would work there either).
+  tolerance of an AT line whose target class is absent, in both directions (`animal.horse` on a 26.x/1.21.11 install,
+  `animal.equine` on 1.21.1). The official runtime names this document settles are not yet proven by a production install
+  either; the probe reads `inventory` by that name, so an install that broke the assumption would log the
+  `(cannot read it: ...)` form.
 - Settled in F1: the 3-arg `registerConfig(type, spec, fileName)` exists; Forge keeps one config per type per mod.
   `ForgeConfigSpec` lacks only the 4-arg `defineListAllowEmpty` (nine calls in `BCEnergyConfig` and `BCSiliconConfig`):
   they go through `lib.misc.ConfigListUtil.stringList`, whose one directive is the only loader fork.

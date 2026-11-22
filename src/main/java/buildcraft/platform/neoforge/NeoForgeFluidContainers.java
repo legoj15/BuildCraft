@@ -40,9 +40,11 @@ import buildcraft.platform.transfer.BCTransaction;
 /**
  * Fluid container items on NeoForge, the bodies that used to sit in {@code FluidUtilBC} and {@code WidgetFluidTank}:
  * on 1.21.10+ through the Transfer API ({@code Capabilities.Fluid.ITEM} behind an {@code ItemAccess}), on 1.21.1
- * through the classic {@code FluidUtil} helpers, each arm exactly as it was, except the held-item interaction: its
- * creative swap is 1.21.1's own, for FluidUtil hands a creative player's container back unchanged (see
- * {@link #interactWithHeldContainer}). {@code FluidContainerHelperTest} pins that both behave the same.
+ * through the classic {@code FluidUtil} helpers, each arm exactly as it was, except the creative half of the held-item
+ * interaction on 1.21.1: FluidUtil hands a creative player's container back unchanged, so that arm gives the filled
+ * or emptied result itself (see {@link #interactWithHeldContainer}); survival keeps FluidUtil's own path.
+ * {@code FluidContainerHelperTest} covers the slot helpers (read, is-container, drain, fill) with the same assertions
+ * on every node; no test calls the held-item or cursor interactions.
  */
 final class NeoForgeFluidContainers {
     private NeoForgeFluidContainers() {}
@@ -159,19 +161,22 @@ final class NeoForgeFluidContainers {
         }
         return false;
         //?} else {
-        /*// FluidUtil.interactWithFluidHandler would hand a creative player's held container back unchanged
-        // (its try*AndStow creative branches never stow the result), so a creative pour gave no empty bucket.
-        // The moves still ride FluidUtil's try* helpers, which play the fluid's bucket sound, but the
-        // held-item swap is ours — the rule of the arm above and of Forge's twin: one item of the held stack
-        // becomes the result, and a creative player keeps the item and is given the result only when the
-        // inventory holds none like it (vanilla createFilledResult).
-        IFluidHandler tankHandler = NeoForgeFluidStorages.toNeo(tank);
-        boolean creative = player.getAbilities().instabuild;
+        /*IFluidHandler tankHandler = NeoForgeFluidStorages.toNeo(tank);
+        if (!player.getAbilities().instabuild) {
+            // Survival is FluidUtil's own path, untouched: its try*AndStow stows a multi-item result through the
+            // player's item-handler capability (main inventory, armour and the offhand), which a plain
+            // Inventory.add over the 36 main slots would not reach.
+            return FluidUtil.interactWithFluidHandler(player, hand, tankHandler);
+        }
+        // Creative: FluidUtil hands the held container back unchanged (its try*AndStow creative branches never
+        // stow the result), so a creative pour gave no empty bucket. The moves still ride FluidUtil's try*
+        // helpers, which play the fluid's bucket sound, but the player keeps the held item and is given the result
+        // only when the inventory holds none like it (vanilla createFilledResult, as the arm above and Forge's twin).
         // First try draining the tank into the item (filling a bucket), on a one-item copy of the held stack.
         FluidActionResult filled = FluidUtil.tryFillContainer(held.copyWithCount(1), tankHandler,
                 Integer.MAX_VALUE, player, true);
         if (filled.isSuccess()) {
-            swapHeld(player, hand, held, filled.getResult(), creative);
+            giveCreativeResult(player, filled.getResult());
             return true;
         }
         // Next the item into the tank (emptying a bucket), on a fresh copy so a failed first attempt leaves
@@ -179,7 +184,7 @@ final class NeoForgeFluidContainers {
         FluidActionResult emptied = FluidUtil.tryEmptyContainer(held.copyWithCount(1), tankHandler,
                 Integer.MAX_VALUE, player, true);
         if (emptied.isSuccess()) {
-            swapHeld(player, hand, held, emptied.getResult(), creative);
+            giveCreativeResult(player, emptied.getResult());
             return true;
         }
         return false;*/
@@ -391,29 +396,15 @@ final class NeoForgeFluidContainers {
         }
     }
 
-    // One item of the held stack becomes result: in place for a single item, else the rest stays and the
-    // result goes to the inventory. A creative player keeps the item and is given the result only when the
-    // inventory holds none like it — vanilla's createFilledResult, which FluidUtil's try*AndStow (the path
-    // interactWithFluidHandler used to take) does not follow: in creative it hands the held container back
-    // unchanged and never stows the result.
-    private static void swapHeld(Player player, InteractionHand hand, ItemStack held, ItemStack result,
-            boolean creative) {
-        if (creative) {
-            if (!result.isEmpty() && !player.getInventory().contains(result)) {
-                player.getInventory().add(result);
-                player.containerMenu.broadcastChanges();
-            }
-            return;
+    // A creative player keeps the held item and is given the result only when the inventory holds none like it
+    // (nothing is dropped when it is full) — vanilla's createFilledResult, which FluidUtil's try*AndStow does not
+    // follow: in creative it hands the held container back unchanged and never stows the result. Survival never
+    // comes here; it goes through FluidUtil.interactWithFluidHandler.
+    private static void giveCreativeResult(Player player, ItemStack result) {
+        if (!result.isEmpty() && !player.getInventory().contains(result)) {
+            player.getInventory().add(result);
+            player.containerMenu.broadcastChanges();
         }
-        if (held.getCount() == 1) {
-            player.setItemInHand(hand, result);
-        } else {
-            held.shrink(1);
-            if (!result.isEmpty() && !player.getInventory().add(result)) {
-                player.drop(result, false);
-            }
-        }
-        player.containerMenu.broadcastChanges();
     }*/
     //?}
 

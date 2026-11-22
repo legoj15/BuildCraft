@@ -817,12 +817,15 @@ public class BlockUtil {
      * mods see who broke the block, as 1.12.2's fake-player harvest did.
      *
      * <p>Empty means the block is still standing: it is unbreakable (hardness below zero), or the
-     * world did not remove it — {@code destroyBlock} (the fluid branch's {@code setBlock}) answered
-     * false. That is also how a protection mod that cancels the destroy itself reaches a machine
-     * which asked nobody ({@link BCCoreConfig#minePlayerProtected} on: no probe posts a break event
-     * the mod could cancel; OpenPartiesAndClaims instead mixes into {@code Level.destroyBlock} and
-     * silently returns false). The drops and XP computed for a break that did not happen are
-     * discarded with the empty result, so a refused break reports no loot.
+     * world did not remove it — {@code destroyBlock} answered false (for a fluid block, {@code setBlock}
+     * did, and all that says is that the cell did not change). A protection mod that cancels
+     * {@code Level.destroyBlock} itself, rather than answering a break event, reaches a machine which
+     * asked nobody this way ({@link BCCoreConfig#minePlayerProtected} on: the machine posts no break
+     * event for the mod to cancel). The fluid branch's {@code setBlock} is not a destroy, so that kind
+     * of veto does not reach it. The drops and XP computed for a break that did not happen are
+     * discarded with the empty result, so a refused break reports no loot. A caller that would aim at
+     * the same cell again must treat an empty result as a refusal and park the cell (see
+     * {@link RefusalMemory}), or it retries it for ever.
      */
     public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
             ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, @Nullable GameProfile owner) {
@@ -908,13 +911,13 @@ public class BlockUtil {
             }
         }
 
-        // Keep the world's own answer: destroyBlock is false when the set inside it failed, or a mod cancelled the
-        // destroy outright (OpenPartiesAndClaims' Level.destroyBlock mixin does, with no break event — under
-        // minePlayerProtected that cancel is the only refusal a machine that asked nobody can see). A false means
-        // the block still stands, so the drops and XP computed above never happened and go unreported; answering
-        // success anyway had every caller credit loot for a block that stayed (the Builder re-queued its cell for
-        // ever and gained the "drops" into its resources each pass). The fluid branch's setBlock gets the same
-        // treatment: its false is equally a cell that was not cleared.
+        // Keep the world's own answer: destroyBlock is false when the set inside it failed, or when something
+        // cancelled the destroy outright (a protection mod that vetoes Level.destroyBlock itself, with no break
+        // event — under minePlayerProtected that is the only refusal a machine that asked nobody can meet). A false
+        // means the block still stands, so the drops and XP computed above never happened and go unreported;
+        // answering success anyway had every caller credit loot for a block that stayed (the Builder re-queued its
+        // cell for ever and gained the "drops" into its resources each pass). The fluid branch's setBlock is not a
+        // destroy, so a destroy-only veto cannot reach it; its false only says the cell did not change.
         boolean removed = state.getBlock() instanceof LiquidBlock
                 ? world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3)
                 : world.destroyBlock(pos, false, breaker);

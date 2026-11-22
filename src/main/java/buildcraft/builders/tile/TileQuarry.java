@@ -147,8 +147,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // check() keeps a refused cell out of frameBreakBlockPoses (or framePlaceFramePoses) while that state stands and
     // the retry window runs, so the power loop is not pinned to it; a refused frame-line cell is a gap in the frame
     // meanwhile. The window exists because lifting a claim fires no event: retryRefusedFrameCells() probes each cell
-    // once its window ends, even after the quarry has finished and gone idle. Policy RefusalMemory.QUARRY_FRAME
-    // (uncapped on purpose, see the table there); updatePoses() clears it.
+    // once its window ends, even after the quarry has finished and gone idle. It also holds a drill-column cell
+    // (below the frame box) whose break came back empty, which only skipUnworkableCells consults: the sweep steps past
+    // it, and past the cells under it, since the standing block is in the drill's way. Policy
+    // RefusalMemory.QUARRY_FRAME (uncapped on purpose, see the table there); updatePoses() clears it.
     private final RefusalMemory frameRefusals = new RefusalMemory(RefusalMemory.QUARRY_FRAME);
     public Task currentTask = null;
     public Vec3 drillPos;
@@ -482,13 +484,16 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return null;
     }
 
-    /** Advances the box iterator past every cell the drill cannot work now (passable, unmineable, or under something
-     *  it cannot descend through), noting a thick fluid in its way for a Pump on the quarry. */
+    /** Advances the box iterator past every cell the drill cannot work now (passable, unmineable, parked because its
+     *  last break came back empty, or under something it cannot descend through), noting a thick fluid in its way for
+     *  a Pump on the quarry. */
     private void skipUnworkableCells() {
         while (boxIterator.hasNext()) {
             BlockPos pos = boxIterator.getCurrent();
             if (!canMoveThrough(pos)) {
-                if (!canMine(pos)) {
+                // canMine reads the protection ask, which a machine on minePlayerProtected skips: the parked cell is
+                // the memory of a protection mod that cancelled the destroy itself, which the ask cannot see.
+                if (!canMine(pos) || frameRefusals.isRefused(level, pos, getOwner())) {
                     noteBlockingFluid(pos);
                 } else {
                     BlockPos obstacle = firstObstacleAbove(pos);
@@ -598,6 +603,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
         for (BlockPos blockPos : frameRefusals.takeExpired(level, FRAME_RETRY_PROBES_PER_TICK)) {
             if (!BlockUtil.isChunkPresent(level, blockPos)) {
+                continue;
+            }
+            if (!frameBox.contains(blockPos)) {
+                // A drill-column cell whose break came back empty: it has no frame to repair and must not be queued
+                // as a frame break (that path skips the drill's column checks), so its window simply ends here and
+                // the next walk of the mining box meets the cell again.
+                frameRefusals.forget(blockPos);
                 continue;
             }
             if (canMine(blockPos)) {
@@ -1540,6 +1552,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     if (xp > 0) {
                         getBlockState().getBlock().popExperience(serverLevel, worldPosition, xp);
                     }
+                } else {
+                    // The block still stands although canMine said yes: a protection mod cancelled the destroy itself
+                    // (canMine's ask is skipped under minePlayerProtected, so this is the one place that refusal
+                    // shows). Park the cell before check() runs, so a frame cell stays out of the break queue
+                    // (check() would queue a real block again) and skipUnworkableCells steps the drill past it
+                    // instead of re-aiming at it; the false below gives the power back.
+                    frameRefusals.remember(level, breakPos, getOwner());
                 }
                 check(breakPos);
                 return result.isPresent();

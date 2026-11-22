@@ -29,9 +29,9 @@ error, or BuildCraft logged an ERROR.
 ## What it does per node
 
 1. **Own game folder.** `versions/<node>/run-smoke/` via `-PbcRunDir=run-smoke` (gitignored). The hand-used `run/`
-   with its extra mods and saves is never read, and its mods, config, saves and options are never written. On Fabric one
-   file is: the folder is passed as `--gameDir`, but Loom fixes the working directory, so every smoke run still writes
-   (and rolls) `run/logs/latest.log`. The node's newest McDevBridge jar is copied into
+   with its extra mods and saves is never read, and its mods, config, saves and options are never written. On Fabric too
+   (#217): `-PbcRunDir` moves the client and server run configs' working directory, so a Fabric run's logs land in
+   `run-smoke/logs` as well. The node's newest McDevBridge jar is copied into
    `run-smoke/mods` (searched in McDevBridge's `versions/<node>/build/libs` and its worktrees; `-BuildBridge` builds
    one if none exists). `options.txt` is written once: no pause on focus loss, no accessibility onboarding, sound
    off. The GUI scale is re-applied every run: the scenario's `guiScale`, else 2 (so screenshots line up across runs),
@@ -361,14 +361,14 @@ checks; `multiplayer/scene_guide.py` opens the guide book on a client of the rem
 recipe (the guide's recipes can only come from the recipe sync there, a single-player guide falls back to its integrated server
 and hides a missing sync), screenshotting it, and on a Forge node that carries `ForgeRecipeSync` (26.3, 26.2, 26.1.2, 1.21.11) greps both
 clients' `latest.log` for the `[recipe sync] received <n> recipes` line the receiver logs; `scene_lib.py` holds the helpers the
-scenes share. Run them from Git Bash with `MSYS_NO_PATHCONV=1`. The server
-log's `No key layers` ERROR is vanilla complaining about the flat world's empty generator settings; the default flat world
-is used.
+scenes share. Run them from Git Bash with `MSYS_NO_PATHCONV=1`. The rig
+writes the classic superflat layers (bedrock, two dirt, grass on plains) as `generator-settings`, so the server no longer logs
+vanilla's `No key layers` ERROR (#230).
 
 Loaders: NeoForge nodes take their run switches through `mp.init.gradle` (an init script); a MinecraftForge node (`26.3-forge`)
 through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run carries `--username Dev` from
-the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node has no arm yet:
-`mp.py` and the scene scripts skip it with a reason and exit 0. `setup` also works on a node no single-player run has prepared
+the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node
+takes the same `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` from `bc.fabric` (#217). `setup` also works on a node no single-player run has prepared
 (it takes the newest bridge jar the way the runner does and writes the default `options.txt`).
 
 **The server on another machine.** The two clients always run here (they need a GL context); the server half can run on

@@ -21,16 +21,21 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * What a machine remembers about the answers protection mods (and refusing blocks) gave it, so it neither asks again
  * nor spends power or travel on a block every cycle. Every block-breaking, block-placing or fluid-draining machine
- * keeps one, each with a {@link PositionMemory.Policy}, and they are all here, except the Mining Well and Pump tube:
- * it asks about a cell only when its column grows past it (once per mined block), which is rarer than any window
- * here, so it remembers nothing.
+ * keeps one, each with a {@link PositionMemory.Policy}, and they are all here, except the tube of a Mining Well or
+ * Pump: it asks about a cell only when its column grows past it (once per mined block), which is rarer than any window
+ * here, so it remembers nothing. (The Mining Well does remember the cells whose <em>break</em> the world refused: see
+ * the table.)
  *
  * <table>
  * <caption>Refusal policy per machine (pinned by {@code RefusalMemoryOwnerAndPermitTest})</caption>
  * <tr><th>Machine</th><th>Policy</th><th>Window</th><th>Cap</th><th>Owner key</th><th>Permit used for</th></tr>
- * <tr><td>Quarry (frame-volume cells: blocks it may not break, frame blocks it may not place)</td>
+ * <tr><td>Quarry (frame-volume cells: blocks it may not break, frame blocks it may not place; and a drill-column cell
+ *     whose break came back empty)</td>
  *     <td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are re-probed as they come due
- *     ({@link #takeExpired}), even by an idle quarry</td><td>none: the cells held are cells of the frame box</td>
+ *     ({@link #takeExpired}), even by an idle quarry (a drill-column cell is only forgotten then: the drill meets it
+ *     again on its next walk of the mining box)</td><td>none: the cells held are cells of the frame box, and at most
+ *     the topmost refused cell of each column of the mining box (the cells under it are in the drill's way, never
+ *     tried)</td>
  *     <td>tile owner</td><td>-</td></tr>
  * <tr><td>Builder and Filler placements, and the blocks they may not break</td><td>{@link #BUILDER_PLACE}</td>
  *     <td>fixed 200 ticks; a refused cell is parked (skipped when queuing placements or breaks) and asked again once
@@ -40,7 +45,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * <tr><td>Robot search boards (lumberjack, miner, ...)</td><td>{@link #ROBOT_SEARCH}</td><td>fixed 1200 ticks</td>
  *     <td>256, oldest dropped (a claimed forest)</td><td>robot's acting identity and home-station owner</td>
  *     <td>-</td></tr>
- * <tr><td>Pump; robot pump board; Flood Gate (cells it may not fill)</td><td>{@link #DRAIN}</td><td>spaced: 6000
+ * <tr><td>Pump; robot pump board; Flood Gate (cells it may not fill); Mining Well (cells whose break came back empty,
+ *     which its column scan then steps past like a claimed block)</td><td>{@link #DRAIN}</td><td>spaced: 6000
  *     ticks, stretched by 20 per other live refusal</td><td>none (see below)</td><td>tile owner; robot's acting
  *     identity and home-station owner</td><td>Pump: the cell the current bucket charges</td></tr>
  * </table>
@@ -92,7 +98,10 @@ public final class RefusalMemory {
     public static final PositionMemory.Policy STRIPES = PositionMemory.Policy.fixed(200, 4);
     /** The robot search boards: see the class table. */
     public static final PositionMemory.Policy ROBOT_SEARCH = PositionMemory.Policy.fixed(1200, 256);
-    /** The pump and the robot pump board: five minutes, stretched by a second per other live refusal. */
+    /** The pump, the robot pump board, the Flood Gate and the Mining Well: five minutes, stretched by a second per
+     *  other live refusal. The well rescans its column from the top on every mined block, and a break it was refused
+     *  costs a whole block's power, so a long column of refused cells must average one probe per spacing, not one
+     *  per cell per short window. */
     public static final PositionMemory.Policy DRAIN = PositionMemory.Policy.spaced(6000, 20);
 
     /** A cell's current state, for telling which remembered refusals are stale. */

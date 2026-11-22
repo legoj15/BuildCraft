@@ -19,7 +19,6 @@ import mp
 from scene_lib import Scene
 
 NODE = sys.argv[1]
-mp.refuse_unsupported_node(NODE)
 PHASE = sys.argv[2]
 S = Scene(NODE)
 X, Y, Z = S.X, S.Y, S.Z

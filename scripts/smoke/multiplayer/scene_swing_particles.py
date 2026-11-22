@@ -20,7 +20,6 @@ import mp
 from scene_lib import Scene
 
 NODE = sys.argv[1]
-mp.refuse_unsupported_node(NODE)   # a Fabric node is skipped with a reason (exit 0), as `mp.py` does
 PHASE = sys.argv[2]
 S = Scene(NODE)
 X, Y, Z = S.X, S.Y, S.Z

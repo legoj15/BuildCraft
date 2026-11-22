@@ -290,14 +290,6 @@ def mc_version(node):
     return tuple(int(x) for x in re.match(r'\d+(?:\.\d+)*', node).group(0).split('.'))
 
 
-def refuse_unsupported_node(node):
-    """Nothing to refuse: every loader has an arm — a NeoForge node through mp.init.gradle, a MinecraftForge or Fabric
-    node through its build's own switches (bc.forge, bc.fabric). The call stays because the scene scripts make it beside
-    their own mp.py commands; a loader mp.py cannot drive would again print SKIPPED and exit 0 here, so a caller reads
-    it as skipped, not failed."""
-    pass
-
-
 def run_switches(node, role, side=None):
     """The Gradle -P switches that put a run where mp.py wants it. `role` is 'server' (game dir run-smoke/mp-server) or
     'client' (game dir run-smoke/mp-<side>, the player's name, quick-play into the server). NeoForge reads them through
@@ -779,6 +771,8 @@ def server(node):
         st['server'] = remote_start(node, nonce)
         st['serverStart'] = proc_start(st['server'])
     else:
+        st.pop('serverJvm', None)  # a crashed run's pin must not outlive it: record_server_jvm writes this run's
+        st.pop('serverJvmStart', None)
         log = os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')
         if os.path.exists(log):
             os.remove(log)
@@ -938,16 +932,22 @@ class Rcon:
 def kill_pinned(label, pid, recorded):
     """Tree-kill `pid` only while it is provably the process this rig recorded (pid and a readable, matching start
     time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else.
-    False, without killing, when the pid is alive but not provably this rig's, so a caller that must not lose the
-    process can keep what it recorded (#230); True when it ended, or was already gone."""
+    False, without killing, only for a record with no start time (state an older mp.py wrote): that pid may still be
+    the rig's, so a caller that must not lose the process keeps what it recorded (#230). True when it ended, was
+    already gone, or the number now belongs to another process (a start time that differs, or that cannot be read: a
+    rig process is readable by its own user), since the recorded process is then gone too."""
     now = proc_start(pid)
     if now is None:
         print('%s (pid %s) is already gone' % (label, pid))
         return True
-    if now < 0 or not recorded or recorded <= 0 or not same_process(now, recorded):  # now < 0: its start time cannot be read
-        print('%s: pid %s is not provably a process of this rig (no start time recorded, or the number was reused): '
-              'not killed' % (label, pid))
+    if not recorded or recorded <= 0:
+        print('%s: pid %s has no recorded start time, so it is not provably a process of this rig: not killed'
+              % (label, pid))
         return False
+    if now < 0 or not same_process(now, recorded):
+        print('%s (pid %s) is already gone: the number now belongs to another process, which is left alone'
+              % (label, pid))
+        return True
     print(label, subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
     return True
 
@@ -976,7 +976,7 @@ def stop(node):
         unconfirmed_before = bool(st.pop('remote_kill_unconfirmed', None))  # an earlier stop's kill was never confirmed
         if unconfirmed_before:
             print('an earlier stop could not confirm the remote kill: repeating it whatever the local poller says '
-                  '(the first stop already ended that poller)')
+                  '(the earlier stop left that poller running on purpose, holding the smoke lock)')
         if stopped and poller and not unconfirmed_before:  # the server's Gradle ends, the remote command with it, then the poller returns
             end = time.time() + 240
             while time.time() < end and same_process(proc_start(poller), st.get('serverStart')):
@@ -1005,7 +1005,7 @@ def stop(node):
             refused.append(k)
     if remote_unconfirmed:
         # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry,
-        # marked so the retry forces the kill again instead of trusting a poller the first stop already ended
+        # marked so the retry forces the kill again instead of trusting the poller the first stop kept
         st['remote_kill_unconfirmed'] = True
     if remote_unconfirmed or refused:
         # ... and the same for a kill that was refused because the pid was not provably this rig's (state written
@@ -1035,8 +1035,6 @@ if __name__ == '__main__':
         print('usage: python -I mp.py setup <node> | server <node> | client <node> A|B | rcon <node> "<cmd>" ... | '
               'b <node> A|B <METHOD> <path> [json] | stop <node>   (the docstring at the top of mp.py explains each)')
         sys.exit(0 if a[:1] in (['-h'], ['--help']) else 2)
-    if len(a) > 1:
-        refuse_unsupported_node(a[1])
     if a[0] == 'setup':
         setup(a[1])
     elif a[0] == 'server':

@@ -141,6 +141,9 @@ public final class LegacyFluidContainerModel implements ItemModel {
             TextureSlots slots = new TextureSlots.Resolver()
                     .addLast(new TextureSlots.Data.Builder().addTexture("layer0", material(spec.textures().base().get())).build())
                     .resolve(DEBUG_NAME);
+            // NeoForge 1.21.10/1.21.11 deprecate this four-argument bake for their ContextMap overload, which a
+            // version-only file cannot name; Fabric and Forge, the loaders that register this model, do not deprecate it
+            @SuppressWarnings("deprecation")
             List<BakedQuad> quads = new ItemModelGenerator().geometry().bake(slots, baker, state, DEBUG_NAME).getAll();
             layers.add(new Layer(List.of(), quads, properties, false, true));
         }

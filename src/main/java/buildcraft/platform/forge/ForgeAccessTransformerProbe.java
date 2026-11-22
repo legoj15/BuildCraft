@@ -9,7 +9,7 @@ package buildcraft.platform.forge;
 /*import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-//? if >=1.21.10 {
+//? if >=1.21.11 {
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 //?} else {
 /^import net.minecraft.world.entity.animal.horse.AbstractHorse;
@@ -28,14 +28,15 @@ import buildcraft.api.core.BCLog;
  * class are what it did. {@code AbstractHorse.inventory} is {@code protected} in vanilla, and Forge's own transformer
  * (checked in the universal jars of all five Forge lines) and its patches leave it that way, so BuildCraft's line is the
  * only thing that makes it public and the flag discriminates. It is a member every Forge node's file opens (the class is
- * {@code animal.equine} from 1.21.11 and {@code animal.horse} on 1.21.1; each line of the file is a no-op where its
- * class is absent). The read is a class literal and a reflective field lookup: the class is loaded, never initialised,
+ * {@code animal.equine} from 1.21.11 and {@code animal.horse} on 1.21.1; a dev run tolerates the line whose class is
+ * absent, a production install's tolerance is still open). The read is a class literal and a reflective field lookup: the class is loaded, never initialised,
  * and the field's value is never read.
  *
  * <p><b>The two lines</b> the release test rig greps for ({@code testing/}, gitignored), both logged once on the
  * {@code BuildCraft} logger, on a server and a client alike:
  * <ul>
- * <li>INFO {@code BuildCraft access transformer applied}: the member is public.</li>
+ * <li>INFO {@code BuildCraft access transformer applied}: the member is public. Another mod's transformer opening the
+ * same member would also make it so; stripping BuildCraft's file is the negative test that tells them apart.</li>
  * <li>ERROR {@code BuildCraft access transformer NOT applied: AbstractHorse.inventory}: it is not, or the probe could
  * not read it (the same line, with {@code (cannot read it: <exception>)} after the member).</li>
  * </ul>
@@ -49,7 +50,8 @@ final class ForgeAccessTransformerProbe {
 
     private ForgeAccessTransformerProbe() {}
 
-    /^* Logs whether the access transformer's widening of {@link #MEMBER} is in force. Call it first in the mod's constructor. *^/
+    /^* Logs whether the access transformer's widening of {@link #MEMBER} is in force. Call it first in the mod's
+     * constructor. *^/
     static void check() {
         try {
             Field inventory = AbstractHorse.class.getDeclaredField("inventory");
@@ -59,7 +61,8 @@ final class ForgeAccessTransformerProbe {
                 BCLog.logger.error("BuildCraft access transformer NOT applied: {}", MEMBER);
             }
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-            BCLog.logger.error("BuildCraft access transformer NOT applied: {} (cannot read it: {})", MEMBER, e.toString());
+            BCLog.logger.error("BuildCraft access transformer NOT applied: {} (cannot read it: {})", MEMBER,
+                    e.toString());
         }
     }
 }

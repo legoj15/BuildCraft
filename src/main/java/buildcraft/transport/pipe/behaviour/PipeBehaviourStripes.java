@@ -6,6 +6,8 @@
 
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.Optional;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -261,12 +263,14 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                         crackedPos = offset;
                     }
                 } else if (mayBreak((ServerLevel) world, offset)) {
-                    BlockUtil.breakBlockAndGetDropsWithXp(
+                    Optional<BlockUtil.BreakResult> broken = BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) world,
                         offset,
                         new ItemStack(Items.DIAMOND_PICKAXE),
                         pipe.getHolder().getOwner()
-                    ).ifPresent(result -> {
+                    );
+                    if (broken.isPresent()) {
+                        BlockUtil.BreakResult result = broken.get();
                         result.drops().forEach(stack -> sendItem(stack, direction));
                         // XP at the broken-block position rather than the pipe — the stripes
                         // pipe is a thin transient digger, the player is usually right where
@@ -275,9 +279,16 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                             world.getBlockState(offset).getBlock()
                                 .popExperience((ServerLevel) world, offset, result.xp());
                         }
-                    });
-                    progress = 0;
-                    refusals.revokePermit();
+                        progress = 0;
+                        refusals.revokePermit();
+                    } else {
+                        // The block is still standing although mayBreak said yes: a protection mod cancelled the
+                        // destroy itself (the pipe's own ask is skipped under minePlayerProtected, so this is the one
+                        // place that refusal shows). Park it as mayBreak parks an ask the mod refused, or the next
+                        // tick would re-permit and charge the whole break again.
+                        endCycle(world);
+                        refusals.remember(world, offset, owner);
+                    }
                 }
             }
         } else {

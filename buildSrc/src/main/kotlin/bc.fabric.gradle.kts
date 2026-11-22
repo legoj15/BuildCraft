@@ -342,7 +342,7 @@ listOf("runClient", "runServer").forEach { name ->
 }
 // The game folder moves the runs themselves, client AND server: Loom overwrites a run task's working directory from its
 // run config's runDirectory at launch (AbstractRunTask), so that property — never RunConfigSettings' deprecated
-// runDir()/setRunDir() setters, which would fail this node's compile — is the one place that moves it. Only the plain
+// runDir()/setRunDir() setters, which the project's no-deprecated-API rule forbids — is the one place that moves it. Only the plain
 // client and server runs take it; the game-test runs keep their own build/run directories. A local copy of the folder,
 // for the same configuration-cache reason as the task actions above.
 if (bcRunDir != null) {

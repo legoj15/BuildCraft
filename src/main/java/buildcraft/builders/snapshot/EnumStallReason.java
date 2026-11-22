@@ -15,9 +15,9 @@ public enum EnumStallReason {
     /** The block cannot stand where the blueprint has it (a torch over air the blueprint also leaves empty, a bed or
      *  door whose other half has no room): placing it would only be undone, so the Builder never tries. */
     CANT_STAND(Hue.RED, "cant_stand"),
-    /** A block that is in the way is bedrock or the like, or a protection mod forbids breaking it. */
+    /** A block that is in the way is bedrock or the like. */
     UNBREAKABLE(Hue.RED, "unbreakable"),
-    /** A protection mod refused the placement, and the cell is parked until its window ends. */
+    /** A protection mod refused the placement or the break, and the cell is parked until its window ends. */
     REFUSED(Hue.RED, "refused"),
     /** The Builder's resources lack the items (or fluid) the block needs. */
     MISSING_ITEMS(Hue.YELLOW, "missing_items"),

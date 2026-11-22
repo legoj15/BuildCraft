@@ -38,7 +38,8 @@ import buildcraft.platform.Platform;
 public final class BCForgeEntrypoint {
 
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
-        // First, before any of BuildCraft's own code runs: one log line saying whether the jar's access transformer applied.
+        // First, before any of BuildCraft's own code runs: one log line saying whether the jar's access transformer
+        // applied.
         ForgeAccessTransformerProbe.check();
         //? if >=1.21.10 {
         ForgeModBus.bind(context.getModBusGroup());

@@ -25,8 +25,9 @@ import mp
 from scene_lib import Scene
 
 NODE = sys.argv[1]
-mp.refuse_unsupported_node(NODE)
 PHASE = sys.argv[2]
+if PHASE not in ('prep', 'guide', 'log', 'all'):
+    raise SystemExit('phase must be prep, guide, log or all, not %r' % PHASE)
 S = Scene(NODE)
 X, Y, Z = S.X, S.Y, S.Z
 cmd, b, shot, tp, look, hold = S.cmd, S.b, S.shot, S.tp, S.look, S.hold
@@ -50,7 +51,7 @@ def screen(side, body):
 
 
 def book_corner(side):
-    """The open book's top-left corner in GUI units, from the GUI size (Java's int division truncates toward zero)."""
+    """The open book's top-left corner in GUI units, from the GUI size (int() truncates toward zero, as the GUI's own int division does)."""
     r = screen(side, {'list': True})
     return int((r.get('width', 427) - BOOK_W) / 2), int((r.get('height', 240) - BOOK_H) / 2)
 

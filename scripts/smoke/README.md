@@ -14,9 +14,13 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Lang ru_ru -Scenario sc
 pwsh scripts/smoke/Invoke-SmokeBatch.ps1 -Node 26.3-fabric -Scenarios guide-robot,quarry-pit   # several scenarios, one node, one table
 ```
 
-A node is a Stonecutter node name: `26.3` is the NeoForge node, `26.3-fabric` its Fabric twin. Both loaders run the
-same scenarios; each node needs the McDevBridge jar built for it (`gradlew :<node>:build` in McDevBridge, the same node
-name there).
+A node is a Stonecutter node name: `26.3` is the NeoForge node, `26.3-fabric` its Fabric twin, `26.3-forge` its
+MinecraftForge twin (not NeoForge; #209). The runner reads a node's loader from the `loader=` key of
+`versions/<node>/gradle.properties` (a NeoForge node carries none; the name's suffix is the fallback). The default node
+list is the twelve NeoForge and Fabric nodes: a Forge node runs only when named (`-Nodes 26.3-forge`, or `-Loader forge`
+with a list that holds one) while nothing ships there. All loaders run the same scenarios, except what a loader's dev
+runtime lacks (below); each node needs the McDevBridge jar built for it (`gradlew :<node>:build` in McDevBridge, the same
+node name there).
 
 Output: `build/smoke/<timestamp>/summary.md` (one table per node, screenshot links) and `<node>/report.json`,
 `<node>/NN-<name>.png`, `<node>/NN-<name>.widgets.json`. Exit code 1 when any step failed, any node hit a fatal
@@ -118,15 +122,27 @@ Traps (each one cost a run):
 
 Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset); `at` arrays are offsets from `base`.
 Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
-covers the NeoForge node and its Fabric twin, `"26.2-fabric"` only the twin) and `"loaders": ["neoforge"]` (run only on
-that loader). A top-level `"loaders"` skips the whole scenario on the other loader's nodes (reported as skipped, not as a
-failure): use it when a scenario needs a mod only one loader's dev runtime has. A top-level `"englishOnly": true` skips
+covers every loader's node of that line, the NeoForge node, its Fabric twin and its Forge twin; `"26.2-fabric"` or
+`"26.2-forge"` only that twin) and `"loaders": ["neoforge"]` (run only on that loader: a step one loader cannot run says so
+here, not by leaving the other twins out of `nodes`). A top-level `"loaders"` skips the whole scenario on the other loaders'
+nodes (reported as skipped, not as a failure): use it when a scenario needs a mod only one loader's dev runtime has.
+`"needs": ["recipeViewer"]` (top-level or on a step) says what the scenario or step asks of the dev runtime instead of naming
+loaders: a node that lacks it skips the scenario, or records the step as `skip`, with the reason. The capabilities:
+`recipeViewer` (any viewer, implied by the `"recipeViewer"` key, which also asks for that viewer by name), `devProperties`
+(implied by `gradleProperties`: `-PwithGuideMe` and the like; the Forge nodes wire none) and `devMods` (implied by `mods`
+and `-Mods`: the `-PwithMods` aliases, which every loader reads). A recipe viewer is per node, not per loader: a node has
+one when its `versions/<node>/gradle.properties` pins `jei_version` or `rei_version` (every NeoForge and Fabric node pins
+both; `1.21.1-forge` pins JEI alone; the other Forge nodes pin neither), so `rei-parity` skips on every Forge node. A
+scenario whose own `"mods"` the node defines none of (no `withmod.<alias>` in its `gradle.properties`) is skipped too, with
+that reason, instead of running bare; one defined alias is enough to run it (the other lanes of `crossmod-energy` need
+aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly": true` skips
 the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
 widget text.
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`, `tick unfreeze`) are forgiven by the command itself, in every language, unless the command never parsed (vanilla then echoes the input in its error context line, which marks a bad argument rather than an "already so"). `echo: true` copies the last command's reply into the report (state dumps) |
+| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`, which also forgives the bridge giving up for good on a busy server thread: every `/command`, optional or not, gets three attempts in all on a `TimeoutException`; a repeat can run a command twice, which a non-idempotent one such as `clear` or a claim answers with a failure), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`, `tick unfreeze`) are forgiven by the command itself, in every language, unless the command never parsed (vanilla then echoes the input in its error context line, which marks a bad argument rather than an "already so"). `echo: true` copies the last command's reply into the report (state dumps) |
+| `playerCmd` | `run`: string or list | each command AS the player (the bridge's `/chat` `command`: the player's own permission level and an entity as the source; the reply goes to the client's chat, so gate on state with a `waitCmd` after it). For commands whose requirements read the source's entity at parse time: `execute as @p run ...` does not pass those, because Brigadier checks a requirement against the original source, before the `execute` modifiers apply (FTB Teams' `party create` is one) |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at`; `exact` | look at a block's centre from the current eye position (standing eye height); the report records what the crosshair hit. `exact: true` aims at the point `at` itself (a box corner, an addon slot) |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |
@@ -142,7 +158,7 @@ widget text.
 | `close` | — | close the open screen (releases container menus server-side) |
 | `wait` | `ms` | sleep |
 | `window` | `width`, `height` | resize the game window so its client area (the framebuffer) is exactly that size — options.txt `overrideWidth` is ignored. Pair with a top-level `"guiScale"` (written to options.txt each run, default 2; the game clamps it to what the window fits, so a big scale only shows after the resize) |
-| `waitCmd` | `run` (one command), `match` (regex on its reply), `timeoutSec` (default 60), `pollMs` (default 1000) | re-runs the command until its reply matches: gates on observed state (a machine finishing) instead of a fixed wait; the last reply goes in the report |
+| `waitCmd` | `run` (one command), `match` (regex on its reply), `timeoutSec` (default 60), `pollMs` (default 1000) | re-runs the command until its reply matches: gates on observed state (a machine finishing) instead of a fixed wait; the last reply goes in the report. A poll the bridge gives up on (`TimeoutException`: the server thread is busy, e.g. a fresh world generating chunks) counts as no match yet |
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
@@ -170,8 +186,9 @@ A top-level `"options": {"renderDistance": 4}` pins keys of the run's `options.t
 back to 6 on every run that names none, so a pinned value never reaches the next scenario.
 
 A top-level `"recipeViewer": "rei"` boots the client with REI in place of JEI (`-Precipe_viewer=rei`); see `scenarios/rei-parity.json`.
-A NeoForge dev client has JEI without being asked. A Fabric one loads a viewer only when told to, so on Fabric nodes the
-runner always passes `-Precipe_viewer` (the scenario's, else `jei`).
+A NeoForge dev client has JEI without being asked, as has `1.21.1-forge` (`-Precipe_viewer=none` turns it off there). A
+Fabric one loads a viewer only when told to, so on Fabric nodes the runner always passes `-Precipe_viewer` (the scenario's,
+else `jei`).
 
 A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise. `"freshSave": true` (or `-FreshSave`) deletes the save first and copies it from the seed again on every run (the seed must be present and be another save; the runner refuses and keeps the save otherwise); `-Save`, `-SaveSeed` on the command line override the scenario's. See "Cross-mod pass" below.
 
@@ -324,8 +341,31 @@ stops only what it started. `server` takes the machine-wide smoke lock described
 process), `client` joins it and `stop` releases it; `b` and the scene scripts fail loudly once a client's pinned process
 is gone. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check built on it; its
 docstring gives the phase order and the expected result, and `multiplayer/grids.py` tiles the shots per node for a
-26.3 vs 26.2 comparison. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server log's `No key layers` ERROR is
-vanilla complaining about the flat world's empty generator settings; the default flat world is used.
+26.3 vs 26.2 comparison. `multiplayer/scene_machines.py` checks machines over the connection (a Tank poured by one player
+and opened by both, a Stone Engine's GUI, a creative engine's power rig filmed by the other player) with recorded pass/fail
+checks; `scene_lib.py` holds the helpers the two scenes share. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server
+log's `No key layers` ERROR is vanilla complaining about the flat world's empty generator settings; the default flat world
+is used.
+
+Loaders: NeoForge nodes take their run switches through `mp.init.gradle` (an init script); a MinecraftForge node (`26.3-forge`)
+through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run carries `--username Dev` from
+the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node has no arm yet:
+`mp.py` and the scene scripts skip it with a reason and exit 0. `setup` also works on a node no single-player run has prepared
+(it takes the newest bridge jar the way the runner does and writes the default `options.txt`).
+
+**The server on another machine.** The two clients always run here (they need a GL context); the server half can run on
+Server1, so the connection is a real network one. Set `MP_REMOTE_CHECKOUT=<name>` (a checkout under `C:\Dev` on Server1, made
+with `E:/GitHub/McDevBridge/tools/remote/Sync-ToServer1.ps1 -Repo <this worktree> -Ref <branch> -Name <name>`; committed state
+only, so commit first) and `server` writes the game directory there, runs `gradlew :<node>:runServer` through
+`Invoke-OnServer1.ps1 -NoDesktop` (the long-lived local process is that poller, which the smoke lock names) and polls the
+server's log over scp for `Done`; the clients quick-play into `MP_SERVER_HOST` (default `Server1`, resolved to IPv4) on the
+scratch ports `MP_PORT`/`MP_RCON_PORT` (25661/25662; the real servers' 25565, 25566 and 25575 are refused), RCON uses a
+password `setup` generates per node (`build/smoke-mp/<node>/rcon.pw`), and `stop` ends the server with RCON `stop`, fetches its
+log to `build/smoke-mp/<node>/server-remote-latest.log` and, only if it will not stop, ends the java processes of that checkout
+alone (also what it does when a start loses the lock race: ending the local poller never stops a remote run). A launch that
+stalls in `Invoke-OnServer1`'s ssh step (no status line after 150 s) is restarted, up to three times. A fresh checkout's first `server` includes a cold Gradle configure (minutes). `MP_LOCK_WAIT_MINUTES=<n>` makes `server`
+wait for another run's smoke lock instead of refusing. Server1's firewall must already allow the JDK that Gradle forks (the
+Microsoft JDK 25 has an any-port inbound rule there); the script changes no firewall or system setting.
 
 ## Resource reload: `sprite-reload`
 
@@ -356,6 +396,12 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 - **The dev user is `Dev` on every loader** (`bc.fabric` passes `--username Dev`), so `ownerUUID:"380df991-f603-344c-a090-369bad2a924a"`
   (Dev's offline UUID) names the player on Fabric as it does on NeoForge.
 - **A mod set the loader refuses ends the node at once.** Fabric Loader shows its error window and the process stays alive, so the runner used to wait out the whole boot budget with the smoke lock held; it now reads the loader's refusal from the console log (`Incompatible mod set`, `FormattedException`) and fails the node with the message. A new alias is worth one boot before a long batch: `sodium,iris` on 26.3-fabric was such a case (Sodium 0.9.3-beta.5 refuses Iris 1.12.0 and older, so the `iris` alias carries Sodium 0.9.2: ask for `iris` alone).
+- **OPAC on a Forge node needs its server config seeded (Windows).** Open Parties and Claims' first write of a world's
+  `serverconfig/openpartiesandclaims-server.toml` fails with `AccessDeniedException` (Forge Config API Port's adapter renames the file
+  it has just created), which kills the integrated server on the first load of every fresh world copy (`crossmod-claims-opac` plays
+  one each run). Put that one file, taken from any world that has booted once, in `versions/<node>/run-smoke/defaultconfigs/`: Forge
+  copies it instead of creating it and the world loads. `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
+  names both; OPAC requires it there). The Forge nodes define `opac` only: the other `crossmod-*` scenarios skip there.
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
   something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`
   floors it 10 blocks under the y it is given). `flan setAdminClaim` (the claim at the command's position) found nothing there,
@@ -367,7 +413,7 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 
 | Scenario | Mods | What it shows |
 |---|---|---|
-| `crossmod-claims-<mod>` | opac, flan (both loaders), ftbchunks (NeoForge 1.21.1, 1.21.11, 26.1.2) | three rigs of Quarry, Builder, Filler, stripes pipe and a Stripes robot beside a claim: none, one that is not the owner's, one that is. Each machine and each kind of act (place, break) is probed separately. `-stranger` variants (opac, flan) claim rig B like rig C (the dev's) and give its machines to a stranger instead; `flan-admin-stranger` does that inside an admin claim, where Flan refuses a machine whose owner is no known player through its separate fake-player permission. Flan's claims are asserted (`flan info` must name the owner) before any machine is placed. An admin claim stops everyone but operators: Flan lets a player of permission level 2 and up through (`Claim.isAdminIgnore`), a real operator's hands included, and on NeoForge a machine's fake player answers `permissions()` with its owner's level, so an operator's machines pass as the operator does (measured on 26.3 with the world's cheats forced on, #204: real hands, `canInteract` of the real player and of the fake player all allow, and `flan` rig B fails 7 of 7). The dev world has cheats off, so the dev is no operator and `flan` rig B is refused on both loaders |
+| `crossmod-claims-<mod>` | opac, flan (both loaders), ftbchunks (NeoForge 1.21.1, 1.21.11, 26.1.2) | three rigs of Quarry, two Builders (a 3x3x3 cobblestone cube, and a 6x2x3 blueprint of cobblestone, stairs and chests whose box straddles the claim border), Filler, stripes pipe, Stripes robot, a Pump on a lava pool across the border and a Flood Gate (#208) beside a claim: none, one that is not the owner's, one that is. Each machine and each kind of act (place, break) is probed separately, and each rig also asserts that what lies outside the claim was built, drained or flooded (a control that the machine ran at all). `ftbchunks-teams` (#208, the FTB Chunks nodes: 1.21.1, 1.21.11, 26.1.2) gives both claimed rigs to the dev's FTB party and owns rig B's machines by a player with a team of his own and rig C's by a player forced into the party, so the refused case is a foreign team and the allowed one a teammate who is not the claimer. No second client is needed: a team is data keyed by a UUID and a machine's fake player carries its owner's. `ftbteams add_fake_player <name>` (a dev-runtime command; FTB Teams 2101 spells it `ftbteams_add_fake_player`) gives a name the world has never seen a team of its own, under the UUID of the name LOWER-CASED (the profile cache lower-cases it before making the offline profile), `party create` must be typed by the player (`playerCmd`: its `source.getEntity()` requirement is read before `execute as` applies) and `ftbteams force add` (2101: `force-add`) puts a profile into a party; `ftbchunks admin claim_as` takes a team, not only a profile. A player in a party answers `ftbteams info <name>` with the party, so the personal teams are checked before the force add. Measured with `--swap ftbchunks-teams` (the two players' machines exchanged: all 28 owner-dependent probes of rigs B and C fail) and `--noclaim ftbchunks-teams` (14 refusal probes of rig B fail). `python generators/gen_crossmod_claims.py --noclaim opac` writes the negative control (rig B never claimed: every refusal probe of rig B must fail); delete the JSON after the run. `-stranger` variants (opac, flan) claim rig B like rig C (the dev's) and give its machines to a stranger instead; `flan-admin-stranger` does that inside an admin claim, where Flan refuses a machine whose owner is no known player through its separate fake-player permission. Flan's claims are asserted (`flan info` must name the owner) before any machine is placed. An admin claim stops everyone but operators: Flan lets a player of permission level 2 and up through (`Claim.isAdminIgnore`), a real operator's hands included, and on NeoForge a machine's fake player answers `permissions()` with its owner's level, so an operator's machines pass as the operator does (measured on 26.3 with the world's cheats forced on, #204: real hands, `canInteract` of the real player and of the fake player all allow, and `flan` rig B fails 7 of 7). The dev world has cheats off, so the dev is no operator and `flan` rig B is refused on both loaders |
 | `crossmod-energy` | energizedpower (both loaders); tre, techreborn (Fabric) | BuildCraft's MJ dynamo into Energized Power and Tech Reborn batteries and cables, their creative sources into BuildCraft's FE engine; the other mod's stored energy rose, the Mining Well dug. The Tech Reborn lanes run only on the Fabric nodes with a techreborn alias |
 | `crossmod-energy-notre` | none (Fabric) | the same BuildCraft blocks with no Team Reborn Energy: they place, open their GUIs, nothing is logged |
 | `crossmod-storage` | tomsstorage, irontanks (both loaders); extendeddrawers, techreborn (Fabric) | item pipes in and out of Tom's Simple Storage and Extended Drawers; fluid pipes, a Pump and a Flood Gate against Tech Reborn tank units with the 81-droplets-per-millibucket rule (1000 mB, 1234 mB, a unit holding a part millibucket) and against Iron Tanks (26.1.2, 26.2). Each mod's lanes run only where it has an alias |

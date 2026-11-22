@@ -142,11 +142,16 @@ import buildcraft.robotics.statements.ActionRobotWorkInArea;
  * so a robot placed today registers, docks, charges, takes damage, drops correctly and idles. Ph4 fills the AI
  * tree in behind the seams already present here.
  */
-// NeoForge sends the extra spawn data through IEntityWithComplexSpawn; Fabric through SpawnDataEntity's payload.
+// NeoForge sends the extra spawn data through IEntityWithComplexSpawn, MinecraftForge through
+// IEntityAdditionalSpawnData (which Forge finds by the interface, so the platform layer cannot add it from outside);
+// Fabric through SpawnDataEntity's payload.
 //? if neoforge {
 public class EntityRobot extends EntityRobotBase implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn,
         SpawnDataEntity, IDebuggable, LevelRemovalEntity {
-//?} else {
+//?} elif forge {
+/*public class EntityRobot extends EntityRobotBase implements net.minecraftforge.entity.IEntityAdditionalSpawnData,
+        SpawnDataEntity, IDebuggable, LevelRemovalEntity {
+*///?} elif fabric {
 /*public class EntityRobot extends EntityRobotBase implements SpawnDataEntity, IDebuggable, LevelRemovalEntity {
 *///?}
 
@@ -563,6 +568,19 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     public void readSpawnData(RegistryFriendlyByteBuf additionalData) {
         readExtraSpawnData(additionalData);
     }
+    //?} elif forge {
+    /*// Forge hands over a plain FriendlyByteBuf (no registry access), which the stack codec needs.
+    @LoaderHook("forge:IEntityAdditionalSpawnData#writeSpawnData")
+    @Override
+    public void writeSpawnData(net.minecraft.network.FriendlyByteBuf buffer) {
+        writeExtraSpawnData(buildcraft.platform.Platform.network().registryBuf(buffer, level().registryAccess()));
+    }
+
+    @LoaderHook("forge:IEntityAdditionalSpawnData#readSpawnData")
+    @Override
+    public void readSpawnData(net.minecraft.network.FriendlyByteBuf additionalData) {
+        readExtraSpawnData(buildcraft.platform.Platform.network().registryBuf(additionalData, level().registryAccess()));
+    }*/
     //?}
 
     @Override
@@ -1039,7 +1057,14 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     public boolean isPushedByFluid(net.neoforged.neoforge.fluids.FluidType type) {
         return false;
     }
-    //?} else {
+    //?} elif forge {
+    /*// Forge's own per-fluid-type hook (EntityFluidInteraction asks it); its no-argument vanilla twin is deprecated there.
+    @LoaderHook("forge:IForgeEntity#isPushedByFluid")
+    @Override
+    public boolean isPushedByFluid(net.minecraftforge.fluids.FluidType type) {
+        return false;
+    }
+    *///?} elif fabric {
     /*// Fabric has no fluid types: vanilla's own test, which NeoForge deprecates for the one above.
     @Override
     public boolean isPushedByFluid() {
@@ -1269,14 +1294,25 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
-    //? if neoforge {
-    @LoaderHook("neoforge:IEntityExtension#onRemovedFromLevel")
+    // Forge's ServerLevel and ClientLevel patches call it too. Forge before 64 (1.21.1, 1.21.11) names it onRemovedFromWorld
+    // (the second arm). NeoForge names it onRemovedFromLevel on every line, so its term goes last and bare: Stonecutter reads
+    // && and || left to right at one rank, and a version term after `neoforge` switched the override off on NeoForge 1.21.1
+    // (the robot never deregistered on a chunk unload there); this order reads the same under either rule.
+    //? if forge && >=26.1 || neoforge {
+    @LoaderHook({"neoforge:IEntityExtension#onRemovedFromLevel", "forge:IForgeEntity#onRemovedFromLevel"})
     @Override
     public void onRemovedFromLevel() {
         onLeftLevel();
         super.onRemovedFromLevel();
     }
-    //?}
+    //?} elif forge {
+    /*@LoaderHook("forge:IForgeEntity#onRemovedFromWorld")
+    @Override
+    public void onRemovedFromWorld() {
+        onLeftLevel();
+        super.onRemovedFromWorld();
+    }
+    *///?}
 
     @Override
     public void onLeftLevel() {

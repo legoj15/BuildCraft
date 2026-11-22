@@ -591,40 +591,41 @@ public class FluidPhysicsTest {
         helper.succeed();
     }
 
-    // What the loader's entity physics reads for a BC fluid: NeoForge's FluidType, Fabric's registered properties.
+    // What the loader's entity physics reads for a BC fluid: the FluidType of NeoForge and of Forge (the same accessors), Fabric's
+    // registered properties.
 
-    /** The water-like flag, or null where the loader has none (NeoForge on 1.21.1). */
+    /** The water-like flag, or null where the loader has none (NeoForge on 1.21.1, Forge: its fluid type has no such flag yet). */
     private static Boolean waterLike(Fluid fluid) {
         //? if neoforge && >=1.21.10 {
         return fluid.getFluidType().getIsWaterLike();
-        //?} elif neoforge {
+        //?} elif neoforge || forge {
         /*return null;
-        *///?} else {
+        *///?} elif fabric {
         /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).waterLike();
         *///?}
     }
 
     private static boolean canSwim(Fluid fluid) {
-        //? if neoforge {
+        //? if neoforge || forge {
         return fluid.getFluidType().canSwim(null);
-        //?} else {
+        //?} elif fabric {
         /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).canSwim();
         *///?}
     }
 
-    /** Whether a boat floats on it: NeoForge's fluid type (what {@code canBoatInFluid} asks), Fabric's boat test. */
+    /** Whether a boat floats on it: the fluid type of NeoForge and Forge (what {@code canBoatInFluid} asks), Fabric's boat test. */
     private static boolean boating(Fluid fluid) {
-        //? if neoforge {
+        //? if neoforge || forge {
         return fluid.getFluidType().supportsBoating(null);
-        //?} else {
+        //?} elif fabric {
         /*return buildcraft.platform.fabric.FabricFluidPhysics.boatsFloatOn(fluid);
         *///?}
     }
 
     private static double motionScale(Fluid fluid) {
-        //? if neoforge {
+        //? if neoforge || forge {
         return fluid.getFluidType().motionScale(null);
-        //?} else {
+        //?} elif fabric {
         /*return buildcraft.platform.fabric.FabricFlowingFluids.declared(fluid).motionScale().getAsDouble();
         *///?}
     }

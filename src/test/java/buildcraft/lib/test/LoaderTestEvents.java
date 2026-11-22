@@ -23,13 +23,14 @@ import buildcraft.platform.event.HookOrder;
 
 /**
  * The loader events a game test fires itself, so the wiring from the loader's event to BuildCraft's listener is under
- * test, not just the listener: each posts the event the running loader would post (NeoForge's bus, or the Fabric API
- * event's invoker), so every listener the loader holds runs, BuildCraft's {@code Platform} hooks included. The
+ * test, not just the listener: each posts the event the running loader would post (NeoForge's or Forge's bus, or the
+ * Fabric API event's invoker), so every listener the loader holds runs, BuildCraft's {@code Platform} hooks included. The
  * {@code claim...} and {@code observe...} methods stand up a claim mod or an observer on the running loader's own
  * event for as long as the returned handle is open; a {@link HookOrder} is the claim's place among the listeners
- * (NeoForge's priority, or the Fabric event phase BuildCraft's own hooks use for it). Fabric events cannot be
- * unregistered, so each Fabric claim kind is one callback registered once (per order), handing the click to the open
- * claims.
+ * (NeoForge's or Forge's priority, or the Fabric event phase BuildCraft's own hooks use for it). Fabric events cannot
+ * be unregistered, so each Fabric claim kind is one callback registered once (per order), handing the click to the open
+ * claims. Forge's events go through BuildCraft's {@code ForgeBus}, which is EventBus 7 on Forge for 26.x and EventBus 6
+ * on Forge 1.21.1: a claim refuses by answering true, and is removed again through the handle the bus returned.
  */
 public final class LoaderTestEvents {
 
@@ -40,10 +41,12 @@ public final class LoaderTestEvents {
     public static void levelUnload(ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Unload(level));
-        //?} elif >=26.1 {
+        //?} elif fabric && >=26.1 {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents.UNLOAD.invoker().onLevelUnload(level.getServer(), level);*/
-        //?} else {
+        //?} elif fabric {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.UNLOAD.invoker().onWorldUnload(level.getServer(), level);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
         //?}
     }
 
@@ -54,18 +57,20 @@ public final class LoaderTestEvents {
     public static void levelUnload(net.minecraft.world.level.Level level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Unload(level));
-        //?} else {
+        //?} elif fabric {
         /*if (!level.isClientSide() && level instanceof ServerLevel server) {
             levelUnload(server);
         } else {
             buildcraft.platform.fabric.FabricGameHooks.fireClientLevelUnload(level);
         }*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Unload(level));*/
         //?}
     }
 
     /**
      * A survival player's break of the block at {@code pos} reaching the point where the loader asks the block whether
-     * it goes (NeoForge's {@code onDestroyedByPlayer}, which also removes the block when it answers true; Fabric's
+     * it goes (NeoForge's and Forge's {@code onDestroyedByPlayer}, which also removes the block when it answers true; Fabric's
      * {@code PlayerBlockBreakEvents.BEFORE}, every callback, BuildCraft's player-break guard among them): whether the
      * break goes ahead.
      */
@@ -75,45 +80,49 @@ public final class LoaderTestEvents {
         //? if neoforge && >=1.21.10 {
         return state.getBlock().onDestroyedByPlayer(state, level, pos, player, player.getMainHandItem(), false,
                 level.getFluidState(pos));
-        //?} elif neoforge {
+        //?} elif neoforge || forge {
         /*return state.getBlock().onDestroyedByPlayer(state, level, pos, player, false, level.getFluidState(pos));*/
-        //?} else {
+        //?} elif fabric {
         /*return net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.BEFORE.invoker()
                 .beforeBlockBreak(level, player, pos, state, level.getBlockEntity(pos));*/
         //?}
     }
 
     /**
-     * A server level saved (NeoForge {@code LevelEvent.Save} for that level; Fabric has only the server-wide
+     * A server level saved (NeoForge's and Forge's {@code LevelEvent.Save} for that level; Fabric has only the server-wide
      * {@code ServerLifecycleEvents.AFTER_SAVE}, which BuildCraft's save hook turns into one call per level).
      */
     public static void levelSave(ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Save(level));
-        //?} else {
+        //?} elif fabric {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.AFTER_SAVE.invoker()
                 .onAfterSave(level.getServer(), false, false);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.LevelEvent.Save(level));*/
         //?}
     }
 
     /**
-     * An entity joining a level, newly spawned (NeoForge {@code EntityJoinLevelEvent}, Fabric
+     * An entity joining a level, newly spawned (NeoForge's and Forge's {@code EntityJoinLevelEvent}, Fabric
      * {@code ServerEntityEvents.ALLOW_LOAD}, before 26.1 BuildCraft's {@code FabricGameHooks.ENTITY_ALLOW_JOIN}; the
      * answer is ignored here).
      */
     public static void entityJoin(Entity entity, ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.EntityJoinLevelEvent(entity, level));
-        //?} elif >=26.1 {
+        //?} elif fabric && >=26.1 {
         /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ALLOW_LOAD.invoker()
                 .onAllowLoad(entity, level, null, false);*/
-        //?} else {
+        //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireEntityJoin(entity, level, false);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.entity.EntityJoinLevelEvent(entity, level));*/
         //?}
     }
 
     /**
-     * A dying entity's drops being collected into {@code drops} (NeoForge {@code LivingDropsEvent}; Fabric
+     * A dying entity's drops being collected into {@code drops} (NeoForge's and Forge's {@code LivingDropsEvent}; Fabric
      * {@code FabricGameHooks.fireLivingDrops}, where its {@code LivingEntityMixin} posts it).
      */
     public static void livingDrops(LivingEntity victim, DamageSource source, Collection<ItemEntity> drops,
@@ -121,14 +130,18 @@ public final class LoaderTestEvents {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(victim, source, drops, recentlyHit));
-        //?} else {
+        //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireLivingDrops(victim, source, recentlyHit,
                 drops instanceof java.util.List<ItemEntity> list ? list : new java.util.ArrayList<>(drops));*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(
+                new net.minecraftforge.event.entity.living.LivingDropsEvent(victim, source, drops, recentlyHit));*/
         //?}
     }
 
     /**
-     * A mob's spawn being finalized, as a natural spawn (NeoForge {@code FinalizeSpawnEvent}; Fabric
+     * A mob's spawn being finalized, as a natural spawn (NeoForge {@code FinalizeSpawnEvent}, Forge
+     * {@code MobSpawnEvent.FinalizeSpawn}; Fabric
      * {@code FabricGameHooks.fireFinalizeSpawn}, where its {@code MobMixin} posts it).
      */
     public static void finalizeSpawn(ServerLevel level, Mob mob) {
@@ -140,14 +153,24 @@ public final class LoaderTestEvents {
         /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent(
                 mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
                 net.minecraft.world.entity.MobSpawnType.NATURAL, null, null));*/
-        //?} else {
+        //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireFinalizeSpawn(mob, false);*/
+        //?} elif forge && >=1.21.10 {
+        /*buildcraft.platform.forge.ForgeBus.post(
+                new net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn(
+                        mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
+                        net.minecraft.world.entity.EntitySpawnReason.NATURAL, null, null, null));*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(
+                new net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn(
+                        mob, level, mob.getX(), mob.getY(), mob.getZ(), level.getCurrentDifficultyAt(mob.blockPosition()),
+                        net.minecraft.world.entity.MobSpawnType.NATURAL, null, null, null));*/
         //?}
     }
 
     /**
      * Calls {@code listener} with each vanilla game event (its type, position and cause) until the returned handle is
-     * closed (NeoForge {@code VanillaGameEvent}; on Fabric the game-test mod's {@code ServerLevelGameEventMixin}, at
+     * closed (NeoForge's and Forge's {@code VanillaGameEvent}; on Fabric the game-test mod's {@code ServerLevelGameEventMixin}, at
      * the same point in {@code ServerLevel.gameEvent}).
      */
     public static Observer observeGameEvents(GameEventListener listener) {
@@ -156,27 +179,37 @@ public final class LoaderTestEvents {
                 event -> listener.onGameEvent(event.getVanillaEvent(), event.getEventPosition(), event.getCause());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.VanillaGameEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*FabricGameEvents.OPEN.add(listener);
         return () -> FabricGameEvents.OPEN.remove(listener);*/
+        //?} elif forge {
+        /*// Forge's event hands over the vanilla event itself, not its holder.
+        buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.VanillaGameEvent.class,
+                event -> listener.onGameEvent(
+                        net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT.wrapAsHolder(event.getVanillaEvent()),
+                        event.getEventPosition(), event.getCause()));
+        return registered::remove;*/
         //?}
     }
 
-    /** A chunk sent to a player (NeoForge {@code ChunkWatchEvent.Sent}; Fabric {@code FabricGameHooks.fireChunkSent},
+    /** A chunk sent to a player (NeoForge {@code ChunkWatchEvent.Sent}, Forge {@code ChunkWatchEvent.Watch}; Fabric {@code FabricGameHooks.fireChunkSent},
      *  where its {@code PlayerChunkSenderMixin} posts it). */
     public static void chunkSent(net.minecraft.server.level.ServerPlayer player, net.minecraft.world.level.chunk.LevelChunk chunk,
             ServerLevel level) {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new net.neoforged.neoforge.event.level.ChunkWatchEvent.Sent(player, chunk, level));
-        //?} else {
+        //?} elif fabric {
         /*buildcraft.platform.fabric.FabricGameHooks.fireChunkSent(level, player, chunk.getPos());*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.post(new net.minecraftforge.event.level.ChunkWatchEvent.Watch(player, chunk, level));*/
         //?}
     }
 
     /**
      * A claim on attacks: {@code claim} is asked about each player attack on an entity until the returned handle is
-     * closed, and refuses it by answering true (NeoForge {@code AttackEntityEvent} cancelled; Fabric
+     * closed, and refuses it by answering true (NeoForge's and Forge's {@code AttackEntityEvent} cancelled; Fabric
      * {@code AttackEntityCallback} answering FAIL, through one callback registered once, as Fabric events cannot be
      * unregistered).
      */
@@ -190,9 +223,14 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.event.entity.player.AttackEntityEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*FabricAttackClaims.OPEN.add(claim);
         return () -> FabricAttackClaims.OPEN.remove(claim);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.AttackEntityEvent.class,
+                event -> claim.test(event.getEntity(), event.getTarget()));
+        return registered::remove;*/
         //?}
     }
 
@@ -209,7 +247,7 @@ public final class LoaderTestEvents {
 
     /**
      * A claim on players' right-clicks on entities, at {@code order} (NeoForge {@code PlayerInteractEvent.EntityInteract}
-     * at the order's priority; Fabric {@code UseEntityCallback} in the order's phase, which BuildCraft's
+     * and Forge {@code EntityInteractSpecific} (on 1.21.1 {@code EntityInteract}, as NeoForge) at the order's priority; Fabric {@code UseEntityCallback} in the order's phase, which BuildCraft's
      * {@code PlayerMixin} also asks for a fake player's click, where NeoForge posts its event).
      */
     public static Observer claimEntityInteractions(HookOrder order,
@@ -228,14 +266,36 @@ public final class LoaderTestEvents {
                 buildcraft.platform.neoforge.NeoForgeGameHooks.priority(order),
                 net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.EntityInteract.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*return FabricInteractClaims.open(order, claim);*/
+        //?} elif forge {
+        /*// Forge 26.3's one entity-click event is EntityInteractSpecific, posted from the same vanilla call as NeoForge's;
+        // Forge 1.21.1 and 1.21.11 post EntityInteract from NeoForge 1.21.1's point (ForgeGameHooks#onEntityInteract has the
+        // same split).
+        //? if >=26.1 {
+        Class<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific> type =
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteractSpecific.class;
+        //?} else {
+        /^Class<net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract> type =
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract.class;
+        ^///?}
+        buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(type, order, event -> {
+            InteractAnswer answer = claim.apply(event.getEntity(), event.getTarget());
+            if (answer == InteractAnswer.ALLOW) {
+                return false;
+            }
+            if (answer == InteractAnswer.REFUSE_CONSUMING) {
+                event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
+            }
+            return true;
+        });
+        return registered::remove;*/
         //?}
     }
 
     /**
      * A claim on entities joining a level, at {@code order}: {@code claim} answering true keeps the entity out (NeoForge
-     * {@code EntityJoinLevelEvent} cancelled at the order's priority; Fabric {@code ServerEntityEvents.ALLOW_LOAD},
+     * and Forge {@code EntityJoinLevelEvent} cancelled at the order's priority; Fabric {@code ServerEntityEvents.ALLOW_LOAD},
      * before 26.1 {@code FabricGameHooks.ENTITY_ALLOW_JOIN}, answering false in the order's phase).
      */
     public static Observer claimEntityJoins(HookOrder order, java.util.function.Predicate<Entity> claim) {
@@ -249,14 +309,18 @@ public final class LoaderTestEvents {
                 buildcraft.platform.neoforge.NeoForgeGameHooks.priority(order),
                 net.neoforged.neoforge.event.entity.EntityJoinLevelEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*return FabricJoinClaims.open(order, claim);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.EntityJoinLevelEvent.class, order, event -> claim.test(event.getEntity()));
+        return registered::remove;*/
         //?}
     }
 
     /**
      * A claim on block placements: {@code claim} is asked about each placement by an entity at a position and refuses
-     * it by answering true (NeoForge {@code BlockEvent.EntityPlaceEvent} cancelled; on Fabric a Common Protection API
+     * it by answering true (NeoForge's and Forge's {@code BlockEvent.EntityPlaceEvent} cancelled; on Fabric a Common Protection API
      * provider, which is how a Fabric claim mod answers placements: asked by BuildCraft's placement probe and by the
      * blocks a machine's item use placed, once per cell).
      */
@@ -270,18 +334,35 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
                 "buildcraftunofficial_gametest", "placement_claim_" + FabricPlacementClaims.IDS.incrementAndGet());
         eu.pb4.common.protection.api.CommonProtection.register(id, new FabricPlacementClaims(claim));
         return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.Registration onSingle = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.class,
+                event -> claim.test(event.getEntity(), event.getPos()));
+        // On EventBus 7 a multi-cell placement posts EntityMultiPlaceEvent, which has its own bus: listen on both. On
+        // EventBus 6 (1.21.1) the parent's listener sees the subclass already.
+        //? if >=1.21.10 {
+        buildcraft.platform.forge.ForgeBus.Registration onMulti = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.class,
+                event -> claim.test(event.getEntity(), event.getPos()));
+        return () -> {
+            onSingle.remove();
+            onMulti.remove();
+        };
+        //?} else {
+        /^return onSingle::remove;
+        ^///?}*/
         //?}
     }
 
     /**
      * A claim that answers the way most Fabric claim mods answer: through a Common Protection API provider alone, with
      * no Fabric API callback refusing anything, so a refusal it causes proves the provider half of BuildCraft's Fabric
-     * asks. On NeoForge it is the events the same asks post. Each predicate refuses by answering true:
+     * asks. On NeoForge and Forge it is the events the same asks post. Each predicate refuses by answering true:
      * {@code breakRefused} a break at a position (NeoForge's break event; provider
      * {@code canBreakBlock}), {@code interactRefused} an interaction at a position (NeoForge
      * {@code PlayerInteractEvent.RightClickBlock} at the clicked block and {@code RightClickItem} at the block the
@@ -327,17 +408,40 @@ public final class LoaderTestEvents {
             bus.unregister(onUse);
             bus.unregister(onAttack);
         };
-        //?} else {
+        //?} elif fabric {
         /*net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
                 "buildcraftunofficial_gametest", "provider_claim_" + FabricProviderClaims.IDS.incrementAndGet());
         eu.pb4.common.protection.api.CommonProtection.register(id,
                 new FabricProviderClaims(breakRefused, interactRefused, damageRefused));
         return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
+        //?} elif forge {
+        /*// Forge has no provider API: the events the same asks post, as on NeoForge.
+        buildcraft.platform.event.PlatformProtection.Registration onBreak =
+                buildcraft.platform.Platform.protection().onBreak(event -> {
+                    if (breakRefused.test(event.pos())) {
+                        event.cancel();
+                    }
+                });
+        buildcraft.platform.forge.ForgeBus.Registration onClick = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> interactRefused.test(event.getPos()));
+        buildcraft.platform.forge.ForgeBus.Registration onUse = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.class,
+                event -> interactRefused.test(event.getPos()));
+        buildcraft.platform.forge.ForgeBus.Registration onAttack = buildcraft.platform.forge.ForgeBus.refuseRemovable(
+                net.minecraftforge.event.entity.player.AttackEntityEvent.class,
+                event -> damageRefused.test(event.getTarget()));
+        return () -> {
+            onBreak.close();
+            onClick.remove();
+            onUse.remove();
+            onAttack.remove();
+        };*/
         //?}
     }
 
     /**
-     * Calls {@code listener} with each player's right-click on a block (NeoForge {@code PlayerInteractEvent.RightClickBlock};
+     * Calls {@code listener} with each player's right-click on a block (NeoForge's and Forge's {@code PlayerInteractEvent.RightClickBlock};
      * Fabric {@code UseBlockCallback}, answering PASS).
      */
     public static Observer observeRightClickBlocks(
@@ -348,14 +452,19 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*FabricRightClicks.OPEN.add(listener);
         return () -> FabricRightClicks.OPEN.remove(listener);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> listener.accept(event.getEntity(), event.getPos()));
+        return registered::remove;*/
         //?}
     }
 
     /**
-     * Calls {@code listener} with each dying entity and what killed it as its drops are collected (NeoForge
+     * Calls {@code listener} with each dying entity and what killed it as its drops are collected (NeoForge's and Forge's
      * {@code LivingDropsEvent}; Fabric BuildCraft's {@code GameHooks.onLivingDrops}, fed by its
      * {@code LivingEntityMixin}).
      */
@@ -366,9 +475,14 @@ public final class LoaderTestEvents {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.event.entity.living.LivingDropsEvent.class, neo);
         return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
-        //?} else {
+        //?} elif fabric {
         /*FabricLivingDrops.OPEN.add(listener);
         return () -> FabricLivingDrops.OPEN.remove(listener);*/
+        //?} elif forge {
+        /*buildcraft.platform.forge.ForgeBus.Registration registered = buildcraft.platform.forge.ForgeBus.listenRemovable(
+                net.minecraftforge.event.entity.living.LivingDropsEvent.class,
+                event -> listener.accept(event.getEntity(), event.getSource()));
+        return registered::remove;*/
         //?}
     }
 

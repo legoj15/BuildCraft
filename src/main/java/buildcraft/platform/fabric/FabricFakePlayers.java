@@ -21,6 +21,14 @@ import buildcraft.platform.FakePlayers;
 /^*
  * {@link FakePlayers} on Fabric: Fabric API's {@link FakePlayer}, subclassed rather than fetched through
  * {@code FakePlayer.get}, whose one global map is shared with every mod (BuildCraft keeps its own cache).
+ *
+ * <p><b>Advancement tracker.</b> Vanilla's {@code ServerPlayer} constructor asks the player list for the tracker of
+ * the profile's UUID, which re-points the owner's cached tracker at the asker. Nothing is needed here to stop a
+ * machine taking an online owner's tracker over: Fabric API's {@code PlayerAdvancementsMixin} (module
+ * fabric-events-interaction-v0, read on 1.21.1 and 26.3; the class and target names differ, the guard is the same) cancels {@code PlayerAdvancements.setPlayer} when
+ * the new player is a {@link FakePlayer}. That is a reason to stay on {@link FakePlayer}: a machine that did not
+ * extend it would need the re-ask {@code ForgeFakePlayers} makes. {@code fake_player_keeps_online_owners_tracker}
+ * pins the outcome.
  *^/
 public final class FabricFakePlayers implements FakePlayers {
 

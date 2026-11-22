@@ -243,8 +243,9 @@ public class BCButton extends AbstractButton {
     public void onClick(double mouseX, double mouseY, int button) {
         action.press(button);
     }*/
-    //?} elif fabric && <1.21.10 {
+    //?} elif fabric && <1.21.10 || forge && <1.21.10 {
     /*// Vanilla's mouseClicked, which hands onClick no button: the same checks and sound, then the press with it.
+    // Forge 1.21.1 patches no button-aware onClick into AbstractWidget either, so it takes this arm too.
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!this.active || !this.visible || !isValidClickButton(button) || !clicked(mouseX, mouseY)) {

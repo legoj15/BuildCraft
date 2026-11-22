@@ -143,13 +143,13 @@ public class BCFluidTank implements BCFluidStorage {
      * an empty resource or a negative amount throws {@code IllegalArgumentException} instead, as it did before the
      * platform layer, when this tank was NeoForge's {@code FluidStacksResourceHandler} and the Tank's column handler
      * called {@code TransferPreconditions.checkNonEmptyNonNegative} itself. NeoForge 1.21.1's classic tanks answered
-     * 0, and Fabric keeps that answer.
+     * 0, and Fabric and MinecraftForge keep that answer.
      */
     public static boolean movesNothing(BCFluidStack resource, int amount) {
         //? if neoforge && >=1.21.10 {
         BCFluidStorage.checkNonEmptyNonNegative(resource, amount);
         return amount == 0;
-        //?} else {
+        //?} elif neoforge && <1.21.10 || fabric || forge {
         /*return resource.isEmpty() || amount <= 0;*/
         //?}
     }

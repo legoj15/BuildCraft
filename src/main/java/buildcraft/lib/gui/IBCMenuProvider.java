@@ -59,7 +59,9 @@ public interface IBCMenuProvider extends MenuProvider, MenuOpeningData {
     }
 
     // The spectator path described above relies on this hook (on Fabric: the ServerPlayer#openMenu mixin, which
-    // finds MenuOpeningData on the provider instead).
+    // finds MenuOpeningData on the provider instead). MinecraftForge has no provider-side writer: IForgeServerPlayer
+    // opens with a writer only when asked to, and the spectator path (ServerPlayerGameMode) calls the plain
+    // ServerPlayer#openMenu(MenuProvider), so a Forge node needs the same mixin as Fabric.
     //? if neoforge {
     @LoaderHook("neoforge:IMenuProviderExtension#writeClientSideData")
     @Override

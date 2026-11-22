@@ -1,0 +1,37 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "buildcraft.platform.forge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AnvilMenuMixin",
+    "EnchantCommandMixin",
+    "EntityFluidInteractionMixin",
+    "EntityFluidTrackerAccessor",
+    "EntityMixin",
+    "FloatGoalMixin",
+    "LevelChunkMixin",
+    "MappedRegistryMixin",
+    "NamespacedWrapperMixin",
+    "SavedDataStorageMixin",
+    "ServerChunkCacheMixin",
+    "ServerGamePacketListenerImplMixin",
+    "ServerPlayerMixin",
+    "SwimMixin"
+  ],
+  "client": [
+    "client.ClientLevelMixin",
+    "client.CuboidItemModelWrapperInvoker",
+    "client.EditBoxMixin",
+    "client.ItemFeatureRendererMixin",
+    "client.ItemModelsAccessor",
+    "client.LevelRendererMixin",
+    "client.ModelBlockRendererMixin",
+    "client.ParticleEngineMixin",
+    "client.ScissorStackMixin",
+    "client.SpriteSourcesAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

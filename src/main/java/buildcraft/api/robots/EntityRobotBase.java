@@ -10,9 +10,12 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -233,8 +236,8 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         }
 
         DamageSource source = attacker == null
-                ? serverLevel.damageSources().source(DamageTypes.MOB_ATTACK, this)
-                : serverLevel.damageSources().source(DamageTypes.PLAYER_ATTACK, this, attacker);
+                ? new DamageSource(damageType(serverLevel, DamageTypes.MOB_ATTACK), this)
+                : new DamageSource(damageType(serverLevel, DamageTypes.PLAYER_ATTACK), this, attacker);
         LivingEntity angeredBefore = target instanceof LivingEntity living ? living.getLastHurtByMob() : null;
         LivingEntity targetingBefore = attackTargetMemory(target);
         //? if >=1.21.10 {
@@ -268,6 +271,12 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         }
 
         held.hurtAndBreak(1, serverLevel, null, item -> {});
+    }
+
+    /** The registered damage type, from the level's registries. DamageSources#source is private in vanilla (NeoForge opens
+     *  it with an access transformer, MinecraftForge does not); the DamageSource constructors are public everywhere. */
+    private static Holder<DamageType> damageType(ServerLevel level, ResourceKey<DamageType> key) {
+        return level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(key);
     }
 
     /** What a brain-driven mob's attack-target memory holds; null for none, or for an entity without one. */

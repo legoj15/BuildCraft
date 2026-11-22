@@ -1,4 +1,4 @@
-"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft, plus a Fabric twin of every supported line (`<line>-fabric`, #98, #170), each building all of it into its own jar
+"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft, plus a Fabric twin of every supported line (`<line>-fabric`, #98, #170) and a MinecraftForge twin of every line except 1.21.10 (`<line>-forge`, #209, #210), each building all of it into its own jar
 
 The project is a mix of Java 25 and Java 21 out of necessity.
 
@@ -16,6 +16,18 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # them (FML-JUnit has no Fabric twin); their compiles are the deprecated-API guard (-Werror, :<node>-fabric:checkDeprecations).
 # `python -I scripts/fabric-mixin-check.py <node>-fabric` checks mixin targets, field and handler parameter types and
 # `ordinal`s against that node's Minecraft (compile the node first; it refuses, exit 2, while Gradle is regenerating sources).
+# Plus a MinecraftForge twin of every line EXCEPT 1.21.10 (#209, #210; a new Minecraft line gets one for as long as Forge
+# continues): 1.21.1-forge (Forge 52, EventBus 6), 1.21.11-forge (61), 26.1.2-forge (64), 26.2-forge (65), 26.3-forge (66).
+# MinecraftForge is NOT NeoForge: ForgeGradle 7, its own loader API and metadata, code in buildcraft/platform/forge/ under
+# `//? if forge {`, mixins in src/main/resources-forge/buildcraftunofficial.forge.mixins.json. :<node>-forge:runClient /
+# runServer work, :<node>-forge:runGameTest runs the shared game tests (the gate; in :<node>-forge:nodeVerification, which
+# fullTestSuite runs). No JUnit tests on them. The run tasks honour -PbcDebug, -PbcQuickPlay, -PbcRunDir (client and
+# server), -PbcUser=<name> and -PbcQuickPlayServer=<host:port> (a second client for the multiplayer rig) and -PwithMods.
+# Only 1.21.1-forge wires a recipe viewer (JEI; -Precipe_viewer=none for none). Quick-play is defective on that Forge line
+# (quickplay_drops_game_events in its gradle.properties, #226): open saves through Singleplayer, as the smoke runner does.
+# Forge jars are built but held back from a release by the release tool's ship gate until the user says otherwise.
+# Standing design, per-line facts and what is not exercised: docs/forge-port.md. Forge sources per line: .forge-ref/
+# (bash scripts/forge-sources-sync.sh), the Forge twin of .neoforge-ref/.
 # Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and each Fabric node's nodeVerification.
@@ -95,7 +107,7 @@ Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSe
 
 ### Platform layer
 
-Loader-facing seams live in `buildcraft.platform` (`Platform.loader()` today: side, mod list, game/config dirs, current server); common code goes through it, not straight to FML. Contract rule: the files in `buildcraft/platform/` outside the per-loader packages name only the JDK, vanilla, other `buildcraft.platform` types, `buildcraft.api.fluids` (`BCFluidStack`) and `buildcraft.api.capability` (`BCCapability`) — never a loader type or any other BC class. Loader code lives in `buildcraft/platform/<loader>/`, each file's body inside `//? if <loader> {` (Stonecutter constants `neoforge`/`fabric`, set from the `loader` property), and only the binder names an implementation. Standing design, slice plan and finish line: [docs/platform-layer.md](docs/platform-layer.md) (#98).
+Loader-facing seams live in `buildcraft.platform` (`Platform.loader()` today: side, mod list, game/config dirs, current server); common code goes through it, not straight to FML. Contract rule: the files in `buildcraft/platform/` outside the per-loader packages name only the JDK, vanilla, other `buildcraft.platform` types, `buildcraft.api.fluids` (`BCFluidStack`) and `buildcraft.api.capability` (`BCCapability`) — never a loader type or any other BC class. Loader code lives in `buildcraft/platform/<loader>/`, each file's body inside `//? if <loader> {` (Stonecutter constants `neoforge`/`fabric`/`forge`, set from the `loader` property; never a bare loader `else`, and a condition mixing `&&` with `||` is read left to right at one rank, so write it so the order cannot matter: `StonecutterDirectiveGuardTester` fails one that can), and only the binder names an implementation. Standing design, slice plan and finish line: [docs/platform-layer.md](docs/platform-layer.md) (#98).
 
 ### Conventions
 

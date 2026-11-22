@@ -57,6 +57,8 @@ public abstract class AbstractBCSyncedBlockEntity extends AbstractBCBlockEntity 
         return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
 
+    // NeoForge 1.21.1 only: Forge 1.21.1's IForgeBlockEntity.onDataPacket default applies the tag whenever it is
+    // non-null, empty or not, so a Forge node needs no twin of this override.
     //? if neoforge && <1.21.10 {
     /*// 1.21.1's IBlockEntityExtension.onDataPacket only applies the update tag when it is NON-empty.
     // A tile that serialises to an EMPTY tag in some state (e.g. a tank drained empty, an engine that

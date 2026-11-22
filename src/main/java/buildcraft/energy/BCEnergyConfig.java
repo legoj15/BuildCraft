@@ -11,6 +11,8 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import buildcraft.lib.misc.ConfigListUtil;
+
 /**
  * Configuration for BuildCraft Energy.
  */
@@ -174,18 +176,14 @@ public class BCEnergyConfig {
 
         builder.pop();
 
-        forceExcessiveOilBiomes = builder
-                .comment(
+        forceExcessiveOilBiomes = ConfigListUtil.stringList(
+                builder.comment(
                         "Biome IDs that should always receive a 30x oil bonus (small/medium/large rolls all multiplied).",
                         "Originally targeted BuildCraft's own oil_desert/oil_ocean biomes (which no longer exist);",
                         "can now be used to force vanilla or modded biomes to gush oil. Empty by default."
-                )
-                .defineListAllowEmpty(
-                        "forceExcessiveOilBiomes",
-                        List.of(),
-                        () -> "",
-                        s -> s instanceof String
-                );
+                ),
+                "forceExcessiveOilBiomes",
+                List.of());
 
         // Richest oil tier: 1.5x bonus and the standalone LAKE-style surface roll is gated
         // to these biomes. Land biomes in this tier (desert, badlands) get the new clean
@@ -194,29 +192,25 @@ public class BCEnergyConfig {
         // tall spout of a LARGE infinite spring is unambiguous), and the LAKE roll
         // produces a large pool. Ocean biomes in this tier keep the existing tendril
         // aesthetic. Defaults: deep oceans + deserts + badlands variants.
-        richSurfaceDepositBiomes = builder.defineListAllowEmpty(
+        richSurfaceDepositBiomes = ConfigListUtil.stringList(
+                builder,
                 "richSurfaceDepositBiomes",
                 List.of(
                         "minecraft:deep_ocean", "minecraft:deep_lukewarm_ocean",
                         "minecraft:deep_cold_ocean", "minecraft:deep_frozen_ocean",
                         "minecraft:desert",
                         "minecraft:badlands", "minecraft:wooded_badlands", "minecraft:eroded_badlands"
-                ),
-                () -> "",
-                s -> s instanceof String
-        );
+                ));
 
         // Lighter oil tier: a 1.25x bonus multiplier, but no LAKE-style surface tendrils.
         // By default this contains shallow ocean variants only.
-        surfaceDepositBiomes = builder.defineListAllowEmpty(
+        surfaceDepositBiomes = ConfigListUtil.stringList(
+                builder,
                 "surfaceDepositBiomes",
                 List.of(
                         "minecraft:ocean", "minecraft:warm_ocean", "minecraft:lukewarm_ocean",
                         "minecraft:cold_ocean", "minecraft:frozen_ocean"
-                ),
-                () -> "",
-                s -> s instanceof String
-        );
+                ));
 
         // Standard oil tier: 1.0x rate (unchanged from the historical default for these
         // biomes). Defaults to biomes that are otherwise low-value to the player —
@@ -225,21 +219,20 @@ public class BCEnergyConfig {
         // frozen_river (a thin iced-over transit biome — distinct enough from vanilla
         // rivers, which are excluded, to support oil here). Biomes not in this list
         // and not in any richer/lighter tier drop to the 0.5x reduced base rate.
-        standardSurfaceDepositBiomes = builder.defineListAllowEmpty(
+        standardSurfaceDepositBiomes = ConfigListUtil.stringList(
+                builder,
                 "standardSurfaceDepositBiomes",
                 List.of(
                         "minecraft:jungle", "minecraft:sparse_jungle", "minecraft:bamboo_jungle",
                         "minecraft:ice_spikes", "minecraft:snowy_beach", "minecraft:frozen_river"
-                ),
-                () -> "",
-                s -> s instanceof String
-        );
+                ));
 
         // Mountainous oil tier: 0.1x (10x reduced) rate. Rationale: surface oil seeping
         // through bedrock-grade rock is unrealistic. Includes alpine valley biomes
         // (meadow, grove, cherry_grove) by default; move them out if you'd like more
         // oil there.
-        mountainousSurfaceDepositBiomes = builder.defineListAllowEmpty(
+        mountainousSurfaceDepositBiomes = ConfigListUtil.stringList(
+                builder,
                 "mountainousSurfaceDepositBiomes",
                 List.of(
                         "minecraft:windswept_hills", "minecraft:windswept_gravelly_hills",
@@ -247,24 +240,17 @@ public class BCEnergyConfig {
                         "minecraft:frozen_peaks", "minecraft:stony_peaks",
                         "minecraft:snowy_slopes", "minecraft:meadow", "minecraft:grove",
                         "minecraft:cherry_grove"
-                ),
-                () -> "",
-                s -> s instanceof String
-        );
+                ));
 
-        excludedBiomes = builder
-                .comment("Biome IDs that participate in the include/exclude check below. See biomeListMode.",
-                         "Vanilla rivers are excluded by default — they're thin transit biomes where an oil",
-                         "deposit would just look like a polluted creek, and the spout's column of source",
-                         "blocks tends to surface awkwardly across the narrow river bed. (Frozen rivers are",
-                         "left in, classified as standard tier — they're functionally the same shape but",
-                         "their iced-over surface gives them a more isolated, frontier-like feel.)")
-                .defineListAllowEmpty(
-                        "excludedBiomes",
-                        List.of("minecraft:the_void", "minecraft:river"),
-                        () -> "",
-                        s -> s instanceof String
-                );
+        excludedBiomes = ConfigListUtil.stringList(
+                builder.comment("Biome IDs that participate in the include/exclude check below. See biomeListMode.",
+                                "Vanilla rivers are excluded by default — they're thin transit biomes where an oil",
+                                "deposit would just look like a polluted creek, and the spout's column of source",
+                                "blocks tends to surface awkwardly across the narrow river bed. (Frozen rivers are",
+                                "left in, classified as standard tier — they're functionally the same shape but",
+                                "their iced-over surface gives them a more isolated, frontier-like feel.)"),
+                "excludedBiomes",
+                List.of("minecraft:the_void", "minecraft:river"));
 
         biomeListMode = builder
                 .comment(
@@ -273,14 +259,10 @@ public class BCEnergyConfig {
                 )
                 .defineEnum("biomeListMode", ListMode.BLACKLIST);
 
-        excludedDimensions = builder
-                .comment("Dimension IDs that participate in the include/exclude check below. See dimensionListMode.")
-                .defineListAllowEmpty(
-                        "excludedDimensions",
-                        List.of("minecraft:the_end"),
-                        () -> "",
-                        s -> s instanceof String
-                );
+        excludedDimensions = ConfigListUtil.stringList(
+                builder.comment("Dimension IDs that participate in the include/exclude check below. See dimensionListMode."),
+                "excludedDimensions",
+                List.of("minecraft:the_end"));
 
         dimensionListMode = builder
                 .comment(
@@ -289,16 +271,12 @@ public class BCEnergyConfig {
                 )
                 .defineEnum("dimensionListMode", ListMode.BLACKLIST);
 
-        netherSpringBiomes = builder
-                .comment("Nether biome IDs where a LARGE oil roll gets an infinite searing-oil spring at the world floor.",
-                         "Crimson Forest by default (high biomass). Nether oil is always searing crude; every other",
-                         "Nether biome only rolls finite pockets, lava-sea slicks and small spouts.")
-                .defineListAllowEmpty(
-                        "netherSpringBiomes",
-                        List.of("minecraft:crimson_forest"),
-                        () -> "",
-                        s -> s instanceof String
-                );
+        netherSpringBiomes = ConfigListUtil.stringList(
+                builder.comment("Nether biome IDs where a LARGE oil roll gets an infinite searing-oil spring at the world floor.",
+                                "Crimson Forest by default (high biomass). Nether oil is always searing crude; every other",
+                                "Nether biome only rolls finite pockets, lava-sea slicks and small spouts."),
+                "netherSpringBiomes",
+                List.of("minecraft:crimson_forest"));
 
         builder.pop();
     }

@@ -69,7 +69,10 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
      *                     (grass beside the lake) still spreads onto crude oil like any fire */
     public BCFluidBlock(FlowingFluid fluid, BlockBehaviour.Properties properties, int heat,
                         FluidVolatility.Band volatility, boolean lavaIgnites) {
-        super(fluid, properties);
+        // The vanilla flag too, for MinecraftForge has no per-block hook for lava's ignition test, only
+        // this flag ANDed with IForgeBlock#isFlammable (which is getFlammability > 0, answered above), and that pair
+        // equals lavaIgnites(state): every band that burns has a flammability above zero.
+        super(fluid, lavaIgnites ? properties.ignitedByLava() : properties);
         this.searing = heat >= 2;
         this.volatility = volatility;
         this.lavaIgnites = lavaIgnites;
@@ -105,21 +108,29 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
         return FluidVolatility.catchFire(level, pos, state, volatility);
     }
 
-    // NeoForge's patched fire hooks, each handing over to the FireReactiveBlock method above (Fabric's FireBlock and
-    // LavaFluid mixins call those directly).
-    //? if neoforge {
-    @LoaderHook("neoforge:IBlockExtension#getFlammability")
+    // NeoForge's and MinecraftForge's patched fire hooks (same names and arguments, called by each loader's FireBlock
+    // patch), each handing over to the FireReactiveBlock method above (Fabric's FireBlock and LavaFluid mixins call
+    // those directly).
+    //? if neoforge || forge {
+    @LoaderHook({"neoforge:IBlockExtension#getFlammability", "forge:IForgeBlock#getFlammability"})
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
         return fireBurnOdds(state);
     }
 
-    @LoaderHook("neoforge:IBlockExtension#getFireSpreadSpeed")
+    @LoaderHook({"neoforge:IBlockExtension#getFireSpreadSpeed", "forge:IForgeBlock#getFireSpreadSpeed"})
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
         return fireIgniteOdds(state);
     }
+    //?}
 
+    // Whether lava lights this block: NeoForge asks the block. Fabric's LavaFluidMixin asks FireReactiveBlock#lavaIgnites.
+    // Forge has no such hook, and needs no mixin: its LavaFluid patch tests the block state's own ignitedByLava flag
+    // (set from lavaIgnites in the constructor) and then IForgeBlock#isFlammable, the getFlammability answer above, which
+    // is positive exactly while this block burns; that is lavaIgnites(state). Fire spread reads getFlammability and
+    // getFireSpreadSpeed only, never the flag.
+    //? if neoforge {
     @LoaderHook("neoforge:IBlockExtension#ignitedByLava")
     @Override
     public boolean ignitedByLava(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
@@ -127,8 +138,9 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
     }
     //?}
 
-    // onCaughtFire: void on 1.21.1, boolean from 1.21.10 (true = the block was set on fire), and 26.3 adds the item
-    // that lit it. All three hand the work to catchFire.
+    // onCaughtFire: void on 1.21.1, boolean from 1.21.10 (true = the block was set on fire), and NeoForge 26.3 adds the
+    // item that lit it. All of them hand the work to catchFire. Forge has the 5-argument forms (void on 1.21.1,
+    // boolean after) on every line.
     //? if neoforge && >=26.3 {
     @LoaderHook("neoforge:IBlockExtension#onCaughtFire")
     @Override
@@ -136,14 +148,14 @@ public class BCFluidBlock extends LiquidBlock implements FireReactiveBlock {
                                 ItemStack ignitionItem) {
         return catchFire(state, level, pos);
     }
-    //?} elif neoforge && >=1.21.10 {
-    /*@LoaderHook("neoforge:IBlockExtension#onCaughtFire")
+    //?} elif neoforge && >=1.21.10 || forge && >=1.21.10 {
+    /*@LoaderHook({"neoforge:IBlockExtension#onCaughtFire", "forge:IForgeBlock#onCaughtFire"})
     @Override
     public boolean onCaughtFire(BlockState state, Level level, BlockPos pos, Direction direction, LivingEntity igniter) {
         return catchFire(state, level, pos);
     }*/
-    //?} elif neoforge {
-    /*@LoaderHook("neoforge:IBlockExtension#onCaughtFire")
+    //?} elif neoforge || forge {
+    /*@LoaderHook({"neoforge:IBlockExtension#onCaughtFire", "forge:IForgeBlock#onCaughtFire"})
     @Override
     public void onCaughtFire(BlockState state, Level level, BlockPos pos, Direction direction, LivingEntity igniter) {
         catchFire(state, level, pos);

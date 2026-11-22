@@ -912,6 +912,17 @@ public class TileFiller extends TileBC_Neptune
         return renderBounds;
     }
 
+    // MinecraftForge culls a block entity by its own bounds (it has no renderer-level hook, which RenderFiller answers
+    // for NeoForge), so the box RenderFiller hands NeoForge's frustum test is this tile's answer there. Forge's level
+    // renderer patches ask it (LevelExtractor on 26.x, LevelRenderer on 1.21.1).
+    //? if forge {
+    /*@buildcraft.platform.LoaderHook("forge:IForgeBlockEntity#getRenderBoundingBox")
+    @Override
+    public AABB getRenderBoundingBox() {
+        return getRenderBounds();
+    }*/
+    //?}
+
     /** Server side: whether the builder made progress within {@link #PROGRESS_WINDOW_TICKS}, as sent with every sync. */
     private boolean isBuildingNow() {
         if (level == null || mode == Mode.OFF || isFinished()) {

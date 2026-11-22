@@ -34,8 +34,8 @@ What it measures, all on the live view (the code the node actually compiles):
     tagged (carry a @LoaderHook annotation) and untagged. A match counts only when the declaring BC type descends
     from the vanilla type that carries the extension (IBlockExtension -> Block, found through class headers in the
     same sources), so a BC method that merely shares a name with an extension method is not mistaken for a patch.
- 5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge or .fabric) other than
-    the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package (any BC
+ 5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge, .fabric or .forge) other than
+    the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc, net.minecraftforge or a BC gameplay package (any BC
     package but buildcraft.platform, buildcraft.api.fluids and buildcraft.api.capability).
  6. Stonecutter directive lines remaining in common code.
  7. Test-tree figures (src/test/java), informational.
@@ -70,12 +70,13 @@ REPO = Path(__file__).resolve().parent.parent
 #: The NeoForge implementation package: references here are the point of the package, so they are not counted.
 IMPL_PREFIX = "buildcraft/platform/neoforge/"
 #: Loader implementation packages. Contract rules apply to every other file under buildcraft/platform/.
-LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/")
+LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/", "buildcraft/platform/forge/")
 #: The only common files allowed to name a loader implementation package (the compile-time binders).
 BINDERS = ("buildcraft/platform/Platform.java", "buildcraft/platform/client/ClientPlatform.java")
 #: The oldest node. Its commented arms do not count toward the finish line (NeoForge-only forever).
 LEGACY_NODE = "1.21.1"
-FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "26.3-fabric")
+FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "26.3-fabric", "26.3-forge", "26.2-forge",
+                  "26.1.2-forge", "1.21.11-forge", "1.21.1-forge")
 
 #: References that are tolerated for now. Matched in order: `paths` are source-root-relative prefixes, `types` are
 #: regexes over the fully qualified name. A reference matching an entry counts as allowlisted, not remaining.
@@ -93,7 +94,7 @@ ALLOWLIST = {
     "api-events-on-neoforge-bus": {
         "reason": "BuildCraft's API events stay NeoForge Events posted on NeoForge.EVENT_BUS on NeoForge, so addon "
                   "listeners keep working (user decision, 2026-11: no NeoForge behaviour change); the //? if neoforge "
-                  "arms are confined to these two files and are absent on Fabric",
+                  "arms are confined to these two files and are absent on Fabric and Forge",
         "types": [],
         "paths": [
             "buildcraft/api/events/BCEvent.java",
@@ -219,7 +220,7 @@ _D_ELIF = re.compile(r"^\}\s*(?:elif|else\s+if)\s+(.+?)\s*\{$")
 _D_ELSE = re.compile(r"^\}\s*else\s*\{$")
 _D_END = re.compile(r"^\}$")
 _TERM_VERSION = re.compile(r"^(>=|<=|!=|>|<|=)?\s*(\d+(?:\.\d+)*)$")
-_TERM_CONSTANT = re.compile(r"^(neoforge|fabric)$")
+_TERM_CONSTANT = re.compile(r"^(neoforge|fabric|forge)$")
 
 
 class CensusError(Exception):
@@ -270,11 +271,21 @@ def _term_true(term, node):
 def condition_nodes(cond, nodes):
     """The names of the nodes for which a directive condition holds, or None when the grammar is not understood."""
     try:
-        groups = [[t for t in part.split("&&")] for part in cond.split("||")]
-        return frozenset(
-            node.name for node in nodes if any(all(_term_true(t, node) for t in ands) for ands in groups))
+        return frozenset(node.name for node in nodes if _cond_holds(cond, node))
     except ValueError:
         return None
+
+
+def _cond_holds(cond, node):
+    """Stonecutter 0.9.8 gives && and || the same rank and reads left to right (measured with a scratch probe: on the
+    1.21.1 NeoForge node `neoforge || forge && >=1.21.10` is off, where the usual precedence would turn it on). The
+    tree writes mixed conditions with the version term repeated after each loader, which reads the same either way."""
+    parts = re.split(r"(&&|\|\|)", cond)
+    result = _term_true(parts[0], node)
+    for op, term in zip(parts[1::2], parts[2::2]):
+        value = _term_true(term, node)
+        result = (result and value) if op == "&&" else (result or value)
+    return result
 
 
 def parse_directive(text):
@@ -306,7 +317,7 @@ class ChainStates:
 
         for line, text in directives:
             kind, cond = parse_directive(text)
-            if cond is not None and re.search(r"\b(?:neoforge|fabric)\b", cond):
+            if cond is not None and re.search(r"\b(?:neoforge|fabric|forge)\b", cond):
                 self.loader_lines += 1
             if kind == "if":
                 self.chains += 1
@@ -659,10 +670,11 @@ def harvest_extension_methods(path):
 
 _NEOFORGED = re.compile(r"(?<![\w.$])net\.neoforged(?:\.(?:\w+|\*))*")
 _IMPORT_PREFIX = re.compile(r"\s*import\s+(?:static\s+)?$")
-_IMPL_NAME = re.compile(r"(?<![\w.$])buildcraft\.platform\.(?:neoforge|fabric)\b")
+_IMPL_NAME = re.compile(r"(?<![\w.$])buildcraft\.platform\.(?:neoforge|fabric|forge)\b")
 _CONTRACT_BANS = (
     (re.compile(r"(?<![\w.$])net\.neoforged\b"), "net.neoforged"),
     (re.compile(r"(?<![\w.$])net\.fabricmc\b"), "net.fabricmc"),
+    (re.compile(r"(?<![\w.$])net\.minecraftforge\b"), "net.minecraftforge"),
     # buildcraft.api.fluids and buildcraft.api.capability are the only other BC packages a contract may name:
     # BCFluidStack and the BCCapability token are vanilla-only and the Fabric node compiles them (bc.fabric.gradle.kts),
     # so the fluid storage contracts (S14d) and the capability registrar and lookups (S14e) carry them.

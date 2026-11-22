@@ -45,6 +45,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientVanillaExtensions();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientVanillaExtensions();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientVanillaExtensions();
             *///?}
         }
     }
@@ -57,6 +59,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientModels();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientModels();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientModels();
             *///?}
         }
     }
@@ -74,6 +78,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientFluids();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientFluids();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientFluids();
             *///?}
         }
     }
@@ -86,6 +92,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientHooks();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientHooks();
             *///?}
         }
     }
@@ -98,6 +106,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientRegistrationSinks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientRegistrationSinks();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientRegistrationSinks();
             *///?}
         }
     }
@@ -110,6 +120,8 @@ public final class ClientPlatform {
             return new buildcraft.platform.neoforge.client.NeoForgeClientConfigScreens();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.client.FabricClientConfigScreens();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.client.ForgeClientConfigScreens();
             *///?}
         }
     }

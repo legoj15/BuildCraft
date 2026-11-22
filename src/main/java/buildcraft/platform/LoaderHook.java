@@ -19,12 +19,19 @@ import java.lang.annotation.Target;
  * fails the build loudly instead of silently never calling the method. Keep the tagged body a one-line delegate to a
  * common method, so that other route can call the same logic.
  *
+ * <p>An override that two loaders both call under one name (its arm opens {@code //? if neoforge || forge}) lists a
+ * hook per loader, so a grep for {@code forge:} finds every Forge hook BuildCraft answers; an arm keyed to one loader
+ * (the Forge form of a hook whose signature differs, written beside the NeoForge one) carries that loader's tag alone.
+ *
  * <p>Source retention: this is a bookkeeping tag, it never reaches the class files.
  */
 @Documented
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 public @interface LoaderHook {
-    /** {@code "<loader>:<patched interface>#<method>"}, e.g. {@code "neoforge:IBlockExtension#getFlammability"}. */
-    String value();
+    /**
+     * One {@code "<loader>:<patched interface>#<method>"} per loader that calls the method, e.g.
+     * {@code "neoforge:IBlockExtension#getFlammability"} and {@code "forge:IForgeBlock#getFlammability"}.
+     */
+    String[] value();
 }

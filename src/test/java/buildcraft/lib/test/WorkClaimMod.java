@@ -38,6 +38,10 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * Fabric claim mod answers placements through Common Protection API, so there the placement half is a
  * {@code ProtectionProvider} each claim registers and removes again. The provider is asked once per cell, where
  * NeoForge posts one event for a multi-cell placement (at its first cell).
+ *
+ * <p>On Forge each is a listener on the event's own bus (a predicate answering true refuses), removed again through the
+ * handle {@code addListener} returned. A multi-cell placement posts {@code EntityMultiPlaceEvent}, which has a bus of its
+ * own (an event does not pass to its subclasses' buses), so the placement half listens on both.
  */
 public final class WorkClaimMod implements AutoCloseable {
 
@@ -52,7 +56,10 @@ public final class WorkClaimMod implements AutoCloseable {
     private final Consumer<PlayerInteractEvent.RightClickBlock> toolListener;
     private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
     private final Consumer<PlayerInteractEvent.RightClickItem> itemListener;
-    //?} else {
+    //?} elif forge {
+    /*/^* The handles of this claim's Forge listeners, removed by close. ^/
+    private final java.util.List<buildcraft.platform.forge.ForgeBus.Registration> handles = new java.util.ArrayList<>();*/
+    //?} elif fabric {
     /*private static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
     private static final java.util.List<WorkClaimMod> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
     /^* This claim's Common Protection API provider id: registered by the constructor, removed by close. *^/
@@ -124,7 +131,19 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, toolListener);
         NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem.class, itemListener);
-        //?} else {
+        //?} elif forge {
+        /*handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+                event -> toolAsk(event.getPos())));
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent.class,
+                event -> placeAsk(event.getPos())));
+        // EventBus 7 gives the multi-cell placement its own bus; on EventBus 6 (1.21.1) the parent's listener sees it.
+        //? if >=1.21.10 {
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.level.BlockEvent.EntityMultiPlaceEvent.class,
+                event -> placeAsk(event.getPos())));
+        //?}
+        handles.add(buildcraft.platform.forge.ForgeBus.refuseRemovable(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem.class,
+                event -> itemAsk(event.getPos())));*/
+        //?} elif fabric {
         /*OPEN.add(this);
         // The placement: a Common Protection API provider, as a Fabric claim mod answers one (it refuses nothing else:
         // the right-click and the item use are the callbacks above).
@@ -218,7 +237,9 @@ public final class WorkClaimMod implements AutoCloseable {
         NeoForge.EVENT_BUS.unregister(toolListener);
         NeoForge.EVENT_BUS.unregister(placeListener);
         NeoForge.EVENT_BUS.unregister(itemListener);
-        //?} else {
+        //?} elif forge {
+        /*handles.forEach(buildcraft.platform.forge.ForgeBus.Registration::remove);*/
+        //?} elif fabric {
         /*OPEN.remove(this);
         eu.pb4.common.protection.api.CommonProtection.remove(providerId);*/
         //?}

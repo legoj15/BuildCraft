@@ -8,7 +8,7 @@ Standing design for moving every NeoForge use behind `buildcraft.platform` (Phas
 - **Finish line, Phase 1.** Two things must hold, not one:
   1. The census (see Progress metric) reports zero live `net.neoforged` references outside `buildcraft/platform/neoforge/**` on the 26.3 view, apart from the explicit allowlist.
   2. Every patched-vanilla override (a NeoForge-injected method with no import, such as `getFlammability` or `writeClientSideData`) carries a `@LoaderHook` tag.
-- **Which arms count.** The 1.21.1-only arms (`//?} else {` of `>=1.21.10`) do not count toward the finish line. That node is NeoForge-only forever, because Phase 3 excludes 1.21.x. Migrate them into the adapter whenever a slice already owns the seam (it removes directives for free), but never open a slice just for them.
+- **Which arms count.** The 1.21.1-only arms (`//?} else {` of `>=1.21.10`) do not count toward the finish line. (Written when that node was to stay NeoForge-only; since #170 and #209 it has Fabric and Forge twins, whose arms are their own.) Migrate them into the adapter whenever a slice already owns the seam (it removes directives for free), but never open a slice just for them.
 - **The issue's criterion is replaced on purpose.** "No file outside `buildcraft.platform` imports `net.neoforged`" has three faults:
   - It is blind to patched overrides.
   - It can be gamed with fully qualified names (204 live before S1).
@@ -45,6 +45,8 @@ Verified facts this section rests on:
 - Everywhere else, loader differences live in loader packages, and directives in common code stay about MC version.
 - Never use negation (`!fabric`); write the positive constant.
 - Never nest a loader arm inside an MC arm in common code. Nesting MC arms inside a loader-gated implementation file is fine.
+- Three loaders (docs/forge-port.md): no bare `else` after a loader-keyed arm in main code (`StonecutterDirectiveGuardTester` fails it); name each loader the arm serves. A patched override MinecraftForge calls under the same name and signature opens `//? if neoforge || forge {` and lists both hooks in its `@LoaderHook`; one whose Forge signature differs gets an `//?} elif forge {` arm beside it.
+- Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (measured: `neoforge || forge && >=1.21.10` is off on NeoForge 1.21.1). Write a mixed condition with the version term repeated after each loader, `neoforge && >=1.21.10 || forge && >=1.21.10`, or with the loader that serves every line last, `forge && >=1.21.10 || neoforge`, which reads the same either way; the guard and the census evaluate left to right, and the guard fails a condition that reads differently by usual precedence on any node.
 
 ## Binding mechanism
 
@@ -344,6 +346,12 @@ Every NeoForge line has a `<mc>-fabric` twin (`settings.gradle.kts`; pins in `ve
 - **1.21.1 gaps:** chunk tickets are not persisted; no packet splitting (vanilla's 1 MiB / 32 KiB limits); Fabric API 0.116 has no client game-test module, so the game-test mod carries a stand-in for the part the client game test uses (`gametest.ClientGameTestShim`, test sources only): the same body and screenshot names, but no dedicated server, so the multiplayer phase (`BCFabricMultiplayerChecks`) and its two shots are left out there, as is the hit-particle check (its hook sits in `Minecraft.continueAttack`).
 - **Game-test registration before 1.21.5** lives in `lib.test.LegacyGameTestRegistry`, shared by NeoForge 1.21.1 and 1.21.1-fabric (944 BC tests; later lines add vanilla's `always_pass`).
 - **Mixin checker:** `scripts/fabric-mixin-check.py` checks, per node, that mixin targets exist (overloads by descriptor), that `@Shadow`/`@Accessor`/`@Invoker` and injector-handler types and `@Inject` callback kinds match the target's descriptors, and that `@At(ordinal = N)` has an N-th matching instruction; it warns (exit 0) where it cannot resolve a type, and refuses (exit 2) to read a generated view Gradle is still writing. `@Local` captures, local ordinals, constants and slices are unchecked, so a 0 there is still not a guarantee, the game-test run is.
+
+## Forge nodes (#209, as built 2026-11-21)
+
+MinecraftForge is the third loader behind the same contracts: a `<line>-forge` node on 1.21.1, 1.21.11, 26.1.2, 26.2 and 26.3 (never 1.21.10; a new Minecraft line gets one for as long as Forge continues). The implementation is `buildcraft/platform/forge/**`, each file's body inside `//? if forge {`, bound by the same binder; the Stonecutter constant is `forge` and the build logic is `buildSrc/src/main/kotlin/bc.forge.gradle.kts`. Nothing in the contracts changed shape for it. What Forge lacks next to NeoForge (patched hooks, data attachments, a recipe payload, MixinExtras on Forge 52) is supplied by mixins under `platform/forge/mixin`. The design, the per-line differences, every measured result and the open items live in [forge-port.md](forge-port.md), not here.
+
+With three loaders a loader condition is never left to an `else`: every arm names its loader, and a mixed loader-and-version condition repeats the version term after each loader, because Stonecutter 0.9.8 reads `&&` and `||` left to right at one rank (`StonecutterDirectiveGuardTester` fails on both mistakes).
 
 ## Fabric node (Phase 2) prerequisites
 

@@ -10,8 +10,9 @@
   url, token and pid read at boot are pinned and must belong to the client this run spawned: a step fails, and the node
   ends fatal, when bridge.json later names another client or the pinned client is gone.
 
-  Nodes are the Stonecutter node names: "26.3" is the NeoForge node, "26.3-fabric" its Fabric twin. The default is all
-  twelve; -Loader narrows it to one loader.
+  Nodes are the Stonecutter node names: "26.3" is the NeoForge node, "26.3-fabric" its Fabric twin, "26.3-forge" its
+  MinecraftForge twin (not NeoForge). The default is the twelve NeoForge and Fabric nodes (the Forge nodes are opt-in, by
+  name, while nothing ships there); -Loader narrows it to one loader.
 
   Per node, one client at a time:
     1. Prepares versions/<node>/run-smoke/ — a game directory of its own (-PbcRunDir), so the hand-used run/ with its
@@ -31,6 +32,7 @@
 .EXAMPLE
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1                       # every node (both loaders), default scenario
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric        # the six Fabric nodes
+  pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-forge     # the MinecraftForge node (opt-in)
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.2,1.21.1-fabric   # just these
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Lang ru_ru -Scenario scripts/smoke/scenarios/lang-overflow.json
   pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.1.2 -Scenario scripts/smoke/scenarios/line8.json
@@ -39,8 +41,10 @@
 param(
     [string[]]$Nodes = @('26.3', '26.2', '26.1.2', '1.21.11', '1.21.10', '1.21.1',
         '26.3-fabric', '26.2-fabric', '26.1.2-fabric', '1.21.11-fabric', '1.21.10-fabric', '1.21.1-fabric'),
-    # Keep only this loader's nodes of -Nodes (a bare node name is NeoForge, "<mc>-fabric" is Fabric).
-    [ValidateSet('', 'neoforge', 'fabric')]
+    # Keep only this loader's nodes of -Nodes (a bare node name is NeoForge, "<mc>-fabric" is Fabric, "<mc>-forge" is
+    # MinecraftForge; see Get-NodeLoader). The default node list leaves the Forge nodes out (nothing ships there yet): name
+    # one with -Nodes 26.3-forge.
+    [ValidateSet('', 'neoforge', 'fabric', 'forge')]
     [string]$Loader = '',
     # Game language for the run (options.txt `lang`), e.g. ru_ru or zh_cn for a text-overflow look. Re-applied every
     # run, so a run without it is back in English. Steps that click by `widgetText` only work in English: a scenario
@@ -83,9 +87,106 @@ $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $Nodes = @($Nodes | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $Mods = @($Mods | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-# A node's loader and Minecraft line come from its name: "26.3" is NeoForge on 26.3, "26.3-fabric" Fabric on 26.3.
-function Get-NodeLoader([string]$Node) { if ($Node -like '*-fabric') { 'fabric' } else { 'neoforge' } }
-function Get-NodeMcVersion([string]$Node) { $Node -replace '-fabric$', '' }
+# A node's loader is the `loader=` key of its own versions/<node>/gradle.properties (the key the build itself reads, so the
+# runner and Gradle cannot disagree; a NeoForge node carries none and inherits neoforge). A node whose file does not say falls
+# back to its name's suffix. The Minecraft line is the name less that suffix: "26.3" is NeoForge on 26.3, "26.3-fabric" and
+# "26.3-forge" (MinecraftForge, not NeoForge) are its twins.
+$script:NodeLoaders = @{}
+function Get-NodeLoader([string]$Node) {
+    if (-not $script:NodeLoaders.ContainsKey($Node)) {
+        $found = $null
+        $props = Join-Path $Repo "versions/$Node/gradle.properties"
+        if (Test-Path -LiteralPath $props) {
+            foreach ($line in Get-Content -LiteralPath $props) {
+                if ($line -match '^\s*loader\s*=\s*(\w+)\s*$') { $found = $Matches[1].ToLowerInvariant(); break }
+            }
+        }
+        if (-not $found) { $found = if ($Node -like '*-fabric') { 'fabric' } elseif ($Node -like '*-forge') { 'forge' } else { 'neoforge' } }
+        $script:NodeLoaders[$Node] = $found
+    }
+    $script:NodeLoaders[$Node]
+}
+function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '' }
+# Whether a node pins a recipe viewer: the `jei_version` / `rei_version` key of its own versions/<node>/gradle.properties,
+# the pin the build compiles that viewer's plugins and puts it in the dev runtime by (every NeoForge and Fabric node pins
+# both; of the Forge nodes only 1.21.1-forge pins one, JEI).
+$script:NodeViewers = @{}
+function Test-NodeViewer([string]$Node, [string]$Viewer) {
+    if (-not $script:NodeViewers.ContainsKey($Node)) {
+        $pinned = @()
+        $props = Join-Path $Repo "versions/$Node/gradle.properties"
+        if (Test-Path -LiteralPath $props) {
+            foreach ($line in Get-Content -LiteralPath $props) {
+                if ($line -match '^\s*(jei|rei)_version\s*=\s*\S') { $pinned += $Matches[1].ToLowerInvariant() }
+            }
+        }
+        $script:NodeViewers[$Node] = $pinned
+    }
+    if ($Viewer) { return @($script:NodeViewers[$Node]) -contains $Viewer.ToLowerInvariant() }
+    return @($script:NodeViewers[$Node]).Count -gt 0
+}
+# Whether a node's quick-play is defective: `quickplay_drops_game_events=true` in its gradle.properties (1.21.1-forge: Forge
+# 52 loads a quick-played world before it starts its game event bus, and the integrated server crashes at the first loot
+# roll). Such a node boots to the title screen and its save is opened through Singleplayer (Open-SaveFromMenu).
+function Test-QuickPlayDefective([string]$Node) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    foreach ($line in Get-Content -LiteralPath $props) {
+        if ($line -match '^\s*quickplay_drops_game_events\s*=\s*true\s*$') { return $true }
+    }
+    return $false
+}
+# What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
+# needs one the node lacks is SKIPPED with the reason (never failed): it asks for something the node cannot give. The
+# recipe viewers are per node, not per loader: "recipeViewer" is any viewer (the node's default one), "viewer:<name>" the
+# one a scenario's "recipeViewer" boots (Test-NodeViewer). devMods is the -PwithMods runtime (bc.forge reads it too since
+# #209: the aliases a node defines load there); devProperties is a scenario's "gradleProperties" (-PwithGuideMe,
+# -PwithFallingTree ...), which only the NeoForge scripts wire.
+$LoaderLacks = @{
+    forge = @{
+        devProperties = 'the optional dev-runtime switches a scenario names in "gradleProperties" (-PwithGuideMe ...): the Forge node wires none of them'
+    }
+}
+# True when the node's own gradle.properties defines the -PwithMods alias (`withmod.<alias>=`, empty counts: a deliberate no-op).
+function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    $defined = $false
+    foreach ($line in Get-Content -LiteralPath $props) {
+        if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { $defined = $true }
+        # `withmods_compile_only=<alias>[,<alias>]`: the pin is there for the compile only and its mod cannot load on this
+        # node's dev runtime (#228), so a scenario that names it is skipped like one whose alias is missing.
+        if ($line -match '^\s*withmods_compile_only\s*=\s*(.+)$') {
+            if (@($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() }) -contains $Alias.ToLowerInvariant()) { return $false }
+        }
+    }
+    return $defined
+}
+# True when the node's gradle.properties says `config_screen=false` (1.21.1-forge, #225: no config screen there).
+function Test-NodeLacksConfigScreen([string]$Node) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    return [bool](Get-Content -LiteralPath $props | Where-Object { $_ -match '^\s*config_screen\s*=\s*false\s*$' })
+}
+function Get-LackReason($Needs, [string]$Node) {
+    # The first capability of $Needs the node lacks, as "needs <what>"; $null when it lacks none.
+    $lacks = $LoaderLacks[(Get-NodeLoader $Node)]
+    foreach ($n in @($Needs)) {
+        $need = [string]$n
+        if ($need -eq 'recipeViewer' -and -not (Test-NodeViewer $Node)) {
+            return "needs a recipe viewer (this node pins neither JEI nor REI: no jei_version or rei_version in versions/$Node/gradle.properties)"
+        }
+        if ($need -like 'viewer:*') {
+            $viewer = $need.Substring(7)
+            if (-not (Test-NodeViewer $Node $viewer)) { return "needs $viewer (this node does not pin it: no ${viewer}_version in versions/$Node/gradle.properties)" }
+        }
+        if ($need -eq 'configScreen' -and (Test-NodeLacksConfigScreen $Node)) {
+            return "needs a config screen (this node has none: config_screen=false in versions/$Node/gradle.properties)"
+        }
+        if ($lacks -and $lacks.ContainsKey($need)) { return "needs $($lacks[$need])" }
+    }
+    return $null
+}
 if ($Loader) { $Nodes = @($Nodes | Where-Object { (Get-NodeLoader $_) -eq $Loader }) }
 if (-not $Nodes.Count) { throw 'no nodes to run (check -Nodes and -Loader)' }
 if (-not $Scenario) { $Scenario = Join-Path $PSScriptRoot 'scenarios/line8.json' }
@@ -171,6 +272,33 @@ function Wait-Until([scriptblock]$Condition, [int]$TimeoutSec, [string]$What, [i
     throw "timed out after ${TimeoutSec}s waiting for $What" + $(if ($lastError) { " (last error: $lastError)" } else { '' })
 }
 
+# Remove-Item -Recurse races with whatever else touches the folder (a virus scan, the indexer, a Gradle file watcher): "The
+# directory is not empty" on a folder that was empty a moment later. Retried; a folder that is gone by then is a success.
+function Remove-TreeWithRetry([string]$Path) {
+    for ($try = 1; $try -le 6; $try++) {
+        try { Remove-Item -Recurse -Force -LiteralPath $Path -ErrorAction Stop; return } catch {
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            if ($try -eq 6) { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
+# POST /command, repeated when the bridge gave up on it ("TimeoutException": the server thread stayed busy for longer than the bridge
+# waits, on a loaded machine or while a fresh world generates chunks). The first attempt either ran or runs when the thread frees,
+# so the repeat may run the command a second time. Most rig commands are idempotent in effect (setblock, fill, item replace, tp,
+# queries): the repeat finds the work done and its "did not change" / "could not set the block" replies are the ones the cmd step
+# already forgives (in English runs). A command that is not (clear, a claim, a team command) answers the repeat with a failure, so
+# such a step can fail after a timeout though its first attempt worked: never a false pass, and the step failed before retries too.
+function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
+    for ($attempt = 1; ; $attempt++) {
+        try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
+            if ($attempt -ge $Attempts -or "$_" -notmatch 'TimeoutException') { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 function Get-State { Invoke-Bridge GET '/state' }
 
 function Wait-NoOverlay {
@@ -182,7 +310,16 @@ function Wait-NoOverlay {
 function Wait-InWorld([int]$TimeoutSec = 300) {
     Wait-Until {
         $s = Get-State
-        ($null -ne $s.PSObject.Properties['player']) -and ($null -eq $s.PSObject.Properties['screen'])
+        if (($null -ne $s.PSObject.Properties['player']) -and ($null -eq $s.PSObject.Properties['screen'])) { return $true }
+        # A world saved by a Forge client before #213 carries the experimental lifecycle (see New-SmokeWorld), so loading it (quick-play, or
+        # Play Selected World) stops at vanilla's "Worlds using Experimental Settings are not supported" confirmation, which
+        # waits for a click for ever (the render thread idles in the frame limiter, no server thread ever starts). Load without
+        # a backup, as a person making the smoke world would; any other screen is left alone.
+        if ($s.PSObject.Properties['screen'] -and $s.screen.class -match 'BackupConfirmScreen' -and "$($s.screen.title)" -match 'Experimental') {
+            Write-Host 'note: loaded a world that carries the experimental lifecycle (clicked "I Know What I''m Doing!" on the backup confirmation)'
+            Invoke-MenuClick "I Know What I'm Doing!"
+        }
+        $false
     } $TimeoutSec 'the player to be in a world with no screen open' 1000 | Out-Null
 }
 
@@ -254,6 +391,14 @@ function Initialize-RunDir([string]$Node) {
     # Ledgers remember open/closed per screen in this file: start every run with all of them closed, so a screenshot
     # (or a click on a ledger tab) never depends on what an earlier run left open.
     Remove-Item -LiteralPath (Join-Path $runDir 'config/buildcraft/gui_state.json') -ErrorAction SilentlyContinue
+    # forge-config-screen flips this client option in the config screen and flips it back: a run that failed in between
+    # would leave searing steam off for every later scenario, so it goes back to its default before every run.
+    $bcClient = Join-Path $runDir 'config/buildcraftunofficial-client.toml'
+    if (Test-Path -LiteralPath $bcClient) {
+        $toml = Get-Content -LiteralPath $bcClient -Raw
+        $fixed = $toml -replace '(?m)^(\s*searingFluidSteam\s*=\s*)false\s*$', '${1}true'
+        if ($fixed -ne $toml) { Set-Content -LiteralPath $bcClient -Value $fixed -NoNewline -Encoding utf8 }
+    }
     if ((Get-NodeLoader $Node) -eq 'neoforge') {
         # NeoForge's "mods loaded with warnings" screen blocks quick-play (REI trips it on 26.3 with @OnlyIn). The log
         # keeps the warnings; NeoForge fills in the rest of a file that only holds this key. Fabric has no such screen.
@@ -301,7 +446,8 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
         $gradleArgs += @($ScenarioData.gradleProperties | ForEach-Object { "-P$_" })
     }
     # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI. A NeoForge dev client has JEI
-    # without being asked; a Fabric one loads a viewer only when told to, so it is always named there.
+    # without being asked, as has a Forge node that pins it (1.21.1-forge); a Fabric one loads a viewer only when told to,
+    # so it is always named there. Get-SkipReason keeps a scenario off a node that does not pin the viewer it names.
     if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
     elseif ((Get-NodeLoader $Node) -eq 'fabric') { $gradleArgs += '-Precipe_viewer=jei' }
     # A scenario's "mods" and -Mods name optional dev-runtime mods by alias; the Gradle side resolves them.
@@ -486,7 +632,62 @@ function New-SmokeWorld {
         Wait-Until { (Get-ScreenClass) -match 'CreateWorldScreen' } 60 'the create-world screen' | Out-Null
     }
     Invoke-MenuClick 'Create New World'
-    Wait-InWorld 600
+    # A Forge client answers "Create New World" with vanilla's "Warning! These settings are using experimental features"
+    # confirmation (a non-vanilla data pack's registry entries carry the experimental lifecycle; 26.3-forge before #213's
+    # MappedRegistryMixin, and still for any other Forge mod with worldgen data), which
+    # waits for a click for ever: say Yes to it, as a person making the smoke world would, then wait for the world.
+    Wait-Until {
+        $s = Get-State
+        if (($null -ne $s.PSObject.Properties['player']) -and ($null -eq $s.PSObject.Properties['screen'])) { return $true }
+        if ($s.PSObject.Properties['screen'] -and $s.screen.class -match 'ConfirmScreen' -and "$($s.screen.title)" -match 'experimental') {
+            Write-Host 'note: the new world is flagged experimental (clicked Yes on the experimental-features warning)'
+            Invoke-MenuClick 'Yes'
+        }
+        $false
+    } 600 'the player to be in a world with no screen open' 1000 | Out-Null
+    # A new world's spawn is random and the chunks around the player arrive seconds after the join: a first step that edits
+    # blocks at the scenario's base would meet "That position is not loaded". Stand at the base and wait for it to load. Only
+    # here (the first run of a node): a run that quick-plays the saved world starts as it always did. Creative first: the
+    # tp is a fall of the base's height (a survival player dies of it before the rig stands); the saved worlds of the other
+    # nodes hold a creative player too, since nearly every scenario opens with `gamemode creative @p`.
+    if ($Base.Count -ge 3) {
+        $pos = "$($Base[0]) $($Base[1]) $($Base[2])"
+        Invoke-Bridge POST '/command' @{ command = 'gamemode creative @p' } | Out-Null
+        Invoke-Bridge POST '/command' @{ command = "execute as @p run tp @p $pos" } | Out-Null
+        Wait-Until { (Invoke-Bridge POST '/command' @{ command = "execute if loaded $pos" }).success } 120 "the scenario base ($pos) to be loaded" 1000 | Out-Null
+    }
+}
+
+function Open-SaveFromMenu([string]$Save) {
+    # The quick-play path by hand, for a node whose quick-play is defective (Test-QuickPlayDefective): Singleplayer, the
+    # save's folder name typed into the search box (focused when the screen opens) so it is the only entry, a click on the
+    # entry's row to select it, then "Play Selected World". The row is the world list's first: its top is the list's top
+    # plus 4, and it is 36 high (vanilla WorldSelectionList, 1.21.1); the click lands right of the 32-pixel icon, which
+    # would join on its own and bypass the button this path checks.
+    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
+    Wait-NoOverlay
+    Invoke-MenuClick 'Singleplayer'
+    Wait-Until { (Get-ScreenClass) -match 'SelectWorldScreen' } 120 'the world list' 1000 | Out-Null
+    Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Save } | Out-Null
+    # The list reads the saves off the game thread, so the row may not exist at the first click: click it until the
+    # button turns active (it is inactive while nothing is selected).
+    $script:listing = $null
+    try { Wait-Until {
+        $script:listing = Invoke-Bridge POST '/screenclick' @{ list = $true }
+        if (@($script:listing.widgets | Where-Object { "$($_.text)" -eq 'Play Selected World' -and $_.active }).Count) { return $true }
+        $list = @($script:listing.widgets | Where-Object { $_.class -match 'WorldSelectionList' }) | Select-Object -First 1
+        if ($list) { $top = [int]$list.y; $mid = [int]$list.x + [int]([int]$list.width / 2) }
+        else { $top = 48; $mid = [int]([int]$script:listing.width / 2) }
+        Invoke-Bridge POST '/screenclick' @{ x = $mid; y = $top + 4 + 18 } | Out-Null
+        Start-Sleep -Milliseconds 400   # past the list's 250 ms double-click window: the next click selects, never joins
+        $false
+    } 60 "'Play Selected World' to turn active" 1000 | Out-Null }
+    catch {
+        $seen = @($(if ($script:listing) { $script:listing.widgets }) | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
+        throw "could not select '$Save' on the world list: $($_.Exception.Message) (widgets: $seen)"
+    }
+    Invoke-MenuClick 'Play Selected World'
+    Write-Host "note: opened '$Save' through Singleplayer (this node's quick-play is defective)"
 }
 
 # ── Scenario steps ───────────────────────────────────────────────────────────
@@ -513,6 +714,22 @@ function Get-SkipReason([string]$Node) {
     # Why the whole scenario is not run on this node, or $null when it is. Not a failure either way: the scenario needs
     # something this node or this language does not have.
     if (-not (Test-LoaderFilter $ScenarioData $Node)) { return "runs on $(@($ScenarioData.loaders) -join ', ') only" }
+    # What the scenario needs from the loader's dev runtime: its own top-level "needs" list, a "recipeViewer" (it boots that
+    # viewer) and optional dev-runtime mods ("mods" / -Mods, "gradleProperties"). A loader that lacks one skips the scenario.
+    $needs = @(if ($ScenarioData.PSObject.Properties['needs']) { $ScenarioData.needs })
+    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $needs += 'recipeViewer'; $needs += "viewer:$($ScenarioData.recipeViewer)" }
+    if ($ModAliases.Count) { $needs += 'devMods' }
+    if ($ScenarioData.PSObject.Properties['gradleProperties'] -and @($ScenarioData.gradleProperties).Count) { $needs += 'devProperties' }
+    $lack = Get-LackReason $needs $Node
+    if ($lack) { return $lack }
+    # A scenario that names mods ("mods") needs at least one of them on this node: Gradle skips an alias the node does not
+    # define (a lifecycle line only), so a scenario whose every mod is missing would run bare and fail on its first lane.
+    # One defined alias is enough to run: crossmod-energy names Tech Reborn too, which only some nodes have.
+    $own = @()
+    if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
+    if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
+        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias>, or a compile-only one, in versions/$Node/gradle.properties)"
+    }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)
     if ($Lang -ne 'en_us' -and $ScenarioData.PSObject.Properties['englishOnly'] -and $ScenarioData.englishOnly) {
@@ -524,8 +741,9 @@ function Get-SkipReason([string]$Node) {
 function Test-NodeFilter($Step, [string]$Node) {
     if (-not (Test-LoaderFilter $Step $Node)) { return $false }
     if (-not $Step.PSObject.Properties['nodes']) { return $true }
-    # A step's "nodes" names Minecraft lines: "26.3" covers both the NeoForge node and its Fabric twin. Naming the
-    # twin itself ("26.3-fabric") covers that node only.
+    # A step's "nodes" names Minecraft lines: "26.3" covers every loader's node of that line (the NeoForge node, its Fabric
+    # twin and its Forge twin), so a step that only one loader can run says so with "loaders". Naming the twin itself
+    # ("26.3-fabric", "26.3-forge") covers that node only.
     return (@($Step.nodes) -contains $Node) -or (@($Step.nodes) -contains (Get-NodeMcVersion $Node))
 }
 
@@ -555,11 +773,19 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             # re-run): such a failure is not an error, in every language. `success` is the bridge's language-neutral result
             # code, so any other failed command fails the step the same way in English and under -Lang.
             $stepBenign = $Step.PSObject.Properties['benign'] -and [bool]$Step.benign
+            $gaveUp = 0
             foreach ($c in @($Step.run)) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
-                $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
+                try {
+                    $r = Invoke-ServerCommand (Expand-Coords $c)
+                } catch {
+                    # An optional command the bridge kept giving up on (the server thread was busy: a forceload over chunks
+                    # that were still generating) is not an error: the command was handed over and runs when the thread frees.
+                    if ($optional -and "$_" -match 'TimeoutException') { $gaveUp++; continue }
+                    throw
+                }
                 # The world persists between runs, so "already so" replies are success for a rig builder. The reply TEXT is
                 # translated under -Lang, so the English wording is read in English runs only; a scenario meant for -Lang
                 # says it with "benign" or '?'.
@@ -577,8 +803,21 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 }
             }
             $detail = "$(@($Step.run).Count) command(s)"
+            if ($gaveUp) { $detail += ", $gaveUp optional one(s) the bridge timed out on" }
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
+        }
+        # Runs each command AS the player (the bridge's /chat command: the player's own permission level and an entity as the
+        # source). For a command whose requirements read the source's entity at parse time: `execute as @p run ...` does not
+        # pass them, because Brigadier checks a requirement against the ORIGINAL source, before the execute modifiers apply
+        # (FTB Teams' `party create`). The reply goes to the client's chat, not back here: gate on observed state with a
+        # waitCmd afterwards.
+        'playerCmd' {
+            foreach ($c in @($Step.run)) {
+                Invoke-Bridge POST '/chat' @{ action = 'command'; text = (Expand-Coords $c).TrimStart('/') } | Out-Null
+                Start-Sleep -Milliseconds 800
+            }
+            $detail = "$(@($Step.run).Count) player command(s)"
         }
         # Re-runs one command until its reply matches `match` (a regex): gates on observed state instead of a fixed
         # wait (a machine finishing its work). The reply is in the report either way.
@@ -589,12 +828,21 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $deadline = (Get-Date).AddSeconds($timeout)
             $last = ''
             do {
-                $r = Invoke-Bridge POST '/command' @{ command = $c }
-                $last = @($r.output) -join ' | '
-                if ($last -match $Step.match) { break }
+                # A poll the bridge gave up on (the server thread was busy, a world still generating chunks) is a poll that
+                # did not match yet, not a failed step.
+                $timedOut = $false
+                try {
+                    $r = Invoke-Bridge POST '/command' @{ command = $c }
+                    $last = @($r.output) -join ' | '
+                } catch {
+                    if ("$_" -notmatch 'TimeoutException') { throw }
+                    $last = 'the bridge timed out (the server thread is busy)'
+                    $timedOut = $true
+                }
+                if (-not $timedOut -and $last -match $Step.match) { break }
                 Start-Sleep -Milliseconds $poll
             } while ((Get-Date) -lt $deadline)
-            if ($last -notmatch $Step.match) { throw "no reply matched '$($Step.match)' within ${timeout}s: $c -> $last" }
+            if ($timedOut -or $last -notmatch $Step.match) { throw "no reply matched '$($Step.match)' within ${timeout}s: $c -> $last" }
             $detail = $last
         }
         'tp' {
@@ -602,7 +850,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $yaw = if ($Step.PSObject.Properties['yaw']) { $Step.yaw } else { 0 }
             $pitch = if ($Step.PSObject.Properties['pitch']) { $Step.pitch } else { 0 }
             # A bare server-context tp does not move the player; running it AS the player does.
-            Invoke-Bridge POST '/command' @{ command = "execute as @p at @p run tp @p $x $y $z $yaw $pitch" } | Out-Null
+            Invoke-ServerCommand "execute as @p at @p run tp @p $x $y $z $yaw $pitch" | Out-Null
             Wait-Until { $p = (Get-State).player.pos; [math]::Abs($p.x - $x) -lt 0.6 -and [math]::Abs($p.z - $z) -lt 0.6 } 30 "the player to reach $x $y $z" | Out-Null
             Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $yaw; pitch = $pitch } | Out-Null
             $detail = "at $x $y $z"
@@ -799,11 +1047,18 @@ function Invoke-Scenario([string]$Node, [string]$NodeOut) {
         $i++
         if (-not (Test-NodeFilter $step $Node)) { continue }
         $label = if ($step.PSObject.Properties['label']) { $step.label } elseif ($step.PSObject.Properties['name']) { $step.name } else { $step.do }
+        # A step that needs something this loader's dev runtime lacks (a recipe viewer's click area) is recorded as skipped,
+        # with the reason, not run and not failed: it asks for something the loader cannot give.
+        $lack = if ($step.PSObject.Properties['needs']) { Get-LackReason $step.needs $Node } else { $null }
+        if ($lack) {
+            $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $true; skipped = $true; detail = "skipped: $lack"; shot = $null }
+            continue
+        }
         try {
             $r = Invoke-Step $step $Node $NodeOut $i
-            $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $true; detail = $r.detail; shot = $r.shot }
+            $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $true; skipped = $false; detail = $r.detail; shot = $r.shot }
         } catch {
-            $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $false; detail = $_.Exception.Message; shot = $null }
+            $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $false; skipped = $false; detail = $_.Exception.Message; shot = $null }
             # A broken bridge pin ends the node: whatever a later step would drive, it is not the client this run pinned.
             if ($script:PinViolation) { break }
             # A failed step leaves the client in an unknown state: take a picture of it, close any screen, go on.
@@ -853,6 +1108,24 @@ try {
             $savePath = Join-Path $prep.RunDir "saves/$SaveName"
             # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
             # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
+            # Open Parties and Claims on Forge (#215): a world's first write of its server config dies on Windows (Forge Config
+            # API Port renames a file it still holds open; docs/forge-port.md), and every run of an OPAC scenario plays a fresh
+            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from any
+            # world a dead first boot left behind (the file it leaves is complete). Before the fresh-save delete below.
+            if ((Get-NodeLoader $node) -eq 'forge' -and $ModAliases -contains 'opac') {
+                $opacSeed = Join-Path $prep.RunDir 'defaultconfigs/openpartiesandclaims-server.toml'
+                if (-not (Test-Path -LiteralPath $opacSeed)) {
+                    $left = @(Get-ChildItem -File -Path (Join-Path $prep.RunDir 'saves/*/serverconfig/openpartiesandclaims-server.toml') -ErrorAction SilentlyContinue |
+                        Where-Object Length -gt 0) | Select-Object -First 1
+                    if ($left) {
+                        New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
+                        Copy-Item -LiteralPath $left.FullName -Destination $opacSeed
+                        Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $($left.Directory.Parent.Name)"
+                    } else {
+                        Write-Warning "[$node] no Open Parties and Claims server config to seed yet: this first boot is expected to die writing it (#215); run the scenario again and it is seeded from what that boot leaves"
+                    }
+                }
+            }
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
             if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
             $haveSave = Test-Path $savePath
@@ -860,7 +1133,7 @@ try {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
                 # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
                 if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
-                    Remove-Item -Recurse -Force -LiteralPath $playPath
+                    Remove-TreeWithRetry $playPath
                 } elseif ($WantFresh -and (Test-Path -LiteralPath $playPath)) {
                     throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
                 }
@@ -884,8 +1157,10 @@ try {
                 }
             }
             Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
-            $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
+            $menuPlay = $quickPlay -and (Test-QuickPlayDefective $node)
+            $client = Start-Client $node $prep.RunDir ($quickPlay -and -not $menuPlay) $nodeOut
             $report.bridgeVersion = $client.BridgeVersion
+            if ($menuPlay) { Open-SaveFromMenu $PlaySave }
             if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
             $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
 
@@ -929,7 +1204,7 @@ foreach ($s in $summary) {
         $d = ([string]$st.detail) -replace '\|', '\|' -replace "`r?`n", ' '
         if ($d.Length -gt 160) { $d = $d.Substring(0, 157) + '...' }
         $img = if ($st.shot) { "[$($st.shot)]($($s.node)/$($st.shot))" } else { '' }
-        $md += "| $($st.n) | $($st.step) | $(if ($st.ok) { 'yes' } else { '**NO**' }) | $d | $img |"
+        $md += "| $($st.n) | $($st.step) | $(if ($st.skipped) { 'skip' } elseif ($st.ok) { 'yes' } else { '**NO**' }) | $d | $img |"
     }
     foreach ($e in $s.report.buildcraftErrors) { $md += "- log: $((($e | ConvertTo-Json -Compress -Depth 4)) -replace "`r?`n", ' ')" }
 }

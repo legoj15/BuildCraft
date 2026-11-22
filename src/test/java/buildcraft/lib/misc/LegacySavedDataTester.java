@@ -138,6 +138,39 @@ public class LegacySavedDataTester {
         ((buildcraft.platform.fabric.FabricSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
         return storage;
     }*/
+    //?} elif forge && >=26.1 {
+    /*// Forge's level-aware saved data is Fabric's shape: ForgeSavedDataLevels is the thread-local answer, ServerChunkCacheMixin
+    // tells each dimension's own storage its level and SavedDataStorageMixin runs the storage's calls under it.
+    // A fresh type data for the level, as the level's storage would make it.
+    static <T extends SavedData> T newData(SavedDataType<T> type, ServerLevel level) {
+        return buildcraft.platform.forge.ForgeSavedDataLevels.with(level, () -> type.constructor().get());
+    }
+
+    // The type's codec as the level's storage would use it.
+    static <T extends SavedData> Codec<T> codec(SavedDataType<T> type, ServerLevel level) {
+        Codec<T> codec = type.codec();
+        return new Codec<T>() {
+            @Override
+            public <O> com.mojang.serialization.DataResult<com.mojang.datafixers.util.Pair<T, O>> decode(
+                    com.mojang.serialization.DynamicOps<O> ops, O input) {
+                return buildcraft.platform.forge.ForgeSavedDataLevels.with(level, () -> codec.decode(ops, input));
+            }
+
+            @Override
+            public <O> com.mojang.serialization.DataResult<O> encode(T input,
+                    com.mojang.serialization.DynamicOps<O> ops, O prefix) {
+                return buildcraft.platform.forge.ForgeSavedDataLevels.with(level,
+                        () -> codec.encode(input, ops, prefix));
+            }
+        };
+    }
+
+    // A saved-data storage over the folder that belongs to the level, as the level's own does.
+    static SavedDataStorage newStorage(ServerLevel level, Path folder) {
+        SavedDataStorage storage = new SavedDataStorage(folder, DataFixers.getDataFixer(), level.registryAccess());
+        ((buildcraft.platform.forge.ForgeSavedDataLevels.LevelAwareStorage) storage).buildcraft$setLevel(level);
+        return storage;
+    }*/
     //?}
 
     /** The overworld's pre-26.1 saved-data file is picked up by the real storage the first time the type is asked for. */

@@ -170,9 +170,10 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // Sounds
 
     // Every pipe shares this one block, so the sound comes from the placed pipe's material. Fabric asks
-    // PositionalSoundBlock at the sites NeoForge passes the position (its sound-type mixins).
-    //? if neoforge {
-    @LoaderHook("neoforge:IBlockExtension#getSoundType")
+    // PositionalSoundBlock at the sites NeoForge passes the position (its sound-type mixins); Forge's patched
+    // vanilla passes it at the same sites, to the same four-argument hook.
+    //? if neoforge || forge {
+    @LoaderHook({"neoforge:IBlockExtension#getSoundType", "forge:IForgeBlock#getSoundType"})
     @Override
     public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
         SoundType sound = soundType(level, pos, entity);
@@ -196,8 +197,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
      *  centre first, so the pipe resists it as well as that pluggable does (a facade answers with its block's
      *  resistance). Ported from 1.12.2, with one deliberate change — a pluggable can only raise the pipe's own
      *  resistance, never lower it, so a glass facade no longer makes the pipe behind it weaker than bare. */
-    //? if neoforge {
-    @LoaderHook("neoforge:IBlockExtension#getExplosionResistance")
+    //? if neoforge || forge {
+    @LoaderHook({"neoforge:IBlockExtension#getExplosionResistance", "forge:IForgeBlock#getExplosionResistance"})
     @Override
     public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos,
                                         Explosion explosion) {
@@ -710,8 +711,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return !keepsBlockOnPlayerBreak(state, level, pos, player)
             && super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
     }
-    //?} elif neoforge {
-    /*@LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
+    //?} elif neoforge || forge {
+    /*// NeoForge 1.21.1's six-argument form, which is also MinecraftForge's on every line (it never took the tool).
+    @LoaderHook({"neoforge:IBlockExtension#onDestroyedByPlayer", "forge:IForgeBlock#onDestroyedByPlayer"})
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
                                        boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
@@ -925,9 +927,11 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     //?}
 
     // Before 26.3 this is NeoForge's canConnectRedstone extension (same name and arguments) and, on Fabric, the
-    // RedstoneConnectBlock hook its redstone-wire mixin asks; from 26.3 the vanilla override above asks it.
+    // RedstoneConnectBlock hook its redstone-wire mixin asks; from 26.3 the vanilla override above asks it. On
+    // MinecraftForge it is IForgeBlock#canConnectRedstone on every line: Forge's RedstoneWireBlock patch replaces
+    // vanilla's connection test with it (so the 26.3 override above is not what the wire asks there).
     @Override
-    @LoaderHook("neoforge:IBlockExtension#canConnectRedstone")
+    @LoaderHook({"neoforge:IBlockExtension#canConnectRedstone", "forge:IForgeBlock#canConnectRedstone"})
     public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {
@@ -973,6 +977,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Pick block (middle click) — return the correct item for what's targeted
     // Fabric asks pickedStack(level, pos, player) from PlayerPickItemEvents.BLOCK (FabricLoaderHookRoutes).
+    // MinecraftForge has this hook on 1.21.1 only (the second arm); from 26.1 no Forge hook carries the player, so
+    // a Forge 26.x node asks pickedStack from a mixin on the server's pick-block handler (platform/forge/mixin
+    // ServerGamePacketListenerImplMixin), as Fabric's event does.
     //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockExtension#getCloneItemStack")
     @Override
@@ -980,12 +987,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         ItemStack picked = pickedStack(level, pos, player);
         return picked != null ? picked : super.getCloneItemStack(level, pos, state, includeData, player);
     }
-    //?} elif neoforge {
-    /*@LoaderHook("neoforge:IBlockExtension#getCloneItemStack")
+    //?} elif neoforge && <1.21.10 || forge && <1.21.10 {
+    /*@LoaderHook({"neoforge:IBlockExtension#getCloneItemStack", "forge:IForgeBlock#getCloneItemStack"})
     @Override
     public ItemStack getCloneItemStack(BlockState state, net.minecraft.world.phys.HitResult target, LevelReader level, BlockPos pos, Player player) {
         ItemStack picked = pickedStack(level, pos, () -> target);
-        // Fallback rides the NeoForge IBlockExtension default (5-arg) — deprecation-clean.
+        // Fallback rides the loader's own default (5-arg) — deprecation-clean.
         return picked != null ? picked : super.getCloneItemStack(state, target, level, pos, player);
     }*/
     //?}
@@ -1051,16 +1058,16 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Sprint particles — vanilla would use the holder's invisible particle sprite.
     // We delegate to PipeHolderClientExtensions which resolves the correct pipe-specific texture.
-    // NeoForge's particle hooks; Fabric reaches spawnRunningEffects and spawnLandingEffects through its Entity and
-    // LivingEntity mixins.
-    //? if neoforge {
-    @LoaderHook("neoforge:IBlockExtension#addRunningEffects")
+    // NeoForge's and MinecraftForge's particle hooks (same names and arguments); Fabric reaches spawnRunningEffects and
+    // spawnLandingEffects through its Entity and LivingEntity mixins.
+    //? if neoforge || forge {
+    @LoaderHook({"neoforge:IBlockExtension#addRunningEffects", "forge:IForgeBlock#addRunningEffects"})
     @Override
     public boolean addRunningEffects(BlockState state, Level level, BlockPos pos, Entity entity) {
         return spawnRunningEffects(level, pos, entity);
     }
 
-    @LoaderHook("neoforge:IBlockExtension#addLandingEffects")
+    @LoaderHook({"neoforge:IBlockExtension#addLandingEffects", "forge:IForgeBlock#addLandingEffects"})
     @Override
     public boolean addLandingEffects(BlockState state1, net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state2, net.minecraft.world.entity.LivingEntity entity, int numberOfParticles) {
         return spawnLandingEffects(level, pos, entity, numberOfParticles);

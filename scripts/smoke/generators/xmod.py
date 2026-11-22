@@ -64,6 +64,11 @@ class Scenario:
     def cmd(self, label, *run, **kw):
         self.step(label=label, do="cmd", run=list(run), **kw)
 
+    def player_cmd(self, label, *run, **kw):
+        """Run commands AS the player (the runner's `playerCmd`): for commands whose requirements read the source's entity at parse
+        time, which `execute as @p run` cannot pass. No reply is read; follow with a wait_cmd on the state they change."""
+        self.step(label=label, do="playerCmd", run=list(run), **kw)
+
     def echo(self, label, c, **kw):
         """Run one command that may legitimately fail and put its reply in the report."""
         self.step(label=label, do="cmd", run=[c], allowFail=True, echo=True, **kw)

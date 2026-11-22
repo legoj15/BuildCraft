@@ -7,7 +7,7 @@ package buildcraft.platform.config;
 
 /**
  * Registers a config spec with the loader. The spec is an {@code Object} because a contract may name only vanilla and
- * JDK types and the spec type is the loader's (NeoForge {@code ModConfigSpec}); the implementation casts it.
+ * JDK types and the spec type is the loader's own (the spec class of its config library); the implementation casts it.
  */
 public interface ConfigRegistrar {
 

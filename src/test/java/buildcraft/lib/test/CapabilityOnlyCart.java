@@ -65,12 +65,37 @@ public final class CapabilityOnlyCart extends Minecart {
         event.registerEntity(Capabilities.ItemHandler.ENTITY, minecartType(),
                 (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);
     }*/
-    //?} else {
+    //?} elif fabric {
     /*/^* BuildCraft's own entity item lookup (FabricEntityItems), from the game-test mod's initializer. ^/
     public static void registerLookup() {
         buildcraft.platform.fabric.FabricEntityItems.LOOKUP.registerForType((entity, ctx) ->
                 entity instanceof CapabilityOnlyCart cart
                         ? buildcraft.platform.fabric.FabricItemStorages.toFabric(cart.store) : null, minecartType());
+    }*/
+    //?} elif forge {
+    /*/^* Forge has no capability registry on 26.x: an entity answers through a provider attached to it as it is made
+     *  (AttachCapabilitiesEvent.Entities), here one for the instances of this class alone, handing out the store as
+     *  Forge's own item handler. Called from the game-test hook (platform.forge.ForgeGameTestHooks). On 1.21.1 the
+     *  event is EventBus 6's generic one, listened for by the attached object's class. ^/
+    public static void registerLookup() {
+        //? if >=1.21.10 {
+        buildcraft.platform.forge.ForgeBus.listen(net.minecraftforge.event.AttachCapabilitiesEvent.Entities.class, event -> {
+        //?} else {
+        /^buildcraft.platform.forge.ForgeBus.attachCapabilities(net.minecraft.world.entity.Entity.class, event -> {
+        ^///?}
+            if (event.getObject() instanceof CapabilityOnlyCart cart) {
+                var handler = net.minecraftforge.common.util.LazyOptional.of(
+                        () -> buildcraft.platform.forge.ForgeItemStorages.toForge(cart.store));
+                event.addCapability(net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcraftunofficial", "capability_only_cart"),
+                        new net.minecraftforge.common.capabilities.ICapabilityProvider() {
+                            @Override
+                            public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(
+                                    net.minecraftforge.common.capabilities.Capability<T> cap, net.minecraft.core.Direction side) {
+                                return net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER.orEmpty(cap, handler);
+                            }
+                        });
+            }
+        });
     }*/
     //?}
 }

@@ -1,5 +1,6 @@
 {
   "name": "jei-transfer",
+  "needs": ["recipeViewer"],
   "description": "JEI '+' recipe transfer on each BuildCraft transfer handler: Assembly Table (real items), Auto Workbench (phantom blueprint) and Distiller (buckets). JEI ignores the bridge's key injection, so recipe pages open from each GUI's click area and '+' is clicked by position (GUI scale 2, 427x240 screen).",
   "base": [0, 150, 0],
   "steps": [

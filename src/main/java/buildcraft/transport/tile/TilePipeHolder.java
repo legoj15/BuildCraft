@@ -308,7 +308,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     }
 
     // Fabric has no update-tag or data-packet hook: on the client, vanilla hands both to loadAdditional, so the
-    // Fabric arm applies the client update there.
+    // Fabric arm applies the client update there. MinecraftForge has both, with the registry lookup as one more
+    // argument on 26.x (its ClientPacketListener and LevelChunk patches call them); from 1.21.1 it shares NeoForge's
+    // forms.
     //? if neoforge && >=1.21.10 {
     @LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
     @Override
@@ -339,15 +341,31 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             onClientUpdate(new BCValueInput(tag));
         }
     }*/
-    //?} elif neoforge {
-    /*@LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
+    //?} elif forge && >=1.21.10 {
+    /*@LoaderHook("forge:IForgeBlockEntity#handleUpdateTag")
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input,
+            net.minecraft.core.HolderLookup.Provider provider) {
+        super.handleUpdateTag(input, provider);
+        onClientUpdate(new BCValueInput(input));
+    }
+
+    @LoaderHook("forge:IForgeBlockEntity#onDataPacket")
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input,
+            net.minecraft.core.HolderLookup.Provider provider) {
+        super.onDataPacket(net, input, provider);
+        onClientUpdate(new BCValueInput(input));
+    }*/
+    //?} elif neoforge || forge {
+    /*@LoaderHook({"neoforge:IBlockEntityExtension#handleUpdateTag", "forge:IForgeBlockEntity#handleUpdateTag"})
     @Override
     public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
         super.handleUpdateTag(tag, provider);
         onClientUpdate(new BCValueInput(tag));
     }
 
-    @LoaderHook("neoforge:IBlockEntityExtension#onDataPacket")
+    @LoaderHook({"neoforge:IBlockEntityExtension#onDataPacket", "forge:IForgeBlockEntity#onDataPacket"})
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt, net.minecraft.core.HolderLookup.Provider provider) {
         super.onDataPacket(net, pkt, provider);
@@ -1027,6 +1045,13 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public net.neoforged.neoforge.model.data.ModelData getModelData() {
         return (net.neoforged.neoforge.model.data.ModelData) Platform.renderData().blockEntityRenderData(getPipeRenderData());
     }
+    //?} elif forge {
+    /*// Same name, Forge's own ModelData class (ForgeRenderData builds it).
+    @LoaderHook("forge:IForgeBlockEntity#getModelData")
+    @Override
+    public net.minecraftforge.client.model.data.ModelData getModelData() {
+        return (net.minecraftforge.client.model.data.ModelData) Platform.renderData().blockEntityRenderData(getPipeRenderData());
+    }*/
     //?} elif fabric {
     /*@Override
     public Object getRenderData() {

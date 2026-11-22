@@ -188,7 +188,7 @@ public final class TransactionSeamTester {
         //? if fabric {
         /*helper.assertTrue(refusals == 2, "both the commit and the close are refused while the child is current ("
             + refusals + ")");*/
-        //?} else {
+        //?} elif neoforge || forge {
         helper.assertTrue(refusals >= 1, "committing a transaction that has an open child is refused");
         //?}
 
@@ -204,8 +204,8 @@ public final class TransactionSeamTester {
     private static void closeRootBehindTheWrapper(BCTransaction outer) {
         //? if fabric {
         /*((net.fabricmc.fabric.api.transfer.v1.transaction.Transaction) buildcraft.platform.fabric.FabricTransfer.unwrap(outer)).abort();*/
-        //?} else {
-        outer.close(); // NeoForge's wrapper has no root-commit queue to strand; a second close ends the root
+        //?} elif neoforge || forge {
+        outer.close(); // NeoForge's and Forge's wrapper have no root-commit queue to strand; a second close ends the root
         //?}
     }
 
@@ -217,7 +217,7 @@ public final class TransactionSeamTester {
             changes.accept(buildcraft.platform.fabric.FabricTransfer.wrap(tx));
             tx.commit();
         }*/
-        //?} else {
+        //?} elif neoforge || forge {
         try (BCTransaction tx = BCTransaction.openRoot()) {
             changes.accept(tx);
             tx.commit();

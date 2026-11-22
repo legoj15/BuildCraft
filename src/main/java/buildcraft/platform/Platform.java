@@ -145,6 +145,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeTransfer();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricTransfer();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeTransfer();
             *///?}
         }
     }
@@ -157,6 +159,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeLoaderServices();
             *///?}
         }
     }
@@ -169,6 +173,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeNetwork();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricNetwork();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeNetwork();
             *///?}
         }
     }
@@ -181,6 +187,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeMenus();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricMenus();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeMenus();
             *///?}
         }
     }
@@ -193,6 +201,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeProtection();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricProtection();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeProtection();
             *///?}
         }
     }
@@ -205,6 +215,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeGameHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricGameHooks();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeGameHooks();
             *///?}
         }
     }
@@ -217,6 +229,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLifecycleHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLifecycleHooks();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeLifecycleHooks();
             *///?}
         }
     }
@@ -229,6 +243,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeFakePlayers();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFakePlayers();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeFakePlayers();
             *///?}
         }
     }
@@ -241,6 +257,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeConfigRegistrar();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigRegistrar();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeConfigRegistrar();
             *///?}
         }
     }
@@ -253,6 +271,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeConfigHooks();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricConfigHooks();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeConfigHooks();
             *///?}
         }
     }
@@ -265,6 +285,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeSoundServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricSoundServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeSoundServices();
             *///?}
         }
     }
@@ -277,6 +299,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeFluids();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricFluids();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeFluids();
             *///?}
         }
     }
@@ -289,6 +313,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeChunkTickets();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricChunkTickets();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeChunkTickets();
             *///?}
         }
     }
@@ -301,6 +327,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeCraftingServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricCraftingServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeCraftingServices();
             *///?}
         }
     }
@@ -313,6 +341,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeShearServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricShearServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeShearServices();
             *///?}
         }
     }
@@ -325,6 +355,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeAccessorySlots();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAccessorySlots();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeAccessorySlots();
             *///?}
         }
     }
@@ -337,6 +369,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeVanillaExtensions();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricVanillaExtensions();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeVanillaExtensions();
             *///?}
         }
     }
@@ -349,6 +383,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLootServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeLootServices();
             *///?}
         }
     }
@@ -361,6 +397,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeRenderData();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRenderData();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeRenderData();
             *///?}
         }
     }
@@ -373,6 +411,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeRegistryServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRegistryServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeRegistryServices();
             *///?}
         }
     }
@@ -385,6 +425,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeDataServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricDataServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeDataServices();
             *///?}
         }
     }
@@ -397,6 +439,8 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeAttachmentServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricAttachmentServices();
+            *///?} elif forge {
+            /*return new buildcraft.platform.forge.ForgeAttachmentServices();
             *///?}
         }
     }

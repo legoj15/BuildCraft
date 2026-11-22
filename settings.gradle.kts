@@ -33,6 +33,18 @@ stonecutter {
         version("1.21.11-fabric", "1.21.11")
         version("1.21.10-fabric", "1.21.10")
         version("1.21.1-fabric", "1.21.1")
+        // Forge nodes are `<mc>-forge`, named like the Fabric ones: MinecraftForge, NOT NeoForge (#209). 26.3-forge is the
+        // port in progress: it builds all of src/main/java bar the recipe-viewer plugins into a jar, boots a dedicated server
+        // and runs the shared game tests, and ships nothing yet (see buildSrc bc.forge.gradle.kts).
+        version("26.3-forge", "26.3")
+        // 1.21.1-forge is the second Forge node (#209 slice F7): Forge 52 on the 1.21.1 line, EventBus 6, Java 21.
+        version("1.21.1-forge", "1.21.1")
+        // 26.2-forge (Forge 65) and 26.1.2-forge (Forge 64) are the 26.x siblings of 26.3-forge (#209 slice F8), EventBus 7.
+        version("26.2-forge", "26.2")
+        version("26.1.2-forge", "26.1.2")
+        // 1.21.11-forge (#209 slice F8): Forge 61 on the 1.21.11 line, EventBus 7 (26.3's bus shape), Java 21.
+        // There is never a 1.21.10 Forge node (#210).
+        version("1.21.11-forge", "1.21.11")
         vcsVersion = "26.3"
     }
 }

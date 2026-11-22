@@ -10,7 +10,7 @@ package buildcraft.api.events;
  *  {@code ICancellableEvent}, whose bus reads the cancel state through these same two methods. */
 //? if neoforge {
 public interface ICancellableBCEvent extends net.neoforged.bus.api.ICancellableEvent {
-//?} else {
+//?} elif fabric || forge {
 /*public interface ICancellableBCEvent {
 *///?}
     boolean isCanceled();

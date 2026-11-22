@@ -15,7 +15,7 @@ read it first. This skill is the procedure around it.
   run is for what only eyes can judge: textures, models, layout, tooltips, animations.
 - **McDevBridge jars**: the runner copies the newest `mcdevbridge-*+mc<node>.jar` from `E:/GitHub/McDevBridge`
   (`versions/<node>/build/libs`, or a McDevBridge worktree). None → `-BuildBridge`, or build it there. McDevBridge
-  uses the same node names: `26.3` is the NeoForge jar, `26.3-fabric` the Fabric one.
+  uses the same node names: `26.3` is the NeoForge jar, `26.3-fabric` the Fabric one, `26.3-forge` the MinecraftForge one.
   `/screenclick` + `/screenhover` need McDevBridge `4f0b536` or later.
 - **Free disk**: each first boot of a node downloads assets and writes a world. A full C: drive fails the boot.
 - **One run per machine.** The runner holds `~/.mcdevbridge/smoke.lock` for the whole run. When another session's run
@@ -33,14 +33,29 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.1.2          # one node wh
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3,26.3-fabric # a line on both loaders
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1                        # all twelve, sequentially (~3-5 min each once warm)
 pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Loader fabric         # the six Fabric twins only
+pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3-forge      # MinecraftForge (#209): opt-in, never in the default list
 ```
 
 A visual change is checked on both loaders: the Fabric nodes have their own render and screen glue, so a NeoForge-only
-run does not cover them. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
+run does not cover them (the Forge node has its own too, `platform/forge/client`, and is run by name until it ships).
+A scenario or step that needs what a loader's dev runtime lacks (`"needs"`: a recipe viewer, `gradleProperties` switches; Forge has
+no switches, and a viewer, JEI, on `1.21.1-forge` only) is reported SKIPPED with the reason, not failed, and so is a `"mods"` scenario whose aliases the node does not define
+(Forge nodes define `opac` only, so `crossmod-claims-opac*` run there and the flan ones skip). A step's `"nodes": ["26.3"]` names the
+Minecraft line and covers every loader's node of it (NeoForge, Fabric and Forge twins), as it always did for the Fabric twin; a step
+one loader cannot run is `"loaders"`-filtered. `-Lang ru_ru` / `-Lang zh_cn` re-run a scenario translated, to look for text that overflows
 its box (`scenarios/lang-overflow.json` tours the GUIs without clicking by English text).
 
 Run it with `run_in_background` — a node's first boot compiles and can take several minutes. It exits 1 on any
 failed step, fatal error or BuildCraft ERROR log line, and 3 when another run holds the smoke lock.
+
+## Two players, and a server on another machine
+
+What another player sees, and anything that only crosses a real connection (menu opening data, recipe and fluid sync, entity
+sync), needs a dedicated server and two clients: `scripts/smoke/multiplayer/mp.py` with the scenes beside it (`setup`, `server`,
+`client A`, `client B`, a scene, `stop`; the README's "Two players" section has the commands). It drives NeoForge and Forge nodes
+(a Fabric node is skipped with a reason). The server half can run on Server1 so the clients join over the LAN:
+`MP_REMOTE_CHECKOUT=<checkout>` (committed state synced with `Sync-ToServer1.ps1 -Name <checkout>`), `MP_LOCK_WAIT_MINUTES` to
+queue behind another run's smoke lock; scratch ports 25661/25662 only, never the real servers' 25565, 25566 or 25575.
 
 ## On Server1 (the default for anything long)
 

@@ -7,7 +7,8 @@ robot, then sneak-wrenches it off), dismantle (the second half alone), mine (Wor
 under Mining Fatigue while Watcher's crosshair rests on the stone beside it), cmd "<rcon command>"...
 Shots land in build/smoke-mp/<node>/shots as <A|B>-<name>.png; grids.py tiles them for a 26.3 vs 26.2 comparison.
 
-The held items carry a 40-tick swing animation (interact_animation on 26.3, swing_animation before), so the swing
+The held items carry a 40-tick swing animation (interact_animation on 26.3, swing_animation from 1.21.11 to 26.2; 1.21.1 has
+no such component, so there Worker gets Mining Fatigue instead, which also lengthens the swing), so the swing
 is slow enough for the screenshot burst to catch it on the watching client; the plain-wrench burst checks the
 default 6-tick swing too. Expected: Watcher sees every Worker swing on both nodes; while Worker mines, 26.3 shows
 gold pipe-sprite crack particles on Watcher's screen (26.3 sends remote destroy-progress level events 2019/2020;
@@ -16,86 +17,35 @@ gold pipe-sprite crack particles on Watcher's screen (26.3 sends remote destroy-
 import json, os, sys, time, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mp
+from scene_lib import Scene
 
 NODE = sys.argv[1]
+mp.refuse_unsupported_node(NODE)   # a Fabric node is skipped with a reason (exit 0), as `mp.py` does
 PHASE = sys.argv[2]
-OUT = os.path.join(mp.HERE, NODE, 'shots')
-os.makedirs(OUT, exist_ok=True)
-X, Y, Z = 0, -60, 0
-ANIM = 'minecraft:interact_animation' if tuple(map(int, NODE.split('.'))) >= (26, 3) else 'minecraft:swing_animation'
-R = mp.Rcon()
-log = open(os.path.join(mp.HERE, NODE, 'scene.log'), 'a', encoding='utf-8')
+S = Scene(NODE)
+X, Y, Z = S.X, S.Y, S.Z
+# The data component that lengthens an item's swing: `interact_animation` on 26.3, `swing_animation` from 1.21.11 to 26.2, and
+# none on 1.21.1 (it does not exist there: the command would fail). A line without it slows the swing with Mining Fatigue instead
+# (swing time is 6 + 2 * (amplifier + 1) ticks, and a remote client reads the other player's effects), so the burst still
+# catches the raised arm on the watching client.
+_V = mp.mc_version(NODE)
+ANIM = 'minecraft:interact_animation' if _V >= (26, 3) else 'minecraft:swing_animation' if _V >= (1, 21, 11) else None
+say, cmd, b, shot, tp, look, aim, hold, burst = S.say, S.cmd, S.b, S.shot, S.tp, S.look, S.aim, S.hold, S.burst
 
 
-def say(*a):
-    s = ' '.join(str(x) for x in a)
-    print(s)
-    log.write(time.strftime('%H:%M:%S ') + s + '\n')
-    log.flush()
+def slow(item):
+    """`item` with a 40-tick swing where the line has the component, else `item` as it is (slow_swing() then does the work)."""
+    return item + ('[%s={duration:40}]' % ANIM if ANIM else '')
 
 
-def coords(t):
-    import re
-    def rep(m):
-        base = {'X': X, 'Y': Y, 'Z': Z}[m.group(1)]
-        off = int(m.group(2) or 0)
-        return str(base + off)
-    return re.sub(r'\{([XYZ])([+-]\d+)?\}', rep, t)
+def slow_swing():
+    if not ANIM:
+        cmd('effect give Worker minecraft:mining_fatigue 600 9 true')
 
 
-def cmd(*cs):
-    for c in cs:
-        c = coords(c)
-        r = R.cmd(c)
-        say('rcon>', c[:160], '=>', r[:200])
-
-
-def b(side, method, path, body=None, timeout=60):
-    return mp.bridge(NODE, side, method, path, body, timeout)
-
-
-def shot(side, name, look=''):
-    p = os.path.join(OUT, f'{side}-{name}.png').replace('\\', '/')
-    b(side, 'POST', '/screenshot', {'path': p})
-    say('shot', side, name, '-', look)
-    return p
-
-
-def tp(user, x, y, z, yaw=0, pitch=0):
-    cmd(f'tp {user} {x} {y} {z} {yaw} {pitch}')
-
-
-def look(side, yaw, pitch):
-    b(side, 'POST', '/look', {'mode': 'absolute', 'yaw': yaw, 'pitch': pitch})
-    time.sleep(0.2)
-
-
-def aim(side, tx, ty, tz):
-    p = b(side, 'GET', '/state')['player']['pos']
-    dx, dy, dz = tx - p['x'], ty - (p['y'] + 1.62), tz - p['z']
-    yaw = math.degrees(math.atan2(-dx, dz))
-    pitch = -math.degrees(math.atan2(dy, math.hypot(dx, dz)))
-    look(side, yaw, pitch)
-    hit = b(side, 'GET', '/state').get('hit')
-    say('aim', side, round(yaw, 1), round(pitch, 1), json.dumps(hit)[:200])
-    return hit
-
-
-def hold(user, side, item):
-    cmd(f'item replace entity {user} weapon.mainhand with {item}')
-    want = item.split('[')[0]
-    for _ in range(50):
-        h = b(side, 'GET', '/state')['player'].get('selectedItem') or {}
-        if (want == 'minecraft:air' and h.get('empty')) or h.get('id') == want:
-            return
-        time.sleep(0.1)
-    say('WARN hold not seen client-side', side, item)
-
-
-def burst(side, name, n, gap):
-    for i in range(n):
-        shot(side, f'{name}-{i}')
-        time.sleep(gap)
+def normal_swing():
+    if not ANIM:
+        cmd('effect clear Worker')
 
 
 A, B = 'Watcher', 'Worker'
@@ -156,7 +106,8 @@ elif PHASE == 'wrench':
     tp(A, X + 3.5, Y, Z - 7.5, 0, 0)
     time.sleep(1.5)
     aim('A', X + 6.5, Y + 1.2, Z - 3.5)
-    hold(B, 'B', 'buildcraftunofficial:wrench[%s={duration:40}]' % ANIM)
+    slow_swing()
+    hold(B, 'B', slow('buildcraftunofficial:wrench'))
     aim('B', X + 8.5, Y + 0.5, Z - 3.5)
     shot('A', 'wrench-before', 'B standing, arm down')
     say('wrench click', b('B', 'POST', '/worldclick', {'action': 'right_click'}))
@@ -164,6 +115,7 @@ elif PHASE == 'wrench':
     shot('B', 'wrench-self')
     time.sleep(2.5)
     # second click: plain 6-tick swing, no component, as a player would see it
+    normal_swing()
     hold(B, 'B', 'buildcraftunofficial:wrench')
     say('wrench click plain', b('B', 'POST', '/worldclick', {'action': 'right_click'}))
     burst('A', 'wrench-plain', 3, 0.08)
@@ -175,14 +127,15 @@ elif PHASE in ('robotclick', 'dismantle'):
     tp(A, X - 4.5, Y, Z - 2.5, 90, 0)
     time.sleep(1.5)
     aim('A', X - 8 + 0.5, Y + 1.4, Z - 1.5)
-    hold(B, 'B', 'minecraft:leather_helmet[%s={duration:40}]' % ANIM)
+    slow_swing()
+    hold(B, 'B', slow('minecraft:leather_helmet'))
     aim('B', rx, ry, rz)
     shot('B', 'robotclick-aim')
     if PHASE == 'robotclick':
       say('helmet click', b('B', 'POST', '/worldclick', {'action': 'right_click'}))
       burst('A', 'helmet-swing', 4, 0.3)
       time.sleep(2.5)
-    hold(B, 'B', 'buildcraftunofficial:wrench[%s={duration:40}]' % ANIM)
+    hold(B, 'B', slow('buildcraftunofficial:wrench'))
     b('B', 'POST', '/keybind', {'keyName': 'key.sneak', 'action': 'press'})
     time.sleep(0.6)
     hit = aim('B', rx, ry + 0.35, rz)
@@ -191,6 +144,7 @@ elif PHASE in ('robotclick', 'dismantle'):
     say('dismantle click', b('B', 'POST', '/worldclick', {'action': 'right_click'}))
     burst('A', 'dismantle-swing', 4, 0.3)
     b('B', 'POST', '/keybind', {'keyName': 'key.sneak', 'action': 'release'})
+    normal_swing()
     cmd('data get entity @e[type=buildcraftunofficial:robot,x={X-8},y={Y},z={Z-4},distance=..3,limit=1] wearables')
 
 elif PHASE == 'mine':

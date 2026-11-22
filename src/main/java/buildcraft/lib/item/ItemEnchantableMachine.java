@@ -37,7 +37,11 @@ public class ItemEnchantableMachine extends BlockItem implements EnchantmentFilt
         return MachineEnchantments.enabled() && MachineEnchantments.isUseful(enchantment);
     }
 
-    // Fabric asks acceptsEnchantment through EnchantmentEvents.ALLOW_ENCHANTING (FabricLoaderHookRoutes).
+    // Fabric asks acceptsEnchantment through EnchantmentEvents.ALLOW_ENCHANTING (FabricLoaderHookRoutes). MinecraftForge
+    // has no such hook: its canApplyAtEnchantingTable is the enchanting table's alone (this item must stay out of
+    // that), isBookEnchantable can only veto, and Enchantment#canEnchant, which the anvil and /enchant ask, is unpatched.
+    // So no override here serves Forge: platform/forge/mixin AnvilMenuMixin and EnchantCommandMixin route those two
+    // calls to acceptsEnchantment (ForgeEnchantments).
     //? if neoforge {
     @LoaderHook("neoforge:IItemExtension#supportsEnchantment")
     @Override

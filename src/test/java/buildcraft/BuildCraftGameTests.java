@@ -18,12 +18,16 @@ import buildcraft.lib.test.TestOnlyBlocks;
 /**
  * Every BuildCraft game test, registered the same way on every loader. A loader hook calls {@link #register} during
  * mod construction: {@code platform.neoforge.NeoForgeGameTestHooks} from {@code FMLConstructModEvent} on NeoForge,
- * {@code platform.fabric.BCFabricGameTestEntrypoint} from the game-test mod's initializer on Fabric. 1.21.1 predates
- * the dynamic {@code TEST_FUNCTION} registry, so its NeoForge hook feeds {@link #registerAll} into
+ * {@code platform.fabric.BCFabricGameTestEntrypoint} from the game-test mod's initializer on Fabric,
+ * {@code platform.forge.ForgeGameTestHooks} (an automatic mod-bus subscriber on {@code FMLConstructModEvent}) on Forge.
+ * 1.21.1 predates the dynamic {@code TEST_FUNCTION} registry, so its NeoForge hook feeds {@link #registerAll} into
  * {@code GameTestRegistry} instead (see that hook).
  *
- * <p>A test the Fabric node cannot run sits in a {@code //? if neoforge} arm of {@link #registerAll} with its reason;
- * the Fabric build drops the manifests of the tests it does not register (bc.fabric, {@code FabricGameTests}).
+ * <p>A test the Fabric node cannot run sits in a {@code //? if neoforge} arm of {@link #registerAll} with its reason
+ * (it names neither Fabric nor Forge, so Forge leaves it out too: a client class on a dedicated server is refused there
+ * as well). A test only the Forge node cannot run sits in a {@code //? if neoforge || fabric} arm under a
+ * {@code // Not on Forge: <reason>} line. Both builds drop the manifests of the tests they do not register (bc.fabric,
+ * bc.forge, {@code FabricGameTests}).
  */
 public class BuildCraftGameTests {
 
@@ -42,7 +46,8 @@ public class BuildCraftGameTests {
         }
         buildcraft.platform.registry.BCRegistrar<Consumer<GameTestHelper>> functions =
                 buildcraft.platform.registry.BCRegistrar.create(net.minecraft.core.registries.Registries.TEST_FUNCTION, NAMESPACE);
-        registerAll((id, sup) -> functions.register(path(id), sup));
+        // GameTestTrace.wrap is the test itself unless -Dbuildcraft.gameTestTrace is set.
+        registerAll((id, sup) -> functions.register(path(id), buildcraft.lib.test.GameTestTrace.wrap(id, sup)));
         functions.subscribe();
     }
     //?}
@@ -197,6 +202,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_swept_at_tick_start", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsSweptWhenATickStarts);
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
+        reg.accept("buildcraftunofficial:fake_player_keeps_online_owners_tracker", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::machinePlayerLeavesTheOnlineOwnersTracker);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:machine_protection_probe_shows_empty_main_hand", () -> buildcraft.lib.misc.MachineProtectionTester::probeShowsListenersAnEmptyMainHand);
         reg.accept("buildcraftunofficial:machine_protection_place_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::placeProbeIsNotABlockUpdate);
@@ -382,7 +388,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gui_test_filler_ui", () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
         // Guide book recipe lookups off the server-synced cache (multiplayer recipe-panel fix)
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_recipe_lookup_synced_cache", () -> buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache);
         //?}
@@ -954,7 +961,8 @@ public class BuildCraftGameTests {
         // because `Ingredient.items()` drops data-component patches) and that CLAY_BRICK
         // Basic Gate has no assembly usages.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
         //?}
@@ -1105,7 +1113,8 @@ public class BuildCraftGameTests {
         // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
         // in place of its layer, and nothing out of view or off the mapped terrain.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
@@ -1113,13 +1122,15 @@ public class BuildCraftGameTests {
         //?}
         // ...and terrain far below the planner, de-magnified into view from beyond the ground span, is still drawn.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_edge_low_terrain", () -> buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn);
         //?}
         // ...and the survey-square outline is made of the terrain's own cells.
         // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load; the Fabric
-        // client game test (BCFabricClientGameTest) runs it instead.
+        // client game test (BCFabricClientGameTest) runs it instead. Not on Forge either: its dedicated server refuses client
+        // classes too, and there is no Forge client game test yet (docs/forge-port.md, F5).
         //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_outline_on_cells", () -> buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells);
         //?}

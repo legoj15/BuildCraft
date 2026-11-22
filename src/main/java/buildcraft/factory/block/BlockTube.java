@@ -146,8 +146,9 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock, PlayerBr
         return !keepsBlockOnPlayerBreak(state, level, pos, player)
             && super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
     }
-    //?} elif neoforge {
-    /*@LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
+    //?} elif neoforge || forge {
+    /*// NeoForge 1.21.1's six-argument form, which is also MinecraftForge's on every line (it never took the tool).
+    @LoaderHook({"neoforge:IBlockExtension#onDestroyedByPlayer", "forge:IForgeBlock#onDestroyedByPlayer"})
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
             boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {

@@ -2,7 +2,6 @@ package buildcraft.lib.script;
 
 import net.minecraft.resources.Identifier;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
@@ -15,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -106,44 +106,31 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         List<ScriptAction> actions = new ArrayList<>();
 
         List<FileSystem> openFileSystems = new ArrayList<>();
-        Map<File, Path> loadedFiles = new HashMap<>();
+        // Keyed by Path, not File: a loader may hand over a path on a filesystem of its own (Forge mounts a
+        // development mod, and Minecraft itself, on a union filesystem), which Path.toFile() refuses (#212).
+        Map<Path, Path> loadedFiles = new LinkedHashMap<>();
         List<Path> jarRoots = new ArrayList<>();
         for (String modId : Platform.loader().modIds()) {
-            // Empty when the loader has no file for the mod
-            for (Path modPath : Platform.loader().modSourcePaths(modId)) {
-                File source = modPath.toFile();
-                if (!source.exists()) {
-                    continue;
-                }
-                visitFile(openFileSystems, loadedFiles, jarRoots, source);
-
-                // Dev environment fix: a mod's source path points to
-                // build/classes/java/main which has no assets/ — the resources are at
-                // build/resources/main. Try the sibling resources directory too.
-                if (source.isDirectory()) {
-                    String sourcePath = source.getAbsolutePath();
-                    if (sourcePath.endsWith("classes" + File.separator + "java" + File.separator + "main")) {
-                        File resourcesDir = new File(source.getParentFile().getParentFile().getParentFile(),
-                            "resources" + File.separator + "main");
-                        if (resourcesDir.isDirectory()) {
-                            visitFile(openFileSystems, loadedFiles, jarRoots, resourcesDir);
-                        }
-                    }
-                }
+            try {
+                visitModSources(openFileSystems, loadedFiles, jarRoots, modId);
+            } catch (RuntimeException e) {
+                BCLog.logger.warn("[lib.script] Skipping the files of " + modId, e);
             }
         }
 
         // Resource pack loading deferred — NeoForge handles resource packs differently
 
-        File baseFile = new File(Platform.loader().configDir().toFile(), "buildcraft/scripts");
-        if (!baseFile.isDirectory()) {
-            baseFile.mkdirs();
+        Path baseFile = Platform.loader().configDir().resolve("buildcraft").resolve("scripts");
+        try {
+            Files.createDirectories(baseFile);
+        } catch (IOException e) {
+            BCLog.logger.warn("[lib.script] Unable to create " + baseFile, e);
         }
         visitFile(openFileSystems, loadedFiles, null, baseFile);
 
-        for (Entry<File, Path> entry : loadedFiles.entrySet()) {
-            File file = entry.getKey();
-            loadScripts(openFileSystems, actions, file, entry.getValue(), jarRoots, file == baseFile);
+        for (Entry<Path, Path> entry : loadedFiles.entrySet()) {
+            Path file = entry.getKey();
+            loadScripts(actions, file, entry.getValue(), jarRoots);
         }
 
         SimpleScript.logForAll("#############");
@@ -160,8 +147,30 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         }
     }
 
-    private void visitFile(List<FileSystem> openFileSystems, Map<File, Path> loadedFiles, List<Path> roots,
-        File source) {
+    private void visitModSources(List<FileSystem> openFileSystems, Map<Path, Path> loadedFiles, List<Path> jarRoots,
+        String modId) {
+        // Empty when the loader has no file for the mod
+        for (Path source : Platform.loader().modSourcePaths(modId)) {
+            if (!Files.exists(source)) {
+                continue;
+            }
+            visitFile(openFileSystems, loadedFiles, jarRoots, source);
+
+            // Dev environment fix: a mod's source path points to
+            // build/classes/java/main which has no assets/ — the resources are at
+            // build/resources/main. Try the sibling resources directory too.
+            if (source.getFileSystem() == FileSystems.getDefault() && Files.isDirectory(source)
+                && source.endsWith(Path.of("classes", "java", "main"))) {
+                Path resourcesDir = source.getParent().getParent().getParent().resolve("resources").resolve("main");
+                if (Files.isDirectory(resourcesDir)) {
+                    visitFile(openFileSystems, loadedFiles, jarRoots, resourcesDir);
+                }
+            }
+        }
+    }
+
+    private void visitFile(List<FileSystem> openFileSystems, Map<Path, Path> loadedFiles, List<Path> roots,
+        Path source) {
         if (loadedFiles.containsKey(source)) {
             return;
         }
@@ -175,10 +184,10 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
     }
 
     @Nullable
-    private Path getRoot(List<FileSystem> openFileSystems, File file) {
+    private Path getRoot(List<FileSystem> openFileSystems, Path file) {
         final PackType sourceType = manager.getType();
-        Path scriptDirRoot = file.toPath();
-        if (file.isDirectory()) {
+        Path scriptDirRoot = file;
+        if (Files.isDirectory(file)) {
             Path root = scriptDirRoot.resolve(sourceType.prefix);
             return Files.exists(root) ? root : null;
         }
@@ -186,18 +195,20 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
             FileSystem fileSystem = FileSystems.newFileSystem(scriptDirRoot, /* since java 13 */ (ClassLoader) null);
             Path root = fileSystem.getPath("/" + sourceType.prefix);
             if (!Files.exists(root)) {
+                IOUtils.closeQuietly(fileSystem);
                 return null;
             }
             openFileSystems.add(fileSystem);
             return root;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
+            // Unchecked too: a file no provider can open (not a zip, or on a filesystem of its own) throws
+            // ProviderNotFoundException or UnsupportedOperationException. Skip that one source, not every pack.
             BCLog.logger.error("Unable to load " + file + " as a separate file system!", e);
             return null;
         }
     }
 
-    private void loadScripts(List<FileSystem> openFileSystems, List<ScriptAction> actions, File file, Path root,
-        List<Path> jarRoots, boolean genInfo) {
+    private void loadScripts(List<ScriptAction> actions, Path file, Path root, List<Path> jarRoots) {
         try {
             boolean loggedInsn = false;
             String postPath = "compat/" + this.entryPath;
@@ -238,8 +249,9 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
                     }
                 }
             }
-        } catch (IOException io) {
-            BCLog.logger.warn("Unable to load from ...", io);
+        } catch (IOException | RuntimeException e) {
+            // One unreadable pack loses its own scripts only, never every other pack's
+            BCLog.logger.warn("[lib.script] Unable to load scripts from " + file, e);
         }
     }
 

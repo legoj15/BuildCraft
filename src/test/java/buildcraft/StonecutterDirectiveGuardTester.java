@@ -64,6 +64,13 @@ import org.junit.jupiter.api.Test;
  * {@code /^ ... ^/} (and {@code /^* ... *^/}); inside a block comment's body the scanner reads that form as a comment.
  * In a file's own text it is not Java, so there the scanner does not read it as one and it counts as code.
  *
+ * <p><b>One design rule on top: no bare loader {@code else} in main or test code.</b> With three loaders, an
+ * {@code else} after an arm that names a loader silently means "the other two", so a feature written for NeoForge and
+ * Fabric quietly reaches MinecraftForge on the Fabric arm. A chain in {@code src/main} or {@code src/test/java} that
+ * names a loader in any arm may not end in a plain {@code else}; it names each loader it serves
+ * ({@code elif fabric || forge}). Version-only chains keep their {@code else}. (Test code joined main code in the
+ * Forge game-test slice, F5, which re-keyed the last of its forks.)
+ *
  * <p><b>What Stonecutter processes.</b> Every file in the {@code src/} source dirs, resources included, whose
  * extension has a handler in Stonecutter's {@code Defaults.kt}; everything else (json, toml, md, txt, images) is
  * copied verbatim, which was confirmed on a scratch project. Today only {@code .java} files carry directives.
@@ -79,9 +86,9 @@ import org.junit.jupiter.api.Test;
  * verdict is too. Which arms are live is decided against the active node, read from the {@code stonecutter active}
  * line of {@code stonecutter.gradle.kts}, whose text {@code src/} always matches (the node name may carry a
  * {@code -<loader>} suffix, as a Fabric node's does), and against the loader that node builds against: {@code loader}
- * in the node's own {@code gradle.properties}, else the root one. The bare identifiers {@code neoforge} and
- * {@code fabric} are the loader constants build.gradle.kts defines, so {@code //? if neoforge} is live exactly when
- * that loader is the active one.
+ * in the node's own {@code gradle.properties}, else the root one. The bare identifiers {@code neoforge},
+ * {@code fabric} and {@code forge} (MinecraftForge) are the loader constants build.gradle.kts defines, so
+ * {@code //? if neoforge} is live exactly when that loader is the active one.
  *
  * <p><b>What it cannot see.</b> Whether an inactive arm's block comment holds code or prose. Stonecutter wraps code in
  * exactly that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first
@@ -90,7 +97,7 @@ import org.junit.jupiter.api.Test;
  * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Such prose
  * does not blind the scan to what follows it: a quote or apostrophe in it opens a literal that ends with its line, as
  * Java's string and char literals do, so a nested chain on a later line is still judged. Conditions
- * beyond version comparisons and the two loader constants, joined by {@code &&} and {@code ||}, are reported rather
+ * beyond version comparisons and the three loader constants, joined by {@code &&} and {@code ||}, are reported rather
  * than guessed at, and the arms of such a chain are not judged. */
 public class StonecutterDirectiveGuardTester {
 
@@ -115,7 +122,10 @@ public class StonecutterDirectiveGuardTester {
     private static final Pattern ELSE = Pattern.compile("^\\}\\s*else\\s*\\{$");
     /** One term of a condition: a version comparison (groups 1 and 2) or a loader constant (group 3). */
     private static final Pattern TERM =
-        Pattern.compile("^(?:(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)|(neoforge|fabric))$");
+        Pattern.compile("^(?:(>=|<=|!=|>|<|=)\\s*(\\d+(?:\\.\\d+)*)|(neoforge|fabric|forge))$");
+
+    /** A loader constant inside a condition. */
+    private static final Pattern LOADER_CONSTANT = Pattern.compile("\\b(?:neoforge|fabric|forge)\\b");
 
     @Test
     public void noDirectiveArmIsLeftForStonecutterToMangle() throws IOException {
@@ -247,6 +257,8 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertTrue(holds("fabric || >=26.3", active, "neoforge"));
         Assertions.assertFalse(holds("fabric && >=26.3", active, "neoforge"));
         Assertions.assertTrue(holds("fabric && >=26.3", active, "fabric"));
+        Assertions.assertFalse(holds("forge", active, "neoforge"));
+        Assertions.assertTrue(holds("forge", active, "forge"));
         Matcher suffixed = ACTIVE_NODE.matcher("stonecutter active \"26.3-fabric\" /* [SC] DO NOT EDIT */");
         Assertions.assertTrue(suffixed.find() && suffixed.group(1).equals("26.3-fabric") && suffixed.group(2).equals("26.3"));
     }
@@ -338,6 +350,121 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertEquals(2, mixed.findings.size(), mixed.findings.toString());
         Assertions.assertTrue(mixed.findings.get(0).startsWith("S.java:3: "), mixed.findings.get(0));
         Assertions.assertTrue(mixed.findings.get(1).startsWith("S.java:6: "), mixed.findings.get(1));
+    }
+
+    /** With three loaders, an {@code else} after a loader-keyed arm silently means "the other two": main and test code
+     *  must name each loader they serve. A version-only chain keeps its else. */
+    @Test
+    public void scannerFlagsABareLoaderElseInMainAndTestCode() {
+        int[] active = {26, 3};
+        String chain = """
+            //? if neoforge {
+            int a = 1;
+            //?} else {
+            /*int a = 2;
+            *///?}
+            """;
+
+        Scan bare = new Scan(active);
+        bare.file("src/main/java/A.java", chain);
+        Assertions.assertEquals(1, bare.findings.size(), bare.findings.toString());
+        Assertions.assertTrue(bare.findings.get(0).startsWith("src/main/java/A.java:3: "), bare.findings.get(0));
+
+        // The loader may sit in a later arm or beside a version term; the else after it is still bare.
+        Scan versioned = new Scan(active);
+        versioned.file("src/main/java/B.java", """
+            //? if neoforge && >=1.21.10 {
+            int b = 1;
+            //?} else {
+            /*int b = 2;
+            *///?}
+            //? if >=26.3 {
+            int c = 1;
+            //?} elif fabric {
+            /*int c = 2;
+            *///?} else {
+            /*int c = 3;
+            *///?}
+            """);
+        Assertions.assertEquals(2, versioned.findings.size(), versioned.findings.toString());
+        Assertions.assertTrue(versioned.findings.get(0).startsWith("src/main/java/B.java:3: "), versioned.findings.get(0));
+        Assertions.assertTrue(versioned.findings.get(1).startsWith("src/main/java/B.java:10: "), versioned.findings.get(1));
+
+        // Test code is held to the rule too.
+        Scan bareTest = new Scan(active);
+        bareTest.file("src/test/java/T.java", chain);
+        Assertions.assertEquals(1, bareTest.findings.size(), bareTest.findings.toString());
+        Assertions.assertTrue(bareTest.findings.get(0).startsWith("src/test/java/T.java:3: "), bareTest.findings.get(0));
+
+        // Sound: every loader named, and a version-only chain with an else.
+        Scan sound = new Scan(active);
+        sound.file("src/main/java/C.java", """
+            //? if neoforge {
+            int d = 1;
+            //?} elif fabric || forge {
+            /*int d = 2;
+            *///?}
+            //? if >=26.3 {
+            int e = 1;
+            //?} else {
+            /*int e = 2;
+            *///?}
+            """);
+        sound.file("src/test/java/D.java", """
+            //? if neoforge || forge {
+            int d = 1;
+            //?} elif fabric {
+            /*int d = 2;
+            *///?}
+            """);
+        Assertions.assertEquals(List.of(), sound.findings);
+
+        // The conditions those chains use: && and || read left to right, as Stonecutter does (see holds).
+        Assertions.assertFalse(holds("neoforge || forge && >=1.21.10", new int[] {1, 21, 1}, "neoforge"));
+        Assertions.assertTrue(holds("neoforge && >=1.21.10 || forge && >=1.21.10", active, "forge"));
+        Assertions.assertFalse(holds("neoforge && >=1.21.10 || forge && >=1.21.10", new int[] {1, 21, 1}, "forge"));
+        Assertions.assertTrue(holds("neoforge && >=1.21.10 || forge && >=1.21.10", new int[] {1, 21, 11}, "neoforge"));
+        Assertions.assertTrue(holds("forge && >=1.21.10 || neoforge", new int[] {1, 21, 1}, "neoforge"));
+        Assertions.assertFalse(holds("forge && >=1.21.10 || neoforge", new int[] {1, 21, 1}, "forge"));
+        Assertions.assertTrue(holds("forge && >=1.21.10 || neoforge", active, "forge"));
+    }
+
+    /** A condition whose value depends on whether {@code &&} or {@code ||} is read first is a node silently losing a
+     *  block: {@code neoforge || forge && >=1.21.10} is on for NeoForge 1.21.1 by precedence and off in Stonecutter,
+     *  which dropped the robot's chunk-unload override there. A condition that reads the same both ways passes. */
+    @Test
+    public void scannerFlagsAConditionWhoseReadingOrderMatters() {
+        Scan scan = new Scan(new int[] {26, 3});
+        scan.file("src/main/java/E.java", """
+            //? if neoforge || forge && >=1.21.10 {
+            int f = 1;
+            //?} elif fabric {
+            /*int f = 2;
+            *///?}
+            """);
+        Assertions.assertEquals(1, scan.findings.size(), scan.findings.toString());
+        Assertions.assertTrue(scan.findings.get(0).startsWith("src/main/java/E.java:1: "), scan.findings.get(0));
+        Assertions.assertTrue(scan.findings.get(0).contains("on neoforge 1.21.1"), scan.findings.get(0));
+
+        Scan sound = new Scan(new int[] {26, 3});
+        sound.file("src/main/java/F.java", """
+            //? if forge && >=1.21.10 || neoforge {
+            int g = 1;
+            //?} elif forge {
+            /*int g = 2;
+            *///?}
+            //? if neoforge && >=1.21.10 || forge && >=1.21.10 {
+            int h = 1;
+            //?} elif fabric {
+            /*int h = 2;
+            *///?}
+            //? if neoforge && <1.21.10 || fabric || forge {
+            /*int i = 1;
+            *///?} elif neoforge {
+            int i = 2;
+            //?}
+            """);
+        Assertions.assertEquals(List.of(), sound.findings);
     }
 
     /** The false-positive guard rails: arms that look odd to a text scan but that Stonecutter handles correctly. */
@@ -555,6 +682,8 @@ public class StonecutterDirectiveGuardTester {
     }
 
     private static final class Chain {
+        /** Some arm's condition names a loader constant. */
+        boolean loaderKeyed;
         boolean taken;
         /** A condition of this chain could not be evaluated (already reported), so its arms are not judged. */
         boolean unknown;
@@ -623,6 +752,12 @@ public class StonecutterDirectiveGuardTester {
                     begin(chain, open.group(1), marker, tok);
                 } else if (!stack.isEmpty() && (elif.matches() || ELSE.matcher(body).matches())) {
                     end(stack.peek().arm);
+                    if (!elif.matches() && stack.peek().loaderKeyed
+                            && (where.startsWith("src/main/") || where.startsWith("src/test/java/"))) {
+                        report(tok, "`" + marker + "` ends a chain that names a loader, so it silently also serves "
+                            + "every loader the chain does not name. Name each loader the arm serves instead "
+                            + "(`} elif fabric || forge {`), as docs/forge-port.md requires of main code");
+                    }
                     begin(stack.peek(), elif.matches() ? elif.group(1) : null, marker, tok);
                 } else if (!stack.isEmpty() && body.equals("}")) {
                     end(stack.pop().arm);
@@ -637,6 +772,14 @@ public class StonecutterDirectiveGuardTester {
         }
 
         private void begin(Chain chain, String cond, String marker, Tok tok) {
+            chain.loaderKeyed |= cond != null && LOADER_CONSTANT.matcher(cond).find();
+            String diverges = cond == null ? null : readingOrderDivergence(cond);
+            if (diverges != null) {
+                report(tok, "`" + marker + "` mixes && and || so that its value depends on the reading order: "
+                    + diverges + ". Stonecutter reads them left to right at one rank, the usual precedence reads "
+                    + "&& first. Reorder it so both agree (`forge && >=1.21.10 || neoforge`, or the version term "
+                    + "repeated after each loader), or split it into flat arms");
+            }
             boolean live = false;
             if (!chain.taken) {
                 try {
@@ -704,33 +847,85 @@ public class StonecutterDirectiveGuardTester {
     /** Whether a condition ({@code >=26.2}, {@code >=1.21.10 && <26.3}, {@code neoforge}) holds for the node with
      *  version {@code active} and loader {@code loader}. */
     private static boolean holds(String cond, int[] active, String loader) {
-        boolean any = false;
-        for (String conjunction : cond.split("\\|\\|")) {
-            boolean all = true;
-            for (String term : conjunction.split("&&")) {
-                Matcher m = TERM.matcher(term.trim());
-                if (!m.matches()) {
-                    throw new IllegalArgumentException("cannot evaluate the condition `" + cond + "` (only version "
-                        + "comparisons and the loader constants neoforge and fabric, joined by && and ||, are "
-                        + "understood) - extend the guard before using other forms");
-                }
-                if (m.group(3) != null) {
-                    all &= m.group(3).equals(loader);
-                    continue;
-                }
-                int cmp = compare(active, version(m.group(2)));
-                all &= switch (m.group(1)) {
-                    case ">=" -> cmp >= 0;
-                    case "<=" -> cmp <= 0;
-                    case ">" -> cmp > 0;
-                    case "<" -> cmp < 0;
-                    case "=" -> cmp == 0;
-                    default -> cmp != 0;
-                };
+        // Stonecutter 0.9.8 gives && and || the same rank and reads left to right (measured with a scratch probe on
+        // the 26.3 NeoForge and Forge nodes: `neoforge || forge && >=1.21.10` was off on NeoForge 1.21.1, where
+        // the usual precedence would have it on). A mixed condition must read the same either way (see
+        // readingOrderDivergence), so the guard rejects one that does not.
+        String[] terms = cond.split("&&|\\|\\|");
+        Matcher operators = Pattern.compile("&&|\\|\\|").matcher(cond);
+        boolean result = false;
+        for (int i = 0; i < terms.length; i++) {
+            boolean term = term(cond, terms[i], active, loader);
+            if (i == 0) {
+                result = term;
+            } else {
+                operators.find();
+                result = operators.group().equals("&&") ? result && term : result || term;
             }
-            any |= all;
         }
-        return any;
+        return result;
+    }
+
+    /** The same condition under the usual precedence ({@code &&} binds tighter than {@code ||}). */
+    private static boolean holdsByPrecedence(String cond, int[] active, String loader) {
+        for (String alternative : cond.split("\\|\\|")) {
+            boolean all = true;
+            for (String term : alternative.split("&&")) {
+                all &= term(cond, term, active, loader);
+            }
+            if (all) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean term(String cond, String text, int[] active, String loader) {
+        Matcher m = TERM.matcher(text.trim());
+        if (!m.matches()) {
+            throw new IllegalArgumentException("cannot evaluate the condition `" + cond + "` (only version "
+                + "comparisons and the loader constants neoforge, fabric and forge, joined by && and ||, are "
+                + "understood) - extend the guard before using other forms");
+        }
+        if (m.group(3) != null) {
+            return m.group(3).equals(loader);
+        }
+        int cmp = compare(active, version(m.group(2)));
+        return switch (m.group(1)) {
+            case ">=" -> cmp >= 0;
+            case "<=" -> cmp <= 0;
+            case ">" -> cmp > 0;
+            case "<" -> cmp < 0;
+            case "=" -> cmp == 0;
+            default -> cmp != 0;
+        };
+    }
+
+    /** The nodes the project builds, as a version crossed with each loader constant (the lines of
+     *  stonecutter.gradle.kts; 1.21.10 builds no MinecraftForge node but its arms are still read). */
+    private static final int[][] NODE_VERSIONS =
+        {{1, 21, 1}, {1, 21, 10}, {1, 21, 11}, {26, 1, 2}, {26, 2}, {26, 3}};
+    private static final String[] NODE_LOADERS = {"neoforge", "fabric", "forge"};
+
+    /** For a condition that mixes {@code &&} and {@code ||}: the first node where reading it left to right (as
+     *  Stonecutter does) and by the usual precedence disagree, else null. A condition like
+     *  {@code neoforge || forge && >=1.21.10} is on for NeoForge 1.21.1 by precedence and off for Stonecutter, which
+     *  silently dropped a NeoForge-only override from that node once. */
+    private static String readingOrderDivergence(String cond) {
+        if (!cond.contains("&&") || !cond.contains("||")) {
+            return null;
+        }
+        for (int[] version : NODE_VERSIONS) {
+            for (String loader : NODE_LOADERS) {
+                boolean stonecutter = holds(cond, version, loader);
+                if (stonecutter != holdsByPrecedence(cond, version, loader)) {
+                    return "on " + loader + " " + String.join(".", Arrays.stream(version)
+                        .mapToObj(Integer::toString).toList()) + " it is " + (stonecutter ? "on" : "off")
+                        + " for Stonecutter and " + (stonecutter ? "off" : "on") + " by precedence";
+                }
+            }
+        }
+        return null;
     }
 
     /** Stonecutter's slash scanner: comments, with string, char and text-block literals skipped whole. {@code base} is

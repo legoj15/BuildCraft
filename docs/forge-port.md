@@ -942,6 +942,23 @@ it back and re-opens the section before it ends; that version is not run yet). O
 `mod-list-banner`) failed at its first step on Server1: the runner could not bring the 26.3 (SDL3) window to the front to open
 the pause menu ("could not focus the game window"), so the screen is not verified in a 26.3-forge client.
 
+### Client batches after the last line merged (2026-11-22)
+
+Full default batches at `0055bc3f6` (every Forge line with its client), `upgrade-26-3-verify` left out (it needs a save carried
+from 26.2). 0 BuildCraft log errors in every scenario.
+
+| Node | Where | Result |
+|---|---|---|
+| 26.3-forge | workstation | 37 pass, `forge-config-screen` and the two OPAC claims scenarios among them (`crossmod-claims-opac` failed once on the control rig's Flood Gate step and passed 2 of 2 reruns) |
+| 26.2-forge | Server1 | 36 pass; `marker-length`, `marker-relog` (bridge `TimeoutException`) and `zone-planner-zoom` (a refused `setblock` under the player) failed while two multiplayer servers shared the machine, and all three passed when rerun alone |
+| 26.1.2-forge | Server1 | every scenario that ran passed |
+| 1.21.1-forge | Server1 | all pass but two: `zone-planner-zoom` (the same refused `setblock`) and `crossmod-claims-opac-stranger` (no world after 10 minutes); both passed when rerun alone |
+| 1.21.11-forge | workstation | see the line below this table |
+
+On 26.2, 26.1.2 and 1.21.11 the OPAC pin is compile-only (the mod wants a Forge Config API Port build those lines have no pin
+for, #228): `withmods_compile_only=opac` in the node's `gradle.properties` makes the runner skip the claims scenarios there. On
+1.21.1-forge `config_screen=false` skips `forge-config-screen` (#225). Both skips were seen in a Server1 batch.
+
 ## Common-code loader forks (F3b)
 
 Every loader-keyed directive outside `platform/` was walked (`//? if neoforge`, `fabric`, `forge`, bare elses). Evidence

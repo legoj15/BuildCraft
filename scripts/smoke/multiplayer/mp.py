@@ -712,11 +712,13 @@ def server(node):
             raise SystemExit('run `python -I mp.py setup %s` first (it writes the RCON password)' % node)
         nonce = uuid.uuid4().hex
         st['server'] = remote_start(node, nonce)
+        st['serverStart'] = proc_start(st['server'])
     else:
         log = os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')
         if os.path.exists(log):
             os.remove(log)
         st['server'] = gradle(node, [f':{node}:runServer'] + run_switches(node, 'server'), 'server.gradle.log')
+        st['serverStart'] = proc_start(st['server'])
     save_state(node, st)
     try:
         lock_acquire(node, st['server'])
@@ -745,6 +747,7 @@ def server(node):
             print('the remote launch stalled (no status line); starting it again (attempt %d of 3)' % (attempt + 1), flush=True)
             lock_release(node)
             st['server'] = remote_start(node, nonce)
+            st['serverStart'] = proc_start(st['server'])
             save_state(node, st)
             lock_acquire(node, st['server'])
         m = remote_wait_done(node, st['server'], 3600, nonce)  # a fresh checkout configures every node first
@@ -763,6 +766,7 @@ def client(node, side):
     if os.path.exists(log):
         os.remove(log)
     st['client' + side] = gradle(node, [f':{node}:runClient'] + run_switches(node, 'client', side), f'client{side}.gradle.log')
+    st['client' + side + 'Start'] = proc_start(st['client' + side])
     save_state(node, st)
     m = wait_log(log, r'listening on http://127\.0\.0\.1:(\d+)', 900)
     port = int(m.group(1))
@@ -838,6 +842,19 @@ class Rcon:
                 self.s.settimeout(30)
 
 
+def kill_pinned(label, pid, recorded):
+    """Tree-kill `pid` only while it is provably the process this rig recorded (pid and start time, as tunnel_stop
+    does): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else."""
+    now = proc_start(pid)
+    if now is None:
+        print('%s (pid %s) is already gone' % (label, pid))
+    elif not recorded or recorded <= 0 or not same_process(now, recorded):
+        print('%s: pid %s is not provably a process of this rig (no start time recorded, or the number was reused): '
+              'not killed' % (label, pid))
+    else:
+        print(label, subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+
+
 def stop(node):
     st = load_state(node)
     t = st.get('tunnel')
@@ -848,7 +865,7 @@ def stop(node):
     for side in ('B', 'A'):
         b = st.get('bridge' + side)
         if b:
-            subprocess.run(['taskkill', '/PID', str(b['pid']), '/T', '/F'], capture_output=True)
+            kill_pinned('bridge' + side, b['pid'], b.get('startFileTime'))
     stopped = False
     try:
         r = Rcon(node)
@@ -878,12 +895,12 @@ def stop(node):
         time.sleep(15 if stopped else 0)
     for k in ('clientB', 'clientA', 'server'):
         if k in st:
-            print(k, subprocess.run(['taskkill', '/PID', str(st[k]), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+            kill_pinned(k, st[k], st.get(k + 'Start'))
     if remote_unconfirmed:
         # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry,
         # marked so the retry forces the kill again instead of trusting a poller the first stop already ended
         st['remote_kill_unconfirmed'] = True
-        save_state(node, {k: st[k] for k in ('server', 'tunnel', 'remote_kill_unconfirmed') if k in st})
+        save_state(node, {k: st[k] for k in ('server', 'serverStart', 'tunnel', 'remote_kill_unconfirmed') if k in st})
         print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
               'run `python -I mp.py stop %s` again' % node)
         return

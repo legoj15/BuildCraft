@@ -19,14 +19,15 @@ ssh tunnel's pid is pinned the same way; a tunnel key the older mp.py wrote (a b
 
   python -I mp.py setup <node>            game dirs, server.properties, ops, bridge jar + options from run-smoke
   python -I mp.py server <node>            start the dedicated server, wait for "Done"
-  python -I mp.py client <node> A|B        start a client that quick-plays into the server, capture its bridge
+  python -I mp.py client <node> A|B        start a client that quick-plays into the server, capture its bridge, wait for the join
   python -I mp.py rcon <node> "<cmd>" ...  server console commands
   python -I mp.py b <node> A|B <METHOD> <path> [json]
   python -I mp.py stop <node>              stop clients + server (a remote server: every java of that checkout)
 
 Loaders: NeoForge nodes pass the run switches through mp.init.gradle (an init script, so build.gradle.kts stays untouched);
-a MinecraftForge node (`loader=forge`) reads the build's own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (bc.forge).
-A Fabric node has no arm yet and is skipped with a reason (exit 0).
+a MinecraftForge node (`loader=forge`) and a Fabric node (`loader=fabric`) read the build's own `-PbcUser`,
+`-PbcQuickPlayServer` and `-PbcRunDir` (bc.forge and bc.fabric: on Fabric the folder moves the run's working directory
+too, so the server's files and both clients' logs land under run-smoke/).
 
 The server may run on another machine, so the two clients join over a real network; when that machine's firewall does not let the
 server's JVM in (a Java-21 line on Server1), `server` forwards the game and RCON ports over ssh (`ensure_reachable`) and the clients
@@ -73,6 +74,12 @@ BRIDGE = os.path.expanduser('~/.mcdevbridge/bridge.json')
 LOCK = os.path.join(os.path.expanduser('~'), '.mcdevbridge', 'smoke.lock')
 LOCK_OWNER = 'multiplayer/mp.py'
 SERVER_DIR = 'run-smoke/mp-server'  # relative to versions/<node>, on whichever machine the server runs
+# The scratch world's generator-settings: the classic superflat stack (bedrock, two dirt, grass) on the plains biome,
+# the shape vanilla's own flat preset builds. An empty value is rejected by the FlatLevelGeneratorSettings codec, which
+# logs 'No key layers in MapLike[{}]' on every boot and falls back to its default layers (#230).
+FLAT_GENERATOR_SETTINGS = ('{"layers":[{"block":"minecraft:bedrock","height":1},'
+                           '{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],'
+                           '"biome":"minecraft:plains"}')
 # Ports of the real servers on Server1 and of this machine's own: this script never takes them.
 FORBIDDEN_PORTS = (25565, 25566, 25575)
 if PORT in FORBIDDEN_PORTS or RCON_PORT in FORBIDDEN_PORTS:
@@ -224,6 +231,18 @@ def lock_acquire(node, holder_pid):
                      'smoke run is going' % LOCK)
 
 
+def server_process_alive(st):
+    """True when a process the run recorded as its server is provably alive: the server JVM when a local run pinned it
+    (serverJvm, #230), else the Gradle wrapper / ssh poller — each pinned by its recorded start time, never by the pid
+    number alone (the OS hands a dead process's number to something else; state written before start times were recorded
+    stays lenient, the way same_process already is)."""
+    for key in ('serverJvm', 'server'):
+        pid = st.get(key)
+        if pid and same_process(proc_start(pid), st.get(key + 'Start')):
+            return True
+    return False
+
+
 def lock_require(node):
     """For a command that joins a run: the lock must be this run's. When it is free (a run started before locks
     existed, or one whose holder died) take it, held by the server's Gradle process; a live holder that is not
@@ -233,10 +252,10 @@ def lock_require(node):
         if lock_is_ours(held, node):
             return
         raise SystemExit(lock_busy_message(held))
-    srv = load_state(node).get('server')
-    if not srv or proc_start(srv) is None:
+    st = load_state(node)
+    if not st.get('server') or not server_process_alive(st):
         raise SystemExit('no server is running for %s: start it first (python -I mp.py server %s)' % (node, node))
-    lock_acquire(node, srv)
+    lock_acquire(node, st['server'])
 
 
 def lock_release(node):
@@ -272,24 +291,23 @@ def mc_version(node):
 
 
 def refuse_unsupported_node(node):
-    """NeoForge nodes (mp.init.gradle) and MinecraftForge nodes (bc.forge's own switches) are driven; a Fabric node has no
-    arm yet and is skipped, with the reason, and exits 0 so a caller treats it as skipped, not failed. Nothing is booted
-    and the smoke lock is not taken."""
-    if node_loader(node) == 'fabric':
-        print('SKIPPED: %s is a Fabric node; the two-client multiplayer smoke has no Fabric arm '
-              '(mp.init.gradle extends the NeoForge run extension, bc.forge reads the Forge switches)' % node)
-        sys.exit(0)
+    """Nothing to refuse: every loader has an arm — a NeoForge node through mp.init.gradle, a MinecraftForge or Fabric
+    node through its build's own switches (bc.forge, bc.fabric). The call stays because the scene scripts make it beside
+    their own mp.py commands; a loader mp.py cannot drive would again print SKIPPED and exit 0 here, so a caller reads
+    it as skipped, not failed."""
+    pass
 
 
 def run_switches(node, role, side=None):
     """The Gradle -P switches that put a run where mp.py wants it. `role` is 'server' (game dir run-smoke/mp-server) or
     'client' (game dir run-smoke/mp-<side>, the player's name, quick-play into the server). NeoForge reads them through
-    mp.init.gradle (mpUser, mpServer, mpServerDir), a Forge node through bc.forge (bcUser, bcQuickPlayServer, bcRunDir)."""
-    forge = node_loader(node) == 'forge'
+    mp.init.gradle (mpUser, mpServer, mpServerDir); a MinecraftForge or Fabric node reads the bc* switches its own build
+    provides (bcUser, bcQuickPlayServer, bcRunDir in bc.forge and bc.fabric alike)."""
+    own = node_loader(node) in ('forge', 'fabric')
     if role == 'server':
-        return [f'-PbcRunDir={SERVER_DIR}'] if forge else [f'-PmpServerDir={SERVER_DIR}']
+        return [f'-PbcRunDir={SERVER_DIR}'] if own else [f'-PmpServerDir={SERVER_DIR}']
     target = f'{server_ip(node)}:{PORT}'
-    if forge:
+    if own:
         return [f'-PbcRunDir=run-smoke/mp-{side.lower()}', f'-PbcUser={USERS[side]}', f'-PbcQuickPlayServer={target}']
     return [f'-PbcRunDir=run-smoke/mp-{side.lower()}', f'-PmpUser={USERS[side]}', f'-PmpServer={target}']
 
@@ -325,6 +343,7 @@ def server_files(node):
     props = {
         'online-mode': 'false', 'server-port': PORT, 'server-ip': '' if REMOTE else '127.0.0.1', 'enable-rcon': 'true',
         'rcon.port': RCON_PORT, 'rcon.password': rcon_password(node), 'level-type': 'minecraft\\:flat',
+        'generator-settings': FLAT_GENERATOR_SETTINGS,
         'gamemode': 'creative',
         'spawn-protection': '0', 'difficulty': 'peaceful', 'view-distance': '6', 'simulation-distance': '6',
         'generate-structures': 'false', 'enforce-secure-profile': 'false', 'motd': 'bc-smoke-mp', 'level-name': 'world',
@@ -701,9 +720,58 @@ def tunnel_stop(node):
     kill_pinned('tunnel', pid, start)
 
 
+def find_server_jvm():
+    """The pid of the process listening on this run's two ports — the server JVM, which on this machine nothing else may
+    hold (the real servers' ports are refused) — from netstat. The recorded `server` pid is the Gradle wrapper's (local)
+    or the ssh poller's (remote) while the JVM is a grandchild, so a kill that loses the tree would miss it; its own pid
+    is recorded too (#230). None when netstat cannot be asked, or names nothing or more than one pid: `stop` then keeps
+    to the wrapper tree kill it always had."""
+    try:
+        r = subprocess.run(['netstat', '-ano', '-p', 'tcp'], capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    pids = set()
+    for line in r.stdout.splitlines():
+        m = re.match(r'\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)\s*$', line)
+        if m and int(m.group(1)) in (PORT, RCON_PORT):
+            pids.add(int(m.group(2)))
+    if len(pids) != 1:
+        return None
+    pid = next(iter(pids))
+    return pid if proc_start(pid) is not None else None
+
+
+def record_server_jvm(node, st, tries=6):
+    """Pin the local server JVM's pid and start time into the run's state (find_server_jvm), retried a few times: the
+    ports follow the `Done` line by moments. Remote runs record nothing — their JVM is on the server machine, where the
+    straggler kill sweeps by checkout, not by a pid this script could pin."""
+    for _ in range(tries):
+        pid = find_server_jvm()
+        if pid is not None:
+            st['serverJvm'] = pid
+            st['serverJvmStart'] = proc_start(pid)
+            save_state(node, st)
+            print('server jvm pid', pid)
+            return
+        time.sleep(5)
+    print('no single process was listening on the run\'s ports; `stop` falls back to the Gradle tree kill for the '
+          'server JVM')
+
+
 def server(node):
     lock_wait_if_busy()
     st = load_state(node)
+    if REMOTE and st.get('remote_kill_unconfirmed'):
+        # a stop could not confirm its remote kill, so a server of that checkout may still be running there: never a
+        # second one on it (#230; server() used not to look at the flag). Repeat the kill and refuse until confirmed.
+        confirmed, line = remote_kill_stragglers()
+        print(line)
+        if not confirmed:
+            raise SystemExit('the remote kill of the earlier run on %s could still not be confirmed, so no server may '
+                             'be started there; the run\'s state and the smoke lock are still kept: run '
+                             '`python -I mp.py stop %s` again' % (REMOTE, node))
+        del st['remote_kill_unconfirmed']  # confirmed now: nothing of that checkout is running
+        save_state(node, st)
     if REMOTE:
         if not os.path.exists(os.path.join(HERE, node, 'rcon.pw')) and not os.environ.get('MP_RCON_PASSWORD'):
             raise SystemExit('run `python -I mp.py setup %s` first (it writes the RCON password)' % node)
@@ -730,15 +798,16 @@ def server(node):
                 break
             confirmed, line = remote_kill_stragglers()  # killing the poller must not leave a started remote run going
             print(line)
-            subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
             if not confirmed:
-                # never two servers on one remote checkout: an unconfirmed kill keeps the state and the lock for `stop`
+                # never two servers on one remote checkout: an unconfirmed kill keeps the state, AND the poller with
+                # the smoke lock it holds, for `stop` (which repeats the kill and clears both once it is confirmed)
                 st['remote_kill_unconfirmed'] = True
                 save_state(node, st)
                 raise SystemExit('the remote kill of the stalled launch could not be confirmed, so nothing may be '
-                                 'started on that checkout yet; the run\'s state and the smoke lock were kept: run '
-                                 '`python -I mp.py stop %s`, which repeats the kill and clears them once it is '
-                                 'confirmed' % node)
+                                 'started on that checkout yet; the run\'s state and the smoke lock were kept (the '
+                                 'poller stays, holding it): run `python -I mp.py stop %s`, which repeats the kill and '
+                                 'clears them once it is confirmed' % node)
+            subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
             if attempt == 3:
                 raise SystemExit('the remote launch stalled 3 times; see build/smoke-mp/%s/server.remote.log' % node)
             print('the remote launch stalled (no status line); starting it again (attempt %d of 3)' % (attempt + 1), flush=True)
@@ -753,6 +822,32 @@ def server(node):
     print('server up', m.group(0), ('on ' + SERVER_HOST) if REMOTE else '')
     if REMOTE:
         ensure_reachable(node)
+    else:
+        record_server_jvm(node, st)
+
+
+def wait_player_joined(node, side, timeout=300):
+    """Wait until the server's player list names this client's player (`list` over RCON). The bridge's port only says
+    the client booted, not that it quick-played in (#230): until the join, a command naming the player answers 'No
+    player was found' and a scene's first such command would pass silently. Bounded, and the failure names both logs."""
+    name = USERS[side]
+    cl = os.path.join(node_dir(node), f'run-smoke/mp-{side.lower()}', 'logs', 'latest.log')
+    end = time.time() + timeout
+    reply = ''
+    while time.time() < end:
+        try:
+            r = Rcon(node)  # a fresh connection each round: a stale one would fail the whole wait on one hiccup
+            reply = r.cmd('list', timeout=10)
+            r.s.close()
+        except Exception:
+            reply = ''
+        if re.search(r'\b%s\b' % re.escape(name), reply):
+            print('player', name, 'on the server:', reply.strip())
+            return
+        time.sleep(3)
+    raise SystemExit('%s never joined the server within %d s (the last `list` said %r); the client log is %s, the '
+                     'server log is %s' % (name, timeout, reply.strip(), cl,
+                                           os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')))
 
 
 def client(node, side):
@@ -783,7 +878,8 @@ def client(node, side):
     b['startFileTime'] = proc_start(b['pid'])  # pins the process, not just its pid number
     st['bridge' + side] = b
     save_state(node, st)
-    print('client', side, 'bridge', port, 'pid', b['pid'])
+    wait_player_joined(node, side)
+    print('client', side, 'bridge', port, 'pid', b['pid'], '-', USERS[side], 'joined')
 
 
 def bridge(node, side, method, path, body=None, timeout=60):
@@ -841,15 +937,19 @@ class Rcon:
 
 def kill_pinned(label, pid, recorded):
     """Tree-kill `pid` only while it is provably the process this rig recorded (pid and a readable, matching start
-    time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else."""
+    time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else.
+    False, without killing, when the pid is alive but not provably this rig's, so a caller that must not lose the
+    process can keep what it recorded (#230); True when it ended, or was already gone."""
     now = proc_start(pid)
     if now is None:
         print('%s (pid %s) is already gone' % (label, pid))
-    elif now < 0 or not recorded or recorded <= 0 or not same_process(now, recorded):  # now < 0: its start time cannot be read
+        return True
+    if now < 0 or not recorded or recorded <= 0 or not same_process(now, recorded):  # now < 0: its start time cannot be read
         print('%s: pid %s is not provably a process of this rig (no start time recorded, or the number was reused): '
               'not killed' % (label, pid))
-    else:
-        print(label, subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+        return False
+    print(label, subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+    return True
 
 
 def stop(node):
@@ -879,27 +979,49 @@ def stop(node):
                   '(the first stop already ended that poller)')
         if stopped and poller and not unconfirmed_before:  # the server's Gradle ends, the remote command with it, then the poller returns
             end = time.time() + 240
-            while time.time() < end and proc_start(poller) is not None:
+            while time.time() < end and same_process(proc_start(poller), st.get('serverStart')):
                 time.sleep(5)
         if remote_fetch_log(node):  # keep the server's side of the run beside the clients' logs
             shutil.copy2(remote_server_log(node), os.path.join(HERE, node, 'server-remote-latest.log'))
-        if not stopped or unconfirmed_before or (poller and proc_start(poller) is not None):  # did not stop on RCON, or a kill still needs confirming
+        still_up = poller and same_process(proc_start(poller), st.get('serverStart'))
+        if not stopped or unconfirmed_before or still_up:  # did not stop on RCON, or a kill still needs confirming
             print('remote server did not stop; ending the java processes of this checkout on the server machine')
             confirmed, line = remote_kill_stragglers()
             print(line)
             remote_unconfirmed = not confirmed
     else:
         time.sleep(15 if stopped else 0)
-    for k in ('clientB', 'clientA', 'server'):
-        if k in st:
-            kill_pinned(k, st[k], st.get(k + 'Start'))
+    refused = []
+    for k in ('serverJvm', 'clientB', 'clientA', 'server'):
+        if k not in st:
+            continue
+        if k == 'server' and remote_unconfirmed:
+            # the ssh poller is what the smoke lock names: while the remote kill is unconfirmed it is not ended (while
+            # it lives it keeps the lock for this run, the way the docstring promises — stop used to end it first,
+            # which left the kept lock stale and a second server able to start, #230)
+            print('server (pid %s) not killed, and the smoke lock not released: the remote kill is unconfirmed' % st[k])
+            continue
+        if not kill_pinned(k, st[k], st.get(k + 'Start')):
+            refused.append(k)
     if remote_unconfirmed:
         # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry,
         # marked so the retry forces the kill again instead of trusting a poller the first stop already ended
         st['remote_kill_unconfirmed'] = True
-        save_state(node, {k: st[k] for k in ('server', 'serverStart', 'tunnel', 'remote_kill_unconfirmed') if k in st})
-        print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
-              'run `python -I mp.py stop %s` again' % node)
+    if remote_unconfirmed or refused:
+        # ... and the same for a kill that was refused because the pid was not provably this rig's (state written
+        # before start times were recorded, or a reused number): the recorded process may still be alive, so the state
+        # is not dropped and the lock not released over it (#230)
+        save_state(node, {k: st[k] for k in ('server', 'serverStart', 'serverJvm', 'serverJvmStart',
+                                             'clientB', 'clientBStart', 'clientA', 'clientAStart',
+                                             'tunnel', 'remote_kill_unconfirmed') if k in st})
+        if remote_unconfirmed:
+            print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
+                  'run `python -I mp.py stop %s` again' % node)
+        if refused:
+            raise SystemExit('%s: a recorded process could not be proved ended (pid %s may still be running), so the '
+                             'run\'s state and the smoke lock were kept; end it by hand if it is this rig\'s, then run '
+                             '`python -I mp.py stop %s` again' % (', '.join(refused),
+                                                                  ', '.join(str(st[k]) for k in refused), node))
         return
     if 'tunnel' in st:
         tunnel_stop(node)

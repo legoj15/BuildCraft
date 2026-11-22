@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.energy.FluidVolatility.Band;
-import buildcraft.energy.block.BCFluidBlock;
+import buildcraft.energy.block.BCFluidBlockExtras;
 
 /**
  * Which oil and fuel variants burn, how fast, and which explode. The table here is the design written out by hand
@@ -49,8 +49,9 @@ public class FluidVolatilityTest {
     @Test
     public void aBlockCarriesTheBandOfItsEntry() {
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            BCFluidBlock block = (BCFluidBlock) entry.block().get();
-            Assertions.assertEquals(entry.volatility(), block.volatility(), entry.name());
+            BCFluidBlockExtras extras = BCFluidBlockExtras.of(entry.block().get());
+            Assertions.assertNotNull(extras, entry.name() + " is not a block carrying BuildCraft's fluid extras");
+            Assertions.assertEquals(entry.volatility(), extras.volatility(), entry.name());
         }
     }
 }

@@ -593,9 +593,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     /**
      * Whether the cell may not be broken as things stand: an unbreakable block (bedrock), or one a protection mod
      * forbids breaking (asked once, then remembered for {@link RefusalMemory#BUILDER_PLACE}'s window like a refused
-     * placement, so a protected area is not asked about on every tick). The break queue skips such a cell: queuing it
-     * only to drain it as impossible on the next step left the queue never empty, and a placement waits for an empty
-     * break queue, so one bedrock block in the box stopped every placement.
+     * placement, so a protected area is not asked about on every tick — a refusal can also be learned at the break
+     * itself, where {@code tick()} parks a cell whose destroy did not happen). The break queue skips such a cell:
+     * queuing it only to drain it as impossible on the next step left the queue never empty, and a placement waits
+     * for an empty break queue, so one bedrock block in the box stopped every placement.
      */
     private boolean isBreakBlocked(BlockPos pos) {
         Level world = tile.getWorldBC();
@@ -1050,10 +1051,17 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         tile.getBreakingTool(),
                         tile.getOwner()
                     );
-                    // Returns Optional.of(emptyList) for fluid sources broken under CLEAR mode
-                    // — the Optional is present (just holds no drops), so isEmpty() here tests
-                    // presence, not drop count. No refund, no cancel.
+                    // An empty result is a break that did not happen — the destroy was refused or failed, which
+                    // under minePlayerProtected (where isBreakBlocked's probe asks nobody) is the only place a
+                    // protection mod that cancels the destroy itself shows up. Park the cell as a refused ask, the
+                    // way isBreakBlocked parks the probe's answer, so it leaves the queue: re-queued every tick it
+                    // kept breakTasks from ever emptying, and the place-task add waits for exactly that, so a box
+                    // straddling a claim placed nothing at all — not even its cells outside the claim. The task is
+                    // refunded like any cancelled one; the cell stays owed and is asked again once the refusal
+                    // window ends. (A present Optional may still hold no drops — a CLEAR-mode fluid source — so
+                    // only isEmpty() means the block stands.)
                     if (result.isEmpty()) {
+                        breakRefusals.remember(tile.getWorldBC(), breakTask.pos, tile.getOwner());
                         cancelBreakTask(breakTask);
                     } else {
                         BlockUtil.BreakResult br = result.get();
@@ -1518,8 +1526,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             if (BlockUtil.isUnbreakableBlock(tile.getWorldBC(), pos, tile.getOwner())) {
                 return true;
             }
-            // Honor third-party player-protection mods (gated by BCCoreConfig.minePlayerProtected).
-            // Cancelled BreakEvent → task is impossible → drained from the queue with a refund.
+            // Honor third-party player-protection mods (gated by BCCoreConfig.minePlayerProtected):
+            // the probe asks only with the option off, so a cancelled BreakEvent → task is impossible → drained
+            // from the queue with a refund. With the option on, a mod that cancels the destroy itself is caught
+            // at the break instead: the empty result parks the cell in breakRefusals (see tick()).
             if (tile.getWorldBC() instanceof ServerLevel serverLevel
                     && !BlockUtil.canMachineBreak(serverLevel, pos, tile.getOwner())) {
                 return true;

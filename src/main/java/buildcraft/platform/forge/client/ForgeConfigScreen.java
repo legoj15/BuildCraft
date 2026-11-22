@@ -5,7 +5,7 @@
  */
 package buildcraft.platform.forge.client;
 
-//? if forge && >=1.21.10 {
+//? if forge {
 /*import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -25,6 +25,9 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.locale.Language;
+//? if <1.21.10 {
+/^import net.minecraft.network.chat.CommonComponents;
+^///?}
 import net.minecraft.network.chat.Component;
 
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -122,8 +125,7 @@ public final class ForgeConfigScreen extends OptionsSubScreen {
             Value value = (Value) node;
             Component label = valueLabel(value);
             Tooltip tooltip = valueTooltip(value);
-            StringWidget labelWidget = new StringWidget(COLUMN, ROW, label, font)
-                .setMaxWidth(COLUMN, StringWidget.TextOverflow.SCROLLING);
+            StringWidget labelWidget = textWidget(label);
             AbstractWidget editor = editor(value, label);
             if (tooltip != null) {
                 labelWidget.setTooltip(tooltip);
@@ -198,8 +200,26 @@ public final class ForgeConfigScreen extends OptionsSubScreen {
             return listBox(value, label, elements);
         }
         // A type this screen has no editor for: shown, not editable (edit the file).
-        return new StringWidget(COLUMN, ROW, Component.literal(String.valueOf(current)), font)
-            .setMaxWidth(COLUMN, StringWidget.TextOverflow.SCROLLING);
+        return textWidget(Component.literal(String.valueOf(current)));
+    }
+
+    /^*
+     * A row's read-only text, {@link #COLUMN} wide and never drawn past it. From 1.21.10 the widget itself clips a text
+     * that does not fit and scrolls it ({@code StringWidget#setMaxWidth}); 1.21.1's {@code StringWidget} has no such
+     * setting and would draw over the editor beside it, so there the text is cut by hand with a trailing ellipsis, as
+     * {@code GuiReplacer} and {@code GuiTextFit} cut theirs.
+     *^/
+    private StringWidget textWidget(Component text) {
+        //? if >=1.21.10 {
+        return new StringWidget(COLUMN, ROW, text, font).setMaxWidth(COLUMN, StringWidget.TextOverflow.SCROLLING);
+        //?} else {
+        /^String string = text.getString();
+        if (font.width(text) > COLUMN) {
+            String ellipsis = CommonComponents.ELLIPSIS.getString();
+            string = font.plainSubstrByWidth(string, Math.max(0, COLUMN - font.width(ellipsis))) + ellipsis;
+        }
+        return new StringWidget(COLUMN, ROW, Component.literal(string), font);
+        ^///?}
     }
 
     private <E extends Enum<E>> AbstractWidget enumButton(Value value, Component label, Enum<?> current) {
@@ -214,10 +234,19 @@ public final class ForgeConfigScreen extends OptionsSubScreen {
         if (!accepted.contains(start)) {
             accepted.add(start);
         }
+        // The builder that takes the starting value is 1.21.11's; before it the value is a separate call.
+        //? if >=1.21.11 {
         return CycleButton.<E>builder(constant -> Component.literal(constant.name()), start)
             .withValues(accepted)
             .displayOnlyValue()
             .create(0, 0, COLUMN, ROW, label, (button, chosen) -> set(value, chosen));
+        //?} else {
+        /^return CycleButton.<E>builder(constant -> Component.literal(constant.name()))
+            .withValues(accepted)
+            .withInitialValue(start)
+            .displayOnlyValue()
+            .create(0, 0, COLUMN, ROW, label, (button, chosen) -> set(value, chosen));
+        ^///?}
     }
 
     /^* Parses text into the number type the value already holds; a parse failure throws. ^/

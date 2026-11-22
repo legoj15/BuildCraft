@@ -265,6 +265,29 @@ dependencies {
 // pass this node's compile gate vacuously (the edge bc.fabric states for the same reason).
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
+// The deprecated-API guard, the Fabric node's twin (AGENTS.md: no deprecated APIs; suppress only on the narrowest element,
+// with a one-line why). ForRemovalApiGuardTester is a unit test and there are none here, so javac itself is the guard: the
+// main compile and the game-test compile lint deprecation and removal and fail on any warning (-Werror), so an unsuppressed
+// [deprecation] and every [removal] stops the build. Both compiles emit no other warning on any Forge node today, so a new
+// non-lint warning would fail them too and is fixed the same way. Forge deprecates vanilla constructors and fields that shared
+// code uses on NeoForge and Fabric (LiquidBlock, BucketItem, Block.BLOCK_STATE_REGISTRY): those go through Platform seams, see
+// docs/forge-port.md (Deprecations). `-PbcLint=...` (the opt-in lint audit, build.gradle.kts) turns -Werror off so the audit
+// can list every category's hits without failing on them.
+val deprecationGuarded = listOf("compileJava", "compileTestJava")
+deprecationGuarded.forEach { name ->
+    tasks.named<JavaCompile>(name) {
+        options.compilerArgs.add("-Xlint:deprecation,removal")
+        if (!project.hasProperty("bcLint")) {
+            options.compilerArgs.add("-Werror")
+        }
+    }
+}
+tasks.register("checkDeprecations") {
+    group = "verification"
+    description = "Compiles the main and game-test source sets with -Xlint:deprecation,removal -Werror (the Forge node's deprecated-API guard)."
+    dependsOn(deprecationGuarded)
+}
+
 // No unit tests: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan). The game tests are below.
 tasks.named("test") { enabled = false }
 
@@ -420,6 +443,6 @@ tasks.register<Copy>("buildAndCollect") {
 // collected jar and the game tests. The NeoForge twin in bc.neoforge adds unit tests (there are none on Forge: FML-JUnit has no twin).
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform, the collected jar and the game tests."
-    dependsOn("compileJava", "processResources", "jar", "buildAndCollect", "runGameTest")
+    description = "This Forge node's share of fullTestSuite: compileJava, the deprecated-API guard, the Forge data transform, the collected jar and the game tests."
+    dependsOn("compileJava", "checkDeprecations", "processResources", "jar", "buildAndCollect", "runGameTest")
 }

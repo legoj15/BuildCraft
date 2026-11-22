@@ -23,7 +23,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 //?}
 
-import buildcraft.energy.block.BCFluidBlock;
+import buildcraft.energy.block.BCFluidBlockExtras;
 import buildcraft.lib.misc.BlockUtil;
 
 /**
@@ -37,10 +37,11 @@ import buildcraft.lib.misc.BlockUtil;
  * whether the gas inside them explodes is {@link ContainedFluidDetonation}'s business.
  *
  * <p><b>Detonation.</b> An {@link Band#EXPLOSIVE} source block explodes when something ignites it: fire catching it
- * ({@code BCFluidBlock#onCaughtFire}), an ignition source beside it ({@link #isIgnitionSource}: fire, soul fire,
- * lava, a lit campfire), or a dimension that evaporates water ({@link #isUltraWarm}, the Nether) -- the last two are
- * noticed by the fluid tick that placing the block or changing a neighbour already schedules. Only source blocks
- * start a detonation; flowing gas burns away like any other fluid but a detonation consumes it too.
+ * ({@code onCaughtFire}, which each loader's fluid block hands to {@link BCFluidBlockExtras#catchFire}), an ignition
+ * source beside it ({@link #isIgnitionSource}: fire, soul fire, lava, a lit campfire), or a dimension that evaporates
+ * water ({@link #isUltraWarm}, the Nether) -- the last two are noticed by the fluid tick that placing the block or
+ * changing a neighbour already schedules. Only source blocks start a detonation; flowing gas burns away like any other
+ * fluid but a detonation consumes it too.
  *
  * <p>A detonation is bounded so a spilled refinery cannot freeze the server: one blast clears every explosive fluid
  * block in the 3x3x3 around its trigger and fires <i>one</i> {@link #BLAST_POWER} explosion; the chain then goes on
@@ -156,7 +157,8 @@ public final class FluidVolatility {
 
     /** Whether {@code state} is an explosive BuildCraft fluid block, source or flowing. */
     static boolean isExplosive(BlockState state) {
-        return state.getBlock() instanceof BCFluidBlock fluid && fluid.volatility() == Band.EXPLOSIVE;
+        BCFluidBlockExtras fluid = BCFluidBlockExtras.of(state.getBlock());
+        return fluid != null && fluid.volatility() == Band.EXPLOSIVE;
     }
 
     /** Whether {@code state} is an explosive BuildCraft fluid <i>source</i> block: the only kind that detonates. */

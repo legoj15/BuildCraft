@@ -223,6 +223,8 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
                 /*net.minecraft.server.packs.resources.ResourceMetadata meta =
                     new net.minecraft.server.packs.resources.ResourceMetadata.Builder()
                         .put(AnimationMetadataSection.SERIALIZER, animation).build();
+                // Forge 52 deprecates this constructor for one that also takes Forge's texture metadata; NeoForge and Fabric have no such overload.
+                @SuppressWarnings("deprecation")
                 SpriteContents result = new SpriteContents(outputId, frameSize, out, meta);*/
                 //?}
                 out = null; // ownership transferred to SpriteContents

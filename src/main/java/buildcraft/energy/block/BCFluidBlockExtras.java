@@ -1,0 +1,141 @@
+/* Copyright (c) 2016 SpaceToad and the BuildCraft team
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+package buildcraft.energy.block;
+
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
+import buildcraft.energy.BCEnergyConfig;
+import buildcraft.energy.FluidVolatility;
+import buildcraft.platform.hook.FluidBlockExtras;
+
+/**
+ * What every BuildCraft energy fluid's {@link LiquidBlock} adds to the vanilla block, which is <b>searing</b>
+ * (heat-tier 2) fluids venting rising steam off their exposed surface, the same white {@link ParticleTypes#CLOUD}
+ * billow BuildCraft already uses for Heat Exchanger steam, and the fire behaviour below. The block is the loader's own
+ * class ({@code FluidServices#liquidBlock}, see {@link FluidBlockExtras}), which forwards its ticks and fire hooks
+ * here; {@link #of} finds this object on a block again.
+ *
+ * <p>(The Minecraft 26.2 {@code NOXIOUS_GAS} wisp was the original inspiration, but it reads
+ * sulfur-yellow — its colour is baked into the vanilla sprite and the particle hardcodes a
+ * white vertex tint, so a {@code SimpleParticleType} caller can't recolour it. {@code CLOUD}
+ * is natively white and exists on every node, so it both looks right and needs no version
+ * directive.)
+ *
+ * <p>The effect is purely cosmetic and client-side (driven by {@link #animateTick}, the
+ * random display tick). It honours the {@code searingFluidSteam} config toggle and only
+ * fires where the block above is air, so steam rises off the top of a pool rather than
+ * inside the column.
+ *
+ * <p><b>Heat is baked in at registration</b> ({@code heat >= 2 -> searing}) so the per-tick
+ * path is a couple of cheap field reads — no {@code BCEnergyFluids.getHeat} scan in the
+ * client render loop.
+ *
+ * <p><b>Fire.</b> It also carries its {@link FluidVolatility.Band}, fixed at registration, and answers
+ * vanilla fire's flammability and spread-speed questions from it (zero for residue and whenever the
+ * {@code canBurn} config is off), so oils and fuels burn with ordinary fire. Lava lights every burning fluid but
+ * crude oil, at any heat (see {@code BCEnergyFluids}, which sets the block's vanilla flag from the same argument). A
+ * gaseous variant additionally detonates when fire catches it ({@link #catchFire}) and, as the cell's own scheduled
+ * block tick, when a neighbouring detonation chains to it ({@link #tick}); the fluid tick covers the rest (see
+ * {@link FluidVolatility}).
+ */
+public final class BCFluidBlockExtras implements FluidBlockExtras {
+
+    /** 1-in-N chance per display-tick sample to vent a wisp. Keeps the surface lively but not a fog. */
+    private static final int STEAM_SPAWN_CHANCE = 8;
+
+    private final boolean searing;
+    private final FluidVolatility.Band volatility;
+    private final boolean lavaIgnites;
+
+    /** @param lavaIgnites whether lava's random tick may light this fluid where it burns at all; false for crude oil,
+     *                     so the Nether slicks on the lava sea, desert lakes beside lava pools and wells reaching
+     *                     underground lava survive. Only lava's own ignition is gated: a fire it lights elsewhere
+     *                     (grass beside the lake) still spreads onto crude oil like any fire */
+    public BCFluidBlockExtras(int heat, FluidVolatility.Band volatility, boolean lavaIgnites) {
+        this.searing = heat >= 2;
+        this.volatility = volatility;
+        this.lavaIgnites = lavaIgnites;
+    }
+
+    /** The extras of {@code block} if it is a BuildCraft energy fluid's block, else null. */
+    @Nullable
+    public static BCFluidBlockExtras of(Block block) {
+        return block instanceof FluidBlockExtras.Host host && host.extras() instanceof BCFluidBlockExtras extras
+                ? extras : null;
+    }
+
+    /** How this fluid behaves around fire, fixed at registration. */
+    public FluidVolatility.Band volatility() {
+        return volatility;
+    }
+
+    /** Whether this fluid burns at all: not residue, and not while {@code canBurn} is off (fire then reads zero). */
+    private boolean burns() {
+        return volatility != FluidVolatility.Band.INERT && BCEnergyConfig.canBurnEnabled();
+    }
+
+    @Override
+    public int fireBurnOdds(BlockState state) {
+        return burns() ? volatility.flammability : 0;
+    }
+
+    @Override
+    public int fireIgniteOdds(BlockState state) {
+        return burns() ? volatility.fireSpreadSpeed : 0;
+    }
+
+    @Override
+    public boolean lavaIgnites(BlockState state) {
+        return lavaIgnites && burns();
+    }
+
+    @Override
+    public boolean catchFire(BlockState state, Level level, BlockPos pos) {
+        return FluidVolatility.catchFire(level, pos, state, volatility);
+    }
+
+    /** The chain of a neighbouring detonation (see {@link FluidBlockExtras#tick}): {@link FluidVolatility#chainTick}
+     *  checks the cell is still an explosive source. */
+    @Override
+    public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (volatility == FluidVolatility.Band.EXPLOSIVE) {
+            FluidVolatility.chainTick(level, pos, state);
+        }
+    }
+
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        if (!searing) {
+            return;
+        }
+        if (!BCEnergyConfig.searingSteamEnabled()) {
+            return;
+        }
+        // Only vent off an exposed surface, so steam rises into open air, not into a covering block.
+        if (!level.getBlockState(pos.above()).isAir()) {
+            return;
+        }
+        if (random.nextInt(STEAM_SPAWN_CHANCE) != 0) {
+            return;
+        }
+
+        double x = pos.getX() + random.nextDouble();
+        double y = pos.getY() + 1.0;
+        double z = pos.getZ() + random.nextDouble();
+        // CLOUD is friction-damped with no gravity, so give it a gentle upward push to read as
+        // rising steam (the Heat Exchanger drives the same particle harder for its steam jet).
+        double rise = 0.04 + random.nextDouble() * 0.04;
+        level.addParticle(ParticleTypes.CLOUD, x, y, z, 0.0, rise, 0.0);
+    }
+}

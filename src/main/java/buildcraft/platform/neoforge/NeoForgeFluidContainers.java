@@ -40,8 +40,9 @@ import buildcraft.platform.transfer.BCTransaction;
 /**
  * Fluid container items on NeoForge, the bodies that used to sit in {@code FluidUtilBC} and {@code WidgetFluidTank}:
  * on 1.21.10+ through the Transfer API ({@code Capabilities.Fluid.ITEM} behind an {@code ItemAccess}), on 1.21.1
- * through the classic {@code FluidUtil} helpers, each arm exactly as it was. {@code FluidContainerHelperTest} pins
- * that both behave the same.
+ * through the classic {@code FluidUtil} helpers, each arm exactly as it was, except the held-item interaction: its
+ * creative swap is 1.21.1's own, for FluidUtil hands a creative player's container back unchanged (see
+ * {@link #interactWithHeldContainer}). {@code FluidContainerHelperTest} pins that both behave the same.
  */
 final class NeoForgeFluidContainers {
     private NeoForgeFluidContainers() {}
@@ -158,7 +159,30 @@ final class NeoForgeFluidContainers {
         }
         return false;
         //?} else {
-        /*return FluidUtil.interactWithFluidHandler(player, hand, NeoForgeFluidStorages.toNeo(tank));*/
+        /*// FluidUtil.interactWithFluidHandler would hand a creative player's held container back unchanged
+        // (its try*AndStow creative branches never stow the result), so a creative pour gave no empty bucket.
+        // The moves still ride FluidUtil's try* helpers, which play the fluid's bucket sound, but the
+        // held-item swap is ours — the rule of the arm above and of Forge's twin: one item of the held stack
+        // becomes the result, and a creative player keeps the item and is given the result only when the
+        // inventory holds none like it (vanilla createFilledResult).
+        IFluidHandler tankHandler = NeoForgeFluidStorages.toNeo(tank);
+        boolean creative = player.getAbilities().instabuild;
+        // First try draining the tank into the item (filling a bucket), on a one-item copy of the held stack.
+        FluidActionResult filled = FluidUtil.tryFillContainer(held.copyWithCount(1), tankHandler,
+                Integer.MAX_VALUE, player, true);
+        if (filled.isSuccess()) {
+            swapHeld(player, hand, held, filled.getResult(), creative);
+            return true;
+        }
+        // Next the item into the tank (emptying a bucket), on a fresh copy so a failed first attempt leaves
+        // nothing behind.
+        FluidActionResult emptied = FluidUtil.tryEmptyContainer(held.copyWithCount(1), tankHandler,
+                Integer.MAX_VALUE, player, true);
+        if (emptied.isSuccess()) {
+            swapHeld(player, hand, held, emptied.getResult(), creative);
+            return true;
+        }
+        return false;*/
         //?}
     }
 
@@ -365,6 +389,31 @@ final class NeoForgeFluidContainers {
                 player.drop(result, false);
             }
         }
+    }
+
+    // One item of the held stack becomes result: in place for a single item, else the rest stays and the
+    // result goes to the inventory. A creative player keeps the item and is given the result only when the
+    // inventory holds none like it — vanilla's createFilledResult, which FluidUtil's try*AndStow (the path
+    // interactWithFluidHandler used to take) does not follow: in creative it hands the held container back
+    // unchanged and never stows the result.
+    private static void swapHeld(Player player, InteractionHand hand, ItemStack held, ItemStack result,
+            boolean creative) {
+        if (creative) {
+            if (!result.isEmpty() && !player.getInventory().contains(result)) {
+                player.getInventory().add(result);
+                player.containerMenu.broadcastChanges();
+            }
+            return;
+        }
+        if (held.getCount() == 1) {
+            player.setItemInHand(hand, result);
+        } else {
+            held.shrink(1);
+            if (!result.isEmpty() && !player.getInventory().add(result)) {
+                player.drop(result, false);
+            }
+        }
+        player.containerMenu.broadcastChanges();
     }*/
     //?}
 

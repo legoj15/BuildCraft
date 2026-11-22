@@ -28,10 +28,11 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.MapColor;
 
-import buildcraft.energy.block.BCFluidBlock;
+import buildcraft.energy.block.BCFluidBlockExtras;
 import buildcraft.platform.FluidBehaviour;
 import buildcraft.platform.FluidFlow;
 import buildcraft.platform.FluidProperties;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
@@ -272,10 +273,13 @@ public class BCEnergyFluids {
                 new OilBehaviour(volatility, dense), () -> blockHolder[0].get(), () -> bucketHolder[0].get());
         BCHolder<Fluid, FlowingFluid> source = fluids.source();
 
-        // Block
+        // Block: the loader's own LiquidBlock (its constructor choice is the loader's), behaving as the extras say
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
+        // Whether lava's random tick may light this fluid: every burning one but crude oil (see BCFluidBlockExtras).
+        boolean lavaIgnites = !crude;
         blockHolder[0] = BLOCKS.registerBlock(regName,
-                props -> new BCFluidBlock(source.get(), props
+                props -> {
+                    BlockBehaviour.Properties properties = props
                         .mapColor(mapColor)
                         .replaceable()
                         .strength(100.0F)
@@ -287,12 +291,19 @@ public class BCEnergyFluids {
                         *///?}
                         .noLootTable()
                         .liquid()
-                        .lightLevel(s -> 0)
-                , heat, volatility, !crude), () -> BlockBehaviour.Properties.of());
+                        .lightLevel(s -> 0);
+                    // The vanilla flag too, for MinecraftForge has no per-block hook for lava's ignition test, only
+                    // this flag ANDed with IForgeBlock#isFlammable (which is getFlammability > 0, answered by the
+                    // extras), and that pair equals lavaIgnites(state): every band that burns has a flammability
+                    // above zero.
+                    return Platform.fluids().liquidBlock(source::get,
+                            lavaIgnites ? properties.ignitedByLava() : properties,
+                            new BCFluidBlockExtras(heat, volatility, lavaIgnites));
+                }, () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
-                props -> new BucketItem(source.get(), props
+                props -> Platform.fluids().bucketItem(source::get, props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
                 ), () -> new Item.Properties());

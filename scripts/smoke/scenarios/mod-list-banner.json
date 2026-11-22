@@ -1,11 +1,9 @@
 {
   "name": "mod-list-banner",
   "englishOnly": true,
-  "base": [0, 150, 0],
+  "startAt": "title",
   "steps": [
-    { "label": "leave the world for the title screen", "do": "pause" },
-    { "do": "click", "widgetText": "Save and Quit to Title" },
-    { "do": "expectScreen", "contains": "TitleScreen", "timeoutSec": 60 },
+    { "label": "the run starts on the title screen (startAt): the Mods button is on it", "do": "expectScreen", "contains": "TitleScreen", "timeoutSec": 10 },
     { "do": "click", "widgetText": "Mods" },
     { "do": "expectScreen", "contains": "Mod", "timeoutSec": 10 },
     { "name": "modlist-widgets", "do": "widgets" },

@@ -1,4 +1,4 @@
-"""Helpers the two-client scene scripts share (scene_swing_particles.py, scene_machines.py), on top of mp.py.
+"""Helpers the two-client scene scripts share (scene_swing_particles.py, scene_machines.py, scene_guide.py), on top of mp.py.
 
   S = Scene(node)       RCON connection, shot folder build/smoke-mp/<node>/shots, scene.log
   S.cmd(*rcon_cmds)     server console commands, `{X+1}` style coordinates around S.base
@@ -35,7 +35,9 @@ class Scene:
         return re.sub(r'\{([XYZ])([+-]\d+)?\}', rep, t)
 
     def cmd(self, *cs):
-        """Each command through RCON; the replies are logged and the last one returned."""
+        """Each command through RCON; the replies are logged and the last one returned. A reply that names no player
+        fails loudly: `client` waits for the quick-play join, so 'No player was found' means the player left since, and
+        the commands after it would silently act on nothing."""
         r = ''
         for c in cs:
             c = self.coords(c)
@@ -51,6 +53,9 @@ class Scene:
                 r = '(no reply)'
                 self.R = mp.Rcon(self.node)
             self.say('rcon>', c[:160], '=>', r[:200])
+            if 'No player was found' in r:
+                raise SystemExit('rcon %r answered %r: that player is not on the server (mp.py client waits for the '
+                                 'join, so it left since); the replies so far are in the scene log' % (c, r))
         return r
 
     def b(self, side, method, path, body=None, timeout=60):

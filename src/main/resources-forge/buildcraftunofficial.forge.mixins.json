@@ -28,6 +28,7 @@
     "client.LevelRendererMixin",
     "client.ModelBlockRendererMixin",
     "client.ParticleEngineMixin",
+    "client.QuickPlayMixin",
     "client.ScissorStackMixin",
     "client.SpriteSourcesAccessor"
   ],

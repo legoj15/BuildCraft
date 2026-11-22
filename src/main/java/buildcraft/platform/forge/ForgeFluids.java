@@ -6,13 +6,20 @@
 package buildcraft.platform.forge;
 
 //? if forge {
-/*import javax.annotation.Nullable;
+/*import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 
 import net.minecraftforge.fluids.FluidStack;
@@ -20,6 +27,7 @@ import net.minecraftforge.fluids.FluidStack;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.FluidProperties;
 import buildcraft.platform.FluidServices;
+import buildcraft.platform.hook.FluidBlockExtras;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
@@ -58,6 +66,19 @@ public final class ForgeFluids implements FluidServices {
     @Override
     public BCFluidRegistrar createRegistrar(String namespace) {
         return new ForgeFlowingFluids(namespace);
+    }
+
+    @Override
+    public LiquidBlock liquidBlock(Supplier<? extends FlowingFluid> fluid, BlockBehaviour.Properties properties,
+            FluidBlockExtras extras) {
+        // The supplier constructors: Forge deprecates the ones that take the fluid, and keeps the fluid in the supplier
+        // until the block or bucket first needs it.
+        return new ForgeFluidBlock(fluid, properties, extras);
+    }
+
+    @Override
+    public BucketItem bucketItem(Supplier<? extends Fluid> fluid, Item.Properties properties) {
+        return new BucketItem(fluid, properties);
     }
 
     @Override

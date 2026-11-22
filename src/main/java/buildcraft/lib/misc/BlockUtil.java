@@ -815,6 +815,14 @@ public class BlockUtil {
      * or nameless owner, {@link MachineIdentity}): it is the breaker of the loot and XP context and
      * the cause of the block-destroy game event, so sculk sensors, loot modifiers and claim or log
      * mods see who broke the block, as 1.12.2's fake-player harvest did.
+     *
+     * <p>Empty means the block is still standing: it is unbreakable (hardness below zero), or the
+     * world did not remove it — {@code destroyBlock} (the fluid branch's {@code setBlock}) answered
+     * false. That is also how a protection mod that cancels the destroy itself reaches a machine
+     * which asked nobody ({@link BCCoreConfig#minePlayerProtected} on: no probe posts a break event
+     * the mod could cancel; OpenPartiesAndClaims instead mixes into {@code Level.destroyBlock} and
+     * silently returns false). The drops and XP computed for a break that did not happen are
+     * discarded with the empty result, so a refused break reports no loot.
      */
     public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
             ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, @Nullable GameProfile owner) {
@@ -900,13 +908,21 @@ public class BlockUtil {
             }
         }
 
-        if (state.getBlock() instanceof LiquidBlock) {
-            world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-        } else {
-            world.destroyBlock(pos, false, breaker);
-        }
+        // Keep the world's own answer: destroyBlock is false when the set inside it failed, or a mod cancelled the
+        // destroy outright (OpenPartiesAndClaims' Level.destroyBlock mixin does, with no break event — under
+        // minePlayerProtected that cancel is the only refusal a machine that asked nobody can see). A false means
+        // the block still stands, so the drops and XP computed above never happened and go unreported; answering
+        // success anyway had every caller credit loot for a block that stayed (the Builder re-queued its cell for
+        // ever and gained the "drops" into its resources each pass). The fluid branch's setBlock gets the same
+        // treatment: its false is equally a cell that was not cleared.
+        boolean removed = state.getBlock() instanceof LiquidBlock
+                ? world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3)
+                : world.destroyBlock(pos, false, breaker);
         resyncChangedBlocks(world, supportsBefore);
 
+        if (!removed) {
+            return Optional.empty();
+        }
         return Optional.of(new BreakResult(drops, xp, capturedFluid));
     }
 }

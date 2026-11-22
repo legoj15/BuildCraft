@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.fluids.BCFluidStack;
 
-/** Client-only: how the loader draws a fluid stack (its still texture and its tint). */
+/** Client-only: how the loader draws a fluid stack (its still texture, its tint and, before 26.1, its light level). */
 public interface ClientFluids {
     /**
      * The name of the still sprite the loader declares for the stack's fluid. Below 26.1 null if it declares none; on
@@ -19,6 +19,12 @@ public interface ClientFluids {
 
     /** The stack's ARGB tint as the loader reports it (it may carry zero alpha); opaque white for no tint. */
     int tint(BCFluidStack stack);
+
+    //? if >=1.21.10 && <26.1 {
+    /*/^* The stack's light level, 0 to 15, as the loader reports it for the fluid itself: the glowing fluid layer of
+     * {@link LegacyFluidContainerModel} reads it. ^/
+    int luminance(BCFluidStack stack);
+    *///?}
 
     //? if >=26.1 {
     /**

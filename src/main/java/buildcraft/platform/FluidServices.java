@@ -5,16 +5,24 @@
  */
 package buildcraft.platform;
 
+import java.util.function.Supplier;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.hook.FluidBlockExtras;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
@@ -36,6 +44,22 @@ public interface FluidServices {
 
     /** A new fluid registrar for {@code namespace}; reach it through {@link BCFluidRegistrar#create}. */
     BCFluidRegistrar createRegistrar(String namespace);
+
+    /**
+     * A fluid's {@code LiquidBlock} whose scheduled tick, display tick and fire hooks are {@code extras}' (the block
+     * implements {@link FluidBlockExtras.Host}). The block is the loader's own subclass because a subclass's
+     * constructor choice cannot live in common code: NeoForge and Fabric call the constructor that takes the fluid (so
+     * {@code fluid} is asked for here, as it was when the block was built directly), MinecraftForge deprecates that for
+     * the one that takes a supplier, which it asks on first use.
+     */
+    LiquidBlock liquidBlock(Supplier<? extends FlowingFluid> fluid, BlockBehaviour.Properties properties,
+            FluidBlockExtras extras);
+
+    /**
+     * A bucket item for {@code fluid}, which is asked for here on NeoForge and Fabric (as the direct constructor did)
+     * and on first use on MinecraftForge, whose constructor that takes the fluid itself is deprecated.
+     */
+    BucketItem bucketItem(Supplier<? extends Fluid> fluid, Item.Properties properties);
 
     /** The fluid's viscosity in NeoForge's unit (water 1000, lava 6000). */
     int viscosity(Fluid fluid);

@@ -20,7 +20,8 @@ import buildcraft.platform.forge.ForgeFluidStacks;
  * models) it is the still texture the fluid type's {@link IClientFluidTypeExtensions} declares, as on NeoForge before
  * 26.1. The tint is the fluid type's stack tint from those extensions on every line: Forge's 26.x fluid models carry
  * vanilla's level-only tint source (water's needs a biome), where NeoForge's carry a stack-aware one, and Forge's water
- * extension answers water's default colour as NeoForge's tint source does.
+ * extension answers water's default colour as NeoForge's tint source does. Before 26.1 the light level is the fluid
+ * type's own ({@link #luminance}, the legacy fluid container model's glowing layer).
  *^/
 public final class ForgeClientFluids implements ClientFluids {
     @Override
@@ -38,5 +39,12 @@ public final class ForgeClientFluids implements ClientFluids {
     public int tint(BCFluidStack stack) {
         return IClientFluidTypeExtensions.of(stack.getFluid()).getTintColor(ForgeFluidStacks.toForge(stack));
     }
+
+    //? if >=1.21.10 && <26.1 {
+    /^@Override
+    public int luminance(BCFluidStack stack) {
+        return stack.getFluid().getFluidType().getLightLevel();
+    }
+    ^///?}
 }
 *///?}

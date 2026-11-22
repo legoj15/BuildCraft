@@ -5,12 +5,22 @@
  */
 package buildcraft.platform.registry;
 
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** The loader half of {@link BCRegistrar#create}: one registrar per (registry, namespace) pair. */
 public interface RegistryServices {
+    /**
+     * The block registry's table of block-state ids, the numbering a state travels under in a packet
+     * ({@code getId}, {@code byId}, {@code size}). Vanilla keeps it in {@code Block.BLOCK_STATE_REGISTRY}; MinecraftForge
+     * deprecates that field for its own table (the same object, which it fills as it registers blocks), so the field is
+     * read only by the NeoForge and Fabric implementations. One object for the life of the game: a caller may hold it.
+     */
+    IdMapper<BlockState> blockStateIds();
+
     /** A new, empty registrar for {@code registry} whose entries are named in {@code namespace}. */
     <T> BCRegistrar<T> create(ResourceKey<? extends Registry<T>> registry, String namespace);
 

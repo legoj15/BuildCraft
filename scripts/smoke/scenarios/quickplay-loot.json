@@ -9,10 +9,13 @@
   "steps": [
     {
       "label": "stand by the rig",
-      "do": "cmd",
-      "run": [
-        "tp @p {X} {Y+3} {Z-6} 0 30"
-      ]
+      "do": "tp",
+      "at": [
+        0,
+        3,
+        -6
+      ],
+      "pitch": 30
     },
     {
       "label": "roll loot tables (global loot modifiers are consulted)",

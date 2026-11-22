@@ -337,6 +337,14 @@ function Initialize-RunDir([string]$Node) {
     # Ledgers remember open/closed per screen in this file: start every run with all of them closed, so a screenshot
     # (or a click on a ledger tab) never depends on what an earlier run left open.
     Remove-Item -LiteralPath (Join-Path $runDir 'config/buildcraft/gui_state.json') -ErrorAction SilentlyContinue
+    # forge-config-screen flips this client option in the config screen and flips it back: a run that failed in between
+    # would leave searing steam off for every later scenario, so it goes back to its default before every run.
+    $bcClient = Join-Path $runDir 'config/buildcraftunofficial-client.toml'
+    if (Test-Path -LiteralPath $bcClient) {
+        $toml = Get-Content -LiteralPath $bcClient -Raw
+        $fixed = $toml -replace '(?m)^(\s*searingFluidSteam\s*=\s*)false\s*$', '${1}true'
+        if ($fixed -ne $toml) { Set-Content -LiteralPath $bcClient -Value $fixed -NoNewline -Encoding utf8 }
+    }
     if ((Get-NodeLoader $Node) -eq 'neoforge') {
         # NeoForge's "mods loaded with warnings" screen blocks quick-play (REI trips it on 26.3 with @OnlyIn). The log
         # keeps the warnings; NeoForge fills in the rest of a file that only holds this key. Fabric has no such screen.

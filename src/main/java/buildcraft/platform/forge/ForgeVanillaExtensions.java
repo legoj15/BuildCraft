@@ -135,9 +135,10 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
     /^@Override
     public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
         // Forge 61, 64 and 65 patch FuelValues#burnDuration into the stack-aware answer (the item's own override, then the
-        // vanilla fuel map, then the burn-time event; the one-argument call asks for no recipe type); their ForgeHooks has
-        // no getBurnTime.
-        return level.fuelValues().burnDuration(stack);
+        // vanilla fuel map, then the burn-time event); their ForgeHooks has no getBurnTime. The two-argument form is the
+        // one Forge adds on all three lines (64 and 65 route the one-argument call to it; 61's was not read), asked with
+        // no recipe type.
+        return level.fuelValues().burnDuration(stack, null);
     }
     ^///?}
     //? if <1.21.10 {

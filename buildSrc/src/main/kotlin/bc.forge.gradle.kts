@@ -53,12 +53,6 @@ val mixinConfig = "buildcraftunofficial.forge.mixins.json"
 // The opt-in -P switches the NeoForge and Fabric runs read too, resolved once here at script scope.
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
-// A node whose Forge loads a quick-played world before starting its game event bus (`quickplay_drops_game_events`, see
-// versions/1.21.1-forge/gradle.properties): the world opens, then the integrated server crashes at its first loot roll.
-if (bcQuickPlay != null && findProperty("quickplay_drops_game_events")?.toString() == "true") {
-    logger.warn("-PbcQuickPlay on $name: this Forge drops every game-bus event during a quick-played world load " +
-            "(the integrated server crashes at the first loot roll); open the save through Singleplayer instead")
-}
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
 // The two-client multiplayer smoke's switches (scripts/smoke/multiplayer/mp.py): the player's name and the server a client
 // quick-plays into. Both are plain `-P` switches, so a hand-run second client works the same way.

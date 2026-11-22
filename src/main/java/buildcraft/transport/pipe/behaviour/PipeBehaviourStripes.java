@@ -250,7 +250,9 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                 int offsetHash = offset.hashCode();
                 if (progress < target) {
                     // Ask before the first power of a cycle, so a refused block costs none; the answer holds for the
-                    // cycle (the permit), and the break itself asks once more in case a claim appeared meanwhile.
+                    // cycle (the permit), and the break itself asks once more in case a claim appeared meanwhile. A
+                    // destroy a protection mod vetoes on its own (no ask under minePlayerProtected) costs one cycle's
+                    // power per STRIPES window: the veto is only seen when the break happens.
                     if (!refusals.isPermitted(offset, state, owner)) {
                         if (!mayBreak((ServerLevel) world, offset)) {
                             return;

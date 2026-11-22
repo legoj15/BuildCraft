@@ -771,8 +771,6 @@ def server(node):
         st['server'] = remote_start(node, nonce)
         st['serverStart'] = proc_start(st['server'])
     else:
-        st.pop('serverJvm', None)  # a crashed run's pin must not outlive it: record_server_jvm writes this run's
-        st.pop('serverJvmStart', None)
         log = os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')
         if os.path.exists(log):
             os.remove(log)

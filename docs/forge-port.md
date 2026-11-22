@@ -413,11 +413,10 @@ also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.
   every line below 1.21.11 the item command fails, so `scene_swing_particles.py` branches on the line and gives Worker Mining
   Fatigue (amplifier 9, a 26-tick swing) instead. Watcher's frames catch the raised arm on 1.21.1 too. On 26.1.2 to 1.21.11
   the scene is unchanged.
-- **`--quickPlayMultiplayer` works on 1.21.1-forge** although its quick-play of a SAVED world is defective
-  (`quickplay_drops_game_events`). Both clients joined by quick-play (Watcher 02:20:01, Worker 02:20:59 in the server's log), render at
+- **`--quickPlayMultiplayer` works on 1.21.1-forge**, even before #226 fixed its quick-play of a SAVED world. Both clients joined by quick-play (Watcher 02:20:01, Worker 02:20:59 in the server's log), render at
   120 fps, and every scene check passed with no client error: the join only starts an asynchronous connection before Forge's game bus
   starts a moment later, so no event that matters is lost, and the single-player world load (the part that crashes at its first loot
-  roll) never happens. `mp.py` therefore needed no menu path for it (`Open-SaveFromMenu` stays the way to open a save there).
+  roll) never happens. `mp.py` therefore needed no menu path for it.
 - **The Java 21 lines are not reachable from the workstation directly.** Server1's inbound allow rules (read only) name specific
   `java.exe` files: `Microsoft\jdk-25.0.2.10-hotspot`, `Java\jdk-17`, `jdk-22`, `jdk-24` and two JREs 1.8. The 26.x servers run on the
   first, so the clients connect straight to `192.168.0.106:25661`. `1.21.11-forge` and `1.21.1-forge` build for Java 21, so Gradle's
@@ -714,7 +713,7 @@ a mixin with nothing to do on a line is an empty `@Mixin` on a class that exists
 |---|---|---|
 | `EditBoxMixin` (new) | NeoForge 1.21.1's `EditBox#setTextShadow`: a `@Redirect` on each `drawString(Font, X, int, int, int)` overload `renderWidget` calls (`FormattedCharSequence`, `Component`, `String`; each covers every call of that overload), drawing with the shadow flag set through `ForgeEditBoxShadow` | empty (26.3 has the setter) |
 | `ParticleEngineMixin` (new) | NeoForge's `addDestroyEffects` / `addHitEffects`: `@Inject` at the head (cancellable) of `ParticleEngine#destroy` and `#addBlockHitEffects`, through `ForgeBlockParticles` | empty (`ClientLevelMixin` does it) |
-| `QuickPlayMixin` (2026-11-22, #226) | Forge's own bus start, earlier: `@Inject` at the head of the static `QuickPlay.connect` starts `MinecraftForge.EVENT_BUS` before a quick-play join loads a world, only when `ClientModLoader`'s private `error` is null (read reflectively; "Quick-play on Forge 1.21.1"). Not yet run live | empty (EventBus 7 has no shut bus; its `connect` takes a `QuickPlayVariant`) |
+| `QuickPlayMixin` (2026-11-22, #226) | Forge's own bus start, earlier: `@Inject` at the head of the static `QuickPlay.connect` starts `MinecraftForge.EVENT_BUS` before a quick-play join loads a world, only when `ClientModLoader`'s private `error` is null (read reflectively; "Quick-play on Forge 1.21.1"). Proven live (#226) | empty (EventBus 7 has no shut bus; its `connect` takes a `QuickPlayVariant`) |
 | `SpriteSourcesAccessor` | `SpriteSources.TYPES` (a private `BiMap`) | `ID_MAPPER` |
 | `ModelBlockRendererMixin` | `@Redirect` on the one `putBulkData` call in `putQuadData`: the alpha scaled by the quad's baked vertex alpha (BuildCraft sprites only; "Vertex alpha on 1.21.1" below) | F6's table |
 | `ClientLevelMixin`, `LevelRendererMixin`, `ItemFeatureRendererMixin`, `ItemModelsAccessor`, `CuboidItemModelWrapperInvoker`, `ScissorStackMixin` | empty (`ItemFeatureRendererMixin`, `ItemModelsAccessor`, `CuboidItemModelWrapperInvoker`, `ScissorStackMixin` target `Minecraft`: their 26.3 targets do not exist) | F6's table |
@@ -731,10 +730,10 @@ need it.
 world loads with the game bus shut and every post is dropped, Forge's own `AddReloadListenerEvent` included: the integrated
 server then crashes at its first loot roll (`Can not retrieve LootModifierManager until resources have loaded once`; a
 squid drowning, water breaking a block, a `fill` over pipes). Forge's defect, not BuildCraft's, and any launcher's "join
-world on start" meets it. The node declares `quickplay_drops_game_events=true`; `-PbcQuickPlay` warns there, and the smoke
-runner boots such a node to the title screen and opens its save through Singleplayer (`Open-SaveFromMenu`).
+world on start" meets it. Until #226 the node declared `quickplay_drops_game_events=true`, `-PbcQuickPlay` warned there, and
+the smoke runner opened its save through Singleplayer; all three went once the mixin below was proven.
 
-**`QuickPlayMixin` (2026-11-22, #226): the fix, not yet run live.** A client mixin on the 1.21.1 line only: `@Inject` at
+**`QuickPlayMixin` (2026-11-22, #226): the fix, proven live.** A client mixin on the 1.21.1 line only: `@Inject` at
 the head of the static `QuickPlay.connect` (`net.minecraft.client.quickplay`, the one entry of the three quick-play kinds
 and the method Forge's `Minecraft` patch reaches from `onResourceLoadFinished` before `completeModLoading`) starts
 `MinecraftForge.EVENT_BUS` there. EventBus 6's `start()` only clears the shutdown flag, so the start that follows in
@@ -748,15 +747,13 @@ applies the same test. The field is final by then: the 52.1.21 sources write it 
 tasks of the resource reload, which ends before `onResourceLoadFinished` calls `connect`. It is read reflectively
 (`getDeclaredField` + `setAccessible`, the way `ClassicSlotLedger` reads `SidedInvWrapper`'s). `ModLoader.isLoadingStateValid()`
 is public, but it has not been traced to match `error == null` on every failure path. A field the mixin cannot read leaves the
-bus alone with one `[platform] cannot read ClientModLoader.error` WARN, and the join then drops events as before (the smoke
-runner's menu detour is what `quickplay_drops_game_events` gives; a player's quick-play has no fallback); a start logs
+bus alone with one `[platform] cannot read ClientModLoader.error` WARN, and the join then drops events as before; a start logs
 `[platform] quick-play: started MinecraftForge.EVENT_BUS before the join (#226)`. The 26.x immunity (EventBus 7) is inferred
-from the sources, not measured. **Proof pending**, since the mixin was written without the node's toolchain: a `:1.21.1-forge:runClient -PbcQuickPlay=<save>`
-whose log shows the INFO start line (and `debug.log` `Mixing client.QuickPlayMixin from buildcraftunofficial.forge.mixins.json into
-net.minecraft.client.quickplay.QuickPlay`) and whose world joins and runs (a squid drowning, water over pipes and a `fill`,
-each of which crashed before). Until that run the workaround above stays as it is (`quickplay_drops_game_events`, the
-`-PbcQuickPlay` warning in `bc.forge.gradle.kts`, the runner's `Test-QuickPlayDefective` and `Open-SaveFromMenu`), and
-is retired only after it: the key gone or false, the warning deleted, the runner's menu path dropped, AGENTS.md's note.
+from the sources, not measured. **Proof** (2026-11-22, workstation, with the workaround switched off): two smoke runs quick-played the `bc-smoke` save on
+1.21.1-forge; the log shows the INFO start line each time, `creative-bucket-tank` passed 17/17, and a loot scenario (`loot spawn`
+of a dungeon chest and the squid table, a water `fill` and its removal, a summoned squid killed for its drops) passed with no
+`LootModifierManager` crash and no BuildCraft error. The workaround was then retired: the node property, the `-PbcQuickPlay`
+warning in `bc.forge.gradle.kts`, the runner's `Test-QuickPlayDefective` and `Open-SaveFromMenu`, and AGENTS.md's note.
 
 **What was run (2026-11-21).**
 

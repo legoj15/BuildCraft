@@ -608,7 +608,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             if (!frameBox.contains(blockPos)) {
                 // A drill-column cell whose break came back empty: it has no frame to repair and must not be queued
                 // as a frame break (that path skips the drill's column checks), so its window simply ends here and
-                // the next walk of the mining box meets the cell again.
+                // the next walk of the mining box meets the cell again (a finished quarry walks again only when
+                // something restarts it: a frame repair, a revisit or a reload, as for a canMine refusal).
                 frameRefusals.forget(blockPos);
                 continue;
             }

@@ -145,8 +145,7 @@ world is opened or created, so the save steps are skipped as well (`-Save`, `-Sa
 change nothing for it; it needs no `bc-smoke` save, even under `-Lang`) and ERROR log lines count from the title screen. Any other value is
 refused when the scenario loads. Use it for a scenario that only needs the title screen and the menus behind it (`forge-config-screen`,
 `mod-list-banner`, #227): leaving a world takes the `pause` step, whose Esc needs the game window in front, which the 26.3-forge (SDL3) client on
-Server1 did not get. The report's `startAt` field says which start a run had. A node whose quick-play is defective (`quickplay_drops_game_events=true`, 1.21.1-forge)
-boots to the title screen for both starts; only a `"world"` scenario then opens its save through Singleplayer. Under the batch each scenario is a runner of
+Server1 did not get. The report's `startAt` field says which start a run had. Under the batch each scenario is a runner of
 its own, so a title-start scenario can sit anywhere among the in-world ones.
 
 | `do` | Fields | Effect |

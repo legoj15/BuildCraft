@@ -420,9 +420,10 @@ also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.
   `=== run ... ===` header (trap 16); `mp.py` ended it after 150 s and the second start ran. One start of `1.21.11-forge` ended at once
   with `remote script on server1 exited 255` (ssh itself failed, Server1 busy with another run's connections); `mp.py` now treats
   that, seen before any status line, like a stalled launch and starts again (checked with a stub log, no real 255 since).
-- Not exercised on these four lines: the direct client-to-server path of the two Java 21 lines (see the tunnel above); the join's
-  recipe payload (as on 26.3-forge); `26.3-forge` itself on this commit (the earlier cycles ran before the tunnel and retry code,
-  which a direct-reachable server never starts); the 255 retry against a real ssh failure.
+- A last `26.2-forge` cycle on the final `mp.py` (the tunnel probe and the launch retry in place): the probe printed `server
+  reachable directly at 192.168.0.106:25661`, `scene_machines.py all` 6 checks 0 failed, `stop` left nothing on Server1 or locally.
+  Not exercised: the direct client-to-server path of the two Java 21 lines (see the tunnel above); the join's recipe payload (as on
+  26.3-forge); `26.3-forge` and the NeoForge nodes on the final `mp.py`; the 255 retry against a real ssh failure.
 
 ## Rules added for the third loader
 

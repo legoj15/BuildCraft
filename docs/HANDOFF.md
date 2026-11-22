@@ -20,7 +20,7 @@ The standing record is [forge-port.md](forge-port.md): toolchain, what each Forg
 
 ## Open follow-ups
 
-#215 to #231 hold everything found along the way. The ones that limit testing: #228 (Open Parties and Claims cannot boot on 26.2, 26.1.2 and 1.21.11 Forge, so the claims scenarios are skipped there), #225 (no config screen on Forge 1.21.1), #227 (Server1 cannot focus the 26.3 Forge window), #224 (three NeoForge 1.21.1 smoke failures that predate this work).
+#216 to #232 were worked on branch `claude/issues-216-232-cffea1` (2026-11-22) and closed with result notes. Still open from that run: #219 (the access-transformer probe is in, but a production-install boot is unproven and the release rig's crash signatures do not yet carry its ERROR line, because `testing/` is gitignored in the main checkout), #229 (painted-pipe preview on 1.21.1), #230 item 4 (Server1 firewall, the user's call), #233 (robots and claims), #234 (creative cursor drain, a question), #235 (Forge-only light speck while another player mines).
 
 The gitignored release test matrix (`testing/config/runtimes.json`) now has all five Forge rows enabled with clients (edited on this machine after the merge; the release rig was not run with them). Server1 has no McDevBridge jar for `1.21.11-forge`; build it there before running that line's client batch remotely.
 

@@ -668,7 +668,7 @@ function Open-SaveFromMenu([string]$Save) {
         $false
     } 60 "'Play Selected World' to turn active" 1000 | Out-Null }
     catch {
-        $seen = @($script:listing.widgets | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
+        $seen = @($(if ($script:listing) { $script:listing.widgets }) | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
         throw "could not select '$Save' on the world list: $($_.Exception.Message) (widgets: $seen)"
     }
     Invoke-MenuClick 'Play Selected World'
@@ -1093,6 +1093,24 @@ try {
             $savePath = Join-Path $prep.RunDir "saves/$SaveName"
             # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
             # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
+            # Open Parties and Claims on Forge (#215): a world's first write of its server config dies on Windows (Forge Config
+            # API Port renames a file it still holds open; docs/forge-port.md), and every run of an OPAC scenario plays a fresh
+            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from any
+            # world a dead first boot left behind (the file it leaves is complete). Before the fresh-save delete below.
+            if ((Get-NodeLoader $node) -eq 'forge' -and $ModAliases -contains 'opac') {
+                $opacSeed = Join-Path $prep.RunDir 'defaultconfigs/openpartiesandclaims-server.toml'
+                if (-not (Test-Path -LiteralPath $opacSeed)) {
+                    $left = @(Get-ChildItem -File -Path (Join-Path $prep.RunDir 'saves/*/serverconfig/openpartiesandclaims-server.toml') -ErrorAction SilentlyContinue |
+                        Where-Object Length -gt 0) | Select-Object -First 1
+                    if ($left) {
+                        New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
+                        Copy-Item -LiteralPath $left.FullName -Destination $opacSeed
+                        Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $($left.Directory.Parent.Name)"
+                    } else {
+                        Write-Warning "[$node] no Open Parties and Claims server config to seed yet: this first boot is expected to die writing it (#215); run the scenario again and it is seeded from what that boot leaves"
+                    }
+                }
+            }
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
             if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
             $haveSave = Test-Path $savePath

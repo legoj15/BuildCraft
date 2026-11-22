@@ -588,8 +588,8 @@ MODS = [
         clear=lambda tag, a: [],
         verify=flan_owner(lambda tag: "Admin" if tag == "B" else "Dev"),
         notes="Rig B's claim is an admin claim and its machines are owned by a stranger."),
-    # FTB Chunks (NeoForge 26.1.2 only): a team's claim by `ftbchunks claim`. `claim_as` only takes a known profile and a
-    # fake player's team may claim nothing, so the foreign case is the machines being owned by a stranger.
+    # FTB Chunks (NeoForge: 1.21.1, 1.21.11, 26.1.2): a team's claim by `ftbchunks claim`. The foreign case here is a STRANGER: machines
+    # owned by a UUID FTB Teams has never seen, so no team at all (a claim and a team of someone else's: ftbchunks-teams, below).
     Mod("ftbchunks", ["neoforge"], foreign=ftbc_claims, own=ftbc_claims, clear=lambda tag, a: [], stranger_owner=True,
         notes="Rig B's claim is the dev's team's like rig C's, and rig B's machines are owned by a stranger (its robot is "
               "deployed by the dev but its station pipe is the stranger's)."),

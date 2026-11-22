@@ -698,10 +698,7 @@ def tunnel_stop(node):
     pid, start, pinned = tunnel_state(node)
     if not pinned:
         return
-    if not same_process(proc_start(pid), start):
-        print('the ssh tunnel (pid %s) is gone or its pid was reused: nothing to kill' % pid)
-        return
-    print('tunnel', subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+    kill_pinned('tunnel', pid, start)
 
 
 def server(node):
@@ -843,12 +840,12 @@ class Rcon:
 
 
 def kill_pinned(label, pid, recorded):
-    """Tree-kill `pid` only while it is provably the process this rig recorded (pid and start time, as tunnel_stop
-    does): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else."""
+    """Tree-kill `pid` only while it is provably the process this rig recorded (pid and a readable, matching start
+    time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else."""
     now = proc_start(pid)
     if now is None:
         print('%s (pid %s) is already gone' % (label, pid))
-    elif not recorded or recorded <= 0 or not same_process(now, recorded):
+    elif now < 0 or not recorded or recorded <= 0 or not same_process(now, recorded):  # now < 0: its start time cannot be read
         print('%s: pid %s is not provably a process of this rig (no start time recorded, or the number was reused): '
               'not killed' % (label, pid))
     else:

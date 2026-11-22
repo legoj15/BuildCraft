@@ -23,6 +23,8 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # runServer work, :<node>-forge:runGameTest runs the shared game tests (the gate; in :<node>-forge:nodeVerification, which
 # fullTestSuite runs). No JUnit tests on them. The run tasks honour -PbcDebug, -PbcQuickPlay, -PbcRunDir (client and
 # server), -PbcUser=<name> and -PbcQuickPlayServer=<host:port> (a second client for the multiplayer rig) and -PwithMods.
+# Only 1.21.1-forge wires a recipe viewer (JEI; -Precipe_viewer=none for none). Quick-play is defective on that Forge line
+# (quickplay_drops_game_events in its gradle.properties, #226): open saves through Singleplayer, as the smoke runner does.
 # Forge jars are built but held back from a release by the release tool's ship gate until the user says otherwise.
 # Standing design, per-line facts and what is not exercised: docs/forge-port.md. Forge sources per line: .forge-ref/
 # (bash scripts/forge-sources-sync.sh), the Forge twin of .neoforge-ref/.

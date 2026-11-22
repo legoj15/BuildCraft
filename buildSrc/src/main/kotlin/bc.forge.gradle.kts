@@ -74,12 +74,15 @@ val gameTestRunDir = file("run-gameTestServer")
 // The node's JEI pin, if it has one (only 1.21.1-forge: JEI's 1.21.1 LTS branch has a Forge build; the 1.21.11, 26.1.2 and
 // 26.2 Forge nodes wire none, and neither viewer has a Forge build for 26.3), and the viewer the dev runs load: JEI by
 // default where it is pinned, `-Precipe_viewer=none` for none. No Forge node pins REI (it has no Forge build for 1.21.1 or
-// 26.3), so `rei` is refused, as is any viewer on a node that pins none.
+// 26.3). `recipe_viewer` is one global property and every node is configured on every invocation, so a viewer this node
+// cannot load (`rei`, or any on a node that pins none) falls back to the node's default with a note instead of failing the
+// whole build: `-Precipe_viewer=rei` on a NeoForge or Fabric run must not die in a Forge node's configuration (#224).
 val jeiVersion = findProperty("jei_version")?.toString()
-val recipeViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: (if (jeiVersion != null) "jei" else "none")
-if (recipeViewer != "none" && (recipeViewer != "jei" || jeiVersion == null)) {
-    throw GradleException("recipe_viewer on this Forge node must be 'none'" +
-            (if (jeiVersion != null) " or 'jei'" else "") + ", not '$recipeViewer'")
+val defaultViewer = if (jeiVersion != null) "jei" else "none"
+val askedViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: defaultViewer
+val recipeViewer = if (askedViewer == "none" || (askedViewer == "jei" && jeiVersion != null)) askedViewer else {
+    logger.info("[${project.name}] recipe_viewer '$askedViewer' has no build on this Forge node; using '$defaultViewer'")
+    defaultViewer
 }
 
 repositories {

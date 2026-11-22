@@ -232,8 +232,10 @@ function Remove-TreeWithRetry([string]$Path) {
 
 # POST /command, repeated when the bridge gave up on it ("TimeoutException": the server thread stayed busy for longer than the bridge
 # waits, on a loaded machine or while a fresh world generates chunks). The first attempt either ran or runs when the thread frees,
-# and a scenario's commands are idempotent in effect (setblock, fill, data merge, item replace, tp, queries), so the repeat finds the
-# work done: its "did not change" / "could not set the block" replies are the ones the cmd step already forgives.
+# so the repeat may run the command a second time. Most rig commands are idempotent in effect (setblock, fill, item replace, tp,
+# queries): the repeat finds the work done and its "did not change" / "could not set the block" replies are the ones the cmd step
+# already forgives (in English runs). A command that is not (clear, a claim, a team command) answers the repeat with a failure, so
+# such a step can fail after a timeout though its first attempt worked: never a false pass, and the step failed before retries too.
 function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
     for ($attempt = 1; ; $attempt++) {
         try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
@@ -677,6 +679,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             # re-run): such a failure is not an error, in every language. `success` is the bridge's language-neutral result
             # code, so any other failed command fails the step the same way in English and under -Lang.
             $stepBenign = $Step.PSObject.Properties['benign'] -and [bool]$Step.benign
+            $gaveUp = 0
             foreach ($c in @($Step.run)) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
@@ -686,7 +689,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 } catch {
                     # An optional command the bridge kept giving up on (the server thread was busy: a forceload over chunks
                     # that were still generating) is not an error: the command was handed over and runs when the thread frees.
-                    if ($optional -and "$_" -match 'TimeoutException') { continue }
+                    if ($optional -and "$_" -match 'TimeoutException') { $gaveUp++; continue }
                     throw
                 }
                 # The world persists between runs, so "already so" replies are success for a rig builder. The reply TEXT is
@@ -706,6 +709,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 }
             }
             $detail = "$(@($Step.run).Count) command(s)"
+            if ($gaveUp) { $detail += ", $gaveUp optional one(s) the bridge timed out on" }
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
         }
@@ -732,17 +736,19 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             do {
                 # A poll the bridge gave up on (the server thread was busy, a world still generating chunks) is a poll that
                 # did not match yet, not a failed step.
+                $timedOut = $false
                 try {
                     $r = Invoke-Bridge POST '/command' @{ command = $c }
                     $last = @($r.output) -join ' | '
                 } catch {
                     if ("$_" -notmatch 'TimeoutException') { throw }
                     $last = 'the bridge timed out (the server thread is busy)'
+                    $timedOut = $true
                 }
-                if ($last -match $Step.match) { break }
+                if (-not $timedOut -and $last -match $Step.match) { break }
                 Start-Sleep -Milliseconds $poll
             } while ((Get-Date) -lt $deadline)
-            if ($last -notmatch $Step.match) { throw "no reply matched '$($Step.match)' within ${timeout}s: $c -> $last" }
+            if ($timedOut -or $last -notmatch $Step.match) { throw "no reply matched '$($Step.match)' within ${timeout}s: $c -> $last" }
             $detail = $last
         }
         'tp' {

@@ -22,20 +22,20 @@ rig's own offset:
   Stripes  (z+21)  a stripes pipe at X+15 facing east, fed cobblestone by a wooden pipe, places at X+16
   Robot    (z+26)  a Stripes robot on a docking station at X+12 (a chest of cobblestone under it, the pipe owned by the dev)
                    whose Work-in-Area zone is the single cell X+17: it flies in from outside the claim and must place there
-  Pump     (z+7)   (#208) a Pump on a creative engine at X+15 over a three-cell lava pool X+15..17 (Y-1): the cell under it is
+  Pump     (z+7)   (#208) a Pump at X+15 (its creative engine at X+14) over a three-cell lava pool X+15..17 (Y-1): the cell under it is
                    outside the claim, the other two inside. A pump drains the farthest cell first and takes a lava source whole,
                    so "the source (level=0) is still there" is the refusal (flowing lava from a kept source refills the emptied
                    cell, which is why the probes name level=0)
   Flood    (z+29)  (#208) a Flood Gate at X+14 fed by a Pump on a three-cell water pool at X+13 (nothing of the pool is near the
                    claim), with a two-cell stone pen in front of it (X+15 outside the claim, X+16 inside): it places a water
                    SOURCE (level=0: a source at X+15 also flows into X+16 as vanilla water, which is not the gate's doing)
-  Builder 2 (z+12..14, builder at X+10, z+13)  (#208) a 6x2x3 blueprint of mixed blocks (cobblestone, a stair, a chest with a block
+  Builder 2 (z+12..14, builder at X+10, z+13)  (#208) a 6x2x3 blueprint of mixed blocks (cobblestone, stairs, chests with a block
                    entity) whose box X+13..18 straddles the claim border: X+13..15 outside, X+16..18 inside, with a dirt block in
                    the way on each side of the border
 
 Probes are `execute if/unless block` commands run as plain `cmd` steps: a `cmd` step fails when the condition is false,
 so a probe that is not what the rig expects is a failed step and a screenshot of it. The rigs run side by side, so one
-wait (gated on the control rig's slowest machine, the quarry) covers all three.
+wait (gated on the control rig's quarry, pump, flood gate and mixed-blueprint chest) covers all three.
 """
 import hashlib
 import os

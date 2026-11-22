@@ -154,11 +154,6 @@ function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
     $defined = $false
     foreach ($line in Get-Content -LiteralPath $props) {
         if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { $defined = $true }
-        # `withmods_compile_only=<alias>[,<alias>]`: the pin is there for the compile only and its mod cannot load on this
-        # node's dev runtime (#228), so a scenario that names it is skipped like one whose alias is missing.
-        if ($line -match '^\s*withmods_compile_only\s*=\s*(.+)$') {
-            if (@($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() }) -contains $Alias.ToLowerInvariant()) { return $false }
-        }
     }
     return $defined
 }
@@ -733,7 +728,7 @@ function Get-SkipReason([string]$Node) {
     $own = @()
     if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
     if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
-        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias>, or a compile-only one, in versions/$Node/gradle.properties)"
+        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias> in versions/$Node/gradle.properties)"
     }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)

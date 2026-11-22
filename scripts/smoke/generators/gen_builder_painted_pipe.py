@@ -51,7 +51,6 @@ What it showed (2026-11-22, run on 1.21.1, 1.21.1-forge, 26.3 and 26.3-forge, 90
     neither show nor hide paint, and the Forge mixin's alpha scaling is never reached by it.
   - 26.3 and 26.3-forge draw the pipe ITEM model for a pipe task (a small plain pipe, unpainted), the same on both loaders.
 """
-import json
 import os
 import sys
 

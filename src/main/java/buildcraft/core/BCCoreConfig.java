@@ -24,10 +24,11 @@ public class BCCoreConfig {
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         minePlayerProtected = builder
                 .comment(
-                        "If true, mining machines (Quarry, Mining Well, Builder/Filler clear-mode) " +
-                                "ignore third-party protection mods and break player-protected blocks. " +
-                                "Default false respects BreakBlockEvent cancellation from mods like " +
-                                "FTB Chunks or GriefPrevention. Does not affect Pumps."
+                        "If true, machines skip BuildCraft's own ask to third-party protection mods " +
+                                "before breaking or placing blocks: Quarry, Mining Well, Builder and Filler, " +
+                                "Pump and Flood Gate, Stripes pipes and robots. Default false asks first, so " +
+                                "claim mods like FTB Chunks, Open Parties and Claims or GriefPrevention can refuse. " +
+                                "A protection mod that blocks the break or placement on its own still does."
                 )
                 .define("minePlayerProtected", false);
 

@@ -5,9 +5,10 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
-/*import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
+//? if forge {
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -26,6 +27,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.platform.forge.client.ForgeBlockParticles;
+//?} else {
+/^import net.minecraft.client.multiplayer.ClientLevel;
+^///?}
 
 /^*
  * NeoForge's {@code IClientBlockExtensions#addDestroyEffects} and {@code #addHitEffects} for a block registered through
@@ -36,7 +40,10 @@ import buildcraft.platform.forge.client.ForgeBlockParticles;
  * {@code IClientBlockExtensions} test (which then never runs for a cancelled call). {@code addBreakingBlockEffects}: the
  * one call to {@code addBreakingParticles}, which Forge's patch leaves in place behind its own extension test and the
  * vanilla render-shape test; wrapped so the hit sound before it still plays and another mod's wrap composes.
+ *
+ * <p>On 1.21.1 it carries nothing: there the block particles go through {@code ParticleEngineMixin}.
  *^/
+//? if >=1.21.10 {
 @Mixin(ClientLevel.class)
 abstract class ClientLevelMixin {
 
@@ -73,4 +80,9 @@ abstract class ClientLevelMixin {
     }
     ^///?}
 }
+//?} else {
+/^@Mixin(ClientLevel.class)
+abstract class ClientLevelMixin {
+}
+^///?}
 *///?}

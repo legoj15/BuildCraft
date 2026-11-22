@@ -5,13 +5,11 @@
  */
 package buildcraft.platform.forge.mixin.client;
 
-//? if forge && >=1.21.10 {
-/*
+//? if forge {
+/*import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.10 {
 //? if >=26.1 {
 import org.spongepowered.asm.mixin.Final;
-//?}
-import org.spongepowered.asm.mixin.Mixin;
-//? if >=26.1 {
 import org.spongepowered.asm.mixin.Shadow;
 //?}
 import org.spongepowered.asm.mixin.injection.At;
@@ -35,6 +33,9 @@ import net.minecraft.client.renderer.entity.ItemRenderer;
 ^///?}
 
 import buildcraft.platform.forge.client.ForgeClientModels;
+//?} else {
+/^import net.minecraft.client.Minecraft;
+^///?}
 
 /^*
  * The per-vertex colours of BuildCraft's item quads ({@code ClientModels#setItemQuads}; NeoForge: the quad's own
@@ -51,7 +52,10 @@ import buildcraft.platform.forge.client.ForgeClientModels;
  * the static {@code renderQuadList} (its only one, after the layer tint is worked out), where a coloured quad is written
  * by {@code ForgeClientModels.putColouredQuad} instead and any other goes to vanilla's call. The outline pass draws
  * through the same method into a flat-colour buffer, which ignores the vertex colour. Forge does not patch it.
+ *
+ * <p>1.21.1 has no such class: its item renderer reads a quad's colours from the vertex data itself, so there it targets {@code Minecraft} and carries nothing.
  *^/
+//? if >=1.21.10 {
 //? if >=26.1 {
 @Mixin(ItemFeatureRenderer.class)
 //?} else {
@@ -86,4 +90,9 @@ abstract class ItemFeatureRendererMixin {
     }
     ^///?}
 }
+//?} else {
+/^@Mixin(Minecraft.class)
+abstract class ItemFeatureRendererMixin {
+}
+^///?}
 *///?}

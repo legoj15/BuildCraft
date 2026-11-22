@@ -1110,20 +1110,17 @@ try {
             # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
             # Open Parties and Claims on Forge (#215): a world's first write of its server config dies on Windows (Forge Config
             # API Port renames a file it still holds open; docs/forge-port.md), and every run of an OPAC scenario plays a fresh
-            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from any
-            # world a dead first boot left behind (the file it leaves is complete). Before the fresh-save delete below.
+            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from the
+            # complete default file shipped in scripts/smoke/seeds (#232; OPAC's keys are the same on every line, only
+            # 1.21.1's default entity names differ). Before the fresh-save delete below.
             if ((Get-NodeLoader $node) -eq 'forge' -and $ModAliases -contains 'opac') {
                 $opacSeed = Join-Path $prep.RunDir 'defaultconfigs/openpartiesandclaims-server.toml'
                 if (-not (Test-Path -LiteralPath $opacSeed)) {
-                    $left = @(Get-ChildItem -File -Path (Join-Path $prep.RunDir 'saves/*/serverconfig/openpartiesandclaims-server.toml') -ErrorAction SilentlyContinue |
-                        Where-Object Length -gt 0) | Select-Object -First 1
-                    if ($left) {
-                        New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
-                        Copy-Item -LiteralPath $left.FullName -Destination $opacSeed
-                        Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $($left.Directory.Parent.Name)"
-                    } else {
-                        Write-Warning "[$node] no Open Parties and Claims server config to seed yet: this first boot is expected to die writing it (#215); run the scenario again and it is seeded from what that boot leaves"
-                    }
+                    $shipped = Join-Path $PSScriptRoot "seeds/openpartiesandclaims-server.$(Get-NodeMcVersion $node).toml"
+                    if (-not (Test-Path -LiteralPath $shipped)) { $shipped = Join-Path $PSScriptRoot 'seeds/openpartiesandclaims-server.toml' }
+                    New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
+                    Copy-Item -LiteralPath $shipped -Destination $opacSeed
+                    Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $(Split-Path -Leaf $shipped)"
                 }
             }
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)

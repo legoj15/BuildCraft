@@ -399,8 +399,9 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 - **OPAC on a Forge node needs its server config seeded (Windows).** Open Parties and Claims' first write of a world's
   `serverconfig/openpartiesandclaims-server.toml` fails with `AccessDeniedException` (Forge Config API Port's adapter renames the file
   it has just created), which kills the integrated server on the first load of every fresh world copy (`crossmod-claims-opac` plays
-  one each run). Put that one file, taken from any world that has booted once, in `versions/<node>/run-smoke/defaultconfigs/`: Forge
-  copies it instead of creating it and the world loads. `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
+  one each run). The runner puts a complete default file from `scripts/smoke/seeds/` in `versions/<node>/run-smoke/defaultconfigs/`
+  before the boot when none is there (#232): Forge copies it instead of creating it and the world loads. The seeds are OPAC's own
+  defaults (`openpartiesandclaims-server.1.21.1.toml` for 1.21.1, whose default entity ids differ; the other file for every later line). `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
   names both; OPAC requires it there). The Forge nodes define `opac` only: the other `crossmod-*` scenarios skip there.
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
   something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`

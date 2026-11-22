@@ -7,7 +7,9 @@ package buildcraft.platform.forge;
 
 //? if forge {
 /*import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
@@ -38,10 +40,20 @@ import buildcraft.platform.config.ConfigRegistrar;
  *
  * <p>Forge reads the file in its own config-load phase, after every mod is constructed, so the loading event reaches a
  * listener subscribed while the constructor runs (see {@link ForgeConfigHooks}); nothing is loaded when this returns.
+ *
+ * <p>The specs are also kept in registration order for the hand-built config screen
+ * ({@code platform/forge/client/ForgeConfigScreen}), as Forge offers no lookup of a mod's specs.
  *^/
 public final class ForgeConfigRegistrar implements ConfigRegistrar {
     /^* The Forge types a spec is registered for already (a container keeps one config per type). ^/
     private final Set<ModConfig.Type> registered = EnumSet.noneOf(ModConfig.Type.class);
+    /^* Every spec registered so far, in registration order. ^/
+    private static final List<ForgeConfigSpec> SPECS = new CopyOnWriteArrayList<>();
+
+    /^* The specs registered so far, in registration order (read by the config screen). ^/
+    public static List<ForgeConfigSpec> registeredSpecs() {
+        return List.copyOf(SPECS);
+    }
 
     @Override
     public synchronized void register(BCConfigType type, Object spec, String fileName) {
@@ -54,6 +66,7 @@ public final class ForgeConfigRegistrar implements ConfigRegistrar {
                 + "per mod: " + type + " maps to it too (see the class documentation)");
         }
         ForgeConfigSpec forgeSpec = (ForgeConfigSpec) spec;
+        SPECS.add(forgeSpec);
         if (fileName == null) {
             ForgeModBus.context().registerConfig(forgeType, forgeSpec);
         } else {

@@ -17,11 +17,11 @@ import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 ^///?}
 
-//? if >=26.3 {
+//? if >=26.1 {
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 //?}
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-//? if >=26.3 {
+//? if >=26.1 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 //?}
@@ -64,7 +64,14 @@ public final class ForgeClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission);
     }
-    //?}
+    //?} elif >=26.1 {
+    /^@Override
+    public BakedQuad.MaterialInfo materialInfo(TextureAtlasSprite sprite, ChunkSectionLayer layer, RenderType itemSheet,
+            int tintIndex, boolean shade, int lightEmission) {
+        // Vanilla's six-component constructor (26.1, 26.2): Forge adds nothing to the material. 1.21.11 has no material.
+        return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, tintIndex, shade, lightEmission);
+    }
+    ^///?}
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {

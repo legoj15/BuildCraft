@@ -134,9 +134,10 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
     //? if >=1.21.10 && <26.3 {
     /^@Override
     public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
-        // The furnace's own question on Forge 61-65: the item's override, then the level's fuel map, then the burn-time
-        // event (Forge's patch of FuelValues#burnDuration); no recipe type is asked for.
-        return level.fuelValues().burnDuration(stack, null);
+        // Forge 61, 64 and 65 patch FuelValues#burnDuration into the stack-aware answer (the item's own override, then the
+        // vanilla fuel map, then the burn-time event; the one-argument call asks for no recipe type); their ForgeHooks has
+        // no getBurnTime.
+        return level.fuelValues().burnDuration(stack);
     }
     ^///?}
     //? if <1.21.10 {

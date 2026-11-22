@@ -167,7 +167,8 @@ public final class ForgeCraftingServices implements CraftingServices {
         }
 
         //? if <26.3 {
-        /^// Forge before 66 (the 26.3 line) has no IIngredientSerializer.simple: the codec and the stream codec by hand.
+        /^// Forge before 66 (the 26.3 line: 52, 61, 64 and 65) has no IIngredientSerializer.simple: the codec and the stream
+        // codec by hand.
         private static IIngredientSerializer<ComponentsIngredient> byHand(MapCodec<ComponentsIngredient> codec,
                 StreamCodec<RegistryFriendlyByteBuf, ComponentsIngredient> streamCodec) {
             return new IIngredientSerializer<>() {

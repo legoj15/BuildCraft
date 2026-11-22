@@ -125,6 +125,17 @@ function Test-NodeViewer([string]$Node, [string]$Viewer) {
     if ($Viewer) { return @($script:NodeViewers[$Node]) -contains $Viewer.ToLowerInvariant() }
     return @($script:NodeViewers[$Node]).Count -gt 0
 }
+# Whether a node's quick-play is defective: `quickplay_drops_game_events=true` in its gradle.properties (1.21.1-forge: Forge
+# 52 loads a quick-played world before it starts its game event bus, and the integrated server crashes at the first loot
+# roll). Such a node boots to the title screen and its save is opened through Singleplayer (Open-SaveFromMenu).
+function Test-QuickPlayDefective([string]$Node) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    foreach ($line in Get-Content -LiteralPath $props) {
+        if ($line -match '^\s*quickplay_drops_game_events\s*=\s*true\s*$') { return $true }
+    }
+    return $false
+}
 # What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
 # needs one the node lacks is SKIPPED with the reason (never failed): it asks for something the node cannot give. The
 # recipe viewers are per node, not per loader: "recipeViewer" is any viewer (the node's default one), "viewer:<name>" the
@@ -586,6 +597,38 @@ function New-SmokeWorld {
     }
 }
 
+function Open-SaveFromMenu([string]$Save) {
+    # The quick-play path by hand, for a node whose quick-play is defective (Test-QuickPlayDefective): Singleplayer, the
+    # save's folder name typed into the search box (focused when the screen opens) so it is the only entry, a click on the
+    # entry's row to select it, then "Play Selected World". The row is the world list's first: its top is the list's top
+    # plus 4, and it is 36 high (vanilla WorldSelectionList, 1.21.1); the click lands right of the 32-pixel icon, which
+    # would join on its own and bypass the button this path checks.
+    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
+    Wait-NoOverlay
+    Invoke-MenuClick 'Singleplayer'
+    Wait-Until { (Get-ScreenClass) -match 'SelectWorldScreen' } 120 'the world list' 1000 | Out-Null
+    Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Save } | Out-Null
+    # The list reads the saves off the game thread, so the row may not exist at the first click: click it until the
+    # button turns active (it is inactive while nothing is selected).
+    $script:listing = $null
+    try { Wait-Until {
+        $script:listing = Invoke-Bridge POST '/screenclick' @{ list = $true }
+        if (@($script:listing.widgets | Where-Object { "$($_.text)" -eq 'Play Selected World' -and $_.active }).Count) { return $true }
+        $list = @($script:listing.widgets | Where-Object { $_.class -match 'WorldSelectionList' }) | Select-Object -First 1
+        if ($list) { $top = [int]$list.y; $mid = [int]$list.x + [int]([int]$list.width / 2) }
+        else { $top = 48; $mid = [int]([int]$script:listing.width / 2) }
+        Invoke-Bridge POST '/screenclick' @{ x = $mid; y = $top + 4 + 18 } | Out-Null
+        Start-Sleep -Milliseconds 400   # past the list's 250 ms double-click window: the next click selects, never joins
+        $false
+    } 60 "'Play Selected World' to turn active" 1000 | Out-Null }
+    catch {
+        $seen = @($script:listing.widgets | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
+        throw "could not select '$Save' on the world list: $($_.Exception.Message) (widgets: $seen)"
+    }
+    Invoke-MenuClick 'Play Selected World'
+    Write-Host "note: opened '$Save' through Singleplayer (this node's quick-play is defective)"
+}
+
 # ── Scenario steps ───────────────────────────────────────────────────────────
 
 $Base = @($ScenarioData.base)   # the rig's origin; step coordinates are relative to it
@@ -995,8 +1038,10 @@ try {
                 }
             }
             Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
-            $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
+            $menuPlay = $quickPlay -and (Test-QuickPlayDefective $node)
+            $client = Start-Client $node $prep.RunDir ($quickPlay -and -not $menuPlay) $nodeOut
             $report.bridgeVersion = $client.BridgeVersion
+            if ($menuPlay) { Open-SaveFromMenu $PlaySave }
             if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
             $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
 

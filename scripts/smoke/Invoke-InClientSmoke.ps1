@@ -151,10 +151,22 @@ $LoaderLacks = @{
 function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
     $props = Join-Path $Repo "versions/$Node/gradle.properties"
     if (-not (Test-Path -LiteralPath $props)) { return $false }
+    $defined = $false
     foreach ($line in Get-Content -LiteralPath $props) {
-        if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { return $true }
+        if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { $defined = $true }
+        # `withmods_compile_only=<alias>[,<alias>]`: the pin is there for the compile only and its mod cannot load on this
+        # node's dev runtime (#228), so a scenario that names it is skipped like one whose alias is missing.
+        if ($line -match '^\s*withmods_compile_only\s*=\s*(.+)$') {
+            if (@($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() }) -contains $Alias.ToLowerInvariant()) { return $false }
+        }
     }
-    return $false
+    return $defined
+}
+# True when the node's gradle.properties says `config_screen=false` (1.21.1-forge, #225: no config screen there).
+function Test-NodeLacksConfigScreen([string]$Node) {
+    $props = Join-Path $Repo "versions/$Node/gradle.properties"
+    if (-not (Test-Path -LiteralPath $props)) { return $false }
+    return [bool](Get-Content -LiteralPath $props | Where-Object { $_ -match '^\s*config_screen\s*=\s*false\s*$' })
 }
 function Get-LackReason($Needs, [string]$Node) {
     # The first capability of $Needs the node lacks, as "needs <what>"; $null when it lacks none.
@@ -167,6 +179,9 @@ function Get-LackReason($Needs, [string]$Node) {
         if ($need -like 'viewer:*') {
             $viewer = $need.Substring(7)
             if (-not (Test-NodeViewer $Node $viewer)) { return "needs $viewer (this node does not pin it: no ${viewer}_version in versions/$Node/gradle.properties)" }
+        }
+        if ($need -eq 'configScreen' -and (Test-NodeLacksConfigScreen $Node)) {
+            return "needs a config screen (this node has none: config_screen=false in versions/$Node/gradle.properties)"
         }
         if ($lacks -and $lacks.ContainsKey($need)) { return "needs $($lacks[$need])" }
     }
@@ -713,7 +728,7 @@ function Get-SkipReason([string]$Node) {
     $own = @()
     if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
     if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
-        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias> in versions/$Node/gradle.properties)"
+        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias>, or a compile-only one, in versions/$Node/gradle.properties)"
     }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)

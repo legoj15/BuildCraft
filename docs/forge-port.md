@@ -9,7 +9,9 @@ Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (272 rows, each
 - Nodes are `<line>-forge`, declared `version("<line>-forge", "<line>")`, `loader=forge` in the node's properties.
 - Order: **26.3-forge** (active line; EventBus 7, the shape 26.2 / 26.1.2 / 1.21.11 share), then **1.21.1-forge**
   (the only Forge line with an audience; EventBus 6, its own event fork).
-- 1.21.11, 26.2, 26.1.2: decided on measured cost once the first two exist (#210).
+- Then **26.2-forge** and **26.1.2-forge** (F8, 2026-11-21): the same EventBus 7 shape as 26.3, with version arms where Forge
+  64/65 or vanilla 26.1/26.2 differ ("The 26.2 and 26.1.2 lines (F8)").
+- 1.21.11: decided on measured cost (#210).
 - **No 1.21.10 Forge node, ever** (user decision, #210: Forge takes no PRs for that branch).
 - Nothing ships until the user says so.
 
@@ -272,7 +274,7 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
    and reloaded on 26.3-forge loads with no confirmation (`confirmedExperimentalSettings` 0, as on NeoForge); both Forge
    lines boot their game tests with the mixin applied (948 and 949 pass). Worlds made
    before the fix keep their stored confirmation; the smoke runner still answers both screens for them.
-3. Minor: no Config button (known, `ForgeClientConfigScreens`); the Forge pause menu's icon row has one button fewer than
+3. Minor: no Config button (known then; a hand-built screen since F8, "Config screen (every 26.x Forge node)"); the Forge pause menu's icon row has one button fewer than
    NeoForge's (a vanilla-screen difference, not BuildCraft's); after pouring a water bucket into a Tank in creative NeoForge leaves an
    empty bucket in the hotbar and Forge did not: NeoForge's player item access follows vanilla's
    `ItemUtils.createFilledResult` (a creative player keeps the item and is given the result if the inventory has none like
@@ -317,7 +319,7 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 | F6 | **Done to boot on 26.3-forge.** Client seams, models, renderers; the dev client reaches the title screen and a world (see "Client on Forge (F6)"). On `1.21.1-forge` the whole slice is compiled out (whole-file `forge && >=1.21.10`) | smoke runner on `26.3-forge` (not run in F6; the boot was checked by hand) |
 | F7 | **Server side done.** `1.21.1-forge`: EventBus 6 arm of `ForgeBus`, 1.21.1 event and API shapes, plain-Mixin arms, data down-ports, vanilla tickets (see "The 1.21.1 line (F7)") | `:1.21.1-forge:nodeVerification` green: boot clean, all 948 game tests pass |
 | F7b | **Not started.** The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders): the six holders throw `not ported (#209)` there until it lands | smoke runner on `1.21.1-forge` |
-| F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
+| F8 | **26.2-forge and 26.1.2-forge done** (2026-11-21; see "The 26.2 and 26.1.2 lines (F8)"), with the Forge config screen on every 26.x Forge node. Remaining: 1.21.11 per #210, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `:26.2-forge:nodeVerification`, `:26.1.2-forge:nodeVerification` green (949 each), smoke batches on both; the rest `fullTestSuite` |
 
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
@@ -509,6 +511,109 @@ container: `ForgeFluidContainerModel` is an item-model type, a 1.21.4+ shape, so
 file step 5 leaves is the candidate), the `LoggingOut` clear, and a client game-test or smoke run. A file ported to
 1.21.1 replaces its whole-file `forge && >=1.21.10` with per-version arms, and its mixin joins the node's list. JEI and REI
 stay off this node (no `jei_version` / `rei_version`; JEI has a Forge 1.21.1 build, wiring it is F8).
+
+## The 26.2 and 26.1.2 lines (F8): `26.2-forge`, `26.1.2-forge`
+
+Forge 65.1.6 on Minecraft 26.2 and Forge 64.1.6 on Minecraft 26.1.2, Java 25, EventBus 7: the same shape as 26.3-forge, so
+`ForgeBus`, the entrypoint, the config, network, menus, transfer, loot and crafting seams needed no change. Pins in
+`versions/26.2-forge/gradle.properties` and `versions/26.1.2-forge/gradle.properties` (player minimum `[65.1.0,66)` and
+`[64.1.0,65)`, `mc_dep_range` the line, `pack_fields` 88-107 and 84-101 as on the NeoForge twins, the Modrinth OPAC pin of
+the line). Each builds its own jar (`BuildCraftRedux-<v>+mc26.2-forge.jar`, `+mc26.1.2-forge.jar`). No change was needed in
+the access transformer, `DataForge`, `mods.toml` or `pack.mcmeta`: the transformed resources pass the node's guard as they
+are. Measured 2026-11-21:
+
+- `:26.2-forge:nodeVerification` and `:26.1.2-forge:nodeVerification` green: "All 949 required tests passed" on each, the
+  same 948 BuildCraft tests plus `minecraft:always_pass` as 26.3-forge; the same 7 client-class tests are not registered (see
+  "Game tests on Forge (F5)"), nothing else is left out. All 14 server mixins apply in the game-test server (debug.log
+  "Mixing ...").
+- `:26.2-forge:runServer` and `:26.1.2-forge:runServer` boot to Done (2.1 s, 2.2 s) and stop cleanly with no BuildCraft
+  warning or error. A bare server with nobody on it loads only the mixed classes it touches: 10 of 14 mixins on 26.2 and 12 on
+  26.1.2 are applied there (`ServerGamePacketListenerImpl` and `Swim` need a player or a mob; the game-test run applies all).
+- Client: see "Smoke on 26.2-forge and 26.1.2-forge" below.
+
+**What differs from 26.3, arm by arm** (every arm is keyed on the version alone inside a whole-file `forge` or
+`forge && >=1.21.10` body; the else arm serves 26.2 and 26.1.2 unless it says otherwise):
+
+| File | 26.3 arm | 26.2 / 26.1.2 arm, and why |
+|---|---|---|
+| `ForgeVanillaExtensions.burnTime` | none (the `VanillaExtensions` default) | `level.fuelValues().burnDuration(stack)`: Forge 64/65 patch `FuelValues#burnDuration` into the stack-aware answer and have no `ForgeHooks.getBurnTime` (1.21.1 keeps that) |
+| `ForgeGameHooks.onBreakSpeed` | `getPosition()` is a `BlockPos` | `getPosition().orElse(null)`: an `Optional` on Forge 64/65, as on 1.21.1 |
+| `ForgeAllBiomesFeatureModifier` | `generationSettings()` | `getGenerationSettings()` (the 1.21.1 name) |
+| `ForgeFakePlayers` | `setPermanentlyInvulnerable(true)`, `setInvulnerableTime(0)` | an `isInvulnerableTo(ServerLevel, DamageSource)` override answering true, and the public `invulnerableTime = 0` field: neither 26.3 setter exists in 26.1/26.2 vanilla |
+| `ForgeCraftingServices` components ingredient serializer | `IIngredientSerializer.simple(CODEC, STREAM_CODEC)` | an anonymous `IIngredientSerializer` with `codec()`, `write`, `read`: Forge 64/65 have no `simple` |
+| `ForgeRecipeSync` | `Recipe.DIRECT_CODEC` | `Recipe.CODEC` (26.3 renamed it) |
+| `mixin/FloatGoalMixin`, `mixin/SwimMixin` | the water-like float check | empty: 26.1/26.2 vanilla asks `isInWater() && getFluidHeight(WATER) > ...`, which the fluid mixin below already answers, as on 1.21.1 |
+| `mixin/EntityFluidInteractionMixin` + `EntityFluidTrackerAccessor` | per-fluid-type trackers with a `fluidType` (26.3) | a new `elif >=1.21.10` arm: 26.1/26.2 vanilla tracks per fluid tag (`trackerByFluid`) and Forge adds a per-type map (`trackerByFluidType`) whose `Tracker` has no type. `@WrapOperation` on the one `Fluid.is(TagKey)` call in `getTrackersFor` keeps a fluid out of the WATER tag tracker unless `ForgeFluidPhysics.isWaterLike`; the water-like and eye-in-water answers are vanilla's WATER tracker; the fall-distance modifier walks the per-type trackers through the accessor's `height`. The accessor arm reads `height` and `eyesInside` only |
+| `ForgeFluidPhysics` | | `declared(FluidType)`, `isWaterLike(Fluid)`, `fallDistanceModifier(FluidType, Entity)` for that arm |
+| `client/ForgeClientModels` | `ItemQuads`, the 26.3 `MaterialInfo` | the 6-argument `MaterialInfo` (sprite, layer, render type, tint, shade, light emission) and `layer.prepareQuadList().addAll(quads)`: 26.1/26.2 have no `ItemQuads` |
+| `client/ForgeFluidContainerModel` | the 26.3 `MaterialInfo.of`, two item sheets | `MaterialInfo.of(..., true, 0)`, the 6-argument fluid layer (shade off for a glowing fluid), one item sheet (as Fabric's arms) |
+| `client/ForgeBlockParticles` | the hit hook gets no position | `addHitEffects(BlockState, Level, BlockHitResult, ParticleEngine)` |
+| `mixin/client/ClientLevelMixin` | `@WrapWithCondition` on `addBreakingParticles` in `addBreakingBlockEffects` | `@Inject` at the head (cancellable) of Forge 64/65's `addBreakingBlockEffect(BlockPos, BlockHitResult)` |
+| `client/ForgeClientRegistrationSinks` | `RenderPipeline` from `client.renderer`; the PiP factory a `Supplier` | `com.mojang.blaze3d.pipeline.RenderPipeline`; on 26.1 (`<26.2`) the PiP factory is a `Function<BufferSource, ...>` fed Forge 64's `event.getBufferSource()` |
+| `client/ForgeClientHooks.onBlockOutline` | `>=26.2`: the collector callback | 26.1: Forge 64's `render(BufferSource, PoseStack, translucent, LevelRenderState)` callback, drawing in the matching pass with `ShapeRenderer.renderShape` and ending the batch |
+| `mixin/client/LevelRendererMixin` | `>=26.2`: before `finalizeGizmoCollection()` in `submitFeatures` | 26.1: `submitBlockDestroyAnimation` at TAIL (26.1.2 has no `submitFeatures`; it submits inside the main pass) |
+| `mixin/client/ItemFeatureRendererMixin` | `>=26.2`: `prepareMainSubmit` | 26.1: `renderItem` (the same `QuadInstance.setColor(I)V` target) |
+
+One behaviour differs from 26.3-forge: the WATER tag tracker leaves out a fluid that is not water-like, so on these lines
+`getFluidHeight(WATER)` is 0 in oil, where 26.3's per-type tracking reports it. Nothing in BuildCraft or vanilla asks for it
+in oil except the float and swim checks, which must not see oil as water (`oil_bobbing_physics` passes on both).
+
+**Mixin re-proof.** Every injection point was re-read in each line's patched sources (the mavenizer's
+`injected-sources.jar` for `26.2-65.1.6` and `26.1.2-64.1.6`), counting the target calls inside the target method:
+
+| Mixin | 26.2 (Forge 65.1.6) | 26.1.2 (Forge 64.1.6) |
+|---|---|---|
+| `AnvilMenuMixin` (`canEnchant` in `createResult`) | 1 | 1 |
+| `EnchantCommandMixin` (`canEnchant` in `enchant`) | 1 | 1 |
+| `EntityFluidInteractionMixin` (`Fluid.is` in `getTrackersFor`) | 1 | 1 |
+| `EntityFluidTrackerAccessor` (`height`, `eyesInside`) | present | present |
+| `EntityMixin` (`isEyeInFluid`, `checkBelowWorld` in `baseTick`; `isInFluid` in `updateFluidInteraction`) | 1, 1, 2 | 1, 1, 2 |
+| `FloatGoalMixin`, `SwimMixin` | no injection (empty arm) | no injection (empty arm) |
+| `LevelChunkMixin` (`onLoad` in `addAndRegisterBlockEntity`) | 1 | 1 |
+| `MappedRegistryMixin` (`register(key, value, RegistrationInfo)`) | present | present |
+| `NamespacedWrapperMixin` | applied (game-test run) | applied (game-test run) |
+| `SavedDataStorageMixin` (`computeIfAbsent`, `get`, `collectDirtyTagsToSave`) | present | present |
+| `ServerChunkCacheMixin` (constructor) | present | present |
+| `ServerGamePacketListenerImplMixin` (`getCloneItemStack` in `handlePickItemFromBlock`) | 1 | 1 |
+| `ServerPlayerMixin` (`openMenu`, `calculateGameModeForNewPlayer`) | present | present |
+| `client.ClientLevelMixin` (`addDestroyBlockEffect`; `addBreakingBlockEffect(BlockPos, BlockHitResult)`) | present, present | present, present |
+| `client.ItemFeatureRendererMixin` (`QuadInstance.setColor` in `prepareMainSubmit` / `renderItem`) | 1 | 1 |
+| `client.LevelRendererMixin` (`finalizeGizmoCollection` in `submitFeatures` / TAIL of `submitBlockDestroyAnimation`) | 1 | TAIL |
+| `client.ModelBlockRendererMixin` (`BlockQuadOutput.put` in `putQuadWithTint`) | 1 | 1 |
+| `client.ScissorStackMixin`, `client.CuboidItemModelWrapperInvoker`, `client.ItemModelsAccessor`, `client.SpriteSourcesAccessor` | same members as 26.3 | same members as 26.3 |
+
+Runtime application: the game-test run (server mixins) and the smoke clients' debug.log (client mixins, below).
+
+### Config screen (every 26.x Forge node)
+
+Forge generates no screen from a spec, so `platform/forge/client/ForgeConfigScreen` is hand-built and the mod list's Config
+button opens it (`ForgeClientConfigScreens` registers a `ConfigScreenHandler.ConfigScreenFactory` extension point on the
+mod's own container; the same call on Forge 64, 65 and 66; not `MinecraftForge.registerConfigScreen`, which goes through
+the for-removal `ModLoadingContext.get()`). It walks the specs `ForgeConfigRegistrar` registered, in order: a section is a
+button opening its own screen, a value a label and an editor by type (on/off, a cycle over the accepted enum constants, a
+text box for numbers and strings, comma-separated text for a list of strings, read-only for anything else). A typed value
+reaches the config only when the spec's validator accepts it (red text until then); changes are set at once and written when
+the screen goes away. Labels and tooltips use NeoForge's lang keys (`<modid>.configuration.<key>[.tooltip]`), so one lang
+file serves both, falling back to the spec comment. Fabric's answer (Forge Config API Port's copy of NeoForge's
+`ConfigurationScreen`) was not reused: on Forge it would be a new runtime dependency for players. `1.21.1-forge` has no arm:
+its client slice is compiled out (TODO(#209) in `ForgeClientConfigScreens`, with F7b).
+
+### Smoke on 26.2-forge and 26.1.2-forge (Server1, 2026-11-21)
+
+`Invoke-SmokeBatch.ps1 -Node 26.2-forge` and `-Node 26.1.2-forge`, the default list (56 scenarios; 16 skipped on Forge for a
+recipe viewer, dev mods or a loader filter, as on 26.3-forge). 26.1.2-forge: all 40 that ran passed (106 min). 26.2-forge: 37
+of 40 passed (102 min); the three failures are McDevBridge requests that timed out (`TimeoutException`) on a busy game
+thread, not a BuildCraft error (0 BuildCraft log errors in every scenario): `port-26-3` step 234 (`spreadplayers 400 400`,
+which generates new chunks), `release-2026-2-1-f` step 144 (a `/screenclick`), `release-2026-2-1` step 34 (a `/state`).
+Not yet compared with the NeoForge twins (`26.2`, `26.1.2` batches were still running when this was written) and the
+render-heavy screenshots not yet read, so no visual verdict here.
+
+`forge-config-screen` passed on both: the mod list's Config button opens the screen (sections General, World Generation,
+Display), Display lists its values with on/off and enum editors, a click flipped "Searing Fluids Emit Steam" and the client
+config on disk then read `searingFluidSteam = false`, which every later scenario's client booted with (the scenario now flips
+it back and re-opens the section before it ends; that version is not run yet). On `26.3-forge` the same scenario (and
+`mod-list-banner`) failed at its first step on Server1: the runner could not bring the 26.3 (SDL3) window to the front to open
+the pause menu ("could not focus the game window"), so the screen is not verified in a 26.3-forge client.
 
 ## Common-code loader forks (F3b)
 

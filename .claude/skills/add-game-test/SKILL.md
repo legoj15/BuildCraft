@@ -1,6 +1,6 @@
 ---
 name: add-game-test
-description: Adding, changing, or debugging a game test in BuildCraft, NeoForge or Fabric (any *Tester.java under src/test plus its test_instance manifest). The three-part wiring (Java method, registration, manifest JSON), Fabric-only and NeoForge-only tests, arena geometry limits, tick-latency pitfalls, player-state limits, and how to verify the test actually runs. Read this BEFORE writing the first line of a new game test.
+description: Adding, changing, or debugging a game test in BuildCraft, NeoForge, Fabric or Forge (any *Tester.java under src/test plus its test_instance manifest). The three-part wiring (Java method, registration, manifest JSON), Fabric-only and NeoForge-only tests, the Forge nodes, arena geometry limits, tick-latency pitfalls, player-state limits, and how to verify the test actually runs. Read this BEFORE writing the first line of a new game test.
 ---
 
 # Adding a game test in BuildCraft
@@ -109,6 +109,24 @@ Three cases leave the "same test, every node" default; pick by what the body nee
 
 The Fabric build drops the manifests of the tests it does not register, so a `neoforge`-arm test needs no manifest
 change.
+
+## The Forge nodes run the same tests
+
+Every `<line>-forge` node runs `registerAll` too (`:<node>-forge:runGameTest`, Forge's own game-test server; part of
+its `nodeVerification` and the gate for a Forge seam). Like Fabric it compiles src/test/java minus the JUnit files and
+`buildcraft/platform/neoforge/**` (`bc.forge.gradle.kts`), so the same rule holds: a body reaches the loader only
+through `Platform` seams and `lib.test.LoaderTestEvents` (which has forge arms). The hook is
+`platform/forge/ForgeGameTestHooks`; on `1.21.1-forge` it feeds the shared `LegacyGameTestRegistry`, as the other
+1.21.1 nodes do.
+
+- A test only Forge cannot run goes in a `//? if neoforge || fabric {` arm of `registerAll` under a
+  `// Not on Forge: <reason>` line (none today). The seven client-class tests are not registered on Forge and have no
+  Forge client game-test run yet.
+- The task fails unless the log holds `All N required tests passed` with N > 0, so a filter that matches nothing is a
+  failure, not a pass. `-PbcTests=<glob>` narrows the run, `-PbcGameTestTrace` logs each test's start and end (the way
+  to name a test that crashes the server). The log is `versions/<node>-forge/run-gameTestServer/logs/latest.log`.
+- A Forge-only difference found by a test is recorded in [docs/forge-port.md](../../../docs/forge-port.md), which also
+  lists the product bugs the shared tests have already caught there.
 
 ## Never assert on a fixed tick after placing blocks/entities
 

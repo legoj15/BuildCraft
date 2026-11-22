@@ -5,7 +5,9 @@ entity sync that travel server -> other clients. This boots `:<node>:runServer` 
 offline, RCON on, both players opped, flat world) and two `runClient`s (`run-smoke/mp-a` as Watcher, `run-smoke/mp-b`
 as Worker) that quick-play into it, and records each client's bridge url+token as it starts (bridge.json only ever
 holds the newest client). Commands go through RCON; per-client actions through each bridge. Output and process ids
-live in build/smoke-mp/<node>/. Gradle runs with --no-daemon, so `stop` takes down exactly the trees it started.
+live in build/smoke-mp/<node>/. Gradle runs with --no-daemon, so `stop` takes down the trees it started; on the server
+machine its last resort ends every java process of the remote checkout (the server's JVM and Gradle's alike), so
+nothing of that checkout may keep running there mid-run.
 From Git Bash set MSYS_NO_PATHCONV=1, or bridge paths like /state get rewritten.
 
 One run per machine: `server` takes the smoke lock (~/.mcdevbridge/smoke.lock, the file Invoke-InClientSmoke.ps1 takes
@@ -18,7 +20,7 @@ bridge, so `b` and the scene scripts fail loudly once that client is gone instea
   python -I mp.py client <node> A|B        start a client that quick-plays into the server, capture its bridge
   python -I mp.py rcon <node> "<cmd>" ...  server console commands
   python -I mp.py b <node> A|B <METHOD> <path> [json]
-  python -I mp.py stop <node>              stop clients + server (only processes this script started)
+  python -I mp.py stop <node>              stop clients + server (a remote server: every java of that checkout)
 
 Loaders: NeoForge nodes pass the run switches through mp.init.gradle (an init script, so build.gradle.kts stays untouched);
 a MinecraftForge node (`loader=forge`) reads the build's own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (bc.forge).
@@ -40,12 +42,24 @@ The server may run on another machine, so the two clients join over a real netwo
 import base64, ctypes, hashlib, json, os, re, secrets, shutil, socket, struct, subprocess, sys, time, urllib.request, uuid
 from ctypes import wintypes
 
+
+def require_dir_name(name, what):
+    """A name spliced into a remote PowerShell string must be a single directory name (letters, digits, . _ -): no path
+    separators, no '..', no quotes (an apostrophe would step out of a single-quoted PowerShell string)."""
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', name or ''):
+        raise SystemExit('%s %r is not a single directory name (letters, digits, "." "_" "-" only): it would be spliced '
+                         'into remote PowerShell strings' % (what, name))
+    return name
+
+
 HERE_SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE_SCRIPTS, '..', '..', '..'))
 HERE = os.path.join(REPO, 'build', 'smoke-mp')
 PORT = int(os.environ.get('MP_PORT', 25661))
 RCON_PORT = int(os.environ.get('MP_RCON_PORT', 25662))
 REMOTE = os.environ.get('MP_REMOTE_CHECKOUT') or None
+if REMOTE:
+    require_dir_name(REMOTE, 'MP_REMOTE_CHECKOUT')  # it is spliced into remote PowerShell strings
 SERVER_HOST = os.environ.get('MP_SERVER_HOST') or ('Server1' if REMOTE else '127.0.0.1')
 MCDEVBRIDGE_ROOT = os.environ.get('MCDEVBRIDGE_ROOT') or 'E:/GitHub/McDevBridge'
 REMOTE_TOOLS = os.path.join(MCDEVBRIDGE_ROOT, 'tools', 'remote')
@@ -155,11 +169,12 @@ def lock_is_ours(held, node):
     return held.get('owner') == LOCK_OWNER and held.get('node') == node and held.get('repo') == REPO
 
 
-def lock_refuse_if_busy():
-    """Exit with the holder's name when a live process holds the lock (checked before anything is started)."""
+def lock_refuse_if_ours(node, why):
+    """Exit when a live run of THIS rig on this node holds the lock; `why` tells the operator what to do instead. Another
+    runner's lock is not this rig's server, so it does not refuse."""
     held = lock_read()
-    if held is not None and lock_alive(held):
-        raise SystemExit(lock_busy_message(held))
+    if held is not None and lock_alive(held) and lock_is_ours(held, node):
+        raise SystemExit('a run of this rig on %s still holds %s (pid %s). %s' % (node, LOCK, held['pid'], why))
 
 
 def lock_acquire(node, holder_pid):
@@ -330,6 +345,8 @@ def setup(node):
     nd = node_dir(node)
     os.makedirs(os.path.join(HERE, node), exist_ok=True)
     if REMOTE and not os.environ.get('MP_RCON_PASSWORD'):
+        lock_refuse_if_ours(node, 'Run `python -I mp.py stop %s` first: setup writes a fresh rcon.pw, and the running server '
+                            'still has the old one' % node)
         with open(os.path.join(HERE, node, 'rcon.pw'), 'w', encoding='utf-8') as f:
             f.write(secrets.token_hex(12))
     if REMOTE:
@@ -402,6 +419,7 @@ def remote_script(node, nonce):
     """The PowerShell 7 text run on Server1: the game directory's files (base64, so no quoting), the old log removed and this
     run's nonce written (the waiter trusts the log only once the nonce is there, so an earlier run's `Done` never counts), then
     the server."""
+    require_dir_name(node, 'the node')
     lines = ["$ErrorActionPreference = 'Stop'", f"$d = 'versions/{node}/{SERVER_DIR}'",
              "New-Item -ItemType Directory -Force -Path $d | Out-Null", "$d = (Resolve-Path $d).Path"]
     for name, data in server_files(node).items():
@@ -421,14 +439,18 @@ def remote_server_log(node):
 def remote_fetch_log(node, rel='logs/latest.log'):
     """Copy a file of the Server1 game directory into build/smoke-mp/<node>/remote-fetch/ (Receive-FromServer1.ps1: scp).
     The previous copy is dropped first, so a stale one can never answer for the fetch that failed. True when it arrived."""
+    require_dir_name(node, 'the node')
     dest = os.path.dirname(remote_server_log(node))
     os.makedirs(dest, exist_ok=True)
     local = os.path.join(dest, os.path.basename(rel))
     if os.path.exists(local):
         os.remove(local)
     remote = f'{REMOTE}/versions/{node}/{SERVER_DIR}/{rel}'
-    subprocess.run(['pwsh', '-NoProfile', '-File', os.path.join(REMOTE_TOOLS, 'Receive-FromServer1.ps1'), '-Path', remote,
-                    '-Destination', dest], capture_output=True, text=True)
+    try:
+        subprocess.run(['pwsh', '-NoProfile', '-File', os.path.join(REMOTE_TOOLS, 'Receive-FromServer1.ps1'), '-Path', remote,
+                        '-Destination', dest], capture_output=True, text=True, timeout=120)
+    except (subprocess.TimeoutExpired, OSError):
+        pass  # no log fetched: the missing file below reports that
     return os.path.exists(local)
 
 
@@ -448,6 +470,7 @@ def remote_wait_done(node, poller, timeout, nonce):
             if m:
                 return m
         if proc_start(poller) is None:
+            print(remote_kill_stragglers()[1])  # the poller is gone; a remote java process may have outlived it
             tail = ''
             try:
                 with open(os.path.join(HERE, node, 'server.remote.log'), encoding='utf-8', errors='replace') as f:
@@ -470,6 +493,7 @@ def remote_start(node, nonce, timeout_minutes=240):
                           '-NoDesktop', '-TimeoutMinutes', str(timeout_minutes), '-ScriptFile', script],
                          stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                          creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+    out.close()  # the child keeps its own handle
     return p.pid
 
 
@@ -495,21 +519,34 @@ def remote_launched(node, pid, launch_seconds=150):
 
 
 def remote_kill_stragglers():
-    """Last resort when a server will not stop or its poller was ended: end the java processes whose command line names this
-    checkout's directory on Server1, and nothing else (Gradle's wrapper JVM and the server's). Ending the LOCAL poller does not
-    stop a remote run that has started, so every path that kills a poller of a started run needs this. Plain ssh with an
-    encoded command (the tools/remote scripts sometimes stall in their own launch)."""
+    """Last resort when a server will not stop or its poller was ended: end EVERY java process whose command line names this
+    checkout's directory on Server1, the server's JVM and Gradle's wrapper JVM alike, so nothing of that checkout may keep
+    running there mid-run (other checkouts' processes are untouched). Ending the LOCAL poller does not stop a remote run that
+    has started, so every path that kills a poller of a started run needs this. Plain ssh with an encoded command (the
+    tools/remote scripts sometimes stall in their own launch). Returns (confirmed, line): confirmed is False when ssh failed
+    or timed out, and then the kill could not be confirmed."""
     script = ("Get-CimInstance Win32_Process -Filter \"Name = 'java.exe'\" | Where-Object { $_.CommandLine -like '*"
               + f"{REMOTE_ROOT}\\{REMOTE}\\*" + "' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force; \"stopped $($_.ProcessId)\" }")
     enc = base64.b64encode(script.encode('utf-16-le')).decode()
-    r = subprocess.run(['ssh', '-o', 'BatchMode=yes', os.environ.get('MP_REMOTE_SSH') or 'server1',
-                        'powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ' + enc],
-                       capture_output=True, text=True, timeout=180)
-    return r.stdout.strip() or '(nothing of this checkout was running)'
+    try:
+        r = subprocess.run(['ssh', '-o', 'BatchMode=yes', os.environ.get('MP_REMOTE_SSH') or 'server1',
+                            'powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ' + enc],
+                           capture_output=True, text=True, timeout=180)
+    except subprocess.TimeoutExpired:
+        return False, ('remote kill could NOT be confirmed (ssh timed out after 180 s); java processes of this checkout '
+                       'may still run on the server machine')
+    except OSError as e:
+        return False, 'remote kill could NOT be confirmed (ssh failed to run: %s)' % e
+    if r.returncode != 0:
+        err = (r.stderr or '').strip().splitlines()
+        why = 'ssh exit %d, %s' % (r.returncode, err[0]) if err else 'ssh exit %d, no stderr' % r.returncode
+        return False, ('remote kill could NOT be confirmed (%s); java processes of this checkout may still run on the '
+                       'server machine' % why)
+    return True, r.stdout.strip() or '(nothing of this checkout was running)'
 
 
 def lock_wait_if_busy():
-    """lock_refuse_if_busy, but when MP_LOCK_WAIT_MINUTES is set wait that long for the holder to finish (polling every 2 s: a
+    """Refuse when a live process holds the lock, but when MP_LOCK_WAIT_MINUTES is set wait that long for the holder to finish (polling every 2 s: a
     slower poll loses every gap between another run's scenarios)."""
     end = time.time() + 60 * float(os.environ.get('MP_LOCK_WAIT_MINUTES') or 0)
     announced = False
@@ -544,12 +581,13 @@ def server(node):
     except SystemExit:  # lost a race for the lock: take down what was just started
         subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
         if REMOTE:
-            print(remote_kill_stragglers())
+            print(remote_kill_stragglers()[1])
         raise
     if REMOTE:
         for attempt in range(1, 4):
             if remote_launched(node, st['server']):
                 break
+            print(remote_kill_stragglers()[1])  # killing the poller must not leave a started remote run going
             subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
             if attempt == 3:
                 raise SystemExit('the remote launch stalled 3 times; see build/smoke-mp/%s/server.remote.log' % node)
@@ -658,8 +696,9 @@ def stop(node):
         r = Rcon(node)
         print('rcon stop:', r.cmd('stop'))
         stopped = True
-    except Exception as e:
-        print('rcon stop failed', e)
+    except (Exception, SystemExit) as e:  # SystemExit too: refused login or missing rcon.pw, so no stop was asked
+        print('rcon stop failed (%s): the server was not asked to stop' % e)
+    remote_unconfirmed = False
     if REMOTE:
         poller = st.get('server')
         if stopped and poller:  # the server's Gradle ends, the remote command with it, then the poller returns
@@ -670,18 +709,30 @@ def stop(node):
             shutil.copy2(remote_server_log(node), os.path.join(HERE, node, 'server-remote-latest.log'))
         if not stopped or (poller and proc_start(poller) is not None):  # the server did not stop on RCON
             print('remote server did not stop; ending the java processes of this checkout on the server machine')
-            print(remote_kill_stragglers())
+            confirmed, line = remote_kill_stragglers()
+            print(line)
+            remote_unconfirmed = not confirmed
     else:
         time.sleep(15 if stopped else 0)
     for k in ('clientB', 'clientA', 'server'):
         if k in st:
             print(k, subprocess.run(['taskkill', '/PID', str(st[k]), '/T', '/F'], capture_output=True, text=True).stdout.strip())
+    if remote_unconfirmed:
+        # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry
+        save_state(node, {'server': st['server']} if 'server' in st else {})
+        print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
+              'run `python -I mp.py stop %s` again' % node)
+        return
     save_state(node, {})
     lock_release(node)
 
 
 if __name__ == '__main__':
     a = sys.argv[1:]
+    if not a or a[0] not in ('setup', 'server', 'client', 'rcon', 'b', 'stop'):
+        print('usage: python -I mp.py setup <node> | server <node> | client <node> A|B | rcon <node> "<cmd>" ... | '
+              'b <node> A|B <METHOD> <path> [json] | stop <node>   (the docstring at the top of mp.py explains each)')
+        sys.exit(0 if a[:1] in (['-h'], ['--help']) else 2)
     if len(a) > 1:
         refuse_unsupported_node(a[1])
     if a[0] == 'setup':

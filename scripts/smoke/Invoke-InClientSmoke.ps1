@@ -218,6 +218,31 @@ function Wait-Until([scriptblock]$Condition, [int]$TimeoutSec, [string]$What, [i
     throw "timed out after ${TimeoutSec}s waiting for $What" + $(if ($lastError) { " (last error: $lastError)" } else { '' })
 }
 
+# Remove-Item -Recurse races with whatever else touches the folder (a virus scan, the indexer, a Gradle file watcher): "The
+# directory is not empty" on a folder that was empty a moment later. Retried; a folder that is gone by then is a success.
+function Remove-TreeWithRetry([string]$Path) {
+    for ($try = 1; $try -le 6; $try++) {
+        try { Remove-Item -Recurse -Force -LiteralPath $Path -ErrorAction Stop; return } catch {
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            if ($try -eq 6) { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
+# POST /command, repeated when the bridge gave up on it ("TimeoutException": the server thread stayed busy for longer than the bridge
+# waits, on a loaded machine or while a fresh world generates chunks). The first attempt either ran or runs when the thread frees,
+# and a scenario's commands are idempotent in effect (setblock, fill, data merge, item replace, tp, queries), so the repeat finds the
+# work done: its "did not change" / "could not set the block" replies are the ones the cmd step already forgives.
+function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
+    for ($attempt = 1; ; $attempt++) {
+        try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
+            if ($attempt -ge $Attempts -or "$_" -notmatch 'TimeoutException') { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 function Get-State { Invoke-Bridge GET '/state' }
 
 function Wait-NoOverlay {
@@ -656,7 +681,14 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 # A leading '?' marks one command as allowed to fail (e.g. a fill that finds nothing to replace).
                 $optional = $c.StartsWith('?')
                 if ($optional) { $c = $c.Substring(1) }
-                $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
+                try {
+                    $r = Invoke-ServerCommand (Expand-Coords $c)
+                } catch {
+                    # An optional command the bridge kept giving up on (the server thread was busy: a forceload over chunks
+                    # that were still generating) is not an error: the command was handed over and runs when the thread frees.
+                    if ($optional -and "$_" -match 'TimeoutException') { continue }
+                    throw
+                }
                 # The world persists between runs, so "already so" replies are success for a rig builder. The reply TEXT is
                 # translated under -Lang, so the English wording is read in English runs only; a scenario meant for -Lang
                 # says it with "benign" or '?'.
@@ -677,6 +709,18 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
         }
+        # Runs each command AS the player (the bridge's /chat command: the player's own permission level and an entity as the
+        # source). For a command whose requirements read the source's entity at parse time: `execute as @p run ...` does not
+        # pass them, because Brigadier checks a requirement against the ORIGINAL source, before the execute modifiers apply
+        # (FTB Teams' `party create`). The reply goes to the client's chat, not back here: gate on observed state with a
+        # waitCmd afterwards.
+        'playerCmd' {
+            foreach ($c in @($Step.run)) {
+                Invoke-Bridge POST '/chat' @{ action = 'command'; text = (Expand-Coords $c).TrimStart('/') } | Out-Null
+                Start-Sleep -Milliseconds 800
+            }
+            $detail = "$(@($Step.run).Count) player command(s)"
+        }
         # Re-runs one command until its reply matches `match` (a regex): gates on observed state instead of a fixed
         # wait (a machine finishing its work). The reply is in the report either way.
         'waitCmd' {
@@ -686,8 +730,15 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $deadline = (Get-Date).AddSeconds($timeout)
             $last = ''
             do {
-                $r = Invoke-Bridge POST '/command' @{ command = $c }
-                $last = @($r.output) -join ' | '
+                # A poll the bridge gave up on (the server thread was busy, a world still generating chunks) is a poll that
+                # did not match yet, not a failed step.
+                try {
+                    $r = Invoke-Bridge POST '/command' @{ command = $c }
+                    $last = @($r.output) -join ' | '
+                } catch {
+                    if ("$_" -notmatch 'TimeoutException') { throw }
+                    $last = 'the bridge timed out (the server thread is busy)'
+                }
                 if ($last -match $Step.match) { break }
                 Start-Sleep -Milliseconds $poll
             } while ((Get-Date) -lt $deadline)
@@ -699,7 +750,7 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $yaw = if ($Step.PSObject.Properties['yaw']) { $Step.yaw } else { 0 }
             $pitch = if ($Step.PSObject.Properties['pitch']) { $Step.pitch } else { 0 }
             # A bare server-context tp does not move the player; running it AS the player does.
-            Invoke-Bridge POST '/command' @{ command = "execute as @p at @p run tp @p $x $y $z $yaw $pitch" } | Out-Null
+            Invoke-ServerCommand "execute as @p at @p run tp @p $x $y $z $yaw $pitch" | Out-Null
             Wait-Until { $p = (Get-State).player.pos; [math]::Abs($p.x - $x) -lt 0.6 -and [math]::Abs($p.z - $z) -lt 0.6 } 30 "the player to reach $x $y $z" | Out-Null
             Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $yaw; pitch = $pitch } | Out-Null
             $detail = "at $x $y $z"
@@ -964,7 +1015,7 @@ try {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
                 # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
                 if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
-                    Remove-Item -Recurse -Force -LiteralPath $playPath
+                    Remove-TreeWithRetry $playPath
                 } elseif ($WantFresh -and (Test-Path -LiteralPath $playPath)) {
                     throw "a fresh '$PlaySave' needs its seed save$(if ($PlaySeed) { " '$PlaySeed'" }), which $node's run-smoke/saves does not have; '$PlaySave' is left as it is"
                 }

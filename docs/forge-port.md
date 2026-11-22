@@ -320,7 +320,7 @@ the same, and the mod list (Forge's own screen) shows the banner. Not the same:
 | F7 | **Server side done.** `1.21.1-forge`: EventBus 6 arm of `ForgeBus`, 1.21.1 event and API shapes, plain-Mixin arms, data down-ports, vanilla tickets (see "The 1.21.1 line (F7)") | `:1.21.1-forge:nodeVerification` green: boot clean, all 948 game tests pass |
 | F7b | **Not started.** The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders): the six holders throw `not ported (#209)` there until it lands | smoke runner on `1.21.1-forge` |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
-| F8 (1.21.11) | **Server and client done.** `1.21.11-forge`: Forge 61.2.5, the 26.3 bus and slice with per-version arms where Forge 61 or vanilla 1.21.11 differ (see "The 1.21.11 line (F8)") | `:1.21.11-forge:nodeVerification` green: all 949 game tests pass; runServer and runClient boot clean; smoke batch |
+| F8 (1.21.11) | **Server and client done.** `1.21.11-forge`: Forge 61.2.5, the 26.3 bus and slice with per-version arms where Forge 61 or vanilla 1.21.11 differ (see "The 1.21.11 line (F8)") | `:1.21.11-forge:nodeVerification` green: all 949 game tests pass; runServer and runClient boot clean; smoke batch 39 PASS / 14 SKIPPED (the 26.3-forge set), its one bridge timeout passing on the rerun |
 
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
@@ -593,6 +593,18 @@ below 1.21.10); the 1.21.11 shapes are `>=26.1` / `>=26.3` arms inside. An inact
 (`FacadeStateManager`, `FacadePhasedState`), `LiquidBlock(FlowingFluid, Properties)` (`BCFluidBlock`) and
 `BucketItem(Fluid, Properties)` (`BCEnergyFluids`): Forge deprecates all three on 61 and on 66 alike (javap `Deprecated`
 attribute), so they are a Forge-wide gap of the shared code, not a 1.21.11 one.
+
+**Smoke (2026-11-21).** `Invoke-SmokeBatch.ps1 -Node 1.21.11-forge` with McDevBridge `1.4.4+mc1.21.11-forge`: 39 PASS,
+14 SKIPPED, 1 FAILED, 0 BuildCraft log errors in any scenario. The failure was `port-26-3` step 234, the bridge's HTTP
+call for `spreadplayers 400 400` timing out while the chunks generated (the later oil screenshots show the player landed);
+alone it passed 289/289. The 14 skips are the 26.3-forge batch's: scenarios whose loader filter names only NeoForge or
+Fabric (FTB Chunks and the Flan admin claims, cross-mod energy and storage, `goggles-curios`, `guideme-guide`), the OPAC
+and Flan claims (they need `-PwithMods`), and the JEI/REI scenarios (no recipe viewer on a Forge dev run). The screenshots were looked at: pipes in world and in hand, shards, facades, the heat
+exchanger, markers and volume boxes, the builder and its GUI, the creative tank with a bucket, goggles worn, the zone
+planner map (same as `26.3-forge`'s), the guide. In `port-26-3`'s B12 probe, water replaces flowing oil on 1.21.11
+("Test failed"), the pre-26.3 behaviour: only the 26.3 port puts oil in `minecraft:washed_away_by_fluids`. The client
+logs carry no BuildCraft WARN or ERROR; McDevBridge's own jar logs `Couldn't load mod:mcdevbridge pack metadata`, its
+pack.mcmeta (75..94) missing the 1.21.11 fields this node's `pack_fields` adds for BuildCraft.
 
 ## Common-code loader forks (F3b)
 

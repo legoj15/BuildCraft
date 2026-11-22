@@ -7,7 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import org.spongepowered.asm.mixin.Mixin;
-//? if >=1.21.10 {
+//? if >=26.1 {
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import net.minecraft.core.Holder;
@@ -35,8 +35,8 @@ public interface EntityFluidTrackerAccessor {
 //?} else {
 /^import net.minecraft.world.entity.Entity;
 
-// 1.21.1 has no EntityFluidInteraction tracker to read (see EntityFluidInteractionMixin).
-// Empty, so the mixin config names the same classes on both Forge lines.
+// 1.21.1 and 1.21.11 have no EntityFluidInteraction tracker to read (see EntityFluidInteractionMixin).
+// Empty, so the mixin config names the same classes on every Forge line.
 @Mixin(Entity.class)
 abstract class EntityFluidTrackerAccessor {
 }

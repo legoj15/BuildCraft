@@ -1,6 +1,7 @@
 // The MinecraftForge half of the per-node build: applied by build.gradle.kts as `bc.$loader` on every node whose `loader` is
-// forge (26.3-forge and 1.21.1-forge today). This is MinecraftForge, NOT NeoForge (bc.neoforge): a different plugin (ForgeGradle 7), a
-// different loader API and a different metadata file. ForgeGradle's version is pinned in buildSrc/build.gradle.kts.
+// forge (26.3-forge, 1.21.11-forge and 1.21.1-forge today). This is MinecraftForge, NOT NeoForge (bc.neoforge): a
+// different plugin (ForgeGradle 7), a different loader API and a different metadata file. ForgeGradle's version is pinned
+// in buildSrc/build.gradle.kts.
 //
 // Port in progress (#209), NOTHING SHIPS. The node compiles all of src/main/java except the recipe-viewer plugin packages
 // of a viewer this node has no build of (see the sourceSets block), builds a jar collected beside the NeoForge and Fabric

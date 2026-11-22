@@ -29,8 +29,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-//? if >=1.21.10 {
+//? if >=26.1 {
 import net.minecraft.world.item.ItemStackTemplate;
+//?}
+//? if >=1.21.10 {
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
@@ -89,7 +91,7 @@ public final class ForgeCraftingServices implements CraftingServices {
         // The stack's *patch* (its real overrides), not every default component: a stack rebuilt from an ingredient that
         // listed the defaults too would then fail patch equality against the canonical stack, and a recipe viewer's lookup
         // would stop finding the recipe.
-        //? if >=1.21.10 {
+        //? if >=26.1 {
         return new ComponentsIngredient(HolderSet.direct(stack.typeHolder()), stack.getComponentsPatch());
         //?} else {
         /^return new ComponentsIngredient(HolderSet.direct(stack.getItemHolder()), stack.getComponentsPatch());
@@ -126,7 +128,11 @@ public final class ForgeCraftingServices implements CraftingServices {
                 DataComponentPatch.STREAM_CODEC, i -> i.patch,
                 ComponentsIngredient::new);
 
+        //? if >=26.3 {
         static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = IIngredientSerializer.simple(CODEC, STREAM_CODEC);
+        //?} else {
+        /^static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = byHand(CODEC, STREAM_CODEC);
+        ^///?}
         //?} else {
         /^static final MapCodec<ComponentsIngredient> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                 RegistryCodecs.homogeneousList(Registries.ITEM).fieldOf("items").forGetter(i -> i.items),
@@ -138,23 +144,7 @@ public final class ForgeCraftingServices implements CraftingServices {
                 DataComponentPatch.STREAM_CODEC, i -> i.patch,
                 ComponentsIngredient::new);
 
-        // Forge 52 has no IIngredientSerializer.simple: the serializer is the codec and the stream codec by hand.
-        static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = new IIngredientSerializer<>() {
-            @Override
-            public MapCodec<? extends ComponentsIngredient> codec() {
-                return CODEC;
-            }
-
-            @Override
-            public void write(RegistryFriendlyByteBuf buffer, ComponentsIngredient value) {
-                STREAM_CODEC.encode(buffer, value);
-            }
-
-            @Override
-            public ComponentsIngredient read(RegistryFriendlyByteBuf buffer) {
-                return STREAM_CODEC.decode(buffer);
-            }
-        };
+        static final IIngredientSerializer<ComponentsIngredient> SERIALIZER = byHand(CODEC, STREAM_CODEC);
 
         private final HolderSet<Item> items;
         ^///?}
@@ -175,6 +165,29 @@ public final class ForgeCraftingServices implements CraftingServices {
             this.added = split.added();
             this.removed = split.removed();
         }
+
+        //? if <26.3 {
+        /^// Forge before 66 (the 26.3 line) has no IIngredientSerializer.simple: the codec and the stream codec by hand.
+        private static IIngredientSerializer<ComponentsIngredient> byHand(MapCodec<ComponentsIngredient> codec,
+                StreamCodec<RegistryFriendlyByteBuf, ComponentsIngredient> streamCodec) {
+            return new IIngredientSerializer<>() {
+                @Override
+                public MapCodec<? extends ComponentsIngredient> codec() {
+                    return codec;
+                }
+
+                @Override
+                public void write(RegistryFriendlyByteBuf buffer, ComponentsIngredient value) {
+                    streamCodec.encode(buffer, value);
+                }
+
+                @Override
+                public ComponentsIngredient read(RegistryFriendlyByteBuf buffer) {
+                    return streamCodec.decode(buffer);
+                }
+            };
+        }
+        ^///?}
 
         //? if <1.21.10 {
         /^// The values a 1.21.1 ingredient shows and syncs: each item with the patch applied.
@@ -215,7 +228,11 @@ public final class ForgeCraftingServices implements CraftingServices {
         public SlotDisplay display() {
             // The overridden stacks themselves, so a recipe viewer shows (and looks up) the exact variant.
             return new SlotDisplay.Composite(values.stream()
+                //? if >=26.1 {
                 .<SlotDisplay>map(item -> new SlotDisplay.ItemStackSlotDisplay(new ItemStackTemplate(item, 1, patch)))
+                //?} else {
+                /^.<SlotDisplay>map(item -> new SlotDisplay.ItemStackSlotDisplay(new ItemStack(item, 1, patch)))
+                ^///?}
                 .toList());
         }
         //?}

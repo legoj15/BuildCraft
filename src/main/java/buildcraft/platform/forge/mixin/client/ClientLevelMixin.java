@@ -13,12 +13,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//? if >=26.3 {
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+//?}
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+//? if >=26.3 {
 import net.minecraft.core.Direction;
+//?}
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.platform.forge.client.ForgeBlockParticles;
@@ -48,10 +52,23 @@ abstract class ClientLevelMixin {
         }
     }
 
+    //? if >=26.3 {
     @WrapWithCondition(method = "addBreakingBlockEffects", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/multiplayer/ClientLevel;addBreakingParticles(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;)V"))
     private boolean buildcraft$hitEffects(ClientLevel level, BlockPos pos, Direction face, BlockState state) {
         return !ForgeBlockParticles.addHitEffects(state, level, pos, face, minecraft.particleEngine);
     }
+    //?} else {
+    /^// Forge 61 adds addBreakingBlockEffect(pos, BlockHitResult), the one the client's attack calls, which asks Forge's own
+    // IClientBlockExtensions with the hit and then the vanilla direction overload; the head runs before both.
+    @Inject(method = "addBreakingBlockEffect(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/BlockHitResult;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void buildcraft$hitEffects(BlockPos pos, net.minecraft.world.phys.BlockHitResult target, CallbackInfo ci) {
+        ClientLevel level = (ClientLevel) (Object) this;
+        if (ForgeBlockParticles.addHitEffects(level.getBlockState(pos), level, target, minecraft.particleEngine)) {
+            ci.cancel();
+        }
+    }
+    ^///?}
 }
 *///?}

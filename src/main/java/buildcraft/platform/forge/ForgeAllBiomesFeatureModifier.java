@@ -58,7 +58,7 @@ final class ForgeAllBiomesFeatureModifier implements BiomeModifier {
     @Override
     public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
         if (phase == Phase.ADD) {
-            //? if >=1.21.10 {
+            //? if >=26.3 {
             builder.generationSettings().addFeature(step, feature);
             //?} else {
             /^builder.getGenerationSettings().addFeature(step, feature);

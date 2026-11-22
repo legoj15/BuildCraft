@@ -8,8 +8,9 @@ Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (272 rows, each
 
 - Nodes are `<line>-forge`, declared `version("<line>-forge", "<line>")`, `loader=forge` in the node's properties.
 - Order: **26.3-forge** (active line; EventBus 7, the shape 26.2 / 26.1.2 / 1.21.11 share), then **1.21.1-forge**
-  (the only Forge line with an audience; EventBus 6, its own event fork).
-- 1.21.11, 26.2, 26.1.2: decided on measured cost once the first two exist (#210).
+  (the only Forge line with an audience; EventBus 6, its own event fork), then **1.21.11-forge** (F8: Forge 61, EventBus 7,
+  server and client; "The 1.21.11 line (F8)" below).
+- 26.2, 26.1.2: being added in F8 beside 1.21.11 (#210).
 - **No 1.21.10 Forge node, ever** (user decision, #210: Forge takes no PRs for that branch).
 - Nothing ships until the user says so.
 
@@ -176,7 +177,8 @@ state.isFlammable(level, pos, face)`), not BuildCraft's hook, which Forge never 
 
 The six client holders of `ClientPlatform` are `platform/forge/client/Forge<Seam>`; client mixins are in
 `platform/forge/mixin/client`, listed in the config's `client` array (so a dedicated server never loads them). The slice is
-26.3 code: its 19 files are whole-file `forge && >=1.21.10`, so `1.21.1-forge` compiles none of them (see F7b). No access
+26.3 code: its 19 files are whole-file `forge && >=1.21.10`, so `1.21.1-forge` compiles none of them (see F7b);
+`1.21.11-forge` compiles them with version arms inside, plus `ForgeLegacyFluidContainerModel` (see "The 1.21.11 line"). No access
 transformer line was added: what Forge's own AT leaves private is reached through accessor and invoker mixins, so the
 shared `accesstransformer.cfg` (read raw by every NeoForge node too) is untouched.
 
@@ -406,6 +408,7 @@ the vanilla `Done (0.3s to 0.7s)!` line and a Forge client's `--quickPlayMultipl
 | F7 | **Server side done.** `1.21.1-forge`: EventBus 6 arm of `ForgeBus`, 1.21.1 event and API shapes, plain-Mixin arms, data down-ports, vanilla tickets (see "The 1.21.1 line (F7)") | `:1.21.1-forge:nodeVerification` green: boot clean, all 948 game tests pass |
 | F7b | **Not started.** The 1.21.1 client (`platform/forge/client/**`, client mixins, `ClientPlatform` holders): the six holders throw `not ported (#209)` there until it lands | smoke runner on `1.21.1-forge` |
 | F8 | Remaining lines per #210; smoke, cross-mod (JEI on 1.21.1, OPAC), release tooling (`release/`, gitignored), skills and AGENTS.md | `fullTestSuite` |
+| F8 (1.21.11) | **Server and client done.** `1.21.11-forge`: Forge 61.2.5, the 26.3 bus and slice with per-version arms where Forge 61 or vanilla 1.21.11 differ (see "The 1.21.11 line (F8)") | `:1.21.11-forge:nodeVerification` green: all 949 game tests pass; runServer and runClient boot clean; smoke batch 39 PASS / 14 SKIPPED (the 26.3-forge set), its one bridge timeout passing on the rerun |
 
 Loader lists that must grow together (F0 does the first three): `build.gradle.kts` loader check and `constants.match`;
 `StonecutterDirectiveGuardTester`; `scripts/platform-census.py`; `scripts/smoke/Invoke-InClientSmoke.ps1`
@@ -599,6 +602,99 @@ file step 5 leaves is the candidate), the `LoggingOut` clear, and a client game-
 1.21.1 replaces its whole-file `forge && >=1.21.10` with per-version arms, and its mixin joins the node's list. JEI and REI
 stay off this node (no `jei_version` / `rei_version`; JEI has a Forge 1.21.1 build, wiring it is F8).
 
+## The 1.21.11 line (F8): `1.21.11-forge`
+
+Forge 61.2.5 on Minecraft 1.21.11, Java 21, EventBus 7 (`versions/1.21.11-forge/gradle.properties`; player minimum
+`[61.1.0,62)`, OPAC `forge-1.21.11-0.33.0` as the compile-only claims jar). It is the 26.3-forge build with version arms:
+`bc.forge` needed no change (`DataDownportPre263` runs, `DataDownport1211` does not, the client mixin list is kept, game
+tests filter with `--tests`). `ForgeBus`'s split (`>=1.21.10` is EventBus 7) is right for 1.21.11: Forge 61 is EventBus 7
+and there is no 1.21.10 Forge node. Forge 61 bundles MixinExtras 0.5.4, so the 26.3 mixins keep their MixinExtras
+injectors. Official names at runtime, as on the other two lines. The access transformer needed no new line (the
+`animal.equine.AbstractHorse` line already covers 1.21.11).
+
+**pack.mcmeta.** Vanilla 1.21.11 validates the jar's one pack.mcmeta once per pack type (`PackFormat.validate`): read as
+data (last pre-minor format 81), a `min_format` of 81 or lower must come with `supported_formats` and `pack_format`; read as
+resources (last pre-minor 64), a `min_format` above 64 must not carry `supported_formats`. `75..94` (resource and data
+majors) failed the data read ("Couldn't load mod:buildcraftunofficial pack metadata" on the server). `64..94` with
+`"supported_formats": [64, 94], "pack_format": 64` passes both. McDevBridge's `1.21.11-forge` node declares `75..94` and
+will log the same error (that repo is not this slice's to edit).
+
+The reference for every arm below is Forge 61's patched vanilla (the mavenizer's `official/1.21.11/remapped-javadoc.jar`
+sources and `recompiled.jar` classes, under
+`~/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches/forge/net/minecraftforge/forge/1.21.11-61.2.5/`), compared
+with javap against Forge 64 (26.1.2), 65 (26.2) and 66 (26.3). Most 1.21.11 arms are therefore `>=26.1` or `>=26.3` splits,
+which the 26.1.2 and 26.2 nodes share.
+
+**Server arms.**
+
+| Area | 1.21.11 (Forge 61) | Gate, where |
+|---|---|---|
+| Crafting | No `ItemStackTemplate`, so the item holder is `getItemHolder()` and the components-ingredient display is a plain `ItemStack`; no `IIngredientSerializer.simple` (Forge 66 only), so the serializer is built by hand from the codec and stream codec (1.21.1 now shares that `byHand`) | `>=26.1`, `>=26.3`: `ForgeCraftingServices` |
+| Biomes | `getGenerationSettings()` | `>=26.3`: `ForgeAllBiomesFeatureModifier` |
+| Loader | `ModList.get()` is an instance (static from Forge 64) | `>=26.1`: `ForgeLoaderServices` |
+| Fake players | No `setPermanentlyInvulnerable` / `setInvulnerableTime` (Forge 66): `isInvulnerableTo(ServerLevel, DamageSource)` answers true, `invulnerableTime` is a field | `>=26.3`: `ForgeFakePlayers` |
+| Events | A dig speed's position is an `Optional` (Forge 61, 64, 65); the entity click is `PlayerInteractEvent.EntityInteract` (Forge 64 moved `Player.interactOn` to `EntityInteractSpecific`; found by `stripes_refused_entity_interaction_ends_dispatch`) | `>=26.3`, `>=26.1`: `ForgeGameHooks`, `LoaderTestEvents` |
+| Menus | `displayClientMessage(msg, true)` for the action bar (`sendOverlayMessage` is 26.1+) | `>=26.1`: `ForgeMenus` |
+| Recipe sync | `Recipe.CODEC` (`DIRECT_CODEC` is 26.3) | `>=26.3`: `ForgeRecipeSync` |
+| Burn time | `ForgeHooks.getBurnTime` is gone; `level.fuelValues().burnDuration(stack, null)` (Forge's patched `FuelValues`, on 61, 64, 65) | `>=1.21.10 && <26.3`: `ForgeVanillaExtensions.burnTime` |
+| Crafting remainder | `IForgeItemStack#getCraftingRemainder()` (no `ItemStackTemplate`) | `>=1.21.10 && <26.1`: `ForgeVanillaExtensions.craftingRemainder` |
+| Fluids, saved data | No `EntityFluidInteraction` and no `SavedDataStorage` (26.1+); Forge 61's `Entity`, `FloatGoal` and `Swim` ask the fluid type, as Forge 52 does | `>=26.1`: `ForgeFluidPhysics` (whole file) and the seven mixins below |
+| Entity | `IForgeEntity#onRemovedFromWorld` (`onRemovedFromLevel` from Forge 64) | `forge && >=26.1 || neoforge && >=1.21.10`: `EntityRobot` |
+
+**Server mixins, re-proved against Forge 61.** The config's 14 names are unchanged. Applied as on 26.3 (target and point
+read in the patched source): `AnvilMenuMixin`, `EnchantCommandMixin`, `LevelChunkMixin`, `MappedRegistryMixin`,
+`NamespacedWrapperMixin`, `ServerPlayerMixin`, and `ServerGamePacketListenerImplMixin` (Forge 61 has no
+`IForgeBlock#getCloneItemStack` with the player, so the `>=1.21.10` pick-block wrap applies unchanged). Empty 1.21.11 arms
+(the reason in each file): `EntityFluidInteractionMixin`, `EntityFluidTrackerAccessor`, `EntityMixin`, `FloatGoalMixin`,
+`SwimMixin` (the fluid type answers), `SavedDataStorageMixin` (on `DimensionDataStorage`), `ServerChunkCacheMixin` (no
+level-aware saved data before 26.1). A `runServer` boot's debug log shows 12 applied; `ServerGamePacketListenerImplMixin` and
+`SwimMixin` target classes a boot with no player never loads, as on 26.3.
+
+**Client arms.** The client files keep their whole-file `forge && >=1.21.10` header (the 1.21.1 client, F7b, owns the lines
+below 1.21.10); the 1.21.11 shapes are `>=26.1` / `>=26.3` arms inside. An inactive nested arm's own comments are `//` lines
+(a block comment there would need a third nesting level).
+
+| Seam | 1.21.11 (Forge 61) | Where |
+|---|---|---|
+| GUI | `GuiGraphics` (26.1 renamed it `GuiGraphicsExtractor`), `gui.render.state.pip`; PiP through `getRenderState().submitPicturesInPictureState`; the scissor stack is `GuiGraphics$ScissorStack` (the duck is kept); a PiP renderer is built from the GUI buffer source the event hands over (`Function<BufferSource, ...>`, the interface's 1.21.x shape) | `ForgeClientVanillaExtensions`, `ScissorStackMixin`, `ForgeClientHooks` (tooltip context), `ForgeClientRegistrationSinks` |
+| Block models | `renderSingleBlock` and `particleIcon` through Forge's model-data overloads (the plain ones are deprecated); a part's layer is `IForgeBlockModelPart.layer()`, else the layers its model draws on (`getRenderTypes`, translucent if any is; Forge deprecates `ItemBlockRenderTypes.getChunkRenderType`) | `ForgeClientVanillaExtensions` |
+| Pipe model | A quad carries no layer: Forge's `SectionCompiler` asks `getRenderTypes(state, rand, data)` and collects once per layer into that layer's buffer. A pipe with geometry answers cutout and translucent and returns the matching list (both for a null layer); parts are `SimpleModelWrapper(quads, ao, particle, layer, layer)` | `ForgePipeBlockStateModel` |
+| Quad colours | No `QuadInstance`: `ForgeClientModels.putColouredQuad` writes a coloured quad as vanilla's `putBulkData` loop does with the colours multiplied in, and answers false (vanilla's call runs) for a quad with none; `setItemQuads` fills `prepareQuadList()`; no `materialInfo` (the interface's is 26.x) | `ForgeClientModels`, the two draw mixins |
+| Level overlay | Immediate mode after the translucent terrain (NeoForge `AfterTranslucentBlocks`, Fabric `END_MAIN`): the context carries the main buffer source, which the renderers flush | `ForgeClientHooks`, `LevelRendererMixin` |
+| Block outline | `RenderHighlightEvent.Block.Callback` is `(BufferSource, PoseStack, translucentPass, LevelRenderState)` and is called in both outline slots of the main pass; BuildCraft draws in the slot vanilla's would take (any of the model's layers sorted on upload) with `ShapeRenderer.renderShape` and `endLastBatch`, and draws nothing in the other, which keeps vanilla's outline out of both | `ForgeClientHooks` |
+| Hit particles | Forge adds `ClientLevel.addBreakingBlockEffect(BlockPos, BlockHitResult)`, the overload the attack calls; the override takes the hit result (the interface's 1.21.x shape) | `ClientLevelMixin`, `ForgeBlockParticles` |
+| Registration | `RegisterColorHandlersEvent.Block.register(BlockColor, Block...)` (`blockColor`); render pipelines are `com.mojang.blaze3d.pipeline.RenderPipeline`; no fluid world model (`BakeFluidModels` / `FluidModel` are 26.1+): Forge's fluid renderer reads the client extension textures, which `ForgeClientFluids.stillTexture` returns too | `ForgeClientRegistrationSinks`, `ForgeClientFluids` |
+| Fluid containers | No `CuboidItemModelWrapper` and no `Material.Baked`: `ForgeLegacyFluidContainerModel` (whole-file `forge && >=1.21.10 && <26.1`) is the port of Fabric's `FabricLegacyFluidContainerModel`, same type id and fields; the fluid sprite is the type's still texture on the block atlas, the light level the type's. `ForgeFluidContainerModel` is `>=26.1` inside its file | `ForgeLegacyFluidContainerModel`, `ForgeFluidContainerModel` |
+
+**Client mixins, re-proved against Forge 61.** Same eight names in the shared config.
+
+| Mixin | 1.21.11 target and point |
+|---|---|
+| `LevelRendererMixin` | `ChunkSectionsToRender.renderGroup`, at `RETURN`, acting for `ChunkSectionLayerGroup.TRANSLUCENT` only. The point after the translucent terrain is inside `addMainPass`'s frame-pass lambda, whose synthetic name is the compiler's and need not match between the dev jar and an installed game; `renderGroup(TRANSLUCENT)` has one caller, once a frame, between the translucent and tripwire groups. The pose stack is a fresh one (the main pass's own is `new PoseStack()`), the camera position the main camera's. Forge does not patch the class |
+| `ModelBlockRendererMixin` | `@WrapOperation` on the one nine-argument `VertexConsumer.putBulkData` call in `putQuadData`, where the chunk mesh and every lit draw end, and on the one eight-argument call in the private static `renderQuadList` (`renderModel`: block-entity renderers, `renderSingleBlock`). Forge patches neither |
+| `ItemFeatureRendererMixin` | `ItemRenderer.renderQuadList` (1.21.11's `ItemFeatureRenderer` hands each submit to `ItemRenderer.renderItem`): `@WrapOperation` on its one `putBulkData` call. Not patched by Forge |
+| `ClientLevelMixin` | `addDestroyBlockEffect` head as on 26.3; the hit hook is the head of Forge's `addBreakingBlockEffect(BlockPos, BlockHitResult)` (cancellable), before Forge's own `IClientBlockExtensions.addHitEffects` and the vanilla direction overload (no hit sound in that path on 1.21.11) |
+| `ScissorStackMixin` | `net.minecraft.client.gui.GuiGraphics$ScissorStack` (string target), duck over `peek()` |
+| `ItemModelsAccessor`, `SpriteSourcesAccessor` | Unchanged: `ItemModels.ID_MAPPER` and `SpriteSources.ID_MAPPER` are private static on 1.21.11 too |
+| `CuboidItemModelWrapperInvoker` | Empty 1.21.11 arm on `BlockModelWrapper` (the legacy fluid container model draws its own layers) |
+
+**Deprecations.** `-PbcLint=deprecation,removal` on `:1.21.11-forge:compileJava` leaves `Block.BLOCK_STATE_REGISTRY`
+(`FacadeStateManager`, `FacadePhasedState`), `LiquidBlock(FlowingFluid, Properties)` (`BCFluidBlock`) and
+`BucketItem(Fluid, Properties)` (`BCEnergyFluids`): Forge deprecates all three on 61 and on 66 alike (javap `Deprecated`
+attribute), so they are a Forge-wide gap of the shared code, not a 1.21.11 one.
+
+**Smoke (2026-11-21).** `Invoke-SmokeBatch.ps1 -Node 1.21.11-forge` with McDevBridge `1.4.4+mc1.21.11-forge`: 39 PASS,
+14 SKIPPED, 1 FAILED, 0 BuildCraft log errors in any scenario. The failure was `port-26-3` step 234, the bridge's HTTP
+call for `spreadplayers 400 400` timing out while the chunks generated (the later oil screenshots show the player landed);
+alone it passed 289/289. The 14 skips are the 26.3-forge batch's: scenarios whose loader filter names only NeoForge or
+Fabric (FTB Chunks and the Flan admin claims, cross-mod energy and storage, `goggles-curios`, `guideme-guide`), the OPAC
+and Flan claims (they need `-PwithMods`), and the JEI/REI scenarios (no recipe viewer on a Forge dev run). The screenshots were looked at: pipes in world and in hand, shards, facades, the heat
+exchanger, markers and volume boxes, the builder and its GUI, the creative tank with a bucket, goggles worn, the zone
+planner map (same as `26.3-forge`'s), the guide. In `port-26-3`'s B12 probe, water replaces flowing oil on 1.21.11
+("Test failed"), the pre-26.3 behaviour: only the 26.3 port puts oil in `minecraft:washed_away_by_fluids`. The client
+logs carry no BuildCraft WARN or ERROR; McDevBridge's own jar logs `Couldn't load mod:mcdevbridge pack metadata`, its
+pack.mcmeta (75..94) missing the 1.21.11 fields this node's `pack_fields` adds for BuildCraft.
+
 ## Common-code loader forks (F3b)
 
 Every loader-keyed directive outside `platform/` was walked (`//? if neoforge`, `fabric`, `forge`, bare elses). Evidence
@@ -653,4 +749,3 @@ the call site in its `patches/`.
   `recipe_sync` channel, but no guide panel was opened), the spectator menu's client half (the factory reading the data).
 - `BCEvent` posts to the NeoForge bus only. Whether Forge addons get a bus post is an API decision; until asked, the
   Forge arm is the plain class Fabric uses.
-- McDevBridge has no `1.21.11-forge` node; needed only if that line is taken.

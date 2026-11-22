@@ -10,15 +10,30 @@ package buildcraft.platform.forge.client;
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
+//? if >=26.1 {
 import com.mojang.blaze3d.vertex.QuadInstance;
+//?} else {
+/^import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+^///?}
 
+//? if >=26.3 {
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+//?}
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//? if >=26.3 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//?}
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/^import net.minecraft.client.renderer.block.model.BakedQuad;
+^///?}
+//? if >=26.3 {
 import net.minecraft.client.resources.model.geometry.ItemQuads;
 import net.minecraft.core.Direction;
+//?}
 import net.minecraft.util.ARGB;
 
 import buildcraft.platform.client.ClientModels;
@@ -40,6 +55,7 @@ public final class ForgeClientModels implements ClientModels {
      *^/
     private static final ConcurrentMap<BakedQuad, int[]> VERTEX_COLOURS = new MapMaker().weakKeys().makeMap();
 
+    //? if >=26.3 {
     @Override
     public BakedQuad.MaterialInfo materialInfo(TextureAtlasSprite sprite, ChunkSectionLayer layer, RenderType itemSheet,
             RenderType glintSheet, RenderType glintSpecialSheet, int tintIndex, Direction shadeOverride,
@@ -48,6 +64,7 @@ public final class ForgeClientModels implements ClientModels {
         return new BakedQuad.MaterialInfo(sprite, layer, itemSheet, glintSheet, glintSpecialSheet, tintIndex,
                 shadeOverride, lightEmission);
     }
+    //?}
 
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
@@ -67,13 +84,18 @@ public final class ForgeClientModels implements ClientModels {
     @Override
     public void setItemQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
         // The colours go on when the quads are drawn (ItemFeatureRendererMixin).
+        //? if >=26.3 {
         layer.setQuads(ItemQuads.split(quads));
+        //?} else {
+        /^layer.prepareQuadList().addAll(quads);
+        ^///?}
     }
 
     /^*
      * Multiplies the per-vertex colours {@link #withVertexColours} gave {@code quad}, if any, into {@code instance}'s
      * (which already carry the light and tint), for the draw mixins.
      *^/
+    //? if >=26.1 {
     public static void applyVertexColours(BakedQuad quad, QuadInstance instance) {
         int[] colours = VERTEX_COLOURS.get(quad);
         if (colours != null) {
@@ -82,5 +104,41 @@ public final class ForgeClientModels implements ClientModels {
             }
         }
     }
+    //?} else {
+    /^// Puts quad into consumer as vanilla 1.21.11's VertexConsumer.putBulkData does, with the per-vertex colours
+    // withVertexColours gave it multiplied in, for the draw mixins (1.21.11 has no QuadInstance to put them on, so the
+    // vertices are written here). Returns false, writing nothing, for a quad with no colours, which the caller hands to
+    // vanilla's own putBulkData.
+    public static boolean putColouredQuad(VertexConsumer consumer, PoseStack.Pose pose, BakedQuad quad,
+            float[] brightness, float red, float green, float blue, float alpha, int[] lightmap, int overlay) {
+        int[] colours = VERTEX_COLOURS.get(quad);
+        if (colours == null) {
+            return false;
+        }
+        org.joml.Vector3f normal = pose.transformNormal(quad.direction().getUnitVec3f(), new org.joml.Vector3f());
+        org.joml.Matrix4f matrix = pose.pose();
+        int emission = quad.lightEmission();
+        for (int vertex = 0; vertex < 4; vertex++) {
+            org.joml.Vector3f position = matrix.transformPosition(quad.position(vertex), new org.joml.Vector3f());
+            long uv = quad.packedUV(vertex);
+            float shade = brightness[vertex];
+            int colour = ARGB.multiply(ARGB.colorFromFloat(alpha, shade * red, shade * green, shade * blue),
+                    colours[vertex]);
+            int light = net.minecraft.client.renderer.LightTexture.lightCoordsWithEmission(lightmap[vertex], emission);
+            consumer.addVertex(position.x(), position.y(), position.z(), colour,
+                    net.minecraft.client.model.geom.builders.UVPair.unpackU(uv),
+                    net.minecraft.client.model.geom.builders.UVPair.unpackV(uv), overlay, light, normal.x(), normal.y(),
+                    normal.z());
+        }
+        return true;
+    }
+
+    // putColouredQuad for vanilla's eight-argument putBulkData: no shading, one light value for all four vertices.
+    public static boolean putColouredQuad(VertexConsumer consumer, PoseStack.Pose pose, BakedQuad quad, float red,
+            float green, float blue, float alpha, int light, int overlay) {
+        return VERTEX_COLOURS.containsKey(quad) && putColouredQuad(consumer, pose, quad, new float[] {1.0F, 1.0F, 1.0F,
+                1.0F}, red, green, blue, alpha, new int[] {light, light, light, light}, overlay);
+    }
+    ^///?}
 }
 *///?}

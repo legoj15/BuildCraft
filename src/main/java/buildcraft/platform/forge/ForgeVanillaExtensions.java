@@ -131,13 +131,29 @@ public final class ForgeVanillaExtensions implements VanillaExtensions {
         return entity.getPersistentData();
     }
 
-    //? if <26.3 {
+    //? if >=1.21.10 && <26.3 {
+    /^@Override
+    public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
+        // The furnace's own question on Forge 61-65: the item's override, then the level's fuel map, then the burn-time
+        // event (Forge's patch of FuelValues#burnDuration); no recipe type is asked for.
+        return level.fuelValues().burnDuration(stack, null);
+    }
+    ^///?}
+    //? if <1.21.10 {
     /^@Override
     public int burnTime(ItemStack stack, net.minecraft.world.level.Level level) {
         // Forge's stack-aware burn time (the item's own override, then the vanilla fuel map, then the burn-time event); no
         // recipe type is asked for. Not ItemStack#getBurnTime, which is the item's override alone and -1 for every vanilla
         // fuel on Forge (NeoForge's answers from its fuel data map).
         return net.minecraftforge.common.ForgeHooks.getBurnTime(stack, null);
+    }
+    ^///?}
+
+    //? if >=1.21.10 && <26.1 {
+    /^// Forge's stack-aware remainder (IForgeItemStack), which asks the item with the stack.
+    @Override
+    public ItemStack craftingRemainder(ItemStack stack) {
+        return stack.getCraftingRemainder();
     }
     ^///?}
 

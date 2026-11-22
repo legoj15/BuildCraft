@@ -113,7 +113,7 @@ function Get-NodeMcVersion([string]$Node) { $Node -replace '-(fabric|forge)$', '
 # is a scenario's "gradleProperties" (-PwithGuideMe, -PwithFallingTree ...), which only the NeoForge scripts wire.
 $LoaderLacks = @{
     forge = @{
-        recipeViewer  = 'a recipe viewer (neither JEI nor REI has a Forge build for 26.3; the Forge dev client loads none)'
+        recipeViewer  = 'a recipe viewer (no JEI or REI is wired on a Forge node; the Forge dev client loads none)'
         devProperties = 'the optional dev-runtime switches a scenario names in "gradleProperties" (-PwithGuideMe ...): the Forge node wires none of them'
     }
 }

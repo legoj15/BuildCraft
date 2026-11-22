@@ -6,7 +6,9 @@
 package buildcraft.platform.forge.client;
 
 //? if forge && >=1.21.10 {
-/*import java.util.ArrayList;
+/*
+//? if >=26.1 {
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -349,4 +351,5 @@ public final class ForgeFluidContainerModel implements ItemModel {
         }
     }
 }
+//?}
 *///?}

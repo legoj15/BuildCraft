@@ -103,10 +103,18 @@ public final class ForgeFakePlayers implements FakePlayers {
             if (online != null && online != this) {
                 level.getServer().getPlayerList().getPlayerAdvancements(online);
             }
-            //? if >=1.21.10 {
+            //? if >=26.3 {
             setPermanentlyInvulnerable(true);
             //?}
         }
+
+        //? if >=1.21.10 && <26.3 {
+        /^// No permanent-invulnerability flag before 26.3: refuse every damage source, as on 1.21.1.
+        @Override
+        public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
+            return true;
+        }
+        ^///?}
 
         //? if <1.21.10 {
         /^// 1.21.1 has no permanent-invulnerability flag: the player refuses every damage source instead (NeoForge's
@@ -190,7 +198,7 @@ public final class ForgeFakePlayers implements FakePlayers {
             deathTime = 0;
             hurtTime = 0;
             hurtDuration = 0;
-            //? if >=1.21.10 {
+            //? if >=26.3 {
             setInvulnerableTime(0);
             //?} else {
             /^invulnerableTime = 0;

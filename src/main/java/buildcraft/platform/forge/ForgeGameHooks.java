@@ -77,7 +77,8 @@ import buildcraft.platform.event.HookOrder;
  * <p><b>Entity interaction.</b> Forge 26.3 has no plain {@code EntityInteract}: its only entity-click event,
  * {@code EntityInteractSpecific}, is posted from the same vanilla call as NeoForge's ({@code Player.interactOn(entity,
  * hand, location)}, which on 26.3 is the one entry for every entity click and always has a hit location), so it is the
- * same event under another name. Forge 1.21.1 posts {@code EntityInteract} from {@code Player.interactOn(entity, hand)},
+ * same event under another name. Forge 1.21.1 and 1.21.11 (Forge 52, 61) post {@code EntityInteract} from
+ * {@code Player.interactOn(entity, hand)},
  * NeoForge 1.21.1's point, so that is the event there.
  *
  * <p><b>Chunk sent.</b> Forge's {@code ChunkWatchEvent.Watch} is posted at the end of {@code PlayerChunkSender.sendChunk},
@@ -256,7 +257,7 @@ public final class ForgeGameHooks implements GameHooks {
 
     @Override
     public void onEntityInteract(HookOrder order, boolean receiveCancelled, EntityInteract listener) {
-        //? if >=1.21.10 {
+        //? if >=26.1 {
         Class<PlayerInteractEvent.EntityInteractSpecific> type = PlayerInteractEvent.EntityInteractSpecific.class;
         //?} else {
         /^Class<PlayerInteractEvent.EntityInteract> type = PlayerInteractEvent.EntityInteract.class;
@@ -288,7 +289,7 @@ public final class ForgeGameHooks implements GameHooks {
     @Override
     public void onBreakSpeed(BreakSpeed listener) {
         ForgeBus.listen(PlayerEvent.BreakSpeed.class, event -> {
-            //? if >=1.21.10 {
+            //? if >=26.3 {
             BlockPos pos = event.getPosition();
             //?} else {
             /^BlockPos pos = event.getPosition().orElse(null);

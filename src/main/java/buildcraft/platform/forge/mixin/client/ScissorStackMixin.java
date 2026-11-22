@@ -19,7 +19,11 @@ import buildcraft.platform.forge.client.ForgeScissorPeek;
  * so the class's public {@code peek()} cannot be called from outside (NeoForge patches in {@code peekScissorStack()}).
  * No injection point: the duck method only calls the class's own {@code peek()}.
  *^/
+//? if >=26.1 {
 @Mixin(targets = "net.minecraft.client.gui.GuiGraphicsExtractor$ScissorStack")
+//?} else {
+/^@Mixin(targets = "net.minecraft.client.gui.GuiGraphics$ScissorStack")
+^///?}
 abstract class ScissorStackMixin implements ForgeScissorPeek {
     @Shadow
     public abstract ScreenRectangle peek();

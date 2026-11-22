@@ -7,7 +7,7 @@ package buildcraft.platform.forge.mixin;
 
 //? if forge {
 /*import java.util.List;
-//? if >=1.21.10 {
+//? if >=26.1 {
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -91,9 +91,10 @@ abstract class EntityFluidInteractionMixin implements ForgeFluidPhysics.Interact
 /^import org.spongepowered.asm.mixin.Mixin;
 import net.minecraft.world.entity.Entity;
 
-// Forge 1.21.1's entity physics already asks each fluid's type (isInWater is the water type's, the eyes likewise,
-// every modded type's fall-distance modifier applies), so the water-like checks this adds on 26.x have no role here.
-// Empty, so the mixin config names the same classes on both Forge lines.
+// Forge 1.21.1's and 1.21.11's (Forge 52, 61) entity physics already asks each fluid's type (isInWater is the water
+// type's, the eyes likewise, every modded type's fall-distance modifier applies), so the water-like checks this adds on
+// 26.x have no role here.
+// Empty, so the mixin config names the same classes on every Forge line.
 @Mixin(Entity.class)
 abstract class EntityFluidInteractionMixin {
 }

@@ -1294,11 +1294,11 @@ public class EntityRobot extends EntityRobotBase implements net.neoforged.neofor
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
-    // Forge's ServerLevel and ClientLevel patches call it too. Forge 1.21.1 names it onRemovedFromWorld (the second arm).
-    // NeoForge names it onRemovedFromLevel on every line, so its term goes last: Stonecutter reads && and || left to
-    // right at one rank, and `neoforge || forge && >=1.21.10` was off on NeoForge 1.21.1 (the robot never deregistered
-    // on a chunk unload there); this order reads the same under either rule.
-    //? if forge && >=1.21.10 || neoforge {
+    // Forge's ServerLevel and ClientLevel patches call it too. Forge before 64 (1.21.1, 1.21.11) names it onRemovedFromWorld
+    // (the second arm). NeoForge names it onRemovedFromLevel on every line, so its term goes last and bare: Stonecutter reads
+    // && and || left to right at one rank, and a version term after `neoforge` switched the override off on NeoForge 1.21.1
+    // (the robot never deregistered on a chunk unload there); this order reads the same under either rule.
+    //? if forge && >=26.1 || neoforge {
     @LoaderHook({"neoforge:IEntityExtension#onRemovedFromLevel", "forge:IForgeEntity#onRemovedFromLevel"})
     @Override
     public void onRemovedFromLevel() {

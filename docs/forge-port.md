@@ -793,8 +793,12 @@ recipe viewer, dev mods or a loader filter, as on 26.3-forge). 26.1.2-forge: all
 of 40 passed (102 min); the three failures are McDevBridge requests that timed out (`TimeoutException`) on a busy game
 thread, not a BuildCraft error (0 BuildCraft log errors in every scenario): `port-26-3` step 234 (`spreadplayers 400 400`,
 which generates new chunks), `release-2026-2-1-f` step 144 (a `/screenclick`), `release-2026-2-1` step 34 (a `/state`).
-Not yet compared with the NeoForge twins (`26.2`, `26.1.2` batches were still running when this was written) and the
-render-heavy screenshots not yet read, so no visual verdict here.
+The NeoForge twins ran the same 40 (the Forge skips and `forge-config-screen` left out): `26.2` passed all 40, `26.1.2` 38,
+failing `port-26-3` step 234 with the same `spreadplayers` timeout and `zone-planner-zoom` step 4 (a `setblock` under the
+player refused in that world), so the `spreadplayers` timeout is not Forge's; the two `release-2026-2-1*` timeouts were seen on
+26.2-forge only, once. Same-named shots read side by side: `line8` render rig and Tank GUI (26.1.2-forge against 26.1.2),
+`heat-exchanger-look` running-ne and `facade-shading` c-mixed (26.2-forge against 26.2) show the same models, fluids, shading
+and ambient occlusion; only terrain and sky differ (other seeds). The rest of the shots were not read.
 
 `forge-config-screen` passed on both: the mod list's Config button opens the screen (sections General, World Generation,
 Display), Display lists its values with on/off and enum editors, a click flipped "Searing Fluids Emit Steam" and the client

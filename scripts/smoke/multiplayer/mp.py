@@ -505,21 +505,23 @@ def remote_start(node, nonce, timeout_minutes=240):
 
 def remote_launched(node, pid, launch_seconds=150):
     """True once the remote command is running (its poller's output has a `-- t+` status line) or the poller ended on its own
-    (remote_wait_done reports why); False when neither happened in `launch_seconds`. `Invoke-OnServer1.ps1` sometimes sits for
-    good in its ssh step with no run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one
-    session): its output ends at the `=== run <id> ===` header. The caller ends that poller (this script's own process) and
-    starts again."""
+    (remote_wait_done reports why); False when neither happened in `launch_seconds`, or when the poller ended without ever
+    reaching Server1 because its own ssh failed (`remote script on server1 exited 255` before any status line: a transient
+    refusal, seen once when Server1's sshd was busy). `Invoke-OnServer1.ps1` also sometimes sits for good in its ssh step with no
+    run directory on Server1 (trap 16 of McDevBridge's tools/remote/README.md, seen twice in one session): its output ends at
+    the `=== run <id> ===` header. The caller ends that poller (this script's own process) and starts again."""
     log = os.path.join(HERE, node, 'server.remote.log')
     end = time.time() + launch_seconds
     while time.time() < end:
-        if proc_start(pid) is None:
-            return True
         try:
             with open(log, encoding='utf-8', errors='replace') as f:
-                if '-- t+' in f.read():
-                    return True
+                text = f.read()
         except OSError:
-            pass
+            text = ''
+        if '-- t+' in text:
+            return True
+        if proc_start(pid) is None:
+            return 'exited 255' not in text  # the poller ended on its own: a failed ssh is retried, anything else is reported
         time.sleep(3)
     return False
 

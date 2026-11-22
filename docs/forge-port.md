@@ -953,7 +953,7 @@ from 26.2). 0 BuildCraft log errors in every scenario.
 | 26.2-forge | Server1 | 36 pass; `marker-length`, `marker-relog` (bridge `TimeoutException`) and `zone-planner-zoom` (a refused `setblock` under the player) failed while two multiplayer servers shared the machine, and all three passed when rerun alone |
 | 26.1.2-forge | Server1 | every scenario that ran passed |
 | 1.21.1-forge | Server1 | all pass but two: `zone-planner-zoom` (the same refused `setblock`) and `crossmod-claims-opac-stranger` (no world after 10 minutes); both passed when rerun alone |
-| 1.21.11-forge | workstation | see the line below this table |
+| 1.21.11-forge | workstation | all 40 that ran passed (45.6 min; the two OPAC claims scenarios left out, see below). Server1 has no McDevBridge jar for this line, so its batch there never started |
 
 On 26.2, 26.1.2 and 1.21.11 the OPAC pin is compile-only (the mod wants a Forge Config API Port build those lines have no pin
 for, #228): `withmods_compile_only=opac` in the node's `gradle.properties` makes the runner skip the claims scenarios there. On
@@ -992,8 +992,10 @@ the call site in its `patches/`.
 - The seven client-class game tests are not registered on Forge (below): they need a Forge client game test (F6).
 - `StaticTablesLevelUnloadTester`'s chunk-owner probe runs on Forge only as far as `ForgeChunkTickets.claim` / `release` go; the
   rest of that test is shared.
-- The gitignored release tool rejects any node whose loader is not neoforge or fabric, so it must learn `forge`
-  (or skip it) before this branch merges to main, or the next NeoForge/Fabric release run fails at enumeration.
+- The gitignored release tool knows `forge` and holds it back (`heldBack` in `release/config/release.json`): Forge nodes
+  are built and verified but not published until the user lifts the hold. The release test matrix
+  (`testing/config/runtimes.json`) still has the 26.2, 26.1.2 and 1.21.11 Forge rows disabled and 1.21.1-forge as
+  server-only; enable them once this branch is on main.
 
 - 1.21.1 mixin declaration: the dev run's `--mixin.config` is measured (F7); the jar manifest's `MixinConfigs` on an installed
   Forge 52 is the same unproven item as on 26.3 (below).

@@ -290,9 +290,14 @@ function Remove-TreeWithRetry([string]$Path) {
 # queries): the repeat finds the work done and its "did not change" / "could not set the block" replies are the ones the cmd step
 # already forgives (in English runs). A command that is not (clear, a claim, a team command) answers the repeat with a failure, so
 # such a step can fail after a timeout though its first attempt worked: never a false pass, and the step failed before retries too.
+# A command that generates chunks on the tick thread (spreadplayers, place, forceload add, locate) asks the bridge to wait 30 s
+# instead of its 5 s default (#216), so the first attempt ends it and a retry does not repeat it; a bridge jar older than 1.4.4
+# ignores the field and only the retry is left.
 function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
+    $body = @{ command = $Command }
+    if ($Command -match '^\s*/?(spreadplayers|place|forceload\s+add|locate)\b') { $body.timeoutMs = 30000 }
     for ($attempt = 1; ; $attempt++) {
-        try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
+        try { return Invoke-Bridge POST '/command' $body } catch {
             if ($attempt -ge $Attempts -or "$_" -notmatch 'TimeoutException') { throw }
             Start-Sleep -Seconds 2
         }

@@ -59,13 +59,15 @@ abstract class ClientLevelMixin {
         return !ForgeBlockParticles.addHitEffects(state, level, pos, face, minecraft.particleEngine);
     }
     //?} else {
-    /^// Forge 61 adds addBreakingBlockEffect(pos, BlockHitResult), the one the client's attack calls, which asks Forge's own
-    // IClientBlockExtensions with the hit and then the vanilla direction overload; the head runs before both.
+    /^// Forge 61, 64 and 65 (1.21.11, 26.1, 26.2): the head of Forge's own addBreakingBlockEffect(BlockPos, BlockHitResult),
+    // the overload Minecraft#continueAttack calls (with the crosshair hit), before Forge's IClientBlockExtensions test and
+    // vanilla's particles (the (BlockPos, Direction) overload it then calls). The hit sound plays elsewhere on these lines.
     @Inject(method = "addBreakingBlockEffect(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/BlockHitResult;)V",
             at = @At("HEAD"), cancellable = true)
-    private void buildcraft$hitEffects(BlockPos pos, net.minecraft.world.phys.BlockHitResult target, CallbackInfo ci) {
+    private void buildcraft$hitEffects(BlockPos pos, net.minecraft.world.phys.BlockHitResult hit, CallbackInfo ci) {
         ClientLevel level = (ClientLevel) (Object) this;
-        if (ForgeBlockParticles.addHitEffects(level.getBlockState(pos), level, target, minecraft.particleEngine)) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.isAir() && ForgeBlockParticles.addHitEffects(state, level, hit, minecraft.particleEngine)) {
             ci.cancel();
         }
     }

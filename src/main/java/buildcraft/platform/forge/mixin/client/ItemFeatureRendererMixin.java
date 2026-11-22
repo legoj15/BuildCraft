@@ -63,7 +63,14 @@ abstract class ItemFeatureRendererMixin {
     @Final
     private QuadInstance quadInstance;
 
-    @Inject(method = "prepareMainSubmit", at = @At(value = "INVOKE",
+    @Inject(
+            //? if >=26.2 {
+            method = "prepareMainSubmit",
+            //?} else {
+            /^// 26.1: the quad loop is renderItem's, with the same one setColor call and one BakedQuad local.
+            method = "renderItem",
+            ^///?}
+            at = @At(value = "INVOKE",
             target = "Lcom/mojang/blaze3d/vertex/QuadInstance;setColor(I)V", shift = At.Shift.AFTER))
     private void buildcraft$vertexColours(CallbackInfo ci, @Local BakedQuad quad) {
         ForgeClientModels.applyVertexColours(quad, quadInstance);

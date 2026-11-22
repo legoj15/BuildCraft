@@ -39,7 +39,6 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 //?} else {
 /^import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
-import net.minecraft.client.renderer.MultiBufferSource;
 ^///?}
 import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 //? if >=26.1 {
@@ -200,7 +199,8 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
     //?} else {
     /^@Override
     public void renderPipeline(Supplier<com.mojang.blaze3d.pipeline.RenderPipeline> pipeline) {
-        // As on 26.3: vanilla's registration is one put into the map the shader reload compiles.
+        // The same map before 26.3 moved RenderPipeline to renderpearl (vanilla's registration is one put into the map
+        // the shader reload compiles).
         com.mojang.blaze3d.pipeline.RenderPipeline resolved = pipeline.get();
         RenderPipelines.PIPELINES_BY_LOCATION.put(resolved.getLocation(), resolved);
     }
@@ -260,9 +260,10 @@ public final class ForgeClientRegistrationSinks implements ClientRegistrationSin
     //?} else {
     /^@Override
     public <S extends PictureInPictureRenderState> void pipRenderer(Class<S> stateClass,
-            java.util.function.Function<MultiBufferSource.BufferSource, PictureInPictureRenderer<S>> factory) {
-        // Forge keys the renderer by its own render-state class, which is stateClass; the renderer draws into the
-        // GUI's buffer source, which the event hands over.
+            java.util.function.Function<net.minecraft.client.renderer.MultiBufferSource.BufferSource,
+                    PictureInPictureRenderer<S>> factory) {
+        // 1.21.11 and 26.1: a renderer is built over the GUI's buffer source, which Forge 61's and 64's event hands out;
+        // Forge keys it by its own render-state class, which is stateClass.
         queue(RegisterPictureInPictureRendererEvent.class, RegisterPictureInPictureRendererEvent.BUS::addListener,
                 event -> event.register(factory.apply(event.getBufferSource())));
     }

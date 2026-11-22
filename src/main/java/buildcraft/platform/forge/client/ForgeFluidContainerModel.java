@@ -160,7 +160,11 @@ public final class ForgeFluidContainerModel implements ItemModel {
             // unshared, through the public method under it.
             QuadCollection.Builder builder = new QuadCollection.Builder();
             ItemModelGenerator.bakeExtrudedSprite(builder, baker.interner(), state, baker.interner().materialInfo(
+                    //? if >=26.3 {
                     BakedQuad.MaterialInfo.of(base, base.sprite().transparency(), 0, null, 0)));
+                    //?} else {
+                    /^BakedQuad.MaterialInfo.of(base, base.sprite().transparency(), 0, true, 0)));
+                    ^///?}
             layers.add(CuboidItemModelWrapperInvoker.buildcraft$create(List.of(), builder.build(), properties,
                     transformation));
         }
@@ -168,9 +172,16 @@ public final class ForgeFluidContainerModel implements ItemModel {
             int luminance = fluid.getFluidType().getLightLevel();
             boolean glows = spec.applyFluidLuminosity() && luminance > 0;
             RenderType[] sheets = fluidSheets(fluidSprite, spec.forceOpaqueFluid());
+            //? if >=26.3 {
             BakedQuad.MaterialInfo info = baker.interner().materialInfo(new BakedQuad.MaterialInfo(
                     fluidSprite.sprite(), ChunkSectionLayer.SOLID, sheets[0], sheets[1], sheets[2], 0,
                     glows ? Direction.UP : null, glows ? Level.MAX_BRIGHTNESS : 0));
+            //?} else {
+            /^// One item sheet before 26.3; an unshaded quad is lit as an up face, the 26.3 shade override above.
+            BakedQuad.MaterialInfo info = baker.interner().materialInfo(new BakedQuad.MaterialInfo(
+                    fluidSprite.sprite(), ChunkSectionLayer.SOLID, sheets[0], 0, !glows,
+                    glows ? Level.MAX_BRIGHTNESS : 0));
+            ^///?}
             QuadCollection quads = maskedQuads(mask, info, new Composed(state, FLUID_DEPTH));
             layers.add(CuboidItemModelWrapperInvoker.buildcraft$create(List.of(new FluidTint(fluid)), quads, properties,
                     transformation));
@@ -178,7 +189,11 @@ public final class ForgeFluidContainerModel implements ItemModel {
         if (cover != null) {
             Material.Baked drawn = spec.coverIsMask() ? base : cover;
             BakedQuad.MaterialInfo info = baker.interner().materialInfo(
-                            BakedQuad.MaterialInfo.of(drawn, drawn.sprite().transparency(), 0, null, 0));
+                    //? if >=26.3 {
+                    BakedQuad.MaterialInfo.of(drawn, drawn.sprite().transparency(), 0, null, 0));
+                    //?} else {
+                    /^BakedQuad.MaterialInfo.of(drawn, drawn.sprite().transparency(), 0, true, 0));
+                    ^///?}
                     QuadCollection quads = maskedQuads(cover, info, new Composed(state, COVER_DEPTH));
             layers.add(CuboidItemModelWrapperInvoker.buildcraft$create(List.of(), quads, properties, transformation));
         }
@@ -190,6 +205,7 @@ public final class ForgeFluidContainerModel implements ItemModel {
         boolean translucent = !forceOpaque
                 && (sprite.forceTranslucent() || sprite.sprite().transparency().hasTranslucent());
         boolean blockAtlas = sprite.sprite().atlasLocation().equals(BCLibRenderTypes.BLOCKS_ATLAS_ID);
+        //? if >=26.3 {
         if (blockAtlas) {
             return translucent
                     ? new RenderType[] {Sheets.translucentBlockItemSheet(), Sheets.translucentBlockItemGlintSheet(),
@@ -202,6 +218,13 @@ public final class ForgeFluidContainerModel implements ItemModel {
                     Sheets.translucentItemGlintSpecialSheet()}
                 : new RenderType[] {Sheets.cutoutItemSheet(), Sheets.cutoutItemGlintSheet(),
                     Sheets.cutoutItemGlintSpecialSheet()};
+        //?} else {
+        /^// Before 26.3 an item quad names one sheet (the glint variants are derived from it when drawn).
+        if (blockAtlas) {
+            return new RenderType[] {translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockItemSheet()};
+        }
+        return new RenderType[] {translucent ? Sheets.translucentItemSheet() : Sheets.cutoutItemSheet()};
+        ^///?}
     }
 
     /^*

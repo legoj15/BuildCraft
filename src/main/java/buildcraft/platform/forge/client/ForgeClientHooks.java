@@ -28,7 +28,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?} else {
 /^import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.util.RandomSource;
 ^///?}
@@ -182,7 +181,15 @@ public final class ForgeClientHooks implements ClientHooks {
             // Vanilla's own test for drawing the outline after the translucent terrain (LevelExtractor.extractBlockOutline).
             boolean translucent = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state)
                     .hasMaterialFlag(1);
+            //?} else {
+            /^// 1.21.11: vanilla's test (LevelRenderer.extractBlockOutline) is the block's sorted layer, which Forge deprecates
+            // for the layers its model draws on.
+            boolean translucent = Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
+                    .getRenderTypes(state, RandomSource.create(42L), ModelData.EMPTY).stream()
+                    .anyMatch(ChunkSectionLayer::sortOnUpload);
+            ^///?}
             BlockPos outlinePos = pos.immutable();
+            //? if >=26.2 {
             event.setCustomRenderer((collector, poseStack, levelRenderState) -> {
                 Vec3 cam = levelRenderState.cameraRenderState.pos;
                 poseStack.pushPose();
@@ -192,23 +199,19 @@ public final class ForgeClientHooks implements ClientHooks {
                 poseStack.popPose();
             });
             //?} else {
-            /^// 1.21.11: the custom renderer is called in both of the main pass's outline slots (before and after the
-            // translucent terrain), immediate-mode; it draws in the one vanilla's own outline would take and is a no-op
-            // in the other, which also keeps vanilla's out. Vanilla's test (LevelRenderer.extractBlockOutline) is the
-            // block's sorted layer, which Forge deprecates for the layers its model draws on.
-            boolean translucent = Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
-                    .getRenderTypes(state, RandomSource.create(42L), ModelData.EMPTY).stream()
-                    .anyMatch(ChunkSectionLayer::sortOnUpload);
-            BlockPos outlinePos = pos.immutable();
-            event.setCustomRenderer((buffers, poseStack, translucentPass, levelRenderState) -> {
-                if (translucentPass != translucent) {
+            /^// Forge 61 and 64 (1.21.11, 26.1) call the renderer in both of the main pass's outline slots (before and after
+            // the translucent terrain), immediate-mode, with the buffer source, as vanilla's own outline draw
+            // (LevelRenderer.renderBlockOutline) is: draw in the slot the block belongs to and flush as vanilla does; a no-op
+            // in the other, which also keeps vanilla's out.
+            event.setCustomRenderer((source, poseStack, onlyTranslucent, levelRenderState) -> {
+                if (onlyTranslucent != translucent) {
                     return;
                 }
                 Vec3 cam = levelRenderState.cameraRenderState.pos;
-                ShapeRenderer.renderShape(poseStack, buffers.getBuffer(BCLibRenderTypes.blockOutline()), shape,
-                        outlinePos.getX() - cam.x, outlinePos.getY() - cam.y, outlinePos.getZ() - cam.z, ARGB.black(102),
-                        2.5F);
-                buffers.endLastBatch();
+                net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack,
+                        source.getBuffer(BCLibRenderTypes.blockOutline()), shape, outlinePos.getX() - cam.x,
+                        outlinePos.getY() - cam.y, outlinePos.getZ() - cam.z, ARGB.black(102), 2.5F);
+                source.endLastBatch();
             });
             ^///?}
         });

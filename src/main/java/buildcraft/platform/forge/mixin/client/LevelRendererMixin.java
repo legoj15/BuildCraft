@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-//? if >=26.1 {
+//? if >=26.2 {
 import com.llamalad7.mixinextras.sugar.Local;
 //?}
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -56,7 +56,7 @@ import buildcraft.platform.forge.client.ForgeClientHooks;
 /^@Mixin(ChunkSectionsToRender.class)
 ^///?}
 abstract class LevelRendererMixin {
-    //? if >=26.1 {
+    //? if >=26.2 {
     @Inject(method = "submitFeatures", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/LevelRenderer;finalizeGizmoCollection()V"))
     private void buildcraft$submitCustomGeometry(LevelRenderState levelRenderState,
@@ -64,7 +64,17 @@ abstract class LevelRendererMixin {
             @Local PoseStack poseStack) {
         ForgeClientHooks.submitLevelRender(poseStack, levelRenderState.cameraRenderState.pos, submitNodeCollector);
     }
-    //?} else {
+    //?} elif >=26.1 {
+    /^// 26.1 (Forge 64) submits inside the main frame pass's lambda, with no submitFeatures method: the tail of
+    // submitBlockDestroyAnimation, the last submit before the solid features are drawn and the point NeoForge 26.1 posts
+    // SubmitCustomGeometryEvent right after. Its only caller is that lambda (once a frame), and its three parameters are
+    // the pass's own pose stack, node collector (the level's submit storage) and render state.
+    @Inject(method = "submitBlockDestroyAnimation", at = @At("TAIL"))
+    private void buildcraft$submitCustomGeometry(PoseStack poseStack, SubmitNodeCollector submitNodeCollector,
+            LevelRenderState levelRenderState, CallbackInfo ci) {
+        ForgeClientHooks.submitLevelRender(poseStack, levelRenderState.cameraRenderState.pos, submitNodeCollector);
+    }
+    ^///?} else {
     /^@Inject(method = "renderGroup", at = @At("RETURN"))
     private void buildcraft$afterTranslucentBlocks(ChunkSectionLayerGroup group, GpuSampler sampler,
             CallbackInfo ci) {

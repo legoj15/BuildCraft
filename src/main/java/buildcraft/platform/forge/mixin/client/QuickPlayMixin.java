@@ -45,8 +45,8 @@ import net.minecraft.client.quickplay.QuickPlay;
  * read reflectively, as {@code ClassicSlotLedger} reads {@code SidedInvWrapper}'s protected fields
  * ({@code ModLoader.isLoadingStateValid()} is public but is not traced to match it on every failure path). A field that
  * cannot be read leaves the bus as Forge has it, with one {@code [platform]} WARN, and the quick-play join then drops
- * events as it did before this mixin; it never starts a bus for a failed load. A start logs one INFO line, which the
- * run that retires {@code quickplay_drops_game_events} looks for.
+ * events as it did before this mixin; it never starts a bus for a failed load. A start logs one INFO line (the proof
+ * that let the runner's 1.21.1-forge menu-play workaround be retired, #226).
  *
  * <p>From 1.21.11 up Forge is on EventBus 7, whose buses are never shut: there this is an empty {@code @Mixin} on the
  * same class, which exists there too. This class carries nothing from 1.21.11 up.

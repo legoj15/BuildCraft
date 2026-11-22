@@ -34,7 +34,7 @@ import net.minecraft.world.level.block.state.BlockState;
  *     <td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are re-probed as they come due
  *     ({@link #takeExpired}), even by an idle quarry (a drill-column cell below the frame box is only forgotten then:
  *     the drill meets it again on its next walk of the mining box; one inside the frame box is re-probed like any
- *     frame-volume cell)</td><td>none: the cells held are cells of the frame box, and at most
+ *     frame-volume cell: canMine asked again, the cell kept while still refused)</td><td>none: the cells held are cells of the frame box, and at most
  *     the topmost refused cell of each column of the mining box (the cells under it are in the drill's way, never
  *     tried)</td>
  *     <td>tile owner</td><td>-</td></tr>

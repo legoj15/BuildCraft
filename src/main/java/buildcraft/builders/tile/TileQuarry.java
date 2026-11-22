@@ -150,7 +150,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // once its window ends, even after the quarry has finished and gone idle. It also holds a drill-column cell
     // whose break came back empty, which skipUnworkableCells consults: the sweep steps past it, and past the cells under
     // it, since the standing block is in the drill's way. On expiry one below the frame box is only forgotten; one
-    // inside it (above the frame floor) is re-probed through check() like any frame-volume cell. Policy
+    // inside it (above the frame floor) is re-probed like any frame-volume cell: canMine asked again, and check() run once
+    // the cell is no longer refused. Policy
     // RefusalMemory.QUARRY_FRAME (uncapped on purpose, see the table there); updatePoses() clears it.
     private final RefusalMemory frameRefusals = new RefusalMemory(RefusalMemory.QUARRY_FRAME);
     public Task currentTask = null;
@@ -609,8 +610,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             if (!frameBox.contains(blockPos)) {
                 // A drill-column cell whose break came back empty: it has no frame to repair and must not be queued
                 // as a frame break (that path skips the drill's column checks), so its window simply ends here and
-                // the next walk of the mining box meets the cell again (a finished quarry walks again only when
-                // something restarts it: a frame repair, a revisit or a reload, as for a canMine refusal).
+                // the next walk of the mining box meets the cell again (a finished quarry walks again when
+                // something restarts it: a frame repair, a revisit, a reload or a mining-depth change, as for a
+                // canMine refusal).
                 frameRefusals.forget(blockPos);
                 continue;
             }

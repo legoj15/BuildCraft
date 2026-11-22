@@ -989,7 +989,7 @@ read-only text wider than its column is cut by hand with a trailing ellipsis (`F
 and the cycle button of an enum takes its start value through `withInitialValue` (the builder that takes it is 1.21.11's).
 Since the merge with the 1.21.11 line (2026-11-21) `1.21.11-forge` compiles the same file unchanged (its `>=26.2` / else
 arm takes `setScreen`, as 26.1 does). The screen compiles on 1.21.1-forge, 1.21.11-forge and 26.3-forge; an earlier revision of `forge-config-screen` passed
-on 26.3-forge and 1.21.11-forge, and 1.21.1-forge (#225) is the one not yet run in a client.
+on 26.3-forge and 1.21.11-forge, and on 2026-11-22 the current one passed 35/35 on 1.21.1-forge (#225) and 26.3-forge.
 
 ### Smoke on 26.2-forge and 26.1.2-forge (Server1, 2026-11-21)
 

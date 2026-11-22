@@ -1,18 +1,49 @@
 {
   "name": "quickplay-loot",
   "description": "#226 proof: loot rolls and a fill on a quick-played world (these crashed with LootModifierManager unset before the mixin).",
-  "base": [0, 150, 48],
+  "base": [
+    0,
+    150,
+    48
+  ],
   "steps": [
-    { "label": "roll loot tables (global loot modifiers are consulted)", "do": "cmd", "run": [
-      "loot spawn 0 152 48 loot minecraft:chests/simple_dungeon",
-      "loot spawn 0 152 48 loot minecraft:entities/squid",
-      "fill -3 150 44 3 152 46 minecraft:water",
-      "fill -3 150 44 3 152 46 minecraft:air",
-      "summon minecraft:squid 0 153 48"
-    ] },
-    { "do": "wait", "ms": 8000 },
-    { "label": "kill the squid (death loot)", "do": "cmd", "run": [ "kill @e[type=minecraft:squid]" ] },
-    { "do": "wait", "ms": 3000 },
-    { "name": "after-loot", "do": "shot", "look": "the world still running; dropped loot items near the rig" }
+    {
+      "label": "stand by the rig",
+      "do": "cmd",
+      "run": [
+        "tp @p {X} {Y+3} {Z-6} 0 30"
+      ]
+    },
+    {
+      "label": "roll loot tables (global loot modifiers are consulted)",
+      "do": "cmd",
+      "run": [
+        "loot spawn {X} {Y+2} {Z} loot minecraft:chests/simple_dungeon",
+        "loot spawn {X} {Y+2} {Z} loot minecraft:entities/squid",
+        "fill {X-3} {Y} {Z-4} {X+3} {Y+2} {Z-2} minecraft:water",
+        "fill {X-3} {Y} {Z-4} {X+3} {Y+2} {Z-2} minecraft:air",
+        "summon minecraft:squid {X} {Y+3} {Z}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 8000
+    },
+    {
+      "label": "kill the squid (death loot)",
+      "do": "cmd",
+      "run": [
+        "kill @e[type=minecraft:squid,x={X},y={Y},z={Z},distance=..16]"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "name": "after-loot",
+      "do": "shot",
+      "look": "the world still running; dropped loot items in front of the camera"
+    }
   ]
 }

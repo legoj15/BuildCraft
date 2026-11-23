@@ -37,5 +37,12 @@ public final class NeoForgeClientFluids implements ClientFluids {
             .getTintColor(NeoForgeFluids.toNeo(stack));*/
         //?}
     }
+
+    //? if >=1.21.10 && <26.1 {
+    /*@Override
+    public int luminance(BCFluidStack stack) {
+        return stack.getFluid().getFluidType().getLightLevel(NeoForgeFluids.toNeo(stack));
+    }
+    *///?}
 }
 //?}

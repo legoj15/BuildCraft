@@ -29,9 +29,9 @@ error, or BuildCraft logged an ERROR.
 ## What it does per node
 
 1. **Own game folder.** `versions/<node>/run-smoke/` via `-PbcRunDir=run-smoke` (gitignored). The hand-used `run/`
-   with its extra mods and saves is never read, and its mods, config, saves and options are never written. On Fabric one
-   file is: the folder is passed as `--gameDir`, but Loom fixes the working directory, so every smoke run still writes
-   (and rolls) `run/logs/latest.log`. The node's newest McDevBridge jar is copied into
+   with its extra mods and saves is never read, and its mods, config, saves and options are never written. On Fabric too
+   (#217): `-PbcRunDir` moves the client and server run configs' working directory, so a Fabric run's logs land in
+   `run-smoke/logs` as well. The node's newest McDevBridge jar is copied into
    `run-smoke/mods` (searched in McDevBridge's `versions/<node>/build/libs` and its worktrees; `-BuildBridge` builds
    one if none exists). `options.txt` is written once: no pause on focus loss, no accessibility onboarding, sound
    off. The GUI scale is re-applied every run: the scenario's `guiScale`, else 2 (so screenshots line up across runs),
@@ -39,7 +39,7 @@ error, or BuildCraft logged an ERROR.
    the language (`-Lang`, else `en_us`).
 2. **World.** The first run on a node creates one through the menus (Singleplayer → Create New World) and renames the
    save to `bc-smoke` after the client closes; every later run quick-plays it (`-PbcQuickPlay=bc-smoke`). The rig is
-   rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/` to start over. (A lone save of any name is adopted as `bc-smoke`, so an interrupted first run heals itself.)
+   rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/` to start over. (A lone save of any name is adopted as `bc-smoke`, so an interrupted first run heals itself.) A scenario with `"startAt": "title"` opens no world and needs no save: see "Scenario format".
 3. **Scenario**, then every ERROR log line mentioning BuildCraft since the world loaded.
 4. `save-all`, close the client (and its Gradle wrapper), next node.
 
@@ -120,7 +120,7 @@ Traps (each one cost a run):
 { "name": "line8", "base": [0, 150, 0], "steps": [ { "do": "...", ... } ] }
 ```
 
-Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset); `at` arrays are offsets from `base`.
+Coordinates in commands use `{X}`, `{Y+2}`, `{Z-1}` (the `base` plus an offset); `at` arrays are offsets from `base`. A scenario that opens no world (`startAt` below) may omit `base`.
 Every step may carry `"label"` (report text), `"nodes": ["26.2", ...]` (run only on those Minecraft lines: `"26.2"`
 covers every loader's node of that line, the NeoForge node, its Fabric twin and its Forge twin; `"26.2-fabric"` or
 `"26.2-forge"` only that twin) and `"loaders": ["neoforge"]` (run only on that loader: a step one loader cannot run says so
@@ -139,9 +139,19 @@ aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `need
 the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
 widget text.
 
+A top-level `"startAt"` says where the client's first screen is: `"world"` (the default) quick-plays the save (a node's first run creates it
+through the menus), `"title"` boots the client without quick-play, waits for the title screen (loading overlay gone) and starts the steps there: no
+world is opened or created, so the save steps are skipped as well (`-Save`, `-SaveSeed` and `-FreshSave`, which the batch passes to every scenario,
+change nothing for it; it needs no `bc-smoke` save, even under `-Lang`) and ERROR log lines count from the title screen. Any other value is
+refused when the scenario loads, and so is a title-start scenario that uses a world-only step or field (`pause`, `inWorld`, `at`, a
+`{X}`/`{Y}`/`{Z}` coordinate token). Use it for a scenario that only needs the title screen and the menus behind it (`forge-config-screen`,
+`mod-list-banner`, #227): leaving a world takes the `pause` step, whose Esc needs the game window in front, which the 26.3-forge (SDL3) client on
+Server1 did not get. The report's `startAt` field says which start a run had. Under the batch each scenario is a runner of
+its own, so a title-start scenario can sit anywhere among the in-world ones.
+
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`, which also forgives the bridge giving up for good on a busy server thread: every `/command`, optional or not, gets three attempts in all on a `TimeoutException`; a repeat can run a command twice, which a non-idempotent one such as `clear` or a claim answers with a failure), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`, `tick unfreeze`) are forgiven by the command itself, in every language, unless the command never parsed (vanilla then echoes the input in its error context line, which marks a bad argument rather than an "already so"). `echo: true` copies the last command's reply into the report (state dumps) |
+| `cmd` | `run`: string or list; `allowFail`; `benign`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). A command the bridge reports as failed (its `success` flag, a language-neutral result code) fails the step, in every language, unless the command is optional (a leading `?`, which also forgives the bridge giving up for good on a busy server thread: every `/command`, optional or not, gets three attempts in all on a `TimeoutException`, and `spreadplayers`, `place`, `forceload add` and `locate` ask the bridge for a 30 s wait first (#216); a repeat can run a command twice, which a non-idempotent one such as `clear` or a claim answers with a failure), the step has `allowFail` (any failure of the step's commands is fine), or `benign: true` (the commands may legitimately fail: nothing to kill, nothing changed on a re-run, a chunk already force-loaded). English runs also forgive, by the reply text, the "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`, `is already at time marker`), since the world persists between runs; a translated reply cannot be read, so a scenario meant for `-Lang` says it with `benign` or `?`. World-state setters that fail only when the state is already so (`difficulty`, `time set`, `weather`, `gamerule`, `gamemode`, `forceload add`, `tick freeze`, `tick unfreeze`) are forgiven by the command itself, in every language, unless the command never parsed (vanilla then echoes the input in its error context line, which marks a bad argument rather than an "already so"). `echo: true` copies the last command's reply into the report (state dumps) |
 | `playerCmd` | `run`: string or list | each command AS the player (the bridge's `/chat` `command`: the player's own permission level and an entity as the source; the reply goes to the client's chat, so gate on state with a `waitCmd` after it). For commands whose requirements read the source's entity at parse time: `execute as @p run ...` does not pass those, because Brigadier checks a requirement against the original source, before the `execute` modifiers apply (FTB Teams' `party create` is one) |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at`; `exact` | look at a block's centre from the current eye position (standing eye height); the report records what the crosshair hit. `exact: true` aims at the point `at` itself (a box corner, an addon slot) |
@@ -163,7 +173,7 @@ widget text.
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
 | `expectFile` | `path` (relative to the node's output folder, the one holding the screenshots), `timeoutSec` (default 10) | fails unless that file shows up, non-empty and written after the node's steps began (an earlier run's file does not count); the report's Detail holds its content. How a check the game cannot see learns that an outside driver acted: `Drive-RealMouse.ps1` writes `real-mouse-*.done` when its gesture is finished (see "Real-mouse checks"). The path may not leave the output folder |
-| `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed on GLFW nodes). 26.3 runs SDL3, which drops key messages for an unfocused window: when the post does not open the menu within 4 s, the runner brings the game window to the front (an Alt tap lifts Windows' foreground lock) and presses a real Esc, and the step's Detail says so. Follow with `click` "Save and Quit to Title" to leave the world |
+| `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed on GLFW nodes). 26.3 runs SDL3, which drops key messages for an unfocused window: when the post does not open the menu within 4 s, the runner brings the game window to the front (an Alt tap lifts Windows' foreground lock) and presses a real Esc, and the step's Detail says so. Follow with `click` "Save and Quit to Title" to leave the world. A scenario that only wants the title screen should use `"startAt": "title"` instead of playing a world to leave it |
 | `inWorld` | `timeoutSec` (default 300) | waits until the player is in a world with no screen open: after `click` "Play Selected World" |
 
 `-Lang <code>` (e.g. `ru_ru`, `zh_cn`) runs the scenario in that language, for a text-overflow look: screenshots
@@ -180,7 +190,7 @@ and tooltips come out translated. Two things read English and so behave differen
   runs only, so a scenario meant for `-Lang` marks its own re-run failures (`generators/gen_lang_overflow.py` does).
   `waitCmd`'s `match` still reads the translated reply: give a scenario meant for `-Lang` a language-neutral one (NBT
   keys, numbers).
-The node's `bc-smoke` world must already exist (the first run creates it through the English menus).
+The node's `bc-smoke` world must already exist (the first run creates it through the English menus), unless the scenario starts at the title screen (`startAt`).
 
 A top-level `"options": {"renderDistance": 4}` pins keys of the run's `options.txt` (`zone-planner-far-map` does); `renderDistance` goes
 back to 6 on every run that names none, so a pinned value never reaches the next scenario.
@@ -259,6 +269,21 @@ blueprint by NBT, the used blueprint goes architect output -> chest -> player in
 server's own `builderClientData.stalledCounts`. The generator's docstring lists which cell of the rig stalls for which
 reason; its GUI hover coordinates assume the scenario's 1600x900 window at GUI scale 3.
 
+## Painted pipes in the Builder's preview: `builder-painted-pipe`
+
+`builder-painted-pipe` (generated by `generators/gen_builder_painted_pipe.py`, whose docstring has the rig) is the live
+comparison behind #229: a Builder builds a blueprint of painted item pipes (red, lime, blue), a plain one, a painted and a plain
+fluid pipe and a red stained-glass block, beside a row of the same cells placed by command (the chunk-mesh reference). The
+Builder is given the blueprint with no power and no pipes, the camera is set, and pipes plus a battery sized to run dry arrive
+by `data merge` under `tick rate 4`, so the placement preview (the 0.30-block cube each queued pipe flies as, drawn without a
+level) lasts about sixteen seconds. A real-time burst (`fly-N`), a `tick freeze` mid-flight with three close shots, and the
+finished row against the reference follow; the report echoes the place-task list. Run it on two nodes and compare same-named
+shots (`-Nodes 1.21.1,1.21.1-forge`). The first run (2026-11-22, four nodes, 90 steps) found the two 1.21.1 loaders identical:
+the preview draws the block's default model, a pipe holder's is an empty placeholder without its block entity, so no pipe cube
+is drawn on either (only the glass cube, the control, is), and the placed pipes match pixel for pixel; the 26.x nodes draw the
+plain pipe item instead. It also shoots the blueprint item's tooltip preview, a second no-level path that draws painted pipes
+itself.
+
 ## Filler patterns: `filler-patterns`
 
 `filler-patterns` (hand-written) checks issues #80 and #85: five Fillers set up by NBT (box, pattern and parameters,
@@ -324,6 +349,10 @@ button, which ends the stroke where right was tapped, the very symptom the scena
   `hover` once more before a tooltip `shot`.
 - On 26.3 the `pause` step's real-Esc fallback, and any other step that brings the window to the front, can turn the
   camera (the focus grab recentres the mouse): `look` again before a shot that depends on the view.
+- On Server1 the runner could not bring the `26.3-forge` (SDL3) window to the front, so the `pause` step failed there ("could not focus the
+  game window" in its Detail; why Windows refused is not recorded, and `26.3` and `26.3-fabric` there were not checked for it).
+  `forge-config-screen` and `mod-list-banner` no longer need the step (`startAt`); the scenarios that leave and rejoin a world mid-run
+  (`marker-relog`, `port-26-3`, `release-2026-2-1-f`, `sprite-reload`, `upgrade-26-3-author`) still do.
 
 ## Zone Planner far map: `zone-planner-far-map`
 
@@ -343,14 +372,18 @@ is gone. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check b
 docstring gives the phase order and the expected result, and `multiplayer/grids.py` tiles the shots per node for a
 26.3 vs 26.2 comparison. `multiplayer/scene_machines.py` checks machines over the connection (a Tank poured by one player
 and opened by both, a Stone Engine's GUI, a creative engine's power rig filmed by the other player) with recorded pass/fail
-checks; `scene_lib.py` holds the helpers the two scenes share. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server
-log's `No key layers` ERROR is vanilla complaining about the flat world's empty generator settings; the default flat world
-is used.
+checks; `multiplayer/scene_guide.py` opens the guide book on a client of the remote server and walks to a page with a crafting
+recipe (the guide's recipes can only come from the recipe sync there, a single-player guide falls back to its integrated server
+and hides a missing sync), screenshotting it, and on a Forge node that carries `ForgeRecipeSync` (26.3, 26.2, 26.1.2, 1.21.11) greps both
+clients' `latest.log` for the `[recipe sync] received <n> recipes` line the receiver logs; `scene_lib.py` holds the helpers the
+scenes share. Run them from Git Bash with `MSYS_NO_PATHCONV=1`. The rig
+writes the classic superflat layers (bedrock, two dirt, grass on plains) as `generator-settings`, so the server no longer logs
+vanilla's `No key layers` ERROR (#230).
 
 Loaders: NeoForge nodes take their run switches through `mp.init.gradle` (an init script); a MinecraftForge node (`26.3-forge`)
 through `bc.forge`'s own `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` (ForgeGradle's client run carries `--username Dev` from
-the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node has no arm yet:
-`mp.py` and the scene scripts skip it with a reason and exit 0. `setup` also works on a node no single-player run has prepared
+the build itself, so the build is where the name is replaced; no init-script arm was written for it). A Fabric node
+takes the same `-PbcUser`, `-PbcQuickPlayServer` and `-PbcRunDir` from `bc.fabric` (#217). `setup` also works on a node no single-player run has prepared
 (it takes the newest bridge jar the way the runner does and writes the default `options.txt`).
 
 **The server on another machine.** The two clients always run here (they need a GL context); the server half can run on
@@ -399,8 +432,9 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 - **OPAC on a Forge node needs its server config seeded (Windows).** Open Parties and Claims' first write of a world's
   `serverconfig/openpartiesandclaims-server.toml` fails with `AccessDeniedException` (Forge Config API Port's adapter renames the file
   it has just created), which kills the integrated server on the first load of every fresh world copy (`crossmod-claims-opac` plays
-  one each run). Put that one file, taken from any world that has booted once, in `versions/<node>/run-smoke/defaultconfigs/`: Forge
-  copies it instead of creating it and the world loads. `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
+  one each run). The runner puts a complete default file from `scripts/smoke/seeds/` in `versions/<node>/run-smoke/defaultconfigs/`
+  before the boot when none is there (#232): Forge copies it instead of creating it and the world loads. The seeds are OPAC's own
+  defaults (`openpartiesandclaims-server.1.21.1.toml` for 1.21.1, whose default entity ids differ; the other file for every later line). `-PwithMods=opac` on a Forge node also loads Forge Config API Port (the alias
   names both; OPAC requires it there). The Forge nodes define `opac` only: the other `crossmod-*` scenarios skip there.
 - **A command that acts "at the player" acts where he is by then.** A creative player teleported up to a rig is in free fall until
   something is under him: about two seconds after a `tp` to y+4 the dev was 30 blocks down, 16 under the floor of a Flan claim (`flan add`

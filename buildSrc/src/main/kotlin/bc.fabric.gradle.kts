@@ -67,6 +67,11 @@ if (recipeViewer != null && recipeViewer != "jei" && recipeViewer != "rei") {
     throw GradleException("recipe_viewer must be 'jei' or 'rei', not '$recipeViewer'")
 }
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
+// The two-client multiplayer smoke's switches (scripts/smoke/multiplayer/mp.py), the same ones bc.forge reads: the
+// player's name and the server a client quick-plays into. Both are plain `-P` switches, so a hand-run second client
+// works the same way.
+val bcUser = findProperty("bcUser")?.toString()
+val bcQuickPlayServer = findProperty("bcQuickPlayServer")?.toString()
 val bcTests = findProperty("bcTests")?.toString()
 // FallingTree (tree-felling mod), opt-in for dev runs and game tests, as on the NeoForge nodes (bc.neoforge): `-PwithFallingTree`
 // loads it (dependencies below) and tells the game-test run to expect it, so robot_break_fallingtree_* fails if the mod
@@ -294,12 +299,13 @@ tasks.named<JavaExec>("runClientGameTest") {
 // workspace flag (BCLib.DEV-gated affordances: the /bcsoundtest command, debug logging), `-PbcDebug[=tier]` for
 // BCDebugging and, on the client, `-PbcQuickPlay=<saveFolderName>` to boot straight into a saved world. They sit on the
 // run tasks because Loom's RunConfigSettings setters are deprecated.
-// `-PbcRunDir=<node-relative dir>` (client only) is the smoke runner's own game folder, as on NeoForge. Loom sets the
-// working directory itself at launch (its only setter, runDir(), is deprecated), so the folder is handed to the game as
-// `--gameDir` instead: mods, config, saves and options.txt then live there, and only logs/latest.log (written relative
-// to the working directory) stays in run/. runServer cannot take it cleanly: the dedicated server keeps its world,
-// server.properties and eula.txt in that fixed working directory, and Fabric Loader strips --gameDir before the server
-// sees it, so the flag would move only mods/ and config/ and leave the rest in run/. The server run says it ignores it.
+// The multiplayer smoke's switches ride along (mp.py run_switches): `-PbcUser=<name>` names the player and
+// `-PbcQuickPlayServer=<host:port>` quick-plays into the server, as on NeoForge and Forge. `-PbcRunDir=<node-relative
+// dir>` is the smoke runner's own game folder, as on NeoForge: it goes on the run configs' runDirectory (below), which
+// is where Loom takes the working directory at launch, so mods, config, saves, options.txt, the server's world,
+// server.properties, eula.txt and logs/latest.log all land there — the client also carries it as `--gameDir`, which
+// Fabric Loader honors there (it strips that argument for a server, where the working directory alone places the files).
+// Without the properties nothing moves and no argument is added: a hand run behaves as before.
 listOf("runClient", "runServer").forEach { name ->
     tasks.named<JavaExec>(name) {
         systemProperty("buildcraft.dev", "true")
@@ -309,11 +315,15 @@ listOf("runClient", "runServer").forEach { name ->
         if (name == "runClient") {
             // The dev user is "Dev" on every loader, as on NeoForge: Fabric Loader would otherwise draw PlayerNNN anew
             // on each launch, and a machine's ownerUUID (a scenario's, spelled with Dev's fixed offline UUID) then never
-            // names the player, so every owner-gated check (claims, the owner ledger) reads a stranger.
-            args("--username", "Dev")
+            // names the player, so every owner-gated check (claims, the owner ledger) reads a stranger. `-PbcUser` is
+            // the multiplayer smoke's second player (it replaces the argument, it is not a second one).
+            args("--username", bcUser ?: "Dev")
         }
         if (name == "runClient" && bcQuickPlay != null) {
             args("--quickPlaySingleplayer", bcQuickPlay)
+        }
+        if (name == "runClient" && bcQuickPlayServer != null) {
+            args("--quickPlayMultiplayer", bcQuickPlayServer)
         }
         if (name == "runClient" && bcRunDir != null) {
             // A local copy for the action: a task action must not capture a script-level val (configuration cache).
@@ -323,7 +333,23 @@ listOf("runClient", "runServer").forEach { name ->
             doFirst { gameDir.mkdirs() }
         }
         if (name == "runServer" && bcRunDir != null) {
-            doFirst { logger.lifecycle("-PbcRunDir is ignored by $path: the dedicated server runs in Loom's fixed run/ directory") }
+            // Loom does not create the run directory for the server either; the smoke's setup writes server.properties
+            // and friends there first, a hand run's first boot needs the folder to exist.
+            val gameDir = bcRunDir
+            doFirst { gameDir.mkdirs() }
+        }
+    }
+}
+// The game folder moves the runs themselves, client AND server: Loom overwrites a run task's working directory from its
+// run config's runDirectory at launch (AbstractRunTask), so that property — never RunConfigSettings' deprecated
+// runDir()/setRunDir() setters, which the project's no-deprecated-API rule forbids — is the one place that moves it. Only the plain
+// client and server runs take it; the game-test runs keep their own build/run directories. A local copy of the folder,
+// for the same configuration-cache reason as the task actions above.
+if (bcRunDir != null) {
+    val smokeRunDir = bcRunDir
+    loom.runs.configureEach {
+        if (name == "client" || name == "server") {
+            runDirectory.set(smokeRunDir)
         }
     }
 }

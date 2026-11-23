@@ -14,13 +14,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistry;
+import net.minecraftforge.registries.GameData;
 import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryObject;
@@ -58,6 +61,21 @@ import buildcraft.platform.registry.RegistryServices;
  * bus (NeoForge: the mod bus), not on the mod bus group.
  *^/
 public final class ForgeRegistryServices implements RegistryServices {
+    /^*
+     * Forge's block-state id table, asked for once: it is the object {@code Block.BLOCK_STATE_REGISTRY} (deprecated
+     * here) is initialised with, made once with the block registry and filled and cleared in place.
+     ^/
+    private volatile IdMapper<BlockState> blockStateIds;
+
+    @Override
+    public IdMapper<BlockState> blockStateIds() {
+        IdMapper<BlockState> ids = blockStateIds;
+        if (ids == null) {
+            blockStateIds = ids = GameData.BlockCallbacks.getBlockStateIDMap();
+        }
+        return ids;
+    }
+
     @Override
     public <T> BCRegistrar<T> create(ResourceKey<? extends Registry<T>> registry, String namespace) {
         return new ForgeRegistrar<>(DeferredRegister.create(registry, namespace), registry, namespace);

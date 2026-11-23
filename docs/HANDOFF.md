@@ -17,11 +17,10 @@ The standing record is [forge-port.md](forge-port.md): toolchain, what each Forg
 - Server1's firewall has no rule for the Java 21 runtime, so the 1.21.x multiplayer servers are reached through an ssh tunnel (#230).
 - `versions/1.21.1-forge/run` has no accepted EULA, so `:1.21.1-forge:runServer` was never run by hand (the game tests and the multiplayer rig cover the server).
 - Two Forge defects worth reporting upstream are the user's to file: the 1.21.1 quick-play crash (#226) and the shaped-recipe network encoding on 26.3 (forge-port.md, Open).
-- #221 and #231 are open questions.
 
 ## Open follow-ups
 
-#215 to #231 hold everything found along the way. The ones that limit testing: #228 (Open Parties and Claims cannot boot on 26.2, 26.1.2 and 1.21.11 Forge, so the claims scenarios are skipped there), #225 (no config screen on Forge 1.21.1), #227 (Server1 cannot focus the 26.3 Forge window), #224 (three NeoForge 1.21.1 smoke failures that predate this work).
+#216 to #232 were worked on branch `claude/issues-216-232-cffea1` (2026-11-22) and closed with result notes. Still open from that run: #236 (#219's remainder: the access-transformer probe is in, but a production-install boot is unproven and the release rig's crash signatures do not yet carry its ERROR line, because `testing/` is gitignored in the main checkout), #237 (the Builder's preview draws no pipe cube on 1.21.x, found while checking #229), #230 item 4 (Server1 firewall, the user's call), #233 (robots and claims), #234 (creative cursor drain, a question), #235 (Forge-only light speck while another player mines).
 
 The gitignored release test matrix (`testing/config/runtimes.json`) now has all five Forge rows enabled with clients (edited on this machine after the merge; the release rig was not run with them). Server1 has no McDevBridge jar for `1.21.11-forge`; build it there before running that line's client batch remotely.
 

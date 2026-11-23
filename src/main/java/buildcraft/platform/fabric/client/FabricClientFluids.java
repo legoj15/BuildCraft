@@ -9,6 +9,7 @@ package buildcraft.platform.fabric.client;
 /*import net.minecraft.resources.Identifier;
 
 import net.fabricmc.fabric.api.transfer.v1.client.fluid.FluidVariantRendering;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.client.ClientFluids;
@@ -16,8 +17,9 @@ import buildcraft.platform.fabric.FabricFluids;
 
 /^*
  * {@link ClientFluids} on Fabric: the fluid's baked model ({@code ClientFluids#model}, 26.1 and later) or Fabric's
- * variant rendering (before) for the sprite, Fabric's variant rendering for the tint. Only the pre-26.1
- * {@code FluidSprites} reads {@link #stillTexture} (26.1 and later read the model itself, with its water fallback).
+ * variant rendering (before) for the sprite, Fabric's variant rendering for the tint and, before 26.1, the light
+ * level. Before 26.1 {@code FluidSprites} and the legacy fluid container model read {@link #stillTexture} (26.1 and
+ * later read the model itself, with its water fallback).
  ^/
 public final class FabricClientFluids implements ClientFluids {
     /^* The model's still sprite: water's where the fluid has none, as NeoForge's lookup answers on 26.1 and later. ^/
@@ -38,5 +40,12 @@ public final class FabricClientFluids implements ClientFluids {
     public int tint(BCFluidStack stack) {
         return FluidVariantRendering.getColor(FabricFluids.toVariant(stack));
     }
+
+    //? if >=1.21.10 && <26.1 {
+    /^@Override
+    public int luminance(BCFluidStack stack) {
+        return FluidVariantAttributes.getLuminance(FabricFluids.toVariant(stack));
+    }
+    ^///?}
 }
 *///?}

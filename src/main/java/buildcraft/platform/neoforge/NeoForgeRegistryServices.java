@@ -12,10 +12,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -32,6 +35,11 @@ import buildcraft.platform.registry.RegistryServices;
  * ({@link NeoForgeModBus}; the calls are made from its init), exactly where {@code register(modBus)} was called.
  */
 public final class NeoForgeRegistryServices implements RegistryServices {
+    @Override
+    public IdMapper<BlockState> blockStateIds() {
+        return Block.BLOCK_STATE_REGISTRY;
+    }
+
     @Override
     public <T> BCRegistrar<T> create(ResourceKey<? extends Registry<T>> registry, String namespace) {
         return new NeoForgeRegistrar<>(DeferredRegister.create(registry, namespace));

@@ -52,8 +52,8 @@ failed step, fatal error or BuildCraft ERROR log line, and 3 when another run ho
 
 What another player sees, and anything that only crosses a real connection (menu opening data, recipe and fluid sync, entity
 sync), needs a dedicated server and two clients: `scripts/smoke/multiplayer/mp.py` with the scenes beside it (`setup`, `server`,
-`client A`, `client B`, a scene, `stop`; the README's "Two players" section has the commands). It drives NeoForge and Forge nodes
-(a Fabric node is skipped with a reason). The server half can run on Server1 so the clients join over the LAN:
+`client A`, `client B`, a scene, `stop`; the README's "Two players" section has the commands). It drives NeoForge, Forge and Fabric
+nodes. The server half can run on Server1 so the clients join over the LAN:
 `MP_REMOTE_CHECKOUT=<checkout>` (committed state synced with `Sync-ToServer1.ps1 -Name <checkout>`), `MP_LOCK_WAIT_MINUTES` to
 queue behind another run's smoke lock; scratch ports 25661/25662 only, never the real servers' 25565, 25566 or 25575.
 

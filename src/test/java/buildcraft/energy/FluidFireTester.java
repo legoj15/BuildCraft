@@ -459,7 +459,7 @@ public class FluidFireTester {
 
     // NeoForge's and Forge's context-aware fire odds (the same IBlockExtension / IForgeBlockState calls); on Fabric
     // FireBlockMixin and LavaFluidMixin return the block's own FireReactiveBlock answers, which is what these read there.
-    // Forge has no lava-ignition hook wired yet (BCFluidBlock.ignitedByLava is NeoForge's; Forge's LavaFluid patch asks the
+    // Forge has no lava-ignition hook wired yet (NeoForgeFluidBlock.ignitedByLava is NeoForge's; Forge's LavaFluid patch asks the
     // state's own flag and isFlammable, docs/forge-port.md, "Still owed"), so the Forge arm reads the block's own answer too.
     private static int flammability(ServerLevel level, BlockPos pos, Block block) {
         //? if neoforge || forge {
@@ -476,7 +476,7 @@ public class FluidFireTester {
         /*return ((buildcraft.platform.hook.FireReactiveBlock) block).lavaIgnites(block.defaultBlockState());*/
         //?} elif forge {
         /*// What Forge's LavaFluid consults before it lights a block: vanilla's own property AND the flammability the
-        // block answers (BCFluidBlock sets the first from its constructor and answers the second from fireBurnOdds),
+        // block answers (BCEnergyFluids sets the first on the block's properties; the block answers the second from fireBurnOdds),
         // not the BuildCraft hook directly, which Forge never calls.
         BlockState state = block.defaultBlockState();
         return state.ignitedByLava() && state.isFlammable(level, pos, Direction.UP);*/

@@ -183,7 +183,9 @@ public record DyeReplaceSpriteSource(Identifier source, Identifier mask) impleme
                 //? if >=1.21.10 {
                 SpriteContents result = new SpriteContents(outputId, new FrameSize(w, h), out);
                 //?} else {
-                /*SpriteContents result = new SpriteContents(outputId, new FrameSize(w, h), out, net.minecraft.server.packs.resources.ResourceMetadata.EMPTY);*/
+                /*// Forge 52 deprecates this constructor for one that also takes Forge's texture metadata; NeoForge and Fabric have no such overload.
+                @SuppressWarnings("deprecation")
+                SpriteContents result = new SpriteContents(outputId, new FrameSize(w, h), out, net.minecraft.server.packs.resources.ResourceMetadata.EMPTY);*/
                 //?}
                 out = null; // ownership transferred to SpriteContents
                 return result;

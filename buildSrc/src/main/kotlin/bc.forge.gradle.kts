@@ -53,12 +53,6 @@ val mixinConfig = "buildcraftunofficial.forge.mixins.json"
 // The opt-in -P switches the NeoForge and Fabric runs read too, resolved once here at script scope.
 val bcDebug = findProperty("bcDebug")?.toString()
 val bcQuickPlay = findProperty("bcQuickPlay")?.toString()
-// A node whose Forge loads a quick-played world before starting its game event bus (`quickplay_drops_game_events`, see
-// versions/1.21.1-forge/gradle.properties): the world opens, then the integrated server crashes at its first loot roll.
-if (bcQuickPlay != null && findProperty("quickplay_drops_game_events")?.toString() == "true") {
-    logger.warn("-PbcQuickPlay on $name: this Forge drops every game-bus event during a quick-played world load " +
-            "(the integrated server crashes at the first loot roll); open the save through Singleplayer instead")
-}
 val bcRunDir = findProperty("bcRunDir")?.let { file(it.toString()) }
 // The two-client multiplayer smoke's switches (scripts/smoke/multiplayer/mp.py): the player's name and the server a client
 // quick-plays into. Both are plain `-P` switches, so a hand-run second client works the same way.
@@ -74,12 +68,15 @@ val gameTestRunDir = file("run-gameTestServer")
 // The node's JEI pin, if it has one (only 1.21.1-forge: JEI's 1.21.1 LTS branch has a Forge build; the 1.21.11, 26.1.2 and
 // 26.2 Forge nodes wire none, and neither viewer has a Forge build for 26.3), and the viewer the dev runs load: JEI by
 // default where it is pinned, `-Precipe_viewer=none` for none. No Forge node pins REI (it has no Forge build for 1.21.1 or
-// 26.3), so `rei` is refused, as is any viewer on a node that pins none.
+// 26.3). `recipe_viewer` is one global property and every node is configured on every invocation, so a viewer this node
+// cannot load (`rei`, or any on a node that pins none) falls back to the node's default with a note instead of failing the
+// whole build: `-Precipe_viewer=rei` on a NeoForge or Fabric run must not die in a Forge node's configuration (#224).
 val jeiVersion = findProperty("jei_version")?.toString()
-val recipeViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: (if (jeiVersion != null) "jei" else "none")
-if (recipeViewer != "none" && (recipeViewer != "jei" || jeiVersion == null)) {
-    throw GradleException("recipe_viewer on this Forge node must be 'none'" +
-            (if (jeiVersion != null) " or 'jei'" else "") + ", not '$recipeViewer'")
+val defaultViewer = if (jeiVersion != null) "jei" else "none"
+val askedViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: defaultViewer
+val recipeViewer = if (askedViewer == "none" || (askedViewer == "jei" && jeiVersion != null)) askedViewer else {
+    logger.info("[${project.name}] recipe_viewer '$askedViewer' has no build on this Forge node; using '$defaultViewer'")
+    defaultViewer
 }
 
 repositories {
@@ -262,6 +259,29 @@ dependencies {
 // pass this node's compile gate vacuously (the edge bc.fabric states for the same reason).
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
+// The deprecated-API guard, the Fabric node's twin (AGENTS.md: no deprecated APIs; suppress only on the narrowest element,
+// with a one-line why). ForRemovalApiGuardTester is a unit test and there are none here, so javac itself is the guard: the
+// main compile and the game-test compile lint deprecation and removal and fail on any warning (-Werror), so an unsuppressed
+// [deprecation] and every [removal] stops the build. Both compiles emit no other warning on any Forge node today, so a new
+// non-lint warning would fail them too and is fixed the same way. Forge deprecates vanilla constructors and fields that shared
+// code uses on NeoForge and Fabric (LiquidBlock, BucketItem, Block.BLOCK_STATE_REGISTRY): those go through Platform seams, see
+// docs/forge-port.md (Deprecations). `-PbcLint=...` (the opt-in lint audit, build.gradle.kts) turns -Werror off so the audit
+// can list every category's hits without failing on them.
+val deprecationGuarded = listOf("compileJava", "compileTestJava")
+deprecationGuarded.forEach { name ->
+    tasks.named<JavaCompile>(name) {
+        options.compilerArgs.add("-Xlint:deprecation,removal")
+        if (!project.hasProperty("bcLint")) {
+            options.compilerArgs.add("-Werror")
+        }
+    }
+}
+tasks.register("checkDeprecations") {
+    group = "verification"
+    description = "Compiles the main and game-test source sets with -Xlint:deprecation,removal -Werror (the Forge node's deprecated-API guard)."
+    dependsOn(deprecationGuarded)
+}
+
 // No unit tests: FML-JUnit has no Forge twin (docs/platform-layer.md, test plan). The game tests are below.
 tasks.named("test") { enabled = false }
 
@@ -417,6 +437,6 @@ tasks.register<Copy>("buildAndCollect") {
 // collected jar and the game tests. The NeoForge twin in bc.neoforge adds unit tests (there are none on Forge: FML-JUnit has no twin).
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Forge node's share of fullTestSuite: compileJava, the Forge data transform, the collected jar and the game tests."
-    dependsOn("compileJava", "processResources", "jar", "buildAndCollect", "runGameTest")
+    description = "This Forge node's share of fullTestSuite: compileJava, the deprecated-API guard, the Forge data transform, the collected jar and the game tests."
+    dependsOn("compileJava", "checkDeprecations", "processResources", "jar", "buildAndCollect", "runGameTest")
 }

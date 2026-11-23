@@ -1,9 +1,10 @@
 // Two-client multiplayer smoke (scripts/smoke/multiplayer/mp.py): per-invocation username + quick-play-multiplayer for the client run and a
 // separate game directory for the server run, without touching build.gradle.kts.
-// NeoForge nodes only: it looks up the `neoForge` run extension, which a Fabric or MinecraftForge node does not have. A Forge
-// node needs no arm here: bc.forge.gradle.kts reads -PbcUser, -PbcQuickPlayServer and -PbcRunDir itself (mp.py passes those
-// instead, see run_switches), because ForgeGradle's client run carries `--username Dev` from the build itself, so the build is where
-// the name is replaced. A Fabric node is skipped by mp.py with a reason before it gets here.
+// NeoForge nodes only: it looks up the `neoForge` run extension, which a Fabric or MinecraftForge node does not have, and returns
+// at once on them. A Forge node needs no arm here: bc.forge.gradle.kts reads -PbcUser, -PbcQuickPlayServer and -PbcRunDir itself
+// (mp.py passes those instead, see run_switches), because ForgeGradle's client run carries `--username Dev` from the build itself,
+// so the build is where the name is replaced. A Fabric node needs no arm either: bc.fabric.gradle.kts reads the same three switches
+// (Loom's run configs take the user, the quick-play and the run directory there).
 allprojects { proj ->
     proj.afterEvaluate {
         def nf = proj.extensions.findByName('neoForge')

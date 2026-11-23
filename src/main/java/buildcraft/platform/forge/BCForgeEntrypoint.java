@@ -27,6 +27,9 @@ import buildcraft.platform.Platform;
  * extra steps is needed: FML runs the registry events and the setup phases itself, so there are no pending registrations
  * to flush and no queue of setup actions to run.
  *
+ * <p>The first step is {@link ForgeAccessTransformerProbe#check}: it logs whether the access transformer in the jar was
+ * applied, which nothing else on the boot path would show (the release test rig greps for the line).
+ *
  * <p>The boat drag needs no step here: {@code ForgeFlowingFluids.subscribe()} registers its listener
  * ({@code ForgeBoatFluids.register()}) with the fluids' own registrations (Forge has no per-entity tick event, which is
  * why NeoForge's entrypoint does it by hand).
@@ -35,6 +38,9 @@ import buildcraft.platform.Platform;
 public final class BCForgeEntrypoint {
 
     public BCForgeEntrypoint(FMLJavaModLoadingContext context) {
+        // First, before any of BuildCraft's own code runs: one log line saying whether the jar's access transformer
+        // applied.
+        ForgeAccessTransformerProbe.check();
         //? if >=1.21.10 {
         ForgeModBus.bind(context.getModBusGroup());
         //?} else {

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.Unpooled;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.DyeColor;
@@ -54,6 +55,7 @@ import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.ItemStackKey;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 
 import buildcraft.silicon.BCSiliconConfig;
 
@@ -156,7 +158,8 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
     /** Creates a comparator for BlockState based on their ID in the global block state registry. */
     private static Comparator<BlockState> blockStateComparator() {
-        return Comparator.comparingInt(state -> Block.BLOCK_STATE_REGISTRY.getId(state));
+        IdMapper<BlockState> ids = Platform.registries().blockStateIds();
+        return Comparator.comparingInt(ids::getId);
     }
 
     public static FacadeBlockStateInfo getInfoForBlock(Block block) {
@@ -382,7 +385,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
                             + nbtReadState + "\n !=\n\t" + info.state + "\n\tNBT = " + nbt + "\n)");
                     }
                     phasedState.writeToBuffer(testingBuffer);
-                    BlockState bufReadState = Block.BLOCK_STATE_REGISTRY.byId(testingBuffer.readVarInt());
+                    BlockState bufReadState = Platform.registries().blockStateIds().byId(testingBuffer.readVarInt());
                     if (bufReadState != info.state) {
                         throw new IllegalStateException("Read (from buffer) state was different! (\n\t"
                             + bufReadState + "\n !=\n\t" + info.state + "\n)");

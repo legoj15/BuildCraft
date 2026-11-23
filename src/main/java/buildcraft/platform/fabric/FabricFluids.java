@@ -6,15 +6,20 @@
 package buildcraft.platform.fabric;
 
 //? if fabric {
-/*import javax.annotation.Nullable;
+/*import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 
@@ -25,6 +30,7 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.FluidProperties;
 import buildcraft.platform.FluidServices;
+import buildcraft.platform.hook.FluidBlockExtras;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
@@ -57,6 +63,17 @@ public final class FabricFluids implements FluidServices {
     @Override
     public BCFluidRegistrar createRegistrar(String namespace) {
         return new FabricFlowingFluids(namespace);
+    }
+
+    @Override
+    public LiquidBlock liquidBlock(Supplier<? extends FlowingFluid> fluid, BlockBehaviour.Properties properties,
+            FluidBlockExtras extras) {
+        return new FabricFluidBlock(fluid.get(), properties, extras);
+    }
+
+    @Override
+    public BucketItem bucketItem(Supplier<? extends Fluid> fluid, Item.Properties properties) {
+        return new BucketItem(fluid.get(), properties);
     }
 
     @Override

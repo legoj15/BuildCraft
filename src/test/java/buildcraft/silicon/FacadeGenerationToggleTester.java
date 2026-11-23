@@ -14,13 +14,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.core.BCUnifiedConfig;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 import buildcraft.silicon.plug.FacadePhasedState;
 import buildcraft.silicon.plug.FacadeStateManager;
 
@@ -102,7 +102,7 @@ public class FacadeGenerationToggleTester extends VanillaSetupBaseTester {
             // in the disabled-mode fallback and kill the facade buffer decode (no in-tree caller today: facades
             // sync as NBT).
             PacketBufferBC unknown = PacketBufferBC.asPacketBufferBc(Unpooled.buffer());
-            unknown.writeVarInt(Block.BLOCK_STATE_REGISTRY.size() + 100);
+            unknown.writeVarInt(Platform.registries().blockStateIds().size() + 100);
             unknown.writeBoolean(true);
             unknown.writeEnumValue(DyeColor.RED);
             unknown.writeBoolean(true);

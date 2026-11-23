@@ -6,6 +6,8 @@
 
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.Optional;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -248,7 +250,9 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                 int offsetHash = offset.hashCode();
                 if (progress < target) {
                     // Ask before the first power of a cycle, so a refused block costs none; the answer holds for the
-                    // cycle (the permit), and the break itself asks once more in case a claim appeared meanwhile.
+                    // cycle (the permit), and the break itself asks once more in case a claim appeared meanwhile. A
+                    // destroy a protection mod vetoes on its own (no ask under minePlayerProtected) costs one cycle's
+                    // power per STRIPES window: the veto is only seen when the break happens.
                     if (!refusals.isPermitted(offset, state, owner)) {
                         if (!mayBreak((ServerLevel) world, offset)) {
                             return;
@@ -261,12 +265,14 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                         crackedPos = offset;
                     }
                 } else if (mayBreak((ServerLevel) world, offset)) {
-                    BlockUtil.breakBlockAndGetDropsWithXp(
+                    Optional<BlockUtil.BreakResult> broken = BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) world,
                         offset,
                         new ItemStack(Items.DIAMOND_PICKAXE),
                         pipe.getHolder().getOwner()
-                    ).ifPresent(result -> {
+                    );
+                    if (broken.isPresent()) {
+                        BlockUtil.BreakResult result = broken.get();
                         result.drops().forEach(stack -> sendItem(stack, direction));
                         // XP at the broken-block position rather than the pipe — the stripes
                         // pipe is a thin transient digger, the player is usually right where
@@ -275,9 +281,16 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                             world.getBlockState(offset).getBlock()
                                 .popExperience((ServerLevel) world, offset, result.xp());
                         }
-                    });
-                    progress = 0;
-                    refusals.revokePermit();
+                        progress = 0;
+                        refusals.revokePermit();
+                    } else {
+                        // The block is still standing although mayBreak said yes: a protection mod cancelled the
+                        // destroy itself (the pipe's own ask is skipped under minePlayerProtected, so this is the one
+                        // place that refusal shows). Park it as mayBreak parks an ask the mod refused, or the next
+                        // tick would re-permit and charge the whole break again.
+                        endCycle(world);
+                        refusals.remember(world, offset, owner);
+                    }
                 }
             }
         } else {

@@ -13,12 +13,15 @@ import java.util.List;
 import java.util.function.Function;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 //? if >=26.1 {
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
@@ -143,6 +146,11 @@ public final class FabricRegistryServices implements RegistryServices {
             }
             return holder;
         }
+    }
+
+    @Override
+    public IdMapper<BlockState> blockStateIds() {
+        return Block.BLOCK_STATE_REGISTRY;
     }
 
     @Override

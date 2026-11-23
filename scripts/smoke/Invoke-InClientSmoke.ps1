@@ -18,9 +18,11 @@
     1. Prepares versions/<node>/run-smoke/ — a game directory of its own (-PbcRunDir), so the hand-used run/ with its
        extra mods and saves is never touched: installs the node's McDevBridge jar, writes quiet/unpausing options.
     2. Boots :<node>:runClient straight into the "bc-smoke" save (-PbcQuickPlay). The first run on a node has no save
-       yet, so it creates one through the menus (Singleplayer -> Create New World) and renames it afterwards.
+       yet, so it creates one through the menus (Singleplayer -> Create New World) and renames it afterwards. A scenario
+       marked "startAt": "title" is booted without quick-play, to the title screen, and opens no world at all.
     3. Runs the scenario's steps (scripts/smoke/scenarios/*.json; format in scripts/smoke/README.md), screenshots
-       included, then collects every ERROR log line mentioning BuildCraft since the world loaded.
+       included, then collects every ERROR log line mentioning BuildCraft since the world loaded (since the title
+       screen, for a "startAt": "title" scenario).
     4. Saves the world, closes the client, and writes <OutDir>/<node>/report.json plus a combined summary.md.
 
   Screenshots are for a human (or agent) to look at; the pass/fail column only covers what the game can report
@@ -125,17 +127,6 @@ function Test-NodeViewer([string]$Node, [string]$Viewer) {
     if ($Viewer) { return @($script:NodeViewers[$Node]) -contains $Viewer.ToLowerInvariant() }
     return @($script:NodeViewers[$Node]).Count -gt 0
 }
-# Whether a node's quick-play is defective: `quickplay_drops_game_events=true` in its gradle.properties (1.21.1-forge: Forge
-# 52 loads a quick-played world before it starts its game event bus, and the integrated server crashes at the first loot
-# roll). Such a node boots to the title screen and its save is opened through Singleplayer (Open-SaveFromMenu).
-function Test-QuickPlayDefective([string]$Node) {
-    $props = Join-Path $Repo "versions/$Node/gradle.properties"
-    if (-not (Test-Path -LiteralPath $props)) { return $false }
-    foreach ($line in Get-Content -LiteralPath $props) {
-        if ($line -match '^\s*quickplay_drops_game_events\s*=\s*true\s*$') { return $true }
-    }
-    return $false
-}
 # What a loader's dev runtime lacks, by the capability names a scenario or a step lists in "needs". A scenario or step that
 # needs one the node lacks is SKIPPED with the reason (never failed): it asks for something the node cannot give. The
 # recipe viewers are per node, not per loader: "recipeViewer" is any viewer (the node's default one), "viewer:<name>" the
@@ -154,19 +145,8 @@ function Test-NodeDefinesMod([string]$Node, [string]$Alias) {
     $defined = $false
     foreach ($line in Get-Content -LiteralPath $props) {
         if ($line -match ('^\s*withmod\.' + [regex]::Escape($Alias.ToLowerInvariant()) + '\s*=')) { $defined = $true }
-        # `withmods_compile_only=<alias>[,<alias>]`: the pin is there for the compile only and its mod cannot load on this
-        # node's dev runtime (#228), so a scenario that names it is skipped like one whose alias is missing.
-        if ($line -match '^\s*withmods_compile_only\s*=\s*(.+)$') {
-            if (@($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() }) -contains $Alias.ToLowerInvariant()) { return $false }
-        }
     }
     return $defined
-}
-# True when the node's gradle.properties says `config_screen=false` (1.21.1-forge, #225: no config screen there).
-function Test-NodeLacksConfigScreen([string]$Node) {
-    $props = Join-Path $Repo "versions/$Node/gradle.properties"
-    if (-not (Test-Path -LiteralPath $props)) { return $false }
-    return [bool](Get-Content -LiteralPath $props | Where-Object { $_ -match '^\s*config_screen\s*=\s*false\s*$' })
 }
 function Get-LackReason($Needs, [string]$Node) {
     # The first capability of $Needs the node lacks, as "needs <what>"; $null when it lacks none.
@@ -180,9 +160,6 @@ function Get-LackReason($Needs, [string]$Node) {
             $viewer = $need.Substring(7)
             if (-not (Test-NodeViewer $Node $viewer)) { return "needs $viewer (this node does not pin it: no ${viewer}_version in versions/$Node/gradle.properties)" }
         }
-        if ($need -eq 'configScreen' -and (Test-NodeLacksConfigScreen $Node)) {
-            return "needs a config screen (this node has none: config_screen=false in versions/$Node/gradle.properties)"
-        }
         if ($lacks -and $lacks.ContainsKey($need)) { return "needs $($lacks[$need])" }
     }
     return $null
@@ -191,6 +168,23 @@ if ($Loader) { $Nodes = @($Nodes | Where-Object { (Get-NodeLoader $_) -eq $Loade
 if (-not $Nodes.Count) { throw 'no nodes to run (check -Nodes and -Loader)' }
 if (-not $Scenario) { $Scenario = Join-Path $PSScriptRoot 'scenarios/line8.json' }
 $ScenarioData = Get-Content -Raw -LiteralPath $Scenario | ConvertFrom-Json
+# A scenario's top-level "startAt" says where the client's first screen is: "world" (the default: quick-play into the save, or
+# create the world on a node's first run) or "title" (boot WITHOUT quick-play, wait for the title screen, open no world and make
+# no save). "title" is for a scenario that only needs the title screen and the menus behind it (the mod list, a config screen):
+# it needs no OS focus, where leaving a world takes the `pause` step's Esc, which an unfocused SDL3 window (26.3, Server1) drops.
+$StartAt = if ($ScenarioData.PSObject.Properties['startAt']) { ([string]$ScenarioData.startAt).Trim().ToLowerInvariant() } else { 'world' }
+if ($StartAt -notin @('world', 'title')) { throw "scenario '$($ScenarioData.name)': startAt must be 'title' or 'world', not '$($ScenarioData.startAt)'" }
+if ($StartAt -eq 'title') {
+    # The title screen has no world: a pause step would fall back to the OS focus path this flag exists to avoid, inWorld
+    # waits for a world that never loads, and coordinates are relative to a rig origin there is none of.
+    foreach ($s in @($ScenarioData.steps)) {
+        $why = if ($s.do -in @('pause', 'inWorld')) { "'$($s.do)' needs a world" }
+               elseif ($s.PSObject.Properties['at']) { "'at' coordinates need a world" }
+               elseif (($s | ConvertTo-Json -Compress -Depth 8) -cmatch '\{[XYZ]([+-]\d+)?\}') { 'coordinate tokens need a world' }
+        if ($why) { throw "scenario '$($ScenarioData.name)' starts at the title screen, but a step ($($s | ConvertTo-Json -Compress -Depth 8)): $why" }
+    }
+}
+$StartAtTitle = $StartAt -eq 'title'
 if (-not $OutDir) { $OutDir = Join-Path $Repo ("build/smoke/" + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
 # Absolute: screenshot paths are handed to the CLIENT, whose working directory is its run folder, not this one.
 $OutDir = [System.IO.Path]::GetFullPath($OutDir, (Get-Location).Path)
@@ -290,9 +284,14 @@ function Remove-TreeWithRetry([string]$Path) {
 # queries): the repeat finds the work done and its "did not change" / "could not set the block" replies are the ones the cmd step
 # already forgives (in English runs). A command that is not (clear, a claim, a team command) answers the repeat with a failure, so
 # such a step can fail after a timeout though its first attempt worked: never a false pass, and the step failed before retries too.
+# A command that generates chunks on the tick thread (spreadplayers, place, forceload add, locate) asks the bridge to wait 30 s
+# instead of its 5 s default (#216), so the first attempt ends it and a retry does not repeat it; a bridge jar older than 1.4.4
+# ignores the field and only the retry is left.
 function Invoke-ServerCommand([string]$Command, [int]$Attempts = 3) {
+    $body = @{ command = $Command }
+    if ($Command -match '^\s*/?(spreadplayers|place|forceload\s+add|locate)\b') { $body.timeoutMs = 30000 }
     for ($attempt = 1; ; $attempt++) {
-        try { return Invoke-Bridge POST '/command' @{ command = $Command } } catch {
+        try { return Invoke-Bridge POST '/command' $body } catch {
             if ($attempt -ge $Attempts -or "$_" -notmatch 'TimeoutException') { throw }
             Start-Sleep -Seconds 2
         }
@@ -305,6 +304,13 @@ function Wait-NoOverlay {
     # No screen at all is a real failure (a previous step didn't open it) — fail now, not after the 60 s overlay wait.
     if (-not (Get-ScreenClass)) { throw 'no screen is open' }
     Wait-Until { -not (Invoke-Bridge POST '/screenclick' @{ list = $true }).overlay } 60 'the loading overlay to clear' | Out-Null
+}
+
+# The client booted to the title screen and finished its loading overlay: the point every no-quick-play start (a scenario's
+# "startAt": "title", a first run's New-SmokeWorld) begins from.
+function Wait-TitleScreen([int]$TimeoutSec = 300) {
+    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } $TimeoutSec 'the title screen' 1000 | Out-Null
+    Wait-NoOverlay
 }
 
 function Wait-InWorld([int]$TimeoutSec = 300) {
@@ -623,8 +629,7 @@ function Invoke-MenuClick([string]$Text) {
 function New-SmokeWorld {
     # Fresh run-smoke dir: Singleplayer opens the create screen directly when there are no saves; an older run dir
     # that somehow has saves lands on the world list, which has its own "Create New World" button.
-    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
-    Wait-NoOverlay
+    Wait-TitleScreen
     Invoke-MenuClick 'Singleplayer'
     $screen = Wait-Until { $c = Get-ScreenClass; if ($c -match 'CreateWorldScreen|SelectWorldScreen') { $c } } 60 'the world screens'
     if ($screen -match 'SelectWorldScreen') {
@@ -658,41 +663,10 @@ function New-SmokeWorld {
     }
 }
 
-function Open-SaveFromMenu([string]$Save) {
-    # The quick-play path by hand, for a node whose quick-play is defective (Test-QuickPlayDefective): Singleplayer, the
-    # save's folder name typed into the search box (focused when the screen opens) so it is the only entry, a click on the
-    # entry's row to select it, then "Play Selected World". The row is the world list's first: its top is the list's top
-    # plus 4, and it is 36 high (vanilla WorldSelectionList, 1.21.1); the click lands right of the 32-pixel icon, which
-    # would join on its own and bypass the button this path checks.
-    Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
-    Wait-NoOverlay
-    Invoke-MenuClick 'Singleplayer'
-    Wait-Until { (Get-ScreenClass) -match 'SelectWorldScreen' } 120 'the world list' 1000 | Out-Null
-    Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Save } | Out-Null
-    # The list reads the saves off the game thread, so the row may not exist at the first click: click it until the
-    # button turns active (it is inactive while nothing is selected).
-    $script:listing = $null
-    try { Wait-Until {
-        $script:listing = Invoke-Bridge POST '/screenclick' @{ list = $true }
-        if (@($script:listing.widgets | Where-Object { "$($_.text)" -eq 'Play Selected World' -and $_.active }).Count) { return $true }
-        $list = @($script:listing.widgets | Where-Object { $_.class -match 'WorldSelectionList' }) | Select-Object -First 1
-        if ($list) { $top = [int]$list.y; $mid = [int]$list.x + [int]([int]$list.width / 2) }
-        else { $top = 48; $mid = [int]([int]$script:listing.width / 2) }
-        Invoke-Bridge POST '/screenclick' @{ x = $mid; y = $top + 4 + 18 } | Out-Null
-        Start-Sleep -Milliseconds 400   # past the list's 250 ms double-click window: the next click selects, never joins
-        $false
-    } 60 "'Play Selected World' to turn active" 1000 | Out-Null }
-    catch {
-        $seen = @($(if ($script:listing) { $script:listing.widgets }) | ForEach-Object { "$($_.class) '$($_.text)' @$($_.x),$($_.y) $($_.width)x$($_.height) active=$($_.active)" }) -join '; '
-        throw "could not select '$Save' on the world list: $($_.Exception.Message) (widgets: $seen)"
-    }
-    Invoke-MenuClick 'Play Selected World'
-    Write-Host "note: opened '$Save' through Singleplayer (this node's quick-play is defective)"
-}
-
 # ── Scenario steps ───────────────────────────────────────────────────────────
 
-$Base = @($ScenarioData.base)   # the rig's origin; step coordinates are relative to it
+# The rig's origin; step coordinates are relative to it. A "startAt": "title" scenario opens no world and has none.
+$Base = @(if ($ScenarioData.PSObject.Properties['base']) { $ScenarioData.base })
 
 function Expand-Coords([string]$Text) {
     # {X}, {Y+2}, {Z-1}: the scenario base plus an offset.
@@ -728,7 +702,7 @@ function Get-SkipReason([string]$Node) {
     $own = @()
     if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
     if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
-        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias>, or a compile-only one, in versions/$Node/gradle.properties)"
+        return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias> in versions/$Node/gradle.properties)"
     }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)
@@ -1016,7 +990,8 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $detail = "${rel}: $((Get-Content -Raw -LiteralPath $full).Trim())"
         }
         # Esc into the game window: opens the pause menu from the world (see Send-GameEscape). Follow with
-        # `click` "Save and Quit to Title" to leave the world.
+        # `click` "Save and Quit to Title" to leave the world. A scenario that only wants the title screen should not play a
+        # world to leave it: it takes "startAt": "title" instead (no Esc, so no OS focus needed).
         'pause' {
             Send-GameEscape
             # GLFW nodes open the menu from the posted message; SDL3 (26.3) needs the window in front, so retry focused.
@@ -1099,7 +1074,7 @@ try {
         $nodeOut = Join-Path $OutDir $node
         New-Item -ItemType Directory -Force -Path $nodeOut | Out-Null
         Write-Host "[$node] preparing"
-        $report = [ordered]@{ node = $node; loader = (Get-NodeLoader $node); lang = $Lang; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
+        $report = [ordered]@{ node = $node; loader = (Get-NodeLoader $node); lang = $Lang; scenario = $ScenarioData.name; startAt = $StartAt; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
         $client = $null
         $prep = $null
         try {
@@ -1110,26 +1085,26 @@ try {
             # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
             # Open Parties and Claims on Forge (#215): a world's first write of its server config dies on Windows (Forge Config
             # API Port renames a file it still holds open; docs/forge-port.md), and every run of an OPAC scenario plays a fresh
-            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from any
-            # world a dead first boot left behind (the file it leaves is complete). Before the fresh-save delete below.
+            # copy of its seed save. A file in <gameDir>/defaultconfigs is copied instead of written, so seed it from the
+            # complete default file shipped in scripts/smoke/seeds (#232; OPAC's keys are the same on every line, only
+            # 1.21.1's default entity names differ). Before the fresh-save delete below.
             if ((Get-NodeLoader $node) -eq 'forge' -and $ModAliases -contains 'opac') {
                 $opacSeed = Join-Path $prep.RunDir 'defaultconfigs/openpartiesandclaims-server.toml'
                 if (-not (Test-Path -LiteralPath $opacSeed)) {
-                    $left = @(Get-ChildItem -File -Path (Join-Path $prep.RunDir 'saves/*/serverconfig/openpartiesandclaims-server.toml') -ErrorAction SilentlyContinue |
-                        Where-Object Length -gt 0) | Select-Object -First 1
-                    if ($left) {
-                        New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
-                        Copy-Item -LiteralPath $left.FullName -Destination $opacSeed
-                        Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $($left.Directory.Parent.Name)"
-                    } else {
-                        Write-Warning "[$node] no Open Parties and Claims server config to seed yet: this first boot is expected to die writing it (#215); run the scenario again and it is seeded from what that boot leaves"
-                    }
+                    $shipped = Join-Path $PSScriptRoot "seeds/openpartiesandclaims-server.$(Get-NodeMcVersion $node).toml"
+                    if (-not (Test-Path -LiteralPath $shipped)) { $shipped = Join-Path $PSScriptRoot 'seeds/openpartiesandclaims-server.toml' }
+                    New-Item -ItemType Directory -Force -Path (Split-Path $opacSeed) | Out-Null
+                    Copy-Item -LiteralPath $shipped -Destination $opacSeed
+                    Write-Host "[$node] note: seeded defaultconfigs/openpartiesandclaims-server.toml from $(Split-Path -Leaf $shipped)"
                 }
             }
             $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
             if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
             $haveSave = Test-Path $savePath
-            if ($PlaySave -ne $SaveName) {
+            # A "startAt": "title" scenario opens no world, so every save step below is skipped for it: no seed copy or fresh-save
+            # delete (-Save, -SaveSeed and -FreshSave, which the batch passes to every scenario, change nothing for it), no
+            # English-only first-run check, no extra saves. Quick-play is off with it.
+            if ($PlaySave -ne $SaveName -and -not $StartAtTitle) {
                 $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
                 # Only with its seed in hand: a mistyped seed must not cost the save it was meant to replace.
                 if ($WantFresh -and (Test-Path -LiteralPath $playPath) -and $PlaySeed -and $PlaySeed -ne $PlaySave -and (Test-Path -LiteralPath (Join-Path $prep.RunDir "saves/$PlaySeed"))) {
@@ -1145,23 +1120,26 @@ try {
                     Copy-Item -Recurse -LiteralPath $seedPath -Destination $playPath
                 }
             }
-            $quickPlay = $haveSave -or ($PlaySave -ne $SaveName)
+            $quickPlay = -not $StartAtTitle -and ($haveSave -or ($PlaySave -ne $SaveName))
             # The first run creates the world by clicking the English menu buttons.
-            if (-not $quickPlay -and $Lang -ne 'en_us') { throw "$node has no '$SaveName' save yet: run once without -Lang to create it" }
+            if (-not $quickPlay -and -not $StartAtTitle -and $Lang -ne 'en_us') { throw "$node has no '$SaveName' save yet: run once without -Lang to create it" }
             # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
             # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
-            if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
+            if ($haveSave -and -not $StartAtTitle -and $ScenarioData.PSObject.Properties['extraSaves']) {
                 foreach ($extra in @($ScenarioData.extraSaves)) {
                     $extraPath = Join-Path $prep.RunDir "saves/$extra"
                     if (-not (Test-Path $extraPath)) { Copy-Item -Recurse -LiteralPath $savePath -Destination $extraPath }
                 }
             }
-            Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
-            $menuPlay = $quickPlay -and (Test-QuickPlayDefective $node)
-            $client = Start-Client $node $prep.RunDir ($quickPlay -and -not $menuPlay) $nodeOut
+            Write-Host "[$node] booting client ($(if ($StartAtTitle) { 'start at the title screen: no quick-play, no world' } elseif ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
+            $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
             $report.bridgeVersion = $client.BridgeVersion
-            if ($menuPlay) { Open-SaveFromMenu $PlaySave }
-            if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
+            if ($StartAtTitle) {
+                # Where the scenario's steps begin: the title screen, loading overlay gone, no world opened or created.
+                Wait-TitleScreen
+            } else {
+                if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
+            }
             $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
 
             Write-Host "[$node] running $(@($ScenarioData.steps).Count) steps"

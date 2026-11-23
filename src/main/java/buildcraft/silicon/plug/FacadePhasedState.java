@@ -13,7 +13,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.BCLog;
@@ -23,6 +22,7 @@ import buildcraft.api.facades.IFacadeState;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 
 public class FacadePhasedState implements IFacadePhasedState {
     public final FacadeBlockStateInfo stateInfo;
@@ -68,7 +68,7 @@ public class FacadePhasedState implements IFacadePhasedState {
 
     public static FacadePhasedState readFromBuffer(PacketBufferBC buf) {
         int stateId = buf.readVarInt();
-        BlockState state = Block.BLOCK_STATE_REGISTRY.byId(stateId);
+        BlockState state = Platform.registries().blockStateIds().byId(stateId);
         boolean hasColour = buf.readBoolean();
         DyeColor colour = hasColour ? buf.readEnumValue(DyeColor.class) : null;
         if (state == null) {
@@ -77,7 +77,7 @@ public class FacadePhasedState implements IFacadePhasedState {
             // PluggableDefinition.loadFromBuffer today (facades sync as NBT, which reads an unknown block as air),
             // so this guards the API's buffer contract for the day it is wired, not a live crash.
             BCLog.logger.warn("[silicon.facade] Block state id " + stateId + " is not in this side's registry ("
-                + Block.BLOCK_STATE_REGISTRY.size() + " states); showing an empty facade");
+                + Platform.registries().blockStateIds().size() + " states); showing an empty facade");
             return new FacadePhasedState(FacadeStateManager.defaultState, colour);
         }
         return new FacadePhasedState(FacadeStateManager.resolve(state), colour);
@@ -85,7 +85,7 @@ public class FacadePhasedState implements IFacadePhasedState {
 
     public void writeToBuffer(PacketBufferBC buf) {
         try {
-            buf.writeVarInt(Block.BLOCK_STATE_REGISTRY.getId(stateInfo.state));
+            buf.writeVarInt(Platform.registries().blockStateIds().getId(stateInfo.state));
         } catch (Throwable t) {
             throw new IllegalStateException("Writing facade block state\n\tState = " + stateInfo.state, t);
         }

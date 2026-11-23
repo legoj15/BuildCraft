@@ -23,8 +23,8 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # runServer work, :<node>-forge:runGameTest runs the shared game tests (the gate; in :<node>-forge:nodeVerification, which
 # fullTestSuite runs). No JUnit tests on them. The run tasks honour -PbcDebug, -PbcQuickPlay, -PbcRunDir (client and
 # server), -PbcUser=<name> and -PbcQuickPlayServer=<host:port> (a second client for the multiplayer rig) and -PwithMods.
-# Only 1.21.1-forge wires a recipe viewer (JEI; -Precipe_viewer=none for none). Quick-play is defective on that Forge line
-# (quickplay_drops_game_events in its gradle.properties, #226): open saves through Singleplayer, as the smoke runner does.
+# Only 1.21.1-forge wires a recipe viewer (JEI; -Precipe_viewer=none for none). Quick-play works there through a client
+# mixin that starts Forge 52's game event bus before the join (QuickPlayMixin, #226).
 # Forge jars are built but held back from a release by the release tool's ship gate until the user says otherwise.
 # Standing design, per-line facts and what is not exercised: docs/forge-port.md. Forge sources per line: .forge-ref/
 # (bash scripts/forge-sources-sync.sh), the Forge twin of .neoforge-ref/.
@@ -49,7 +49,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # `withmod.opac` is also the compile-only pin of `lib.compat.claims.OpenPartiesAndClaims` (#203): every node compiles the shared source against that jar (`WithMods.compileCoordinate`; the alias must keep its `maven.modrinth:open-parties-and-claims` coordinate), and the jar reaches a runtime only through `-PwithMods=opac`.
 ./gradlew :26.3-fabric:runClient
 ./gradlew :26.3-fabric:runServer
-# Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> and -PbcRunDir=<dir> on the client), as the NeoForge ones do; on Fabric -PbcRunDir is the game dir only (Loom fixes the working dir, so logs stay in run/), and runServer ignores it and says so.
+# Both Fabric run tasks set buildcraft.dev and honour -PbcDebug[=tier] (and -PbcQuickPlay=<save> and -PbcRunDir=<dir> on the client), as the NeoForge ones do; on Fabric -PbcRunDir moves the client and server runs' working directory (logs included), and both run tasks also take -PbcUser=<name> and -PbcQuickPlayServer=<host:port> for the multiplayer rig (#217).
 # A Fabric dev run loads no recipe viewer unless asked: -Precipe_viewer=jei or =rei (the smoke runner always passes one).
 
 # Unit tests / headless game tests

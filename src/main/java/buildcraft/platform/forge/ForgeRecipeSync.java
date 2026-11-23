@@ -205,6 +205,9 @@ public final class ForgeRecipeSync {
         if (batch.index() == batch.count() - 1) {
             List<RecipeHolder<?>> complete = List.copyOf(run);
             run = null;
+            // The only trace of a finished run on the client: single-player masks a missing one (the guide falls back to
+            // the integrated server's recipes), and on a remote server it shows as empty panels. scene_guide.py greps this line.
+            BCLog.logger.info("[recipe sync] received {} recipes in {} batches", complete.size(), batch.count());
             for (Consumer<Collection<RecipeHolder<?>>> listener : CLIENT_LISTENERS) {
                 listener.accept(complete);
             }

@@ -75,7 +75,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
     }
 
     /**
-     * Attempts to transfer fluid between the given stack and this tank.
+     * Attempts to transfer fluid between the player's cursor item and this tank.
      * First tries to fill the tank from the item, then tries to drain the tank into the item.
      */
     private void transferStackToTank(Player player) {

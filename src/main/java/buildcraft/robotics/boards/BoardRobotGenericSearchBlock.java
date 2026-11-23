@@ -33,6 +33,7 @@ import buildcraft.robotics.BlockClaims;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
+import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.entity.RobotSleepReason;
@@ -246,6 +247,10 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      * every pass. A run of {@link WorkRefusals#GIVE_UP_AFTER} failures in a row sends the board to sleep, so a wall of
      * blocks it cannot work is not tried one by one.
      *
+     * <p>One kind of failure is told apart: a break the world refused ({@link AIRobotBreak#wasRefused()}) is remembered
+     * among the refusals ({@link WorkRefusals#refused}), exactly as the search's own permit probe refuses a block, so
+     * the board sleeps saying its work is protected rather than that it keeps failing.
+     *
      * @return true when this was the last failure the board tolerates: it should sleep now
      */
     protected final boolean finishAttempt(AIRobot ai) {
@@ -254,6 +259,8 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         boolean giveUp = false;
         if (ai.success() || level == null || pos == null || !isExpectedBlock(level, pos)) {
             refusals.succeeded();
+        } else if (ai instanceof AIRobotBreak breakAi && breakAi.wasRefused()) {
+            giveUp = refusals.refused(level, pos);
         } else {
             giveUp = refusals.failed(level, pos);
         }

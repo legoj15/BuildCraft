@@ -28,7 +28,10 @@ import buildcraft.api.crops.CropManager;
 import buildcraft.api.crops.ICropHandler;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.PlatformProtection;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotHarvest;
 import buildcraft.robotics.boards.FarmPlantRefusalTester.Fixture;
@@ -43,6 +46,10 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *
  * <p>Driven like {@link FarmPlantRefusalTester}: the boards are cycled by hand on an unadded, zone-pinned robot parked
  * on a station of its own, and each test counts the attempts its board made (the observable the loop shows up in).
+ *
+ * <p>A break the world refused is told apart from one that simply failed: a claim that lets the search's permit probe
+ * through but cancels the real break event leaves the stone standing, and the board remembers that as a refusal - so
+ * its empty search sleeps as protected work, not as work that keeps failing.
  */
 public class BreakFailureMemoryTester {
 
@@ -268,6 +275,45 @@ public class BreakFailureMemoryTester {
                 helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
                         "...saying its work keeps failing, got " + f.sleepReason());
             } finally {
+                clearRow(helper, xs);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A break the world refused is not a break that failed. The claim lets the search's permit probe through and cancels
+     * the real break event, so the stone still stands after the robot's swing: the board swings at it ONCE, parks it as
+     * refused and - finding nothing else - sleeps saying its work is protected, not that it keeps failing.
+     */
+    public static void breakBoardReportsARefusedBreakAsProtected(GameTestHelper helper) {
+        helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or the break asks nobody");
+        int[] xs = { 2 };
+        try (Fixture f = new Fixture(helper, new BlockPos(2, 2, 3))) {
+            placeRow(helper, Blocks.STONE, xs);
+            BlockPos stone = helper.absolutePos(new BlockPos(2, 1, 3));
+            f.robot.setItemInUse(new ItemStack(Items.DIAMOND_PICKAXE));
+            StoneAndBedrockBreaker board = new StoneAndBedrockBreaker(f.robot);
+            f.board = board;
+            // A claim as most are written: the permit probe passes, the break itself is what it refuses. Only this
+            // test's own stone is watched, so a sibling arena's breaks are never refused.
+            PlatformProtection.Registration claim = Platform.protection().onBreak(event -> {
+                if (event.pos().equals(stone) && !event.isProbe()) {
+                    event.cancel();
+                }
+            });
+            try {
+                boolean slept = f.cycleUntil(() -> f.asleep() || board.attemptsAt(stone) > 1);
+
+                helper.assertTrue(board.attemptsAt(stone) == 1,
+                        "the refused block is swung at once, not on every search - got " + board.attemptsAt(stone));
+                helper.assertTrue(slept, "with nothing left to break the board sleeps");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
+                helper.assertTrue(f.level.getBlockState(stone).is(Blocks.STONE), "the refused stone is untouched");
+            } finally {
+                claim.close();
                 clearRow(helper, xs);
             }
         }

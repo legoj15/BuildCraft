@@ -1272,6 +1272,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_board_does_not_retry_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardDoesNotRetryABlockItCannotBreak);
         reg.accept("buildcraftunofficial:robot_break_board_moves_on_from_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardMovesOnFromABlockItCannotBreak);
         reg.accept("buildcraftunofficial:robot_break_board_sleeps_after_repeated_failed_breaks", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardSleepsAfterRepeatedFailedBreaks);
+        // ...and a break a claim refused (probe allowed, event cancelled) is reported as protected work, not as failure.
+        reg.accept("buildcraftunofficial:robot_break_board_reports_a_refused_break_as_protected", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardReportsARefusedBreakAsProtected);
         reg.accept("buildcraftunofficial:robot_harvester_does_not_retry_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterDoesNotRetryAFailedHarvest);
         reg.accept("buildcraftunofficial:robot_harvester_moves_on_from_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterMovesOnFromAFailedHarvest);
         // The combat boards' entity predicates against REAL entities (no unit test can build one).

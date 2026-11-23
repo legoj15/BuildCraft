@@ -52,7 +52,8 @@ import buildcraft.robotics.RobotProtection;
  *
  *  <p>Before the first swing it asks protection mods, for the robot's deployer and its home station's owner alike
  *  ({@link RobotProtection#canBreak}); a refusal fails the AI without touching the block. The break then posts the
- *  event again, for real, and a protection mod may still refuse that one.
+ *  event again, for real, and a protection mod may still refuse that one. Whichever way the world refused it,
+ *  {@link #wasRefused()} says so, so the board can tell a veto from an ordinary failed break.
  *
  *  <p>While {@link BCCoreConfig#minePlayerProtected} is on - the "ignore protection mods" override that
  *  {@code RobotProtection#canBreak} already honours by asking nobody - the robot breaks silently through
@@ -64,6 +65,11 @@ public class AIRobotBreak extends AIRobot {
     private float blockDamage = 0;
     /** Whether protection mods let this robot break {@code blockToBreak}; null until asked. */
     private Boolean permitted = null;
+    /** Whether the world refused the break of a block that still stands - the permit probe was answered no, the real
+     *  break event was cancelled, or the removal itself was vetoed - so the board can tell a refusal from any other
+     *  failure. Not set for a block that was never breakable (air, negative hardness) or a break that ran out of
+     *  power or tool: those are nobody's refusal. */
+    private boolean refused;
 
     public AIRobotBreak(IRobotAccess iRobot) {
         super(iRobot);
@@ -106,6 +112,7 @@ public class AIRobotBreak extends AIRobot {
             permitted = RobotProtection.canBreak(robot, serverLevel, blockToBreak);
         }
         if (!permitted) {
+            refused = true;
             setSuccess(false);
             terminate();
             return;
@@ -168,6 +175,7 @@ public class AIRobotBreak extends AIRobot {
         player.gameMode.destroyBlock(blockToBreak);
         BlockUtil.resyncChangedBlocks(serverLevel, supportsBefore);
         if (serverLevel.getBlockState(blockToBreak) == state) {
+            refused = true;
             setSuccess(false);
         }
         // The tool broke on this block: the hand was left with the emptied stack, and the robot goes and fetches one.
@@ -201,8 +209,16 @@ public class AIRobotBreak extends AIRobot {
                 }
             }
         } else {
+            // Empty is also what a block turned unbreakable under the robot gives: that one is nobody's refusal.
+            refused = serverLevel.getBlockState(blockToBreak).getDestroySpeed(serverLevel, blockToBreak) >= 0;
             setSuccess(false);
         }
+    }
+
+    /** Whether the world refused this break of a block that still stands: the permit probe, the real break event or the
+     *  removal itself was vetoed by a protection mod, which the board records as a refusal rather than a failure. */
+    public boolean wasRefused() {
+        return refused;
     }
 
     @Override

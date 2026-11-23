@@ -288,10 +288,7 @@ final class ForgeFluidContainers {
      *  none like it (vanilla's {@code ItemUtils.createFilledResult}, which NeoForge's player item access follows). ^/
     private static void swapHeld(Player player, InteractionHand hand, ItemStack held, ItemStack result, boolean creative) {
         if (creative) {
-            if (!result.isEmpty() && !player.getInventory().contains(result)) {
-                player.getInventory().add(result);
-                player.containerMenu.broadcastChanges();
-            }
+            giveCreativeResult(player, result);
             return;
         }
         if (held.getCount() == 1) {
@@ -301,6 +298,16 @@ final class ForgeFluidContainers {
             giveOrDrop(player, result);
         }
         player.containerMenu.broadcastChanges();
+    }
+
+    /^* Vanilla's {@code ItemUtils.createFilledResult} for a creative player: the item they acted on is kept, and
+     *  {@code result} joins the inventory only when it holds none like it. Both creative branches use it — the
+     *  held-item swap and the cursor exchange. ^/
+    private static void giveCreativeResult(Player player, ItemStack result) {
+        if (!result.isEmpty() && !player.getInventory().contains(result)) {
+            player.getInventory().add(result);
+            player.containerMenu.broadcastChanges();
+        }
     }
 
     /^* Gives {@code stack} to the inventory, dropping what does not fit (lib's {@code EntityUtil.dropOverflow}). ^/
@@ -321,26 +328,20 @@ final class ForgeFluidContainers {
             return false;
         }
         if (player.getAbilities().instabuild) {
-            // Creative: act on the detached probe so the cursor item is never consumed. A full container fills the tank,
-            // an empty one drains a bucket's worth per click.
-            BCFluidStack contained = ForgeFluidStacks.fromForge(firstFluid(probe));
-            if (!contained.isEmpty()) {
-                try (BCTransaction tx = BCTransaction.openRoot()) {
-                    if (tank.insert(0, contained, contained.getAmount(), tx) > 0) {
-                        tx.commit();
-                    }
-                }
+            // Creative follows vanilla's ItemUtils.createFilledResult: the detached probe leaves the cursor item
+            // untouched, the fluid moves exactly as the survival path below moves it (a whole container's worth or
+            // nothing), and giveCreativeResult hands the filled or emptied container over only when the inventory
+            // holds none like it. No inventory fallback: that spends a container the player owns.
+            if (!moveToTank(probe, tank).isEmpty()) {
+                giveCreativeResult(player, probe.getContainer());
                 return true;
             }
-            BCFluidStack inTank = tank.size() > 0 ? tank.getStack(0) : BCFluidStack.EMPTY;
-            if (!inTank.isEmpty()) {
-                try (BCTransaction tx = BCTransaction.openRoot()) {
-                    if (tank.extract(0, inTank, Math.min(1000, inTank.getAmount()), tx) > 0) {
-                        tx.commit();
-                    }
-                }
+            IFluidHandlerItem container = handlerOf(carried.copyWithCount(1));
+            if (container != null && !moveFromTank(tank, container).isEmpty()) {
+                giveCreativeResult(player, container.getContainer());
+                return true;
             }
-            return true;
+            return false;
         }
         // Try filling the tank from the item.
         if (!moveToTank(probe, tank).isEmpty()) {

@@ -35,16 +35,18 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCItemStorage;
-import buildcraft.platform.transfer.BCTransaction;
 
 /**
  * Fluid container items on NeoForge, the bodies that used to sit in {@code FluidUtilBC} and {@code WidgetFluidTank}:
  * on 1.21.10+ through the Transfer API ({@code Capabilities.Fluid.ITEM} behind an {@code ItemAccess}), on 1.21.1
- * through the classic {@code FluidUtil} helpers, each arm exactly as it was, except the creative half of the held-item
- * interaction on 1.21.1: FluidUtil hands a creative player's container back unchanged, so that arm gives the filled
- * or emptied result itself (see {@link #interactWithHeldContainer}); survival keeps FluidUtil's own path.
+ * through the classic {@code FluidUtil} helpers, each arm exactly as it was, except the creative halves: the held-item
+ * interaction on 1.21.1, where FluidUtil hands a creative player's container back unchanged, so that arm gives the
+ * filled or emptied result itself (see {@link #interactWithHeldContainer}); and the cursor exchange, whose creative
+ * branch follows vanilla's {@code ItemUtils.createFilledResult} — the cursor item stays, the fluid moves a whole
+ * container's worth and the result is given once. Survival keeps its own path throughout.
  * {@code FluidContainerHelperTest} covers the slot helpers (read, is-container, drain, fill) with the same assertions
- * on every node; no test calls the held-item or cursor interactions.
+ * on every node; no test calls the held-item interaction, and the creative cursor exchange has
+ * {@code CreativeCursorTankTester}.
  */
 final class NeoForgeFluidContainers {
     private NeoForgeFluidContainers() {}
@@ -212,47 +214,21 @@ final class NeoForgeFluidContainers {
         boolean isCreative = player.getAbilities().instabuild;
         //? if >=1.21.10 {
         ResourceHandler<FluidResource> tankHandler = NeoForgeFluidStorages.toNeo(tank);
-        if (isCreative) {
-            // ItemAccess.forInfiniteMaterials had a nasty interaction with the bucket fluid
-            // capability: the move(bucket -> tank) path would swap the cursor bucket to an empty
-            // one via the infinite-materials sink but fail to actually commit the fluid into the
-            // tank, so the player lost their bucket AND got no fluid. Bypass the accessor here
-            // and do the bucket-fluid read against a detached copy so the cursor is untouched,
-            // then fill the tank with the bucket's full fluid contents.
-            ItemStack bucketCopy = carried.copy();
-            ResourceHandler<FluidResource> bucketCap =
-                    ItemAccess.forStack(bucketCopy).getCapability(Capabilities.Fluid.ITEM);
-            if (bucketCap == null || bucketCap.size() == 0) {
-                // A non-fluid-container item (e.g. an ice block): the caller tries its solid-coolant conversion.
-                return false;
-            }
-            FluidResource bucketFluid = bucketCap.getResource(0);
-            long bucketAmount = bucketCap.getAmountAsLong(0);
-            if (!bucketFluid.isEmpty() && bucketAmount > 0) {
-                try (Transaction tx = Transaction.openRoot()) {
-                    int filled = tankHandler.insert(0, bucketFluid, (int) bucketAmount, tx);
-                    if (filled > 0) {
-                        tx.commit();
-                    }
-                }
-                return true;
-            }
-            // Empty container in creative: drain one bucket's worth per click, don't swap
-            // the carried item (creative abundance — player keeps their empty bucket, tank
-            // gives up a bucket of fluid at a time matching the survival-mode feel).
-            if (!tankHandler.getResource(0).isEmpty() && tankHandler.getAmountAsLong(0) > 0) {
-                try (Transaction tx = Transaction.openRoot()) {
-                    int drained = tankHandler.extract(0, tankHandler.getResource(0),
-                            (int) Math.min(1000L, tankHandler.getAmountAsLong(0)), tx);
-                    if (drained > 0) {
-                        tx.commit();
-                    }
-                }
-            }
-            return true;
+        if (carried.isEmpty()) {
+            return false; // an empty cursor is nothing to exchange
         }
-        ResourceHandler<FluidResource> itemHandlerIn =
-                ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+        ResourceHandler<FluidResource> itemHandlerIn;
+        if (isCreative) {
+            // Vanilla's ItemUtils.createFilledResult: forInfiniteMaterials is NeoForge's implementation of that rule,
+            // so the cursor item is never taken and the filled or emptied result joins the main inventory only when it
+            // holds none like it.
+            // oneByOne as survival: over a stacked access a bucket's handler moves a whole stack's worth or nothing.
+            itemHandlerIn = ItemAccess.forInfiniteMaterials(player, carried).oneByOne()
+                    .getCapability(Capabilities.Fluid.ITEM);
+        } else {
+            itemHandlerIn = ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne()
+                    .getCapability(Capabilities.Fluid.ITEM);
+        }
         if (itemHandlerIn == null) {
             return false;
         }
@@ -270,6 +246,9 @@ final class NeoForgeFluidContainers {
                 return true;
             }
         }
+        if (isCreative) {
+            return false; // the inventory-bucket fallback below is survival-only: it fills a bucket the player owns
+        }
         // Cursor-direct flow above is one-shot per bucket: with a 1-stack bucket the
         // cursor swaps to a filled bucket on the first click, and a second click finds
         // the same fluid in the cursor and the tank with no room to grow on either side.
@@ -281,23 +260,24 @@ final class NeoForgeFluidContainers {
         /*if (!FluidUtil.getFluidHandler(carried.copy()).isPresent()) {
             return false;
         }
-        BCFluidStack contained = NeoForgeFluids.fromNeo(FluidUtil.getFluidContained(carried).orElse(FluidStack.EMPTY));
         if (isCreative) {
-            // Creative: act on a detached copy so the cursor item is never consumed.
-            if (!contained.isEmpty()) {
-                fill(tank, contained);
+            // Vanilla's ItemUtils.createFilledResult: FluidUtil acts on detached one-item copies, so the cursor item
+            // is never consumed, and giveCreativeResult hands the filled or emptied container over only when the
+            // inventory holds none like it. No inventory fallback: that spends a bucket the player owns.
+            IFluidHandler tankHandler = NeoForgeFluidStorages.toNeo(tank);
+            FluidActionResult emptied = FluidUtil.tryEmptyContainer(carried.copyWithCount(1), tankHandler,
+                    Integer.MAX_VALUE, player, true);
+            if (emptied.isSuccess()) {
+                giveCreativeResult(player, emptied.getResult());
                 return true;
             }
-            // Empty container in creative: drain one bucket's worth per click, cursor untouched.
-            BCFluidStack inTank = tank.getStack(0);
-            if (!inTank.isEmpty() && inTank.getAmount() > 0) {
-                try (BCTransaction tx = BCTransaction.openRoot()) {
-                    if (tank.extract(0, inTank, Math.min(1000, inTank.getAmount()), tx) > 0) {
-                        tx.commit();
-                    }
-                }
+            FluidActionResult filled = FluidUtil.tryFillContainer(carried.copyWithCount(1), tankHandler,
+                    Integer.MAX_VALUE, player, true);
+            if (filled.isSuccess()) {
+                giveCreativeResult(player, filled.getResult());
+                return true;
             }
-            return true;
+            return false;
         }
         IFluidHandler tankHandler = NeoForgeFluidStorages.toNeo(tank);
         ItemStack single = carried.copyWithCount(1);
@@ -377,15 +357,7 @@ final class NeoForgeFluidContainers {
     }
 
     //? if <1.21.10 {
-    /*private static void fill(BCFluidStorage tank, BCFluidStack stack) {
-        try (BCTransaction tx = BCTransaction.openRoot()) {
-            if (tank.insert(0, stack, stack.getAmount(), tx) > 0) {
-                tx.commit();
-            }
-        }
-    }
-
-    private static void updateCarried(Player player, ItemStack original, ItemStack result) {
+    /*private static void updateCarried(Player player, ItemStack original, ItemStack result) {
         if (original.getCount() == 1) {
             player.containerMenu.setCarried(result);
         } else {
@@ -396,10 +368,11 @@ final class NeoForgeFluidContainers {
         }
     }
 
-    // A creative player keeps the held item and is given the result only when the inventory holds none like it
-    // (nothing is dropped when it is full) — vanilla's createFilledResult, which FluidUtil's try*AndStow does not
-    // follow: in creative it hands the held container back unchanged and never stows the result. Survival never
-    // comes here; it goes through FluidUtil.interactWithFluidHandler.
+    // Vanilla's createFilledResult: a creative player keeps the item they acted on and is given the result only when
+    // the inventory holds none like it (nothing is dropped when it is full), which FluidUtil's try*AndStow does not
+    // follow: in creative it hands the container back unchanged and never stows the result. Both creative branches
+    // come here — the held-item one (whose survival twin goes through FluidUtil.interactWithFluidHandler) and the
+    // cursor exchange.
     private static void giveCreativeResult(Player player, ItemStack result) {
         if (!result.isEmpty() && !player.getInventory().contains(result)) {
             player.getInventory().add(result);

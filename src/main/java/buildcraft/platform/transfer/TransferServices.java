@@ -97,8 +97,7 @@ public interface TransferServices {
      * from {@code tank}, else (survival only) fill an empty container in the player's inventory. In creative it
      * follows vanilla's {@code ItemUtils.createFilledResult}: the cursor item never changes, one container's worth
      * moves, and the filled or emptied result joins the inventory only when it holds none like it (NeoForge checks
-     * the main inventory only). Returns whether
-     * fluid moved; false lets the caller try other conversions.
+     * the main inventory only). Returns whether fluid moved; false lets the caller try other conversions.
      */
     boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank);
 

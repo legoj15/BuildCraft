@@ -103,8 +103,8 @@ final class WorkRefusals {
     }
 
     /**
-     * An attempt at {@code pos} failed for a cause the board cannot name (a change under the robot, a block it cannot
-     * break, a refused use or till the board counts like any other failure): remembers the block among the failures
+     * An attempt at {@code pos} failed for a cause the board does not tell apart (a change under the robot, a block it
+     * cannot break; a refused use or till is counted here too, only a refused break goes to {@link #refused}): remembers the block among the failures
      * (when the level and the block are known) and counts the failure.
      *
      * @return true when this was the {@link #GIVE_UP_AFTER}th failure in a row - the board should stop for a while;

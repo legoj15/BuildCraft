@@ -404,8 +404,8 @@ also on 26.3; `mp.py` has since written a flat `generator-settings`, and later r
   `Found no elements` and then `No entity was found`). Mine: Worker mines the gold pipe under Mining Fatigue: the pipe is intact
   while it is being mined, and the break shows gold pipe-sprite fragments and the dropped pipe item on Watcher's screen (no crack
   particles on 26.2, 26.1.2 and 1.21.1, as on NeoForge 26.2; the server confirms the pipe holder is gone). `1.21.11-forge` also
-  shows one tiny white speck at the pipe's lower edge in every progress frame (not seen on the other lines, unexplained, not compared
-  with NeoForge 1.21.11). Tank (`tank-gui-worker`, `tank-gui-watcher`): the Tank GUI with a blue sliver at the bottom of its gauge
+  shows one tiny white speck at the pipe's lower edge in every progress frame (not seen on the other lines; #235: Forge 61's destroy pass
+  already cracks the pipe model, so the block-entity crack overlay drew it twice; fixed: 195 changed pixels in the pipe box before, 73 after, NeoForge 85). Tank (`tank-gui-worker`, `tank-gui-watcher`): the Tank GUI with a blue sliver at the bottom of its gauge
   on both clients, Watcher never having touched it. Engine (`engine-gui-worker`): the "Stirling Engine" GUI; `engine-rig-0..2`: the
   creative engine on its redstone block pushing power into the kinesis pipes. On `1.21.1-forge` JEI's item list is drawn beside
   every GUI (it is that node's default viewer).

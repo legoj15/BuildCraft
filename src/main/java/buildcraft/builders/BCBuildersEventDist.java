@@ -721,7 +721,7 @@ public enum BCBuildersEventDist {
                     cameraPos, collector
                 );
             }
-            // 1.21.11 has no SubmitCustomGeometryEvent, so the place-task throwing animation runs
+            // Below 26.1 there is no SubmitCustomGeometryEvent, so the place-task throwing animation runs
             // here (on RenderLevelStageEvent) instead of in renderAllBuildersCustomGeometry.
             //? if <26.1 {
             /*renderPlaceTaskCubes(active, cameraPos, poseStack, partialTicks);*/

@@ -52,6 +52,10 @@ What it showed (2026-11-22, run on 1.21.1, 1.21.1-forge, 26.3 and 26.3-forge, 90
     placeholder, and both loaders' pipe block models fall back to it when the model data holds no pipe. So the preview can
     neither show nor hide paint, and the Forge mixin's alpha scaling is never reached by it.
   - 26.3 and 26.3-forge draw the pipe ITEM model for a pipe task (a small plain pipe, unpainted), the same on both loaders.
+
+After #237 (2026-11-23, run on 1.21.1, 1.21.11 and 26.3, 90 steps each, all green): every pipe cube flies, painted. 1.21.1
+and 26.3 draw the painted pipe item model and look alike; 1.21.11 (and 1.21.10) draws a paint-tinted pipe-sprite cube, since
+that line has no item-model path at this render stage. The findings above are the pre-fix record.
 """
 import os
 import sys

@@ -202,7 +202,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
                                             VertexConsumer consumer) {
         //? if forge && <26.1 {
         /*boolean levelCracksModel = true;
-        *///?} else {
+        *///?} elif neoforge || fabric || forge {
         boolean levelCracksModel = false;
         //?}
         if (!levelCracksModel && PipeBlockModelQuads.INSTANCE.hasGeometry(pipe)) {

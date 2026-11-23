@@ -297,7 +297,7 @@
    "ms": 1800
   },
   {
-   "label": "the place tasks of the Builder: the items the cubes fly as (a plain pipe item each: no paint component)",
+   "label": "the place tasks of the Builder: the items the cubes fly as (the pipe items, carrying the paint component where the blueprint captured paint)",
    "do": "cmd",
    "run": [
     "data get block {X+15} {Y} {Z-2} builderClientData.placeTasks"

@@ -194,10 +194,18 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
      *  colour overlay and a translucent facade or lens bake only into the translucent list), which only the block
      *  entity can supply (the level's destroy pass draws the model without it, so finds no geometry), and the
      *  pluggables drawn per frame. Only positions and normals matter; the crack consumer supplies colour and texture
-     *  coordinates. */
+     *  coordinates.
+     *  <p>Forge 61 (1.21.11) is the exception: its destroy pass hands the model the block entity's model data, so the
+     *  level already cracks the block-model quads, and drawing them a second time here doubled the crack's blend into
+     *  a light speck (#235). There only the pluggables are emitted. Forge's 26.x lines pass no model data again. */
     private static void renderCrackGeometry(TilePipeHolder pipe, float partialTicks, PoseStack.Pose pose,
                                             VertexConsumer consumer) {
-        if (PipeBlockModelQuads.INSTANCE.hasGeometry(pipe)) {
+        //? if forge && <26.1 {
+        /*boolean levelCracksModel = true;
+        *///?} else {
+        boolean levelCracksModel = false;
+        //?}
+        if (!levelCracksModel && PipeBlockModelQuads.INSTANCE.hasGeometry(pipe)) {
             MutableQuad scratch = new MutableQuad();
             for (var quads : List.of(PipeBlockModelQuads.INSTANCE.cutoutQuads(pipe),
                     PipeBlockModelQuads.INSTANCE.translucentQuads(pipe))) {

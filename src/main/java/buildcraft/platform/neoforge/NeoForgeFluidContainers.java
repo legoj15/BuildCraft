@@ -23,7 +23,6 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
-import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
 //?} else {
 /*import net.neoforged.neoforge.fluids.FluidActionResult;
@@ -43,10 +42,10 @@ import buildcraft.platform.transfer.BCItemStorage;
  * interaction on 1.21.1, where FluidUtil hands a creative player's container back unchanged, so that arm gives the
  * filled or emptied result itself (see {@link #interactWithHeldContainer}); and the cursor exchange, whose creative
  * branch follows vanilla's {@code ItemUtils.createFilledResult} — the cursor item stays, the fluid moves a whole
- * container's worth and the result is given once. Survival keeps its own path throughout.
- * {@code FluidContainerHelperTest} covers the slot helpers (read, is-container, drain, fill) with the same assertions
- * on every node; no test calls the held-item interaction, and the creative cursor exchange has
- * {@code CreativeCursorTankTester}.
+ * container's worth and the result is given once. On 1.21.10+ the held-item interaction leaves the whole item swap to
+ * the one-item player-interaction access. {@code FluidContainerHelperTest} covers the slot helpers (read,
+ * is-container, drain, fill) with the same assertions on every node; {@code CreativeCursorTankTester} covers the
+ * cursor exchange and the held-item interaction with a held stack.
  */
 final class NeoForgeFluidContainers {
     private NeoForgeFluidContainers() {}
@@ -128,10 +127,12 @@ final class NeoForgeFluidContainers {
         if (world.isClientSide()) return true;
         //? if >=1.21.10 {
         ResourceHandler<FluidResource> fluidHandler = NeoForgeFluidStorages.toNeo(tank);
-        boolean isCreative = player.getAbilities().instabuild;
-        ItemStack singleCopy = held.copyWithCount(1);
+        // The player-interaction access does the whole item swap itself: in survival it takes one item from the hand
+        // slot and stows the result back there or in the inventory, in creative (forInfiniteMaterials) it keeps the
+        // hand and stows the result only when the inventory holds none like it (vanilla createFilledResult).
+        // oneByOne: over a stacked access a bucket's handler moves a whole stack's worth or nothing.
         ResourceHandler<FluidResource> itemHandlerIn =
-                singleCopy.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forPlayerInteraction(player, hand));
+                ItemAccess.forPlayerInteraction(player, hand).oneByOne().getCapability(Capabilities.Fluid.ITEM);
         if (itemHandlerIn != null) {
             // First try draining tank -> item (filling bucket)
             try (Transaction tx = Transaction.openRoot()) {
@@ -142,7 +143,7 @@ final class NeoForgeFluidContainers {
                     if (!tankFluid.isEmpty()) {
                         SoundUtil.playBucketFill(world, pos, NeoForgeFluidStorages.stackOf(tankFluid, moved));
                     }
-                    swapHeld(player, hand, held, singleCopy, isCreative);
+                    player.containerMenu.broadcastChanges();
                     return true;
                 }
             }
@@ -156,7 +157,7 @@ final class NeoForgeFluidContainers {
                     if (!itemFluid.isEmpty()) {
                         SoundUtil.playBucketEmpty(world, pos, NeoForgeFluidStorages.stackOf(itemFluid, moved));
                     }
-                    swapHeld(player, hand, held, singleCopy, isCreative);
+                    player.containerMenu.broadcastChanges();
                     return true;
                 }
             }
@@ -192,22 +193,6 @@ final class NeoForgeFluidContainers {
         return false;*/
         //?}
     }
-
-    //? if >=1.21.10 {
-    private static void swapHeld(Player player, InteractionHand hand, ItemStack held, ItemStack singleCopy,
-            boolean isCreative) {
-        if (isCreative) return;
-        if (held.getCount() == 1) {
-            player.setItemInHand(hand, singleCopy);
-        } else {
-            held.shrink(1);
-            if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                EntityUtil.dropOverflow(player, singleCopy);
-            }
-        }
-        player.containerMenu.broadcastChanges();
-    }
-    //?}
 
     static boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank) {
         ItemStack carried = player.containerMenu.getCarried();

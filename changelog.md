@@ -6,3 +6,4 @@
 - With "Mine Player Protected Blocks" off, a Builder, Quarry, Mining Well or Stripes pipe that a claim mod stops from breaking a block now skips it and carries on, instead of retrying it forever or stalling. The Builder's status now says the block was refused.
 - Minecraft 1.21.1 (NeoForge): emptying a creative-mode bucket into a tank no longer replaces the bucket.
 - Creative mode: clicking a tank's gauge with a bucket on the cursor now works like using a bucket in the world. The cursor bucket stays, one bucket's worth moves per click, and you get the filled or emptied bucket unless you already have one. Before, draining just deleted the fluid.
+- Minecraft 1.21.10 and later (NeoForge): right-clicking a tank while holding a stack of buckets now fills or empties one of them, as with a single bucket.

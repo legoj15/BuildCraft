@@ -307,24 +307,18 @@ public final class FabricTransfer implements TransferServices {
         ItemStack carried = player.containerMenu.getCarried();
         Storage<FluidVariant> tankStorage = FabricFluidStorages.toFabric(tank);
         if (player.getAbilities().instabuild) {
-            // Creative: the cursor item never changes. A full container fills the tank, an empty one drains a bucket.
-            if (!isFluidContainer(carried)) {
+            // Creative follows vanilla's ItemUtils.createFilledResult: the creative-interaction context is Fabric's
+            // implementation of that rule, so the cursor item never changes and the filled or emptied result joins the
+            // inventory only when it holds none like it. No inventory fallback: that spends a container the player owns.
+            if (carried.isEmpty()) {
                 return false;
             }
-            BCFluidStack contained = getFluidContained(carried);
-            try (BCTransaction tx = openRoot()) {
-                int moved;
-                if (!contained.isEmpty()) {
-                    moved = tank.insert(0, contained, contained.getAmount(), tx);
-                } else {
-                    BCFluidStack inTank = tank.getStack(0);
-                    moved = inTank.isEmpty() ? 0 : tank.extract(0, inTank, Math.min(1000, inTank.getAmount()), tx);
-                }
-                if (moved > 0) {
-                    tx.commit();
-                }
+            Storage<FluidVariant> creativeContainer =
+                ContainerItemContext.forCreativeInteraction(player, carried).find(FluidStorage.ITEM);
+            if (creativeContainer == null) {
+                return false;
             }
-            return true;
+            return moveAll(creativeContainer, tankStorage) || moveAll(tankStorage, creativeContainer);
         }
         Storage<FluidVariant> container =
             ContainerItemContext.ofPlayerCursor(player, player.containerMenu).find(FluidStorage.ITEM);

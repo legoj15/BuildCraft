@@ -304,6 +304,7 @@ public class BuildCraftGameTests {
 
         // Core Blocks
         reg.accept("buildcraftunofficial:fragile_shard_drain_only_container", () -> buildcraft.core.item.FragileShardContainerTester::testShardIsDrainOnlyConsumableContainer);
+        reg.accept("buildcraftunofficial:creative_cursor_tank_exchange", () -> buildcraft.factory.CreativeCursorTankTester::testCreativeCursorExchangeGivesResultOnce);
         reg.accept("buildcraftunofficial:core_spring_water", () -> buildcraft.core.block.SpringTester::testWaterSpring);
         reg.accept("buildcraftunofficial:core_spring_oil", () -> buildcraft.core.block.SpringTester::testOilSpring);
         reg.accept("buildcraftunofficial:core_spring_oil_attaches_tile", () -> buildcraft.core.block.SpringTester::testOilSpringAttachesTile);

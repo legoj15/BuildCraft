@@ -77,15 +77,13 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
     /**
      * Attempts to transfer fluid between the given stack and this tank.
      * First tries to fill the tank from the item, then tries to drain the tank into the item.
-     *
-     * @return The resulting ItemStack after the transfer attempt
      */
     private void transferStackToTank(Player player) {
         if (player.level().isClientSide()) {
             return;
         }
-        // A fluid container on the cursor: empty it into the tank, else fill it, else fill an empty container
-        // in the inventory (creative leaves the cursor item alone). The platform layer does the item swap.
+        // A fluid container on the cursor: empty it into the tank, else fill it, else (survival) fill an empty
+        // container in the inventory. Creative keeps the cursor item. The platform layer does the item swap.
         if (Platform.transfer().exchangeWithCarriedContainer(player, tank)) {
             return;
         }

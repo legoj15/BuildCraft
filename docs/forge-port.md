@@ -393,7 +393,7 @@ workstation. Result on every line: `scene_machines.py` 6 checks, 0 failed (Worke
 swing phases ran with no command error; the server and both clients' logs held no BuildCraft ERROR (the only ERROR lines are
 vanilla's: the offline client's `Failed to fetch Realms feature flags`, and on a server's first boot of a world
 `DedicatedServerProperties: No key layers in MapLike[{}]`, the rig's `level-type=minecraft:flat` with no `generator-settings`; both
-also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.1.2), 0.52 s (1.21.11), 0.89 s (1.21.1); a Server1 pre-build of the four nodes in the fresh checkout took 4 min 03 s, the workstation's in a fresh worktree
+also on 26.3; `mp.py` has since written a flat `generator-settings`, and later runs' server logs have no such line). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.1.2), 0.52 s (1.21.11), 0.89 s (1.21.1); a Server1 pre-build of the four nodes in the fresh checkout took 4 min 03 s, the workstation's in a fresh worktree
 7 min 36 s (`gradlew --no-daemon :<node>:compileJava` for the four nodes).
 
 - **What the screenshots show, identical on all four lines.** Robots (`robots-*s`): the Lumberjack and Picker work from their stations
@@ -426,6 +426,10 @@ also on 26.3). The servers' own `Done (...)` figures: 0.64 s (26.2), 1.10 s (26.
   answer, runs `ssh -N -L` for both to the server machine's loopback (Windows Firewall does not filter loopback): the clients and RCON
   then use `127.0.0.1:25661` / `:25662` and `stop` ends the tunnel. The traffic still crosses the LAN, inside ssh, so a Java 21 line
   is checked with a real server on another machine, not with the direct client-to-server path (not exercised for them).
+- **`stop` since (#230).** A local `stop` waits up to 240 s for the pinned server JVM (when that pin is still the live JVM) to exit after RCON `stop` instead of a fixed
+  15 s before force-killing. A stop that refuses a pid it cannot prove is the rig's (state an older `mp.py` wrote) keeps state and
+  lock; `mp.py stop <node> --forget` then drops both, killing no server or client (only the rig's pinned ssh tunnel). It refuses
+  while an earlier remote kill is unconfirmed: a plain `stop` repeats that kill first. Not run live yet.
 - **`stop`, observed for real.** Normal path (RCON `stop` answered): `stop` took 15 s (26.2), 86 s (26.1.2), 29 s (1.21.11) and 16 s (1.21.1) to return, no java process of
   `C:\Dev\bc-forge-mp` was left on Server1 (the wrapper JVM and the server JVM both gone, ports 25661/25662 no longer listening),
   no local client or Gradle of the worktree was left, the lock was released and `procs.json` emptied (26.2, 26.1.2, and the

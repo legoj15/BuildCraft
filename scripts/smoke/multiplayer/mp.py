@@ -933,7 +933,7 @@ def kill_pinned(label, pid, recorded):
     time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else.
     False, without killing, for a record with no start time (state an older mp.py wrote): that pid may still be the
     rig's, so a caller that must not lose the process keeps what it recorded (#230). False too when the process is
-    still provably there 5 s after taskkill (access denied, or a slow exit). True when it ended, was
+    still provably there 5 s after taskkill (a slow exit, or one taskkill could not end). True when it ended, was
     already gone, or the number now belongs to another process (a start time that differs, or that cannot be read: a
     rig process is readable by its own user), since the recorded process is then gone too."""
     now = proc_start(pid)
@@ -1053,10 +1053,11 @@ def stop(node):
             # which left the kept lock stale and a second server able to start, #230)
             print('server (pid %s) not killed, and the smoke lock not released: the remote kill is unconfirmed' % st[k])
             continue
-        if k == 'server' and 'serverJvm' in refused:
-            # the Gradle wrapper is what the smoke lock names: killing it beside a surviving server JVM would leave the
-            # kept lock with a dead holder, which the next `server` takes over
-            print('server (pid %s) not killed, so the kept smoke lock stays held: the server JVM survived' % st[k])
+        if k == 'server' and refused:
+            # the wrapper (local) or poller (remote) is what the smoke lock names: killing it while the lock is kept for
+            # a process not proved ended would leave the lock with a dead holder, which the next `server` takes over
+            print('server (pid %s) not killed, so the kept smoke lock stays held: %s not proved ended'
+                  % (st[k], ', '.join(refused)))
             refused[k] = st[k]
             continue
         if not kill_pinned(k, st[k], st.get(k + 'Start')):

@@ -931,8 +931,9 @@ class Rcon:
 def kill_pinned(label, pid, recorded):
     """Tree-kill `pid` only while it is provably the process this rig recorded (pid and a readable, matching start
     time): a state file outlives a crashed run, and Windows hands a dead process's pid number to something else.
-    False, without killing, only for a record with no start time (state an older mp.py wrote): that pid may still be
-    the rig's, so a caller that must not lose the process keeps what it recorded (#230). True when it ended, was
+    False, without killing, for a record with no start time (state an older mp.py wrote): that pid may still be the
+    rig's, so a caller that must not lose the process keeps what it recorded (#230). False too when the process is
+    still provably there 5 s after taskkill (access denied, or a slow exit). True when it ended, was
     already gone, or the number now belongs to another process (a start time that differs, or that cannot be read: a
     rig process is readable by its own user), since the recorded process is then gone too."""
     now = proc_start(pid)
@@ -951,10 +952,10 @@ def kill_pinned(label, pid, recorded):
     print(label, (r.stdout or r.stderr).strip())
     for _ in range(10):  # taskkill can fail (access denied) or return before the process is gone
         left = proc_start(pid)
-        if left is None or (left > 0 and not same_process(left, recorded)):
+        if left is None or left < 0 or not same_process(left, recorded):  # gone, as the check before the kill reads it
             return True
         time.sleep(0.5)
-    print('%s (pid %s) survived taskkill: state and lock kept' % (label, pid))
+    print('%s (pid %s) survived taskkill' % (label, pid))
     return False
 
 
@@ -999,10 +1000,11 @@ def stop(node):
         print('dropping the tunnel key the older mp.py wrote (pid %d, no start time): it is not provably this rig\'s '
               'tunnel, so it is not killed' % t)
         del st['tunnel']
+    refused = {}  # key -> pid of each recorded process that could not be proved ended
     for side in ('B', 'A'):
         b = st.get('bridge' + side)
-        if b:
-            kill_pinned('bridge' + side, b['pid'], b.get('startFileTime'))
+        if b and not kill_pinned('bridge' + side, b['pid'], b.get('startFileTime')):
+            refused['bridge' + side] = b['pid']
     stopped = False
     try:
         r = Rcon(node)
@@ -1042,7 +1044,6 @@ def stop(node):
                 time.sleep(2)
         else:
             time.sleep(15)
-    refused = []
     for k in ('serverJvm', 'clientB', 'clientA', 'server'):
         if k not in st:
             continue
@@ -1052,8 +1053,14 @@ def stop(node):
             # which left the kept lock stale and a second server able to start, #230)
             print('server (pid %s) not killed, and the smoke lock not released: the remote kill is unconfirmed' % st[k])
             continue
+        if k == 'server' and 'serverJvm' in refused:
+            # the Gradle wrapper is what the smoke lock names: killing it beside a surviving server JVM would leave the
+            # kept lock with a dead holder, which the next `server` takes over
+            print('server (pid %s) not killed, so the kept smoke lock stays held: the server JVM survived' % st[k])
+            refused[k] = st[k]
+            continue
         if not kill_pinned(k, st[k], st.get(k + 'Start')):
-            refused.append(k)
+            refused[k] = st[k]
     if remote_unconfirmed:
         # the remote kill could not be confirmed: keep the server's half of the state and the smoke lock for a retry,
         # marked so the retry forces the kill again instead of trusting the poller the first stop kept
@@ -1064,7 +1071,7 @@ def stop(node):
         # is not dropped and the lock not released over it (#230)
         save_state(node, {k: st[k] for k in ('server', 'serverStart', 'serverJvm', 'serverJvmStart',
                                              'clientB', 'clientBStart', 'clientA', 'clientAStart',
-                                             'tunnel', 'remote_kill_unconfirmed') if k in st})
+                                             'bridgeA', 'bridgeB', 'tunnel', 'remote_kill_unconfirmed') if k in st})
         if remote_unconfirmed:
             print('the remote server may still be running; the run\'s state and the smoke lock were kept: '
                   'run `python -I mp.py stop %s` again' % node)
@@ -1073,7 +1080,7 @@ def stop(node):
                              'run\'s state and the smoke lock were kept; end it by hand if it is this rig\'s, then run '
                              '`python -I mp.py stop %s --forget` to drop the state and release the lock (after any '
                              'unconfirmed remote kill is confirmed by a plain stop)'
-                             % (', '.join(refused), ', '.join(str(st[k]) for k in refused), node))
+                             % (', '.join(refused), ', '.join(str(v) for v in refused.values()), node))
         return
     if 'tunnel' in st:
         tunnel_stop(node)

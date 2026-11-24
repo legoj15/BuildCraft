@@ -170,9 +170,9 @@ public final class BlockModelQuadExtractor {
      * Whether drawing {@code state} from its block model shows nothing: an {@code INVISIBLE} render shape, or a
      * {@code MODEL} whose block model has no quads at all, on any face or in the general bucket, over every part (a
      * particle-only placeholder whose look is a block-entity renderer's: the pipe holder, the engines, the tube). The
-     * place-task cube and the blueprint preview below 26.1 send such a block down the item path instead (#240); on
-     * 26.x the preview builds the quad list itself and needs no probe, so that arm is here only to keep the answer
-     * the same on every node. Every part counts, not only {@code SimpleModelWrapper}s, so a model baked to another
+     * place-task cube and the blueprint preview below 26.1 send such a block down the item path instead (#240). No
+     * 26.x code calls it today (the 26.x preview builds the quad list itself); that arm keeps the method defined, with
+     * the same answer, on every node, so a shared caller needs no directive of its own. Every part counts, not only {@code SimpleModelWrapper}s, so a model baked to another
      * part type is never taken for empty. 1.21.1's {@code ENTITYBLOCK_ANIMATED} (chests, beds) is never empty:
      * {@code renderSingleBlock} draws it through the item renderer. The answer is cached per state for as long as
      * the state resolves to the same model instance.

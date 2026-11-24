@@ -12,7 +12,8 @@ and smoke lock until a later `stop` confirms it, so nothing else starts on that 
 From Git Bash set MSYS_NO_PATHCONV=1, or bridge paths like /state get rewritten.
 
 One run per machine: `server` takes the smoke lock (~/.mcdevbridge/smoke.lock, the file Invoke-InClientSmoke.ps1 takes
-too, so the two refuse each other) held by the server's Gradle process, `client` checks it is still this run's, and `stop`
+too, so the two refuse each other) held by the server's Gradle process (on a local NeoForge node first by the artifacts
+build's, which hands it over), `client` checks it is still this run's, and `stop`
 releases it; a lock whose process is gone is taken over. Each client's pid and start time are pinned along with its
 bridge, so `b` and the scene scripts fail loudly once that client is gone instead of answering for another one. The
 ssh tunnel's pid is pinned the same way; a tunnel key the older mp.py wrote (a bare pid) is dropped, never killed.
@@ -261,17 +262,32 @@ def lock_require(node):
 
 
 def lock_hand_over(node, from_pid, to_pid):
-    """Move this run's lock from `from_pid` (a process that is ending) to `to_pid`, in one rename, so no other run can
-    take it in between; exit when the lock is no longer the one `from_pid` held."""
+    """Move this run's lock from `from_pid` (a process that has just ended) to `to_pid` by rewriting the file in one
+    rename, so the lock never goes missing; exit when it is no longer the one `from_pid` held. The file is re-read just
+    before the rename, so only a takeover in the instant between that read and the rename could be overwritten."""
     held = lock_read()
     if held is None or not lock_is_ours(held, node) or held['pid'] != from_pid:
         raise SystemExit('the smoke lock at %s is no longer held by this run (pid %s), so the server was not started'
                          % (LOCK, from_pid))
+    original = dict(held)
     held.update(pid=to_pid, start=proc_start(to_pid), since=time.strftime('%Y-%m-%dT%H:%M:%S'))
     tmp = LOCK + '.handover'
     with open(tmp, 'w', encoding='utf-8') as f:
         json.dump(held, f)
-    os.replace(tmp, LOCK)
+    if lock_read() != original:
+        os.remove(tmp)  # taken over while the new record was written: refuse rather than overwrite that run's lock
+        raise SystemExit('the smoke lock at %s was taken over by another run, so the server was not started' % LOCK)
+    for _ in range(20):
+        try:
+            os.replace(tmp, LOCK)  # refused while another process has the lock open (a reader mid-read): retry
+            return
+        except PermissionError:
+            time.sleep(0.1)
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass
+    raise SystemExit('could not hand the smoke lock at %s to the server (it stayed open elsewhere for 2 s)' % LOCK)
 
 
 def lock_release(node):
@@ -428,11 +444,11 @@ def gradle_start(node, args, log):
     """Start one Gradle invocation (no daemon, plain console, mp.init.gradle) in its own process group, its output in
     build/smoke-mp/<node>/<log>; returns the Popen."""
     os.makedirs(os.path.join(HERE, node), exist_ok=True)
-    out = open(os.path.join(HERE, node, log), 'w')
     cmd = ['cmd', '/c', os.path.join(REPO, 'gradlew.bat'), '--no-daemon', '--console=plain', '-I',
            os.path.join(HERE_SCRIPTS, 'mp.init.gradle')] + args
-    return subprocess.Popen(cmd, cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+    with open(os.path.join(HERE, node, log), 'w') as out:  # the child keeps its own handle
+        return subprocess.Popen(cmd, cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
 
 
 def gradle(node, args, log):
@@ -827,11 +843,17 @@ def server(node):
             except SystemExit:
                 subprocess.run(['taskkill', '/PID', str(prebuild.pid), '/T', '/F'], capture_output=True)
                 raise
+            # pinned like the server, so a `stop` during the build ends it before it releases the lock
+            st['prebuild'], st['prebuildStart'] = prebuild.pid, proc_start(prebuild.pid)
+            save_state(node, st)
             try:
                 gradle_finish(node, prebuild, args, 'artifacts.gradle.log')
             except SystemExit:
                 lock_release(node)
                 raise
+            st = load_state(node)  # a `stop` meanwhile cleared it; the hand-over below then refuses
+            st.pop('prebuild', None)
+            st.pop('prebuildStart', None)
         st['server'] = gradle(node, [f':{node}:runServer'] + run_switches(node, 'server'), 'server.gradle.log')
         st['serverStart'] = proc_start(st['server'])
     save_state(node, st)
@@ -1038,7 +1060,7 @@ def forget(node):
         # the only command that can confirm it; forgetting here would let a second server start on the same checkout
         raise SystemExit('the remote kill of an earlier stop is still unconfirmed: run `python -I mp.py stop %s` '
                          '(without --forget), which repeats it' % node)
-    for k in ('serverJvm', 'server'):
+    for k in ('prebuild', 'serverJvm', 'server'):
         start = st.get(k + 'Start')
         now = proc_start(st[k]) if st.get(k) else None
         if start and start > 0 and now and now > 0 and same_process(now, start):  # an unreadable start proves nothing
@@ -1046,7 +1068,7 @@ def forget(node):
             # server start on this checkout beside it
             raise SystemExit("%s (pid %s) is provably this run's and still running: run `python -I mp.py stop %s` "
                              "(without --forget)" % (k, st[k], node))
-    for k in ('server', 'serverJvm', 'clientB', 'clientA'):
+    for k in ('prebuild', 'server', 'serverJvm', 'clientB', 'clientA'):
         if k in st:
             print('forgetting %s (pid %s): not killed' % (k, st[k]))
     for side in ('A', 'B'):
@@ -1111,7 +1133,7 @@ def stop(node):
                 time.sleep(2)
         else:
             time.sleep(15)
-    for k in ('serverJvm', 'clientB', 'clientA', 'server'):
+    for k in ('prebuild', 'serverJvm', 'clientB', 'clientA', 'server'):
         if k not in st:
             continue
         if k == 'server' and remote_unconfirmed:

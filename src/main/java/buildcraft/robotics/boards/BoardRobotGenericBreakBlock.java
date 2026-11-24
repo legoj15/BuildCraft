@@ -33,7 +33,7 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *  <p>A second: a break that fails on a block that stays (one the tool cannot break, a negative-hardness block a
  *  modded tool was pointed at) is remembered, and a run of them sends the board to sleep
  *  ({@link #finishAttempt}). 7.1.x released the block and searched again, and the nearest block won every time. A
- *  break the world refused is told apart from those ({@link AIRobotBreak#wasRefused()}): remembered as a refusal, so
+ *  break the world refused is told apart from those ({@link buildcraft.api.robots.AIRobot#wasRefused()}): remembered as a refusal, so
  *  the board sleeps saying its work is protected. */
 public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearchBlock {
 

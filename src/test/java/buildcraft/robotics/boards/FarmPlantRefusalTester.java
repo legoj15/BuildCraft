@@ -253,6 +253,34 @@ public class FarmPlantRefusalTester {
     }
 
     /**
+     * A claim that lets the hoe's right-click through and refuses the block the till sets down (the placement half of
+     * a use, the only half some claim mods guard): the farmer still counts those tills as refused, and after
+     * {@code GIVE_UP_AFTER} of them sleeps saying its work is protected, the dirt untouched.
+     */
+    public static void farmerReportsARefusedTillPlacementAsProtected(GameTestHelper helper) {
+        int[] xs = { 1, 2, 3, 4, 5 };
+        try (Fixture f = new Fixture(helper, new BlockPos(1, 2, 3))) {
+            Set<BlockPos> dirt = dirtRow(helper, xs);
+            f.robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
+            f.board = new BoardRobotFarmer(f.robot);
+            try (WorkClaimMod claim = new WorkClaimMod(dirt::contains, pos -> false, dirt::contains, pos -> false)) {
+                boolean slept = f.cycleUntil(() -> f.asleep() || claim.totalPlaceAsks() > xs.length);
+
+                helper.assertTrue(claim.totalPlaceAsks() > 0, "precondition: the till asked the claim about a placement");
+                helper.assertTrue(slept, "the farmer gives up on a claim that refuses every till's placement");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
+                for (BlockPos pos : dirt) {
+                    helper.assertTrue(f.level.getBlockState(pos).is(Blocks.DIRT), "the refused dirt is untouched: " + pos);
+                }
+            } finally {
+                clearRow(helper, xs);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
      * The search asks protection mods about the block it settles on, as the generic search board does for its breaks:
      * dirt a claim will not let the robot break is skipped without the hoe ever being sent to it, and the next dirt is
      * tilled.

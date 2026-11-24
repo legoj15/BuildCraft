@@ -93,12 +93,16 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                         // The item half of a player's right-click: the right-click-block event first (a claim mod
                         // refuses through it on every node), then the item's useOn - the block's own use and
                         // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock). That helper records a
-                        // refused click on the player's tally, so a rise across the use is a refusal too.
+                        // refused click on the player's tally, so a rise across the use is a refusal too; inside
+                        // countingPlacements, so a claim that lets the click through and cancels the block the till
+                        // sets down lands on the tally as well (as the planter's seed does).
                         long refusalsBefore = MachineRefusals.count(player);
-                        used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
+                        used = MachineRefusals.countingPlacements(player, () -> BlockUtil.useItemOnBlock(
+                                serverLevel, player, InteractionHand.MAIN_HAND, held, hit));
                         // Read before the lease closes and takes the hand's contents away.
                         inHand = player.getMainHandItem();
-                        refused = MachineRefusals.count(player) != refusalsBefore;
+                        // The helper's item gate tallies an empty hand as refused too; that one is nobody's veto.
+                        refused = !held.isEmpty() && MachineRefusals.count(player) != refusalsBefore;
                     }
                 } else {
                     refused = true;

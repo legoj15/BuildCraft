@@ -947,15 +947,23 @@ def kill_pinned(label, pid, recorded):
         print('%s (pid %s) is already gone: the number now belongs to another process, which is left alone'
               % (label, pid))
         return True
-    print(label, subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True).stdout.strip())
-    return True
+    r = subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, text=True)
+    print(label, (r.stdout or r.stderr).strip())
+    for _ in range(10):  # taskkill can fail (access denied) or return before the process is gone
+        left = proc_start(pid)
+        if left is None or (left > 0 and not same_process(left, recorded)):
+            return True
+        time.sleep(0.5)
+    print('%s (pid %s) survived taskkill: state and lock kept' % (label, pid))
+    return False
 
 
 def forget(node):
     """`stop <node> --forget`: drop the run's state and release the smoke lock without killing any recorded server,
     client or bridge (only the rig's own pinned ssh tunnel is ended). The way out
     of a stop that keeps refusing a pid it cannot prove is the rig's (state an older mp.py wrote, no start times):
-    the caller has ended those processes by hand, or checked they are not the rig's (#230)."""
+    the caller has ended those processes by hand, or checked they are not the rig's (#230). Refuses while an earlier
+    remote kill is unconfirmed or a pinned server is provably still running: a plain stop handles both."""
     st = load_state(node)
     if st.get('remote_kill_unconfirmed'):
         # the poller still holds the lock for a remote server that may be running: plain stop repeats the kill and is

@@ -107,10 +107,10 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.NO_WORK));
             }
         } else if (ai instanceof AIRobotAttack attack) {
-            if (!attack.refused()) {
+            if (!attack.wasRefused()) {
                 refusals.succeeded();
-            } else if (refusals.failed(null, null)) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+            } else if (refusals.refused(null, null)) {
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.giveUpReason()));
             }
         }
     }

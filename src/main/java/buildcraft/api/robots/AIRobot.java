@@ -19,6 +19,7 @@ public class AIRobot {
     private AIRobot parentAI;
 
     private boolean success;
+    private boolean refused;
 
     public AIRobot(IRobotAccess iRobot) {
         robot = iRobot;
@@ -79,6 +80,21 @@ public class AIRobot {
 
     protected void setSuccess(boolean iSuccess) {
         success = iSuccess;
+    }
+
+    /** Marks this AI's attempt as refused by a protection mod: a failure too ({@link #success()} answers false
+     *  afterwards), but one the board records apart from an ordinary failure, so a robot facing a wall of them
+     *  sleeps saying its work is protected rather than that it keeps failing. The answer sticks: a refused AI stays
+     *  refused however often it is cycled, and it is not saved. */
+    protected void setRefused() {
+        refused = true;
+        setSuccess(false);
+    }
+
+    /** Whether this AI's attempt was refused by a protection mod rather than simply failing; see
+     *  {@link #setRefused()}. */
+    public boolean wasRefused() {
+        return refused;
     }
 
     public long getPowerCost() {

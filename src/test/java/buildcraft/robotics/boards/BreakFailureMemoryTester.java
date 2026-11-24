@@ -49,7 +49,8 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *
  * <p>A break the world refused is told apart from one that simply failed: a claim that lets the search's permit probe
  * through but cancels the real break event leaves the stone standing, and the board remembers that as a refusal - so
- * its empty search sleeps as protected work, not as work that keeps failing.
+ * its empty search sleeps as protected work, not as work that keeps failing. The harvester tells a refused harvest
+ * apart the same way: the claim lets the search's probe pass and refuses the harvest's own.
  */
 public class BreakFailureMemoryTester {
 
@@ -368,6 +369,49 @@ public class BreakFailureMemoryTester {
                 helper.assertTrue(f.level.getBlockState(declined).is(Blocks.HAY_BLOCK), "the declined crop is untouched");
             } finally {
                 clearRow(helper, xs);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A harvest a claim refused is not a harvest that failed. The claim lets the search's permit probe through (it
+     * cancels only while the harvest AI is the board's delegate) and refuses the harvest's own probe, which is the
+     * only ask a reaping gets, so the crop still stands: the harvester tries it ONCE, parks it as refused and -
+     * finding nothing else - sleeps saying its work is protected, not that it keeps failing.
+     */
+    public static void harvesterReportsARefusedHarvestAsProtected(GameTestHelper helper) {
+        helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or the harvest asks nobody");
+        int[] xs = { 2 };
+        try (Fixture f = new Fixture(helper, new BlockPos(2, 2, 3))) {
+            placeRow(helper, Blocks.HAY_BLOCK, xs);
+            BlockPos crop = helper.absolutePos(new BlockPos(2, 1, 3));
+            CountingHarvester board = new CountingHarvester(f.robot);
+            f.board = board;
+            // A claim as most are written, refusing only the harvest itself: while the search runs the board's
+            // delegate is the search AI, so its permit probe passes, and the harvest's own probe - asked once the
+            // harvest AI is the delegate - is the one cancelled. Only this test's own crop is watched, so a sibling
+            // arena's harvests are never refused.
+            PlatformProtection.Registration claim = Platform.protection().onBreak(event -> {
+                if (event.pos().equals(crop) && board.getDelegateAI() instanceof AIRobotHarvest) {
+                    event.cancel();
+                }
+            });
+            try (PinnedCropHandler handler = new PinnedCropHandler(Set.of(crop), Set.of())) {
+                try {
+                    boolean slept = f.cycleUntil(() -> f.asleep() || board.attemptsAt(crop) > 1);
+
+                    helper.assertTrue(board.attemptsAt(crop) == 1,
+                            "the refused crop is tried once, not on every search - got " + board.attemptsAt(crop));
+                    helper.assertTrue(slept, "with nothing left to harvest the harvester sleeps");
+                    helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                            "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
+                    helper.assertTrue(f.level.getBlockState(crop).is(Blocks.HAY_BLOCK), "the refused crop is untouched");
+                } finally {
+                    claim.close();
+                    clearRow(helper, xs);
+                }
             }
         }
         helper.succeed();

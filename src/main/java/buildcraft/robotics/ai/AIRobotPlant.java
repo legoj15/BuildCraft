@@ -22,6 +22,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.MachineRefusals;
 import buildcraft.robotics.RobotProtection;
 
 /** Plants the held seed at {@code blockFound} through the
@@ -73,12 +74,21 @@ public class AIRobotPlant extends AIRobot {
                 // crop's cell, the act the planting is.
                 ItemStack held = robot.getHeldItem();
                 boolean planted = false;
+                boolean refused = false;
                 if (RobotProtection.stationOwnerCanPlace(robot, serverLevel, blockFound.above())) {
                     try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                         ServerPlayer player = lease.player();
                         player.setPos(robot.position());
-                        planted = CropManager.plantCrop(serverLevel, player, held, blockFound);
+                        // Inside countingPlacements, so a placement event a claim mod cancels (the seed's own use
+                        // answers FAIL for it, the same as for a block item with no room) lands on the player's
+                        // refusal tally and the comparison below sees it.
+                        long refusalsBefore = MachineRefusals.count(player);
+                        planted = MachineRefusals.countingPlacements(player,
+                                () -> CropManager.plantCrop(serverLevel, player, held, blockFound));
+                        refused = MachineRefusals.count(player) != refusalsBefore;
                     }
+                } else {
+                    refused = true;
                 }
                 if (planted) {
                     if (!held.isEmpty()) {
@@ -87,10 +97,16 @@ public class AIRobotPlant extends AIRobot {
                     }
                     robot.setItemInUse(ItemStack.EMPTY);
                 } else {
-                    // Nothing was planted (a claim mod refused the right-click or the placement, for the deployer or
-                    // the station's owner, or the soil changed since the search), so the seed was not used: the robot
-                    // keeps it, and the board remembers the spot instead of fetching a fresh seed to be refused again.
-                    setSuccess(false);
+                    // Nothing was planted, so the seed was not used: the robot keeps it, and the board remembers
+                    // the spot instead of fetching a fresh seed to be refused again. A claim mod's refusal (of the
+                    // right-click or the placement, for the deployer or the station's owner) is told apart from a
+                    // planting that plain failed - the soil changed since the search - so the board can sleep
+                    // saying its work is protected.
+                    if (refused) {
+                        setRefused();
+                    } else {
+                        setSuccess(false);
+                    }
                 }
             } else {
                 setSuccess(false);

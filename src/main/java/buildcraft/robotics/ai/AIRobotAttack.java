@@ -27,7 +27,7 @@ import buildcraft.robotics.RobotProtection;
  *  the robot's deployer and its home station's owner, and lands naming the deployer's player as the attacker (7.1.x
  *  asked nobody, and its blow named only the robot). A refused swing hurts nothing and ends the attack: the target is
  *  noted as unreachable, so the board's next search passes it over for a while instead of flying back to it every
- *  cycle, and {@link #refused()} lets the board count the refusal. A swing refused only because the home station
+ *  cycle, and {@link #wasRefused()} lets the board count the refusal. A swing refused only because the home station
  *  cannot name its owner ({@link RobotProtection#stationOwnerUnknown}) is not noted: the note would outlast the
  *  unknown owner by up to a minute, and the station learns its owner as soon as its pipe ticks.
  *
@@ -39,7 +39,6 @@ public class AIRobotAttack extends AIRobot {
 
     private Entity target;
     private int delay = 10;
-    private boolean refused;
 
     public AIRobotAttack(IRobotAccess iRobot) {
         super(iRobot);
@@ -82,22 +81,16 @@ public class AIRobotAttack extends AIRobot {
         if (delay > 20) {
             delay = 0;
             if (robot.level() instanceof ServerLevel level && !RobotProtection.attack(robot, level, target)) {
-                refused = true;
                 if (!RobotProtection.stationOwnerUnknown(robot)) {
                     robot.unreachableEntityDetected(target);
                 }
-                setSuccess(false);
+                setRefused();
                 terminate();
                 return;
             }
             robot.aimItemAt(new BlockPos(
                     Mth.floor(target.getX()), Mth.floor(target.getY()), Mth.floor(target.getZ())));
         }
-    }
-
-    /** Whether the attack ended because a protection mod refused a swing (or the home station's owner is unknown). */
-    public boolean refused() {
-        return refused;
     }
 
     @Override

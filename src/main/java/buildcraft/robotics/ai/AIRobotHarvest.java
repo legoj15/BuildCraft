@@ -32,7 +32,10 @@ import buildcraft.robotics.RobotProtection;
  *  <p>One faithful quirk kept from 7.1.x: a successful harvest does NOT terminate the AI — the next
  *  cycle's re-check finds the (now air) position no longer "harvestable" and ends the AI with
  *  {@code success == false}. The harvester board therefore releases its block reservation
- *  unconditionally rather than on success. */
+ *  unconditionally rather than on success.
+ *
+ *  <p>Protection mods are asked before the crop is reaped ({@link RobotProtection#canBreak}), and a refusal
+ *  is reported apart from that quirk and from a handler that declined the crop: {@link #wasRefused()}. */
 public class AIRobotHarvest extends AIRobot {
 
     private BlockPos blockFound;
@@ -73,9 +76,19 @@ public class AIRobotHarvest extends AIRobot {
 
             // Protection mods get their say first: 7.1.x's crop handlers broke through BlockUtils.breakBlock, which
             // posted a break event; the port's handlers break the crop directly, so the robot asks here instead.
+            // A refusal is told apart from a failed harvest, so the board can sleep saying its work is protected.
             NonNullList<ItemStack> drops = NonNullList.create();
-            if (!(level instanceof ServerLevel serverLevel) || !RobotProtection.canBreak(robot, serverLevel, blockFound)
-                    || !harvestAsRobot(serverLevel, drops)) {
+            if (!(level instanceof ServerLevel serverLevel)) {
+                setSuccess(false);
+                terminate();
+                return;
+            }
+            if (!RobotProtection.canBreak(robot, serverLevel, blockFound)) {
+                setRefused();
+                terminate();
+                return;
+            }
+            if (!harvestAsRobot(serverLevel, drops)) {
                 setSuccess(false);
                 terminate();
                 return;

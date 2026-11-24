@@ -293,7 +293,7 @@ public class RobotDeployerProtectionTester {
             check(helper.getLevel().getBlockState(activator).is(Blocks.DIRT),
                     "a robot whose station's owner the claim refuses at the activator cell must not till it, "
                             + "although its deployer is trusted there");
-            check(user.refused(), "the use is reported as refused, not as an unusable item");
+            check(user.wasRefused(), "the use is reported as refused, not as an unusable item");
             check(claim.breakAsks.contains(GameProfileUtil.getId(owner)), "the station's owner was asked about");
         }
 
@@ -337,7 +337,7 @@ public class RobotDeployerProtectionTester {
             check(!helper.getLevel().getBlockState(water).is(Blocks.WATER),
                     "a robot whose station's owner the claim refuses where its bucket lands must not pour there, "
                             + "although its deployer is trusted there");
-            check(user.refused(), "the use is reported as refused, not as an unusable item");
+            check(user.wasRefused(), "the use is reported as refused, not as an unusable item");
             check(claim.placeAsks.contains(GameProfileUtil.getId(owner)), "the station's owner was asked about");
         }
 
@@ -383,7 +383,7 @@ public class RobotDeployerProtectionTester {
             check(claim.placeAsks.contains(GameProfileUtil.getId(owner)), "the station's owner was asked about");
             check(thrown.size() == 1, "a robot throws its snowball although its station's owner may not build in the "
                     + "cell it aims at, got " + thrown.size() + " thrown");
-            check(!user.refused(), "the throw is not reported as refused");
+            check(!user.wasRefused(), "the throw is not reported as refused");
             check(robot.getHeldItem().getCount() == 3, "the rest of the snowballs stay in hand, got "
                     + robot.getHeldItem());
         }
@@ -759,7 +759,7 @@ public class RobotDeployerProtectionTester {
             try (AttackClaim claim = new AttackClaim(cow, null)) {
                 EntityRobot robot = robotOn(helper, robotRel, deployer, unknownStation(helper, stationRel, owner));
                 AIRobotAttack attack = attackWith(robot, cow);
-                check(attack.refused() && cow.getHealth() == cow.getMaxHealth(),
+                check(attack.wasRefused() && cow.getHealth() == cow.getMaxHealth(),
                         "a robot whose station's owner is unknown must not attack, got health " + cow.getHealth());
                 check(!robot.isKnownUnreachable(cow), "a target refused only because the station's owner is unknown is "
                         + "not left alone: the robot asks again as soon as the owner is known");

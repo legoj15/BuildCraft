@@ -32,6 +32,10 @@ import buildcraft.robotics.entity.RobotSleepReason;
  * can say why ({@link #emptySearchReason}): the search skips both kinds, and a board whose every candidate is skipped
  * would otherwise report "no work" for a zone full of it.
  *
+ * <p>The count is told apart the same way: a board that gives up after a run of failures reads
+ * {@link #giveUpReason} for how to sleep - protected work when every failure in the run was a refusal, work that
+ * keeps failing otherwise.
+ *
  * <p>Neither is saved or shared between robots; a board owns one.
  */
 final class WorkRefusals {
@@ -45,6 +49,11 @@ final class WorkRefusals {
     private final RefusalMemory refused = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
     private final RefusalMemory failedOn = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
     private int failedInARow;
+    /** Whether every failure counted into the run under way was a refusal; drives {@link #giveUpReason}. */
+    private boolean runAllRefused = true;
+    /** The reason for the run that just ended in a give-up: snapshotted as the counter reset, so the board reads it
+     *  right after {@link #failed} or {@link #refused} answered true. */
+    private RobotSleepReason lastGiveUpReason = RobotSleepReason.WORK_FAILING;
     /** Whether the search under way skipped a block for each kind of memory ({@link #startSearch}). */
     private boolean skippedRefused;
     private boolean skippedFailed;
@@ -103,10 +112,9 @@ final class WorkRefusals {
     }
 
     /**
-     * An attempt at {@code pos} failed for a cause the board does not tell apart (a change under the robot, a block it
-     * cannot break; a refused till or plant is counted here too, while a refused break, the Stripes board's refused
-     * use and the Bomber's refused drop go to {@link #refused}): remembers the block among the failures (when the
-     * level and the block are known) and counts the failure.
+     * An attempt at {@code pos} failed for a cause that is nobody's refusal (a change under the robot, a block the
+     * tool cannot break, a handler that declined): remembers the block among the failures (when the level and the
+     * block are known) and counts the failure. A protection mod's refusal goes to {@link #refused} instead.
      *
      * @return true when this was the {@link #GIVE_UP_AFTER}th failure in a row - the board should stop for a while;
      *         the count starts again from zero
@@ -115,12 +123,14 @@ final class WorkRefusals {
         if (pos != null && level != null) {
             failedOn.remember(level, pos, RobotProtection.identityOf(robot), RobotProtection.refusalKeyOf(robot));
         }
+        runAllRefused = false;
         return countFailure();
     }
 
-    /** {@link #failed} for an attempt a protection mod refused: remembered among the refusals, counted the same. */
-    boolean refused(@Nullable Level level, BlockPos pos) {
-        if (level != null) {
+    /** {@link #failed} for an attempt a protection mod refused: remembered among the refusals, counted the same. A
+     *  null pos (or level) is allowed - an attack, say, has no block to remember - and still counts. */
+    boolean refused(@Nullable Level level, @Nullable BlockPos pos) {
+        if (pos != null && level != null) {
             refused.remember(level, pos, RobotProtection.identityOf(robot), RobotProtection.refusalKeyOf(robot));
         }
         return countFailure();
@@ -128,14 +138,26 @@ final class WorkRefusals {
 
     private boolean countFailure() {
         if (++failedInARow >= GIVE_UP_AFTER) {
+            // Snapshotted now, while the run that just ended is still known: the counter resets with it.
+            lastGiveUpReason = runAllRefused ? RobotSleepReason.PROTECTED : RobotSleepReason.WORK_FAILING;
             failedInARow = 0;
+            runAllRefused = true;
             return true;
         }
         return false;
     }
 
+    /** Why the run of failures that just ended gave up: {@link RobotSleepReason#PROTECTED} when every failure in it
+     *  was a refusal a protection mod made, {@link RobotSleepReason#WORK_FAILING} when some were plain failures.
+     *  Reads the run {@link #failed} or {@link #refused} just answered true for; before any give-up it says
+     *  WORK_FAILING. */
+    RobotSleepReason giveUpReason() {
+        return lastGiveUpReason;
+    }
+
     /** An attempt worked: the failures in a row are not in a row any more. */
     void succeeded() {
         failedInARow = 0;
+        runAllRefused = true;
     }
 }

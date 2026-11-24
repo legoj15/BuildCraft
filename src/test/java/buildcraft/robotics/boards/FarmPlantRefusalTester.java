@@ -243,8 +243,8 @@ public class FarmPlantRefusalTester {
                             + claim.toolAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
-                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
-                        "...saying its work keeps failing, got " + f.sleepReason());
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
             } finally {
                 clearRow(helper, xs);
             }
@@ -446,8 +446,8 @@ public class FarmPlantRefusalTester {
                             + claim.placeAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
-                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
-                        "...saying its work keeps failing, got " + f.sleepReason());
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
                 helper.assertTrue(f.robot.getHeldItem().is(Items.WHEAT_SEEDS) && f.robot.getHeldItem().getCount() == 5,
                         "...with its seeds still in hand, got " + f.robot.getHeldItem());
             } finally {

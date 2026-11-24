@@ -155,7 +155,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
                 refusals.remember(level, aimed);
             }
             if (refusals.refused(level, landing)) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.giveUpReason()));
             }
             return;
         }

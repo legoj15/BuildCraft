@@ -70,18 +70,12 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
                         ai instanceof AIRobotFetchAndEquipItemStack
                                 ? RobotSleepReason.NO_TOOL : RobotSleepReason.NOWHERE_TO_UNLOAD)));
             }
-        } else if (ai instanceof AIRobotBreak breakAi && breakAi.wasRefused()) {
-            // The world refused the break of a block that still stands (the permit probe let it through, the real break
-            // event did not): remembered as a refusal, and a run of them sleeps as protected work, not as work that
-            // keeps failing - see finishAttempt.
-            if (finishAttempt(ai)) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
-            }
         } else if (ai instanceof AIRobotBreak) {
             // A break that failed on a block that is still there is remembered (the search skips it from now on), and
-            // a run of them sends the board to sleep - see finishAttempt.
+            // a run of them sends the board to sleep - see finishAttempt, which also picks the reason: protected work
+            // when every failure in the run was a refusal the world made, work that keeps failing otherwise.
             if (finishAttempt(ai)) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
+                startDelegateAI(new AIRobotGotoSleep(robot, giveUpReason()));
             }
         }
         super.delegateAIEnded(ai);

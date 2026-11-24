@@ -25,6 +25,7 @@ import buildcraft.api.robots.IRobotAccess;
 
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.MachineRefusals;
 import buildcraft.robotics.RobotProtection;
 
 /** Right-clicks the held tool on the block at {@code useToBlock} (the farmer's hoe-on-dirt), damaging the
@@ -70,6 +71,7 @@ public class AIRobotUseToolOnBlock extends AIRobot {
             if (useToBlock != null && robot.level() instanceof ServerLevel serverLevel) {
                 ItemStack held = robot.getHeldItem();
                 boolean used = false;
+                boolean refused = false;
                 ItemStack inHand = held;
                 // As the robot's deployer (see RobotProtection), so a claim mod judges the deployer through the
                 // use's own right-click event and an advancement the tool grants reaches them. That event says
@@ -90,11 +92,16 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                                 new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
                         // The item half of a player's right-click: the right-click-block event first (a claim mod
                         // refuses through it on every node), then the item's useOn - the block's own use and
-                        // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock).
+                        // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock). That helper records a
+                        // refused click on the player's tally, so a rise across the use is a refusal too.
+                        long refusalsBefore = MachineRefusals.count(player);
                         used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
                         // Read before the lease closes and takes the hand's contents away.
                         inHand = player.getMainHandItem();
+                        refused = MachineRefusals.count(player) != refusalsBefore;
                     }
+                } else {
+                    refused = true;
                 }
                 if (used) {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no
@@ -109,7 +116,13 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                         robot.setItemInUse(ItemStack.EMPTY);
                     }
                 } else {
-                    setSuccess(false);
+                    // A till a protection mod refused (for the station's owner up front, or for the deployer at the
+                    // click) is told apart from one that simply did not take, so the board remembers it as a refusal.
+                    if (refused) {
+                        setRefused();
+                    } else {
+                        setSuccess(false);
+                    }
                     if (!held.isDamageableItem()) {
                         serverLevel.addFreshEntity(new ItemEntity(serverLevel,
                                 robot.position().x, robot.position().y, robot.position().z, held));

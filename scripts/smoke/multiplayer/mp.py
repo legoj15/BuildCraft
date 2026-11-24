@@ -962,6 +962,14 @@ def forget(node):
         # the only command that can confirm it; forgetting here would let a second server start on the same checkout
         raise SystemExit('the remote kill of an earlier stop is still unconfirmed: run `python -I mp.py stop %s` '
                          '(without --forget), which repeats it' % node)
+    for k in ('serverJvm', 'server'):
+        start = st.get(k + 'Start')
+        now = proc_start(st[k]) if st.get(k) else None
+        if start and start > 0 and now and now > 0 and same_process(now, start):  # an unreadable start proves nothing
+            # provably the rig's and still running: a plain stop can end it, so forgetting it would only let a second
+            # server start on this checkout beside it
+            raise SystemExit("%s (pid %s) is provably this run's and still running: run `python -I mp.py stop %s` "
+                             "(without --forget)" % (k, st[k], node))
     for k in ('server', 'serverJvm', 'clientB', 'clientA'):
         if k in st:
             print('forgetting %s (pid %s): not killed' % (k, st[k]))
@@ -970,6 +978,7 @@ def forget(node):
         if b:
             print('forgetting bridge%s (pid %s): not killed' % (side, b.get('pid')))
     if 'tunnel' in st:
+        print("ending the run's ssh tunnel (if it is provably this rig's)")
         tunnel_stop(node)  # pinned by start time, so only the rig's own tunnel: dropping the record would orphan it
     save_state(node, {})
     lock_release(node)

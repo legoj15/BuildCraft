@@ -134,12 +134,14 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
             boolean giveUp = false;
             if (ai.success()) {
                 refusals.succeeded();
+            } else if (ai.wasRefused()) {
+                giveUp = refusals.refused(robot.level(), blockFound.job());
             } else {
                 giveUp = refusals.failed(robot.level(), blockFound.job());
             }
             releaseBlockFound();
             if (giveUp) {
-                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
+                startDelegateAI(new AIRobotGotoSleep(robot, refusals.giveUpReason()));
             }
         }
     }

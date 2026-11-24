@@ -81,7 +81,7 @@ public class BoardRobotStripesUnusableItemTest extends VanillaSetupBaseTester {
     private static AIRobotStripesHandler refusedUse(IRobotAccess robot) {
         return new AIRobotStripesHandler(robot, BLOCK) {
             {
-                markRefused();
+                setRefused();
             }
         };
     }

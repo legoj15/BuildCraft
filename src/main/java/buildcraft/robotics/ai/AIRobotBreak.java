@@ -65,11 +65,6 @@ public class AIRobotBreak extends AIRobot {
     private float blockDamage = 0;
     /** Whether protection mods let this robot break {@code blockToBreak}; null until asked. */
     private Boolean permitted = null;
-    /** Whether the world refused the break of a block that still stands - the permit probe was answered no, the real
-     *  break event was cancelled, or the removal itself was vetoed - so the board can tell a refusal from any other
-     *  failure. Not set for a block that was never breakable (air, negative hardness) or a break that ran out of
-     *  power or tool: those are nobody's refusal. */
-    private boolean refused;
 
     public AIRobotBreak(IRobotAccess iRobot) {
         super(iRobot);
@@ -112,8 +107,7 @@ public class AIRobotBreak extends AIRobot {
             permitted = RobotProtection.canBreak(robot, serverLevel, blockToBreak);
         }
         if (!permitted) {
-            refused = true;
-            setSuccess(false);
+            setRefused();
             terminate();
             return;
         }
@@ -175,8 +169,7 @@ public class AIRobotBreak extends AIRobot {
         player.gameMode.destroyBlock(blockToBreak);
         BlockUtil.resyncChangedBlocks(serverLevel, supportsBefore);
         if (serverLevel.getBlockState(blockToBreak) == state) {
-            refused = true;
-            setSuccess(false);
+            setRefused();
         }
         // The tool broke on this block: the hand was left with the emptied stack, and the robot goes and fetches one.
         if (hadTool && robot.getHeldItem().isEmpty()) {
@@ -210,15 +203,12 @@ public class AIRobotBreak extends AIRobot {
             }
         } else {
             // Empty is also what a block turned unbreakable under the robot gives: that one is nobody's refusal.
-            refused = serverLevel.getBlockState(blockToBreak).getDestroySpeed(serverLevel, blockToBreak) >= 0;
-            setSuccess(false);
+            if (serverLevel.getBlockState(blockToBreak).getDestroySpeed(serverLevel, blockToBreak) >= 0) {
+                setRefused();
+            } else {
+                setSuccess(false);
+            }
         }
-    }
-
-    /** Whether the world refused this break of a block that still stands: the permit probe, the real break event or the
-     *  removal itself was vetoed by a protection mod, which the board records as a refusal rather than a failure. */
-    public boolean wasRefused() {
-        return refused;
     }
 
     @Override

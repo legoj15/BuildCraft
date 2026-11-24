@@ -1264,6 +1264,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_farmer_does_not_retry_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerDoesNotRetryARefusedTill);
         reg.accept("buildcraftunofficial:robot_farmer_moves_on_from_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerMovesOnFromARefusedTill);
         reg.accept("buildcraftunofficial:robot_farmer_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSleepsAfterRepeatedRefusals);
+        reg.accept("buildcraftunofficial:robot_farmer_reports_a_refused_till_placement_as_protected", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerReportsARefusedTillPlacementAsProtected);
         reg.accept("buildcraftunofficial:robot_farmer_skips_dirt_it_may_not_break", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSkipsDirtItMayNotBreak);
         reg.accept("buildcraftunofficial:robot_plant_failure_keeps_seed", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::refusedPlantingKeepsTheSeed);
         reg.accept("buildcraftunofficial:robot_plant_asks_right_click_first", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::plantingAsksTheRightClickEventFirst);
@@ -1278,6 +1279,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_board_reports_a_refused_break_as_protected", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardReportsARefusedBreakAsProtected);
         reg.accept("buildcraftunofficial:robot_harvester_does_not_retry_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterDoesNotRetryAFailedHarvest);
         reg.accept("buildcraftunofficial:robot_harvester_moves_on_from_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterMovesOnFromAFailedHarvest);
+        // ...and a harvest a claim refused (the search's probe allowed, the harvest's own refused) is protected work too.
+        reg.accept("buildcraftunofficial:robot_harvester_reports_a_refused_harvest_as_protected", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterReportsARefusedHarvestAsProtected);
         // The combat boards' entity predicates against REAL entities (no unit test can build one).
         reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
         reg.accept("buildcraftunofficial:robot_butcher_spares_pets_horses_and_named", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::butcherSparesPetsHorsesAndNamedAnimals);

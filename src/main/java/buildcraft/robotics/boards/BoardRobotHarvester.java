@@ -19,7 +19,6 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.properties.WorldPropertyIsHarvestable;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotHarvest;
-import buildcraft.robotics.entity.RobotSleepReason;
 
 /** The harvester: finds fully-grown crops (the {@code "harvestable"} world property) and harvests them
  *  with {@code AIRobotHarvest} (no tool needed — the hand is the tool). Ported from 7.1.x
@@ -31,7 +30,9 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *  success, so it reports false even when it harvested) made the flag meaningless anyway. The port
  *  implements that TODO by the block rather than the flag: a harvest whose crop is STILL ripe afterwards failed
  *  (a protection mod, a handler that declined it), is remembered like a refused block, and a run of them sends the
- *  harvester to sleep ({@link #finishAttempt}). */
+ *  harvester to sleep ({@link #finishAttempt}). A protection mod's refusal is told apart from a handler that
+ *  declined ({@link AIRobotHarvest} reports it through {@code wasRefused}), so a harvester facing a claim sleeps
+ *  saying its work is protected, not that it keeps failing. */
 public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
 
     public BoardRobotHarvester(IRobotAccess iRobot) {
@@ -69,7 +70,7 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotHarvest && finishAttempt(ai)) {
-            startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.WORK_FAILING));
+            startDelegateAI(new AIRobotGotoSleep(robot, giveUpReason()));
         }
         super.delegateAIEnded(ai);
     }

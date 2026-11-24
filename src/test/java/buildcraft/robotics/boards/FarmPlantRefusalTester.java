@@ -243,8 +243,42 @@ public class FarmPlantRefusalTester {
                             + claim.toolAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
-                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
-                        "...saying its work keeps failing, got " + f.sleepReason());
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
+            } finally {
+                clearRow(helper, xs);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A claim that lets the hoe's right-click through and refuses the block the till sets down (the placement half of
+     * a use, the only half some claim mods guard): the farmer still counts those tills as refused, and after
+     * {@code GIVE_UP_AFTER} of them sleeps saying its work is protected, the dirt untouched.
+     */
+    public static void farmerReportsARefusedTillPlacementAsProtected(GameTestHelper helper) {
+        int[] xs = { 1, 2, 3, 4, 5 };
+        try (Fixture f = new Fixture(helper, new BlockPos(1, 2, 3))) {
+            Set<BlockPos> dirt = dirtRow(helper, xs);
+            f.robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
+            f.board = new BoardRobotFarmer(f.robot);
+            try (WorkClaimMod claim = new WorkClaimMod(dirt::contains, pos -> false, dirt::contains, pos -> false)) {
+                boolean slept = f.cycleUntil(f::asleep);
+
+                helper.assertTrue(claim.totalPlaceAsks() == WorkRefusals.GIVE_UP_AFTER,
+                        "the farmer gives up after " + WorkRefusals.GIVE_UP_AFTER + " refused tills in a row - got "
+                                + claim.totalPlaceAsks());
+                for (BlockPos pos : dirt) {
+                    helper.assertTrue(claim.placeAsks(pos) <= 1, "no block is tilled twice, " + pos + " was asked "
+                            + claim.placeAsks(pos) + " times");
+                }
+                helper.assertTrue(slept, "...and then it sleeps");
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
+                for (BlockPos pos : dirt) {
+                    helper.assertTrue(f.level.getBlockState(pos).is(Blocks.DIRT), "the refused dirt is untouched: " + pos);
+                }
             } finally {
                 clearRow(helper, xs);
             }
@@ -446,8 +480,8 @@ public class FarmPlantRefusalTester {
                             + claim.placeAsks(pos) + " times");
                 }
                 helper.assertTrue(slept, "...and then it sleeps");
-                helper.assertTrue(f.sleepReason() == RobotSleepReason.WORK_FAILING,
-                        "...saying its work keeps failing, got " + f.sleepReason());
+                helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
+                        "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
                 helper.assertTrue(f.robot.getHeldItem().is(Items.WHEAT_SEEDS) && f.robot.getHeldItem().getCount() == 5,
                         "...with its seeds still in hand, got " + f.robot.getHeldItem());
             } finally {

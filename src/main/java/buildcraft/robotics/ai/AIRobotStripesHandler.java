@@ -45,12 +45,10 @@ import buildcraft.robotics.RobotProtection;
  *
  *  <p>Reports {@link #success()} {@code false} when no handler took the item at this cell (7.1.x reported
  *  nothing), which {@code BoardRobotStripes} counts to stop retrying an item nothing can use; a use a protection mod
- *  refused is reported apart ({@link #refused()}), as it says nothing about the item. */
+ *  refused is reported apart ({@link #wasRefused()}), as it says nothing about the item. */
 public class AIRobotStripesHandler extends AIRobot implements IStripesActivator {
     private BlockPos useToBlock;
     private int useCycles = 0;
-    /** Whether a protection mod refused the use; see {@link #refused()}. */
-    private boolean refused = false;
 
     public AIRobotStripesHandler(IRobotAccess iRobot) {
         super(iRobot);
@@ -102,7 +100,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
                 throwOnly = RobotProtection.stationOwnerShortcut(robot) == null
                         && UseInAirProbe.isThrown(stack.getItem());
                 if (!throwOnly) {
-                    markRefused();
+                    setRefused();
                     terminate();
                     return;
                 }
@@ -122,18 +120,18 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
                     if (BlockUtil.useItemInAir(serverLevel, player, InteractionHand.MAIN_HAND, stack)) {
                         takeBackFrom(player, stack, original);
                     } else if (MachineRefusals.count(player) != refusalsBefore) {
-                        markRefused();
+                        setRefused();
                     } else {
                         setSuccess(false);
                     }
                 } else if (PipeApi.stripeRegistry.handleItem(robot.level(), activatorPos, direction, stack, player, this)) {
                     takeBackFrom(player, stack, original);
-                } else if (refused || MachineRefusals.count(player) != refusalsBefore) {
+                } else if (wasRefused() || MachineRefusals.count(player) != refusalsBefore) {
                     // A protection mod refused the deployer's click, break or mob interaction (the tallies the
                     // stripes dispatch already keeps to end a refused use), or the station's owner was refused where
                     // a use in the air would land (mayUseInAir): the item was not tried, so this is no evidence it is
                     // unusable.
-                    markRefused();
+                    setRefused();
                 } else {
                     // Nothing took the item here. 7.1.x ended the cycle silently, so its board could not tell this
                     // from a use and retried the same item on the next cell for ever; the failure is what lets the
@@ -209,7 +207,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
     public boolean mayUseInAir(Player player, ItemStack stack) {
         Boolean shortcut = RobotProtection.stationOwnerShortcut(robot);
         if (shortcut != null && !shortcut) {
-            markRefused();
+            setRefused();
             return false;
         }
         if (shortcut != null || !(player.level() instanceof ServerLevel level)) {
@@ -218,7 +216,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
         GameProfile owner = RobotProtection.stationIdentityOf(robot);
         if (!UseInAirProbe.permits(level, player, stack, cell -> BlockUtil.canMachinePlace(level, cell, owner),
                 cell -> BlockUtil.canMachineBreak(level, cell, owner))) {
-            markRefused();
+            setRefused();
             return false;
         }
         return true;
@@ -239,19 +237,6 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
             sendItem(product, Direction.NORTH);
         }
         robot.setItemInUse(left.remainder());
-    }
-
-    /** Whether the use failed because a protection mod refused it, for the robot's deployer or its home station's
-     *  owner, rather than because no handler could use the item there: a refusal says nothing about the item, so the
-     *  board does not count it towards giving the item up. Always also a failed {@link #success()}. */
-    public boolean refused() {
-        return refused;
-    }
-
-    /** Ends this use as refused by protection; see {@link #refused()}. */
-    protected void markRefused() {
-        refused = true;
-        setSuccess(false);
     }
 
     @Override

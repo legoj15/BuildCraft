@@ -49,7 +49,7 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *  the session, so a supply chest that took it back does not simply hand it over again. Neither the count nor the
  *  refused items are saved: a reloaded board spends at most one more round of failures to learn it again.
  *
- *  <p><b>A use a protection mod refused</b> ({@link AIRobotStripesHandler#refused()}, for the robot's deployer or
+ *  <p><b>A use a protection mod refused</b> ({@link AIRobotStripesHandler#wasRefused()}, for the robot's deployer or
  *  its home station's owner) is not a failed use: it says nothing about the item, and counting it would give a good
  *  item up inside a claim. The cell is remembered in a {@link WorkRefusals}, as the farmer and planter remember
  *  theirs, so the search leaves it alone while it stays refused, and {@link WorkRefusals#GIVE_UP_AFTER} refusals
@@ -138,11 +138,11 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
             if (stripesAI.success()) {
                 failedUses = 0;
                 refusals.succeeded();
-            } else if (stripesAI.refused()) {
+            } else if (stripesAI.wasRefused()) {
                 // Not the item's fault: the cell is skipped while it stays refused, and a run of refusals sends the
                 // robot to sleep, leaving the count of unusable uses where it was.
                 if (refusals.refused(robot.level(), used)) {
-                    startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
+                    startDelegateAI(new AIRobotGotoSleep(robot, refusals.giveUpReason()));
                 }
             } else if (++failedUses >= GIVE_UP_AFTER_FAILED_USES) {
                 giveUpHeldItem();

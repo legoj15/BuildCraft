@@ -81,9 +81,9 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                 // the owner is asked the break question, the one the farmer board already asks every robot about
                 // the block it settles on (and the stripes path asks about the block a hoe tills there).
                 // An empty hand tills nothing and is nobody's veto (the click helper's item gate would tally it as a
-                // refusal), so it is a plain failure before anyone is asked.
+                // refusal), so it is a plain failure before anyone is asked: neither branch below runs.
                 if (held.isEmpty()) {
-                    used = false;
+                    refused = false;
                 } else if (RobotProtection.stationOwnerCanBreak(robot, serverLevel, useToBlock)) {
                     try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                         ServerPlayer player = lease.player();
@@ -130,7 +130,7 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     } else {
                         setSuccess(false);
                     }
-                    if (!held.isDamageableItem()) {
+                    if (!held.isEmpty() && !held.isDamageableItem()) {
                         serverLevel.addFreshEntity(new ItemEntity(serverLevel,
                                 robot.position().x, robot.position().y, robot.position().z, held));
                         robot.setItemInUse(ItemStack.EMPTY);

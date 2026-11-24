@@ -27,7 +27,7 @@ import net.minecraft.world.phys.Vec3;
  * {@code SubmitNodeCollector} path in {@code ItemRenderUtil} and never calls this. (The particle accessor also
  * diverges — 1.21.10/1.21.11 {@code pickParticleIcon():TextureAtlasSprite} vs 26.1 {@code pickParticleMaterial():
  * Material.Baked} — so even the signature-shared body must be gated.) A block whose block model is empty (BC's
- * pipe holder and engines: particle-only placeholders, the body being a block-entity renderer's) must not go
+ * pipe holder, engines and tube: particle-only placeholders, the body being a block-entity renderer's) must not go
  * through {@code renderSingleBlock} — it would draw nothing — so such items take the item path instead: the
  * classic item renderer on 1.21.1, and on 1.21.10/1.21.11 a particle-sprite cube tinted with the paint the
  * client sync copies onto the flying stack.
@@ -109,12 +109,11 @@ public final class PlaceTaskCubeRenderer {
     }
 
     //? if <26.1 {
-    /*/^** Whether {@code block}'s block model is a particle-only placeholder with no geometry of its own: BC's pipe
-     *  holder (the pipe body is drawn by a block-entity renderer) and the engines ({@code RenderEngine_BC8}).
-     *  {@code renderSingleBlock} would draw nothing for such a block, so its items take the item-model path. *^/
+    /*/^** Whether {@code block}'s default state draws nothing through {@code renderSingleBlock} (an {@code INVISIBLE}
+     *  shape, or a block model with no quads: the pipe holder, the engines, the tube). Such items take the item-model
+     *  path (#240). *^/
     private static boolean isBlockModelEmpty(net.minecraft.world.level.block.Block block) {
-        return block instanceof buildcraft.transport.block.BlockPipeHolder
-            || block instanceof buildcraft.lib.engine.BlockEngineBase_BC8;
+        return buildcraft.lib.client.model.BlockModelQuadExtractor.drawsNothingAsBlock(block.defaultBlockState());
     }
 
     /^* Emits the small (~0.30-block) cube textured with {@code sprite} into {@code bufferSource}, every face tinted

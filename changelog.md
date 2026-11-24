@@ -6,7 +6,7 @@
 - With "Mine Player Protected Blocks" off, a Builder, Quarry, Mining Well or Stripes pipe that a claim mod stops from breaking a block now skips it and carries on, instead of retrying it forever or stalling. The Builder's status now says the block was refused.
 - Minecraft 1.21.11 (MinecraftForge): the cracks on a pipe being mined are no longer drawn twice, which showed as bright specks on the pipe.
 - A robot whose break, harvest, tilling or planting a claim mod refuses now reports the work as protected (its sleep reason says so) instead of as work that keeps failing.
-- The blocks a Builder throws into place now show pipes (painted as in the blueprint) and engines on every Minecraft version; they were invisible on 1.21.x and unpainted on 26.x.
+- The blocks a Builder throws into place now show pipes (painted as in the blueprint) and engines on every Minecraft version; they were invisible on 1.21.x and unpainted on 26.x. On 1.21.x, pipes in a blueprint preview are no longer invisible either (they show as their items).
 - Minecraft 1.21.1 (NeoForge): emptying a creative-mode bucket into a tank no longer replaces the bucket.
-- Creative mode: clicking a tank's gauge with a bucket on the cursor now works like using a bucket in the world. The cursor bucket stays, one bucket's worth moves per click, and you get the filled or emptied bucket unless you already have one. Before, draining just deleted the fluid.
+- Creative mode: clicking a tank's gauge with a bucket on the cursor now works like using a bucket in the world. The cursor bucket stays, one bucket's worth moves per click, and you get the filled or emptied bucket unless you already have one (one in the offhand counts). Before, draining just deleted the fluid.
 - Minecraft 1.21.10 and later (NeoForge): right-clicking a tank while holding a stack of buckets now fills or empties one of them, as with a single bucket.

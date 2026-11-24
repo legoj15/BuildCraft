@@ -48,7 +48,7 @@ import buildcraft.lib.engine.BlockEngineBase_BC8;
  * <ul>
  *   <li><b>&lt;26.1</b> (1.21.1 / 1.21.10 / 1.21.11): {@code BlockRenderDispatcher.renderSingleBlock}
  *       — one vanilla call that resolves the state model, selects render types, and applies block
- *       tint.</li>
+ *       tint — after a probe for a block it would draw nothing for.</li>
  *   <li><b>&gt;=26.1</b> (26.1.2 / 26.2): {@code renderSingleBlock} was removed, so resolve the
  *       {@link BlockStateModel} from the {@code BlockStateModelSet}, {@code collectParts} its quads,
  *       and emit them through one block-atlas cutout sheet ({@code BCLibRenderTypes.cutoutBlockSheet})
@@ -78,11 +78,10 @@ public final class PreviewBlockModelRenderer {
      * {@code poseStack} to the cell origin (block models are authored in cell-local {@code [0,1]^3}).
      *
      * @return {@code true} if a model was drawn; {@code false} if the block has no usable block model
-     *         (e.g. an engine — empty model), so the caller should fall back to the item path. Only the
-     *         {@code >=26.1} branch, which counts the model's quads, can answer {@code false}: below 26.1
-     *         {@code renderSingleBlock} reports no failure, so a model-less block there draws nothing and
-     *         still returns {@code true} (the known such blocks — engines — are routed to the item path by
-     *         the callers before ever reaching here).
+     *         (an engine, a pipe, the tube — an empty model), so the caller should fall back to the item path.
+     *         Below 26.1 {@code renderSingleBlock} reports no failure, so {@code
+     *         BlockModelQuadExtractor.drawsNothingAsBlock} is asked first (an {@code INVISIBLE} shape or a block
+     *         model with no quads answers {@code false}).
      */
     //? if >=26.2 {
     public static boolean renderBlock(BlockState state, PoseStack poseStack,
@@ -106,7 +105,10 @@ public final class PreviewBlockModelRenderer {
         *///?}
         return true;
         //?} else {
-        /*buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(state, poseStack, sink, light, overlay);
+        /*if (buildcraft.lib.client.model.BlockModelQuadExtractor.drawsNothingAsBlock(state)) {
+            return false;
+        }
+        buildcraft.platform.client.ClientPlatform.extensions().renderSingleBlock(state, poseStack, sink, light, overlay);
         return true;*/
         //?}
     }

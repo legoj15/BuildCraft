@@ -128,11 +128,15 @@ final class NeoForgeFluidContainers {
         //? if >=1.21.10 {
         ResourceHandler<FluidResource> fluidHandler = NeoForgeFluidStorages.toNeo(tank);
         // The player-interaction access does the whole item swap itself: in survival it takes one item from the hand
-        // slot and stows the result back there or in the inventory, in creative (forInfiniteMaterials) it keeps the
+        // slot and stows the result back there or in the inventory, in creative (CreativeItemAccess) it keeps the
         // hand and stows the result only when the inventory holds none like it (vanilla createFilledResult).
         // oneByOne: over a stacked access a bucket's handler moves a whole stack's worth or nothing.
+        // In creative it is CreativeItemAccess, not NeoForge's forInfiniteMaterials, whose "has one" check misses the
+        // offhand and armour (#241).
+        ItemAccess access = player.getAbilities().instabuild ? new CreativeItemAccess(player, held)
+                : ItemAccess.forPlayerInteraction(player, hand);
         ResourceHandler<FluidResource> itemHandlerIn =
-                ItemAccess.forPlayerInteraction(player, hand).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+                access.oneByOne().getCapability(Capabilities.Fluid.ITEM);
         if (itemHandlerIn != null) {
             // First try draining tank -> item (filling bucket)
             try (Transaction tx = Transaction.openRoot()) {
@@ -204,11 +208,10 @@ final class NeoForgeFluidContainers {
         }
         ResourceHandler<FluidResource> itemHandlerIn;
         if (isCreative) {
-            // Vanilla's ItemUtils.createFilledResult: forInfiniteMaterials is NeoForge's implementation of that rule,
-            // so the cursor item is never taken and the filled or emptied result joins the main inventory only when it
-            // holds none like it.
+            // Vanilla's ItemUtils.createFilledResult (CreativeItemAccess): the cursor item is never taken and the
+            // filled or emptied result joins the main inventory only when the inventory holds none like it.
             // oneByOne as survival: over a stacked access a bucket's handler moves a whole stack's worth or nothing.
-            itemHandlerIn = ItemAccess.forInfiniteMaterials(player, carried).oneByOne()
+            itemHandlerIn = new CreativeItemAccess(player, carried).oneByOne()
                     .getCapability(Capabilities.Fluid.ITEM);
         } else {
             itemHandlerIn = ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne()
@@ -340,6 +343,55 @@ final class NeoForgeFluidContainers {
         return false;*/
         //?}
     }
+
+    //? if >=1.21.10 {
+    /**
+     * NeoForge's {@code ItemAccess.forInfiniteMaterials} with vanilla's "already has one" check: the access never
+     * gives up its item, and a result is added (one, to the main slots) only when {@code Inventory.contains} finds
+     * none like it anywhere, offhand and armour included, as {@code ItemUtils.createFilledResult} and Forge's twin
+     * do. NeoForge's own checks the 36 main slots only (#241). The check reads the live inventory, which the
+     * wrapper's journal keeps current inside a transaction, so a second insert in one transaction sees the first.
+     */
+    private static final class CreativeItemAccess implements ItemAccess {
+        private final Player player;
+        private final net.neoforged.neoforge.transfer.item.ItemResource resource;
+        private final int amount;
+
+        CreativeItemAccess(Player player, ItemStack contents) {
+            this.player = player;
+            this.resource = net.neoforged.neoforge.transfer.item.ItemResource.of(contents);
+            this.amount = contents.getCount();
+        }
+
+        @Override
+        public net.neoforged.neoforge.transfer.item.ItemResource getResource() {
+            return resource;
+        }
+
+        @Override
+        public int getAmount() {
+            return amount;
+        }
+
+        @Override
+        public int insert(net.neoforged.neoforge.transfer.item.ItemResource inserted, int count,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            net.neoforged.neoforge.transfer.TransferPreconditions.checkNonEmptyNonNegative(inserted, count);
+            if (count > 0 && !player.getInventory().contains(inserted.toStack())) {
+                net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper.of(player).getMainSlots()
+                        .insert(inserted, 1, transaction);
+            }
+            return count; // always accepted, as forInfiniteMaterials
+        }
+
+        @Override
+        public int extract(net.neoforged.neoforge.transfer.item.ItemResource extracted, int count,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            net.neoforged.neoforge.transfer.TransferPreconditions.checkNonEmptyNonNegative(extracted, count);
+            return count; // the creative player's item is never used up
+        }
+    }
+    //?}
 
     //? if <1.21.10 {
     /*private static void updateCarried(Player player, ItemStack original, ItemStack result) {

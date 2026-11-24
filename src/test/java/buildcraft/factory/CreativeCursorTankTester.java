@@ -68,6 +68,17 @@ public final class CreativeCursorTankTester {
                 "the stacked cursor is unchanged, got " + stacked);
         helper.assertTrue(player.getInventory().countItem(Items.WATER_BUCKET) == 1,
                 "no second water bucket from the stacked drain, has " + player.getInventory().countItem(Items.WATER_BUCKET));
+
+        // A water bucket held only in the offhand counts as "has one" too (vanilla's Inventory.contains, #241).
+        Player offhander = helper.makeMockPlayer(GameType.CREATIVE);
+        offhander.getAbilities().instabuild = true;
+        offhander.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.WATER_BUCKET));
+        offhander.containerMenu.setCarried(new ItemStack(Items.BUCKET));
+        helper.assertTrue(Platform.transfer().exchangeWithCarriedContainer(offhander, tank), "the offhand drain is handled");
+        helper.assertTrue(tank.getFluidStack(0).getAmount() == 0,
+                "the offhand drain takes a bucket's worth, tank now " + tank.getFluidStack(0).getAmount());
+        helper.assertTrue(offhander.getInventory().countItem(Items.WATER_BUCKET) == 1,
+                "the offhand water bucket stops a second one, has " + offhander.getInventory().countItem(Items.WATER_BUCKET));
         helper.succeed();
     }
 
@@ -117,6 +128,18 @@ public final class CreativeCursorTankTester {
         assertTank(helper, tank, 0, "the second creative drain takes another bucket's worth");
         helper.assertTrue(creative.getInventory().countItem(Items.WATER_BUCKET) == 1,
                 "no second water bucket, has " + creative.getInventory().countItem(Items.WATER_BUCKET));
+
+        // Creative with a water bucket only in the offhand: that one counts, so the main hand's drain gives none (#241).
+        Player offhander = helper.makeMockPlayer(GameType.CREATIVE);
+        offhander.getAbilities().instabuild = true;
+        tank.fill(0, new BCFluidStack(Fluids.WATER, 1000), false);
+        offhander.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET));
+        offhander.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.WATER_BUCKET));
+        helper.assertTrue(Platform.transfer().interactWithHeldContainer(offhander, InteractionHand.MAIN_HAND, pos, tank),
+                "the creative drain beside an offhand water bucket is handled");
+        assertTank(helper, tank, 0, "the creative drain beside an offhand water bucket takes a bucket's worth");
+        helper.assertTrue(offhander.getInventory().countItem(Items.WATER_BUCKET) == 1,
+                "the offhand water bucket stops a second one, has " + offhander.getInventory().countItem(Items.WATER_BUCKET));
 
         // Survival pour: the held water bucket empties into the tank and becomes an empty bucket in the hand.
         survivor.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));

@@ -856,7 +856,8 @@ def server(node):
             if st.get('prebuild') != prebuild.pid or st.get('stopRequested'):
                 # a `stop` ran during the build (it cleared the state, or was refused and marked it): never start
                 # the server it was asked to prevent
-                raise SystemExit('a `stop` ran during the artifacts build, so the server was not started')
+                raise SystemExit('a `stop` ran during the artifacts build, so the server was not started; run '
+                                 '`python -I mp.py stop %s` to clear what that stop kept' % node)
             st.pop('prebuild', None)
             st.pop('prebuildStart', None)
         st['server'] = gradle(node, [f':{node}:runServer'] + run_switches(node, 'server'), 'server.gradle.log')
@@ -907,7 +908,7 @@ def server(node):
         record_server_jvm(node, st)
 
 
-def wait_player_joined(node, side, timeout=300):
+def wait_player_joined(node, side, timeout=300, alive=None):
     """Wait until the server's player list names this client's player (`list` over RCON). The bridge's port only says
     the client booted, not that it quick-played in (#230): until the join, a command naming the player answers 'No
     player was found' and a scene's first such command would pass silently. Bounded, and the failure names both logs."""
@@ -916,6 +917,8 @@ def wait_player_joined(node, side, timeout=300):
     end = time.time() + timeout
     reply = ''
     while time.time() < end:
+        if alive is not None and not alive():
+            raise SystemExit('client %s ended before %s joined the server; the client log is %s' % (side, name, cl))
         try:
             r = Rcon(node)  # a fresh connection each round: a stale one would fail the whole wait on one hiccup
             reply = r.cmd('list', timeout=10)
@@ -965,7 +968,7 @@ def client(node, side):
     b['startFileTime'] = proc_start(b['pid'])  # pins the process, not just its pid number
     st['bridge' + side] = b
     save_state(node, st)
-    wait_player_joined(node, side)
+    wait_player_joined(node, side, alive=lambda: same_process(proc_start(pid), start))
     print('client', side, 'bridge', port, 'pid', b['pid'], '-', USERS[side], 'joined')
 
 

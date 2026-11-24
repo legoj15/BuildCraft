@@ -69,7 +69,7 @@ public final class PreviewBlockModelRenderer {
     private PreviewBlockModelRenderer() {}
 
     //? if >=26.1 {
-    /** Deterministic seed so model variant selection is stable frame-to-frame (no preview flicker). */
+    /** Re-seeded before each use, so model variant selection is stable frame-to-frame (no preview flicker). */
     private static final RandomSource RANDOM = RandomSource.create(42L);
     //?}
 
@@ -92,6 +92,7 @@ public final class PreviewBlockModelRenderer {
     *///?}
         //? if >=26.1 {
         BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
+        RANDOM.setSeed(42L); // per call, so a weighted model picks the same variant every frame
         List<BakedQuad> quads = BlockModelQuadExtractor.getAllQuads(model, RANDOM);
         if (quads.isEmpty()) {
             return false;

@@ -844,6 +844,7 @@ def server(node):
                 subprocess.run(['taskkill', '/PID', str(prebuild.pid), '/T', '/F'], capture_output=True)
                 raise
             # pinned like the server, so a `stop` during the build ends it before it releases the lock
+            st.pop('stopRequested', None)  # an earlier run's refused stop: not about this build
             st['prebuild'], st['prebuildStart'] = prebuild.pid, proc_start(prebuild.pid)
             save_state(node, st)
             try:
@@ -851,7 +852,11 @@ def server(node):
             except SystemExit:
                 lock_release(node)
                 raise
-            st = load_state(node)  # a `stop` meanwhile cleared it; the hand-over below then refuses
+            st = load_state(node)
+            if st.get('prebuild') != prebuild.pid or st.get('stopRequested'):
+                # a `stop` ran during the build (it cleared the state, or was refused and marked it): never start
+                # the server it was asked to prevent
+                raise SystemExit('a `stop` ran during the artifacts build, so the server was not started')
             st.pop('prebuild', None)
             st.pop('prebuildStart', None)
         st['server'] = gradle(node, [f':{node}:runServer'] + run_switches(node, 'server'), 'server.gradle.log')
@@ -1159,7 +1164,10 @@ def stop(node):
         # ... and the same for a kill that was refused because the pid was not provably this rig's (state written
         # before start times were recorded, or a reused number): the recorded process may still be alive, so the state
         # is not dropped and the lock not released over it (#230)
-        save_state(node, {k: st[k] for k in ('server', 'serverStart', 'serverJvm', 'serverJvmStart',
+        if refused:
+            st['stopRequested'] = True  # an artifacts build that outlives this stop must not start its server
+        save_state(node, {k: st[k] for k in ('prebuild', 'prebuildStart', 'stopRequested',
+                                             'server', 'serverStart', 'serverJvm', 'serverJvmStart',
                                              'clientB', 'clientBStart', 'clientA', 'clientAStart',
                                              'bridgeA', 'bridgeB', 'tunnel', 'remote_kill_unconfirmed') if k in st})
         if remote_unconfirmed:

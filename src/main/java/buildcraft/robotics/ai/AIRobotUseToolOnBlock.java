@@ -80,7 +80,11 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                 // the owner would run every other mod's click handler; a till replaces the block it is used on, so
                 // the owner is asked the break question, the one the farmer board already asks every robot about
                 // the block it settles on (and the stripes path asks about the block a hoe tills there).
-                if (RobotProtection.stationOwnerCanBreak(robot, serverLevel, useToBlock)) {
+                // An empty hand tills nothing and is nobody's veto (the click helper's item gate would tally it as a
+                // refusal), so it is a plain failure before anyone is asked.
+                if (held.isEmpty()) {
+                    used = false;
+                } else if (RobotProtection.stationOwnerCanBreak(robot, serverLevel, useToBlock)) {
                     try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                         ServerPlayer player = lease.player();
                         player.setPos(robot.position());
@@ -101,8 +105,7 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                                 serverLevel, player, InteractionHand.MAIN_HAND, held, hit));
                         // Read before the lease closes and takes the hand's contents away.
                         inHand = player.getMainHandItem();
-                        // The helper's item gate tallies an empty hand as refused too; that one is nobody's veto.
-                        refused = !held.isEmpty() && MachineRefusals.count(player) != refusalsBefore;
+                        refused = MachineRefusals.count(player) != refusalsBefore;
                     }
                 } else {
                     refused = true;

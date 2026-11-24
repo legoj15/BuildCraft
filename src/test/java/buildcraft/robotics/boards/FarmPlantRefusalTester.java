@@ -264,10 +264,16 @@ public class FarmPlantRefusalTester {
             f.robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
             f.board = new BoardRobotFarmer(f.robot);
             try (WorkClaimMod claim = new WorkClaimMod(dirt::contains, pos -> false, dirt::contains, pos -> false)) {
-                boolean slept = f.cycleUntil(() -> f.asleep() || claim.totalPlaceAsks() > xs.length);
+                boolean slept = f.cycleUntil(f::asleep);
 
-                helper.assertTrue(claim.totalPlaceAsks() > 0, "precondition: the till asked the claim about a placement");
-                helper.assertTrue(slept, "the farmer gives up on a claim that refuses every till's placement");
+                helper.assertTrue(claim.totalPlaceAsks() == WorkRefusals.GIVE_UP_AFTER,
+                        "the farmer gives up after " + WorkRefusals.GIVE_UP_AFTER + " refused tills in a row - got "
+                                + claim.totalPlaceAsks());
+                for (BlockPos pos : dirt) {
+                    helper.assertTrue(claim.placeAsks(pos) <= 1, "no block is tilled twice, " + pos + " was asked "
+                            + claim.placeAsks(pos) + " times");
+                }
+                helper.assertTrue(slept, "...and then it sleeps");
                 helper.assertTrue(f.sleepReason() == RobotSleepReason.PROTECTED,
                         "...saying its work is protected, not that it keeps failing, got " + f.sleepReason());
                 for (BlockPos pos : dirt) {

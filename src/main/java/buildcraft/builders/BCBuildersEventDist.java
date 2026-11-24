@@ -721,7 +721,7 @@ public enum BCBuildersEventDist {
                     cameraPos, collector
                 );
             }
-            // 1.21.11 has no SubmitCustomGeometryEvent, so the place-task throwing animation runs
+            // Below 26.1 there is no SubmitCustomGeometryEvent, so the place-task throwing animation runs
             // here (on RenderLevelStageEvent) instead of in renderAllBuildersCustomGeometry.
             //? if <26.1 {
             /*renderPlaceTaskCubes(active, cameraPos, poseStack, partialTicks);*/
@@ -760,9 +760,9 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from SubmitCustomGeometryEvent (26.1) to render the block-throwing animation for each
-     *  active place task — items travel from the Builder toward their destination block. On 1.21.11
+     *  active place task — items travel from the Builder toward their destination block. Below 26.1
      *  this event is absent; the animation runs from {@link #renderAllBuilders} via
-     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
+     *  {@code renderPlaceTaskCubes} (PlaceTaskCubeRenderer) instead. */
     //? if >=26.1 {
     public void renderAllBuildersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
@@ -905,7 +905,7 @@ public enum BCBuildersEventDist {
                         );
                     }
                 }
-                // 1.21.11 place-task throwing animation (no SubmitCustomGeometryEvent here). Outside
+                // Below 26.1, the place-task throwing animation (no SubmitCustomGeometryEvent there). Outside
                 // the robotPos/break-task guards above because placing is independent of breaking.
                 //? if <26.1 {
                 /*renderPlaceTaskCubes(filler.builder, cameraPos, poseStack, partialTicks);*/
@@ -915,8 +915,8 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from SubmitCustomGeometryEvent (26.1) to render place-task items in world space via
-     *  SubmitNodeCollector. On 1.21.11 the animation runs from {@link #renderAllFillers} via
-     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
+     *  SubmitNodeCollector. Below 26.1 the animation runs from {@link #renderAllFillers} via
+     *  {@code renderPlaceTaskCubes} (PlaceTaskCubeRenderer) instead. */
     //? if >=26.1 {
     public void renderAllFillersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
@@ -977,12 +977,14 @@ public enum BCBuildersEventDist {
     // renderAllFillers (both already on RenderLevelStageEvent), which fetch a MultiBufferSource via
     // mc.renderBuffers().bufferSource() themselves. PlaceTaskCubeRenderer draws BLOCK items — the
     // overwhelmingly common builder/filler case — as their real block model
-    // (BlockRenderDispatcher.renderSingleBlock); only non-block items fall back to a particle-sprite
-    // cube. That fallback is NOT for lack of a MultiBufferSource: it's because a fully-resolved
+    // (BlockRenderDispatcher.renderSingleBlock), except a block whose model is empty (pipes, engines:
+    // the body is a block-entity renderer's) — those, and non-block items, take the item path instead.
+    // That path is NOT born of a missing MultiBufferSource: it's because a fully-resolved
     // ItemStackRenderState can only be drawn via submit(..., SubmitNodeCollector, ...) (no collector at
-    // RenderLevelStageEvent) and the high-level ItemRenderer.renderStatic was removed on 1.21.10/1.21.11,
-    // leaving no clean public path to a full item model here. (On 1.21.1, renderStatic still exists —
-    // see the ItemRenderUtil/PlaceTaskCubeRenderer <1.21.10 branches.)
+    // RenderLevelStageEvent) and the high-level ItemRenderer.renderStatic was removed on 1.21.10/1.21.11.
+    // So 1.21.1, where renderStatic still exists (see the ItemRenderUtil/PlaceTaskCubeRenderer <1.21.10
+    // branches), draws such items' real item model — a painted pipe's tint included — while 1.21.10/1.21.11
+    // draw a particle-sprite cube tinted with the pipe's paint.
     //? if <26.1 {
     /*private static <T extends buildcraft.builders.snapshot.ITileForSnapshotBuilder> void renderPlaceTaskCubes(
             buildcraft.builders.snapshot.SnapshotBuilder<T> active, Vec3 cameraPos,

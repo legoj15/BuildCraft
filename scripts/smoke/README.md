@@ -281,7 +281,8 @@ finished row against the reference follow; the report echoes the place-task list
 shots (`-Nodes 1.21.1,1.21.1-forge`). The first run (2026-11-22, four nodes, 90 steps) found the two 1.21.1 loaders identical:
 the preview draws the block's default model, a pipe holder's is an empty placeholder without its block entity, so no pipe cube
 is drawn on either (only the glass cube, the control, is), and the placed pipes match pixel for pixel; the 26.x nodes draw the
-plain pipe item instead. It also shoots the blueprint item's tooltip preview, a second no-level path that draws painted pipes
+plain pipe item instead. #237 fixed both (2026-11-23): the client's place tasks carry the paint, and below 26.1 a pipe or
+engine flies as its item model (1.21.1) or a paint-tinted sprite cube (1.21.10, 1.21.11). It also shoots the blueprint item's tooltip preview, a second no-level path that draws painted pipes
 itself.
 
 ## Filler patterns: `filler-patterns`

@@ -6,10 +6,12 @@ Run: python scripts/smoke/generators/gen_builder_painted_pipe.py  (rewrites scri
 The question (#229): on the Forge 1.21.1 node a painted item pipe drawn WITHOUT a level may differ from the NeoForge 1.21.1
 one, because the Forge mixin that scales a mask quad's vertex alpha (platform/forge/mixin/client/ModelBlockRendererMixin)
 only wraps the chunk mesh's putQuadData on 1.21.1, while vanilla's no-level putBulkData passes readExistingColor=false. The
-no-level path is the Builder's placement preview (PlaceTaskCubeRenderer -> ClientVanillaExtensions.renderSingleBlock): each
-queued place task flies its item from the Builder to its cell as a 0.30-block cube of the item's block, drawn with the
-state's default model, so the preview cannot know the cell's paint at all (the task carries the plain pipe item). The run
-puts the two side by side on a node, and the same scenario on two nodes shows whether they differ.
+no-level path is the Builder's placement preview (PlaceTaskCubeRenderer): each queued place task flies its item from the
+Builder to its cell as a 0.30-block cube. The client sync writes a display copy of the task's item carrying the cell's
+captured paint (the PIPE_COLOUR component, SnapshotBuilder.displayStackFor), and the cube is drawn from that item model on
+1.21.1 (the classic item renderer, whose tint applies the paint) and as a paint-tinted sprite cube on 1.21.10/1.21.11;
+26.x draws the same display stack's item model through its SubmitNodeCollector path. So the preview does know the cell's
+paint. The run puts the two loaders side by side on a node, and the same scenario on two nodes shows whether they differ.
 
 The rig, from the base (floor at y-1):
 
@@ -50,6 +52,10 @@ What it showed (2026-11-22, run on 1.21.1, 1.21.1-forge, 26.3 and 26.3-forge, 90
     placeholder, and both loaders' pipe block models fall back to it when the model data holds no pipe. So the preview can
     neither show nor hide paint, and the Forge mixin's alpha scaling is never reached by it.
   - 26.3 and 26.3-forge draw the pipe ITEM model for a pipe task (a small plain pipe, unpainted), the same on both loaders.
+
+After #237 (2026-11-23, run on 1.21.1, 1.21.11 and 26.3, 90 steps each, all green): every pipe cube flies, painted. 1.21.1
+and 26.3 draw the painted pipe item model and look alike; 1.21.11 (and 1.21.10) draws a paint-tinted pipe-sprite cube, since
+that line has no item-model path at this render stage. The findings above are the pre-fix record.
 """
 import os
 import sys
@@ -192,7 +198,7 @@ S.cmd("give the Builder its pipes and the battery: it starts",
       '{stack:{id:"%spipe_stone_item",count:8}},{stack:{id:"%spipe_stone_fluid",count:8}},'
       '{stack:{id:"minecraft:red_stained_glass",count:8}}]}}}' % (at(*BUILDER), BATTERY_UJ, BC, BC))
 S.wait(1800)
-S.echo("the place tasks of the Builder: the items the cubes fly as (a plain pipe item each: no paint component)",
+S.echo("the place tasks of the Builder: the items the cubes fly as (the pipe items, carrying the paint component where the blueprint captured paint)",
        "data get block %s builderClientData.placeTasks" % at(*BUILDER))
 FLY_LOOK = ("the Builder's flying cubes (0.30 block each) arcing from the Builder (north, centre-left) to the row's cells: "
             "compare each cube's look with the placed pipes of the reference row in front. Judge whether a cube is "

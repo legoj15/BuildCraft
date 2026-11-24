@@ -1416,10 +1416,29 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return nbt;
     }
 
+    /**
+     * A display-only stand-in for {@code stack}, one of {@code placeTask}'s items, as the client sync writes it for
+     * the flying-cube animation (see {@link #serializeClientNBT}). Only the copy the client draws is affected: the
+     * task's own {@link PlaceTask#items} — what is placed, and what a cancelled task refunds — is never painted, so
+     * a painted requirement cannot stop matching the plain items the builder's inventory holds. Default: the item
+     * unchanged. Overridden by {@link BlueprintBuilder} to carry a pipe cell's captured paint.
+     */
+    protected ItemStack displayStackFor(PlaceTask placeTask, ItemStack stack) {
+        return stack;
+    }
+
     public CompoundTag serializeClientNBT() {
         CompoundTag nbt = new CompoundTag();
         nbt.put("breakTasks", NBTUtilBC.writeCompoundList(clientBreakTasksCache.stream().map(BreakTask::writeToNBT)));
-        nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
+        nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream()
+            .map(placeTask -> new PlaceTask(
+                placeTask.pos,
+                placeTask.items.stream()
+                    .map(stack -> displayStackFor(placeTask, stack))
+                    .collect(Collectors.toList()),
+                placeTask.power
+            ))
+            .map(PlaceTask::writeToNBT)));
         // Absent unless stalled, so the steady-state sync carries nothing extra. (This tag is also what the tile saves
         // as its client data, so a stalled Builder's list is saved with it; the server drops what it loads again on its
         // first tick, see trackStall.)

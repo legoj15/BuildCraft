@@ -32,7 +32,9 @@ import buildcraft.robotics.entity.RobotSleepReason;
  *
  *  <p>A second: a break that fails on a block that stays (one the tool cannot break, a negative-hardness block a
  *  modded tool was pointed at) is remembered, and a run of them sends the board to sleep
- *  ({@link #finishAttempt}). 7.1.x released the block and searched again, and the nearest block won every time. */
+ *  ({@link #finishAttempt}). 7.1.x released the block and searched again, and the nearest block won every time. A
+ *  break the world refused is told apart from those ({@link AIRobotBreak#wasRefused()}): remembered as a refusal, so
+ *  the board sleeps saying its work is protected. */
 public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearchBlock {
 
     public BoardRobotGenericBreakBlock(IRobotAccess iRobot) {
@@ -67,6 +69,13 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
                 startDelegateAI(new AIRobotGotoSleep(robot, StationOutcome.sleepReason(ai,
                         ai instanceof AIRobotFetchAndEquipItemStack
                                 ? RobotSleepReason.NO_TOOL : RobotSleepReason.NOWHERE_TO_UNLOAD)));
+            }
+        } else if (ai instanceof AIRobotBreak breakAi && breakAi.wasRefused()) {
+            // The world refused the break of a block that still stands (the permit probe let it through, the real break
+            // event did not): remembered as a refusal, and a run of them sleeps as protected work, not as work that
+            // keeps failing - see finishAttempt.
+            if (finishAttempt(ai)) {
+                startDelegateAI(new AIRobotGotoSleep(robot, RobotSleepReason.PROTECTED));
             }
         } else if (ai instanceof AIRobotBreak) {
             // A break that failed on a block that is still there is remembered (the search skips it from now on), and

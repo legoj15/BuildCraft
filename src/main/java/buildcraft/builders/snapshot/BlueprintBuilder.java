@@ -453,6 +453,31 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         ).orElse(null);
     }
 
+    /**
+     * The flying cube for a pipe cell carries the cell's paint: a copy of the pipe item the task took with the
+     * {@code PIPE_COLOUR} component set — the same component pick-block puts on a painted pipe, and the one the pipe
+     * item's model tints itself from. The colour is the one the blueprint captured, read from the schematic's tile
+     * NBT ({@code pipe.col}) the way {@code Pipe}'s NBT constructor reads it, not the world's: the cell is usually
+     * not built yet when the cube flies. Pluggables in the same task are left alone (only pipe items carry the
+     * component). Display only — see {@link SnapshotBuilder#displayStackFor}.
+     */
+    @Override
+    protected ItemStack displayStackFor(PlaceTask placeTask, ItemStack stack) {
+        if (stack.isEmpty() || getBuildingInfo() == null) return stack;
+        if (!(stack.getItem() instanceof buildcraft.transport.item.ItemPipeHolder)) return stack;
+        if (!(getSchematicBlock(placeTask.pos) instanceof SchematicBlockPipe pipe)) return stack;
+        CompoundTag tileNbt = pipe.getTileNbtForRender();
+        if (tileNbt == null) return stack;
+        CompoundTag pipeTag = NBTUtilBC.getCompound(tileNbt, "pipe");
+        if (NBTUtilBC.getString(pipeTag, "col", "").isEmpty()) return stack;
+        net.minecraft.world.item.DyeColor col =
+            NBTUtilBC.readEnum(pipeTag.get("col"), net.minecraft.world.item.DyeColor.class);
+        if (col == null) return stack;
+        ItemStack display = stack.copy();
+        display.set(buildcraft.transport.BCTransportItems.PIPE_COLOUR.get(), col);
+        return display;
+    }
+
     @Override
     protected void cancelPlaceTask(PlaceTask placeTask) {
         super.cancelPlaceTask(placeTask);

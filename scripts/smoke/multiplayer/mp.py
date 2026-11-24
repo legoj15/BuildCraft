@@ -23,6 +23,7 @@ ssh tunnel's pid is pinned the same way; a tunnel key the older mp.py wrote (a b
   python -I mp.py rcon <node> "<cmd>" ...  server console commands
   python -I mp.py b <node> A|B <METHOD> <path> [json]
   python -I mp.py stop <node>              stop clients + server (a remote server: every java of that checkout)
+  python -I mp.py stop <node> --forget     drop the run's state + smoke lock, killing no server/client (after a refused stop)
 
 Loaders: NeoForge nodes pass the run switches through mp.init.gradle (an init script, so build.gradle.kts stays untouched);
 a MinecraftForge node (`loader=forge`) and a Fabric node (`loader=fabric`) read the build's own `-PbcUser`,
@@ -950,6 +951,30 @@ def kill_pinned(label, pid, recorded):
     return True
 
 
+def forget(node):
+    """`stop <node> --forget`: drop the run's state and release the smoke lock without killing any recorded server,
+    client or bridge (only the rig's own pinned ssh tunnel is ended). The way out
+    of a stop that keeps refusing a pid it cannot prove is the rig's (state an older mp.py wrote, no start times):
+    the caller has ended those processes by hand, or checked they are not the rig's (#230)."""
+    st = load_state(node)
+    if st.get('remote_kill_unconfirmed'):
+        # the poller still holds the lock for a remote server that may be running: plain stop repeats the kill and is
+        # the only command that can confirm it; forgetting here would let a second server start on the same checkout
+        raise SystemExit('the remote kill of an earlier stop is still unconfirmed: run `python -I mp.py stop %s` '
+                         '(without --forget), which repeats it' % node)
+    for k in ('server', 'serverJvm', 'clientB', 'clientA'):
+        if k in st:
+            print('forgetting %s (pid %s): not killed' % (k, st[k]))
+    for side in ('A', 'B'):
+        b = st.get('bridge' + side)
+        if b:
+            print('forgetting bridge%s (pid %s): not killed' % (side, b.get('pid')))
+    if 'tunnel' in st:
+        tunnel_stop(node)  # pinned by start time, so only the rig's own tunnel: dropping the record would orphan it
+    save_state(node, {})
+    lock_release(node)
+
+
 def stop(node):
     st = load_state(node)
     t = st.get('tunnel')
@@ -975,7 +1000,9 @@ def stop(node):
         if unconfirmed_before:
             print('an earlier stop could not confirm the remote kill: repeating it whatever the local poller says '
                   '(the earlier stop left that poller running on purpose, holding the smoke lock)')
-        if stopped and poller and not unconfirmed_before:  # the server's Gradle ends, the remote command with it, then the poller returns
+        # the server's Gradle ends, the remote command with it, then the poller returns. A poller with no recorded start
+        # time (older state) is waited on too: skipping it would let the straggler kill below end a server mid-save.
+        if stopped and poller and not unconfirmed_before:
             end = time.time() + 240
             while time.time() < end and same_process(proc_start(poller), st.get('serverStart')):
                 time.sleep(5)
@@ -987,8 +1014,17 @@ def stop(node):
             confirmed, line = remote_kill_stragglers()
             print(line)
             remote_unconfirmed = not confirmed
-    else:
-        time.sleep(15 if stopped else 0)
+    elif stopped:
+        # wait for the server JVM to finish its save and exit before anything is force-killed: a fixed sleep cut slow
+        # saves short (86 s has been seen on the remote box). Without a pinned JVM that is still alive (none recorded, or
+        # a stale pin from an earlier run), keep the old 15 s grace.
+        jvm, jvm_start = st.get('serverJvm'), st.get('serverJvmStart')
+        if jvm and jvm_start and jvm_start > 0 and same_process(proc_start(jvm), jvm_start):
+            end = time.time() + 240
+            while time.time() < end and same_process(proc_start(jvm), jvm_start):
+                time.sleep(2)
+        else:
+            time.sleep(15)
     refused = []
     for k in ('serverJvm', 'clientB', 'clientA', 'server'):
         if k not in st:
@@ -1018,8 +1054,9 @@ def stop(node):
         if refused:
             raise SystemExit('%s: a recorded process could not be proved ended (pid %s may still be running), so the '
                              'run\'s state and the smoke lock were kept; end it by hand if it is this rig\'s, then run '
-                             '`python -I mp.py stop %s` again' % (', '.join(refused),
-                                                                  ', '.join(str(st[k]) for k in refused), node))
+                             '`python -I mp.py stop %s --forget` to drop the state and release the lock (after any '
+                             'unconfirmed remote kill is confirmed by a plain stop)'
+                             % (', '.join(refused), ', '.join(str(st[k]) for k in refused), node))
         return
     if 'tunnel' in st:
         tunnel_stop(node)
@@ -1031,7 +1068,7 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     if not a or a[0] not in ('setup', 'server', 'client', 'rcon', 'b', 'stop'):
         print('usage: python -I mp.py setup <node> | server <node> | client <node> A|B | rcon <node> "<cmd>" ... | '
-              'b <node> A|B <METHOD> <path> [json] | stop <node>   (the docstring at the top of mp.py explains each)')
+              'b <node> A|B <METHOD> <path> [json] | stop <node> [--forget]   (the docstring at the top of mp.py explains each)')
         sys.exit(0 if a[:1] in (['-h'], ['--help']) else 2)
     if a[0] == 'setup':
         setup(a[1])
@@ -1046,4 +1083,11 @@ if __name__ == '__main__':
     elif a[0] == 'b':
         print(json.dumps(bridge(a[1], a[2], a[3], a[4], a[5] if len(a) > 5 else None), indent=1)[:4000])
     elif a[0] == 'stop':
-        stop(a[1])
+        if len(a) < 2 or a[1].startswith('-'):
+            sys.exit('usage: python -I mp.py stop <node> [--forget]')
+        if a[2:] == ['--forget']:
+            forget(a[1])
+        elif a[2:]:
+            sys.exit('stop takes only --forget after the node, not %s' % ' '.join(a[2:]))
+        else:
+            stop(a[1])

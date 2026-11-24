@@ -14,13 +14,13 @@ The standing record is [forge-port.md](forge-port.md): toolchain, what each Forg
 ## Decisions waiting for the user
 
 - Whether and when Forge ships, and whether Forge shares NeoForge's update manifest.
-- Server1's firewall has no rule for the Java 21 runtime, so the 1.21.x multiplayer servers are reached through an ssh tunnel (#230).
+- Server1's firewall has no rule for the Java 21 runtime, so the 1.21.x multiplayer servers are reached through an ssh tunnel (#238, the user's call, blocked by #214).
 - `versions/1.21.1-forge/run` has no accepted EULA, so `:1.21.1-forge:runServer` was never run by hand (the game tests and the multiplayer rig cover the server).
 - Two Forge defects worth reporting upstream are the user's to file: the 1.21.1 quick-play crash (#226) and the shaped-recipe network encoding on 26.3 (forge-port.md, Open).
 
 ## Open follow-ups
 
-#216 to #232 were worked on branch `claude/issues-216-232-cffea1` (2026-11-22) and closed with result notes. Still open from that run: #236 (#219's remainder: the access-transformer probe is in, but a production-install boot is unproven and the release rig's crash signatures do not yet carry its ERROR line, because `testing/` is gitignored in the main checkout), #237 (the Builder's preview draws no pipe cube on 1.21.x, found while checking #229), #230 item 4 (Server1 firewall, the user's call), #233 (robots and claims), #234 (creative cursor drain, a question), #235 (Forge-only light speck while another player mines).
+#216 to #232 were worked on branch `claude/issues-216-232-cffea1` (2026-11-22). Its remainders #230, #233, #235, #236 and #237 were closed on `claude/issues-230-233-235-237-652414` (2026-11-23); follow-ups filed there: #238 (Server1 firewall, the user's call), #239 (mp.py artifacts lock on a fresh worktree), #240 (place-task cube quad check), #242 (should refused harvests sleep PROTECTED?). Still open from the earlier run: #234 (creative cursor drain, a question).
 
 The gitignored release test matrix (`testing/config/runtimes.json`) now has all five Forge rows enabled with clients (edited on this machine after the merge; the release rig was not run with them). Server1 has no McDevBridge jar for `1.21.11-forge`; build it there before running that line's client batch remotely.
 

@@ -156,6 +156,90 @@ public final class BlockModelQuadExtractor {
         //?}
     }
 
+    /** Re-seeded on every probe, so the emptiness probe picks the same weighted variant each time (render thread). */
+    private static final RandomSource EMPTY_PROBE_RANDOM = RandomSource.create(42L);
+
+    /** One probe's answer and the model it was taken from: a reload swaps the model, which forces a new probe. */
+    private record EmptyProbe(Object model, boolean empty) {}
+
+    /** {@link #drawsNothingAsBlock} answers per state, so the per-frame callers resolve the model and nothing else.
+     *  Render thread only, as both callers are. */
+    private static final java.util.Map<BlockState, EmptyProbe> EMPTY_PROBES = new java.util.HashMap<>();
+
+    /**
+     * Whether drawing {@code state} from its block model shows nothing: an {@code INVISIBLE} render shape, or a
+     * {@code MODEL} whose block model has no quads at all, on any face or in the general bucket, over every part (a
+     * particle-only placeholder whose look is a block-entity renderer's: the pipe holder, the engines, the tube). The
+     * place-task cube and the blueprint preview below 26.1 send such a block down the item path instead (#240); on
+     * 26.x the preview builds the quad list itself and needs no probe, so that arm is here only to keep the answer
+     * the same on every node. Every part counts, not only {@code SimpleModelWrapper}s, so a model baked to another
+     * part type is never taken for empty. 1.21.1's {@code ENTITYBLOCK_ANIMATED} (chests, beds) is never empty:
+     * {@code renderSingleBlock} draws it through the item renderer. The answer is cached per state for as long as
+     * the state resolves to the same model instance.
+     */
+    @SuppressWarnings("deprecation") // context-free collectParts / getQuads: see getQuadsFromModel
+    public static boolean drawsNothingAsBlock(BlockState state) {
+        net.minecraft.world.level.block.RenderShape shape = state.getRenderShape();
+        if (shape == net.minecraft.world.level.block.RenderShape.INVISIBLE) {
+            return true;
+        }
+        if (shape != net.minecraft.world.level.block.RenderShape.MODEL) {
+            return false;
+        }
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        //? if >=26.1 {
+        BlockStateModel model = mc.getModelManager().getBlockStateModelSet().get(state);
+        //?} elif >=1.21.10 {
+        /*BlockStateModel model = mc.getBlockRenderer().getBlockModel(state);*/
+        //?} else {
+        /*BakedModel model = mc.getBlockRenderer().getBlockModel(state);*/
+        //?}
+        EmptyProbe probe = EMPTY_PROBES.get(state);
+        if (probe == null || probe.model() != model) {
+            probe = new EmptyProbe(model, hasNoQuads(state, model));
+            EMPTY_PROBES.put(state, probe);
+        }
+        return probe.empty();
+    }
+
+    @SuppressWarnings("deprecation") // context-free collectParts / getQuads: see getQuadsFromModel
+    //? if >=1.21.10 {
+    private static boolean hasNoQuads(BlockState state, BlockStateModel model) {
+    //?} else {
+    /*private static boolean hasNoQuads(BlockState state, BakedModel model) {*/
+    //?}
+        RandomSource random = EMPTY_PROBE_RANDOM;
+        random.setSeed(42L);
+        //? if >=26.1 {
+        return getAllQuads(model, random).isEmpty();
+        //?} elif >=1.21.10 {
+        /*List<BlockModelPart> parts = new ArrayList<>();
+        model.collectParts(random, parts);
+        for (BlockModelPart part : parts) {
+            if (!part.getQuads(null).isEmpty()) {
+                return false;
+            }
+            for (Direction dir : Direction.values()) {
+                if (!part.getQuads(dir).isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;*/
+        //?} else {
+        /*if (!model.getQuads(state, null, random).isEmpty()) {
+            return false;
+        }
+        for (Direction dir : Direction.values()) {
+            random.setSeed(42L);
+            if (!model.getQuads(state, dir, random).isEmpty()) {
+                return false;
+            }
+        }
+        return true;*/
+        //?}
+    }
+
     //? if >=26.1 {
     /**
      * Extracts every quad of {@code model} (all six faces plus the general/unculled bucket) flattened into

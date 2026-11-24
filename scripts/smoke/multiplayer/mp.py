@@ -18,7 +18,8 @@ bridge, so `b` and the scene scripts fail loudly once that client is gone instea
 ssh tunnel's pid is pinned the same way; a tunnel key the older mp.py wrote (a bare pid) is dropped, never killed.
 
   python -I mp.py setup <node>            game dirs, server.properties, ops, bridge jar + options from run-smoke
-  python -I mp.py server <node>            start the dedicated server, wait for "Done"
+  python -I mp.py server <node>            start the dedicated server, wait for "Done" (a local NeoForge node builds
+                                           createMinecraftArtifacts first: the server JVM then holds those jars)
   python -I mp.py client <node> A|B        start a client that quick-plays into the server, capture its bridge, wait for the join
   python -I mp.py rcon <node> "<cmd>" ...  server console commands
   python -I mp.py b <node> A|B <METHOD> <path> [json]
@@ -259,6 +260,20 @@ def lock_require(node):
     lock_acquire(node, st['server'])
 
 
+def lock_hand_over(node, from_pid, to_pid):
+    """Move this run's lock from `from_pid` (a process that is ending) to `to_pid`, in one rename, so no other run can
+    take it in between; exit when the lock is no longer the one `from_pid` held."""
+    held = lock_read()
+    if held is None or not lock_is_ours(held, node) or held['pid'] != from_pid:
+        raise SystemExit('the smoke lock at %s is no longer held by this run (pid %s), so the server was not started'
+                         % (LOCK, from_pid))
+    held.update(pid=to_pid, start=proc_start(to_pid), since=time.strftime('%Y-%m-%dT%H:%M:%S'))
+    tmp = LOCK + '.handover'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(held, f)
+    os.replace(tmp, LOCK)
+
+
 def lock_release(node):
     """Drop the lock when it is this run's (never one that names another run)."""
     held = lock_read()
@@ -409,20 +424,42 @@ def setup(node):
     print('setup ok', srv, [os.path.basename(j) for j in jars])
 
 
-def gradle(node, args, log):
+def gradle_start(node, args, log):
+    """Start one Gradle invocation (no daemon, plain console, mp.init.gradle) in its own process group, its output in
+    build/smoke-mp/<node>/<log>; returns the Popen."""
     os.makedirs(os.path.join(HERE, node), exist_ok=True)
     out = open(os.path.join(HERE, node, log), 'w')
     cmd = ['cmd', '/c', os.path.join(REPO, 'gradlew.bat'), '--no-daemon', '--console=plain', '-I',
            os.path.join(HERE_SCRIPTS, 'mp.init.gradle')] + args
-    p = subprocess.Popen(cmd, cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
-    return p.pid
+    return subprocess.Popen(cmd, cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
 
 
-def wait_log(path, pattern, timeout, since_size=0):
+def gradle(node, args, log):
+    return gradle_start(node, args, log).pid
+
+
+def gradle_finish(node, p, args, log, timeout=3600):
+    """Wait for the Gradle invocation `p` (from gradle_start) to end; a non-zero exit, or `timeout` seconds (the whole
+    tree is then killed; a cold checkout configures every node first, hence the hour), stops mp.py naming the log."""
+    path = os.path.join(HERE, node, log)
+    try:
+        rc = p.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        subprocess.run(['taskkill', '/PID', str(p.pid), '/T', '/F'], capture_output=True)
+        raise SystemExit('gradle %s did not finish in %d s and was killed; see %s' % (' '.join(args), timeout, path))
+    if rc:
+        raise SystemExit('gradle %s failed (exit %d); see %s' % (' '.join(args), rc, path))
+
+
+def wait_log(path, pattern, timeout, since_size=0, alive=None):
+    """Wait for `pattern` in the log at `path`. `alive`, when given, is asked every round whether the process that
+    writes the log still runs: once it has ended (and the log, read after that answer, still lacks the pattern), the
+    wait stops at once instead of running out its timeout."""
     end = time.time() + timeout
     rx = re.compile(pattern)
     while time.time() < end:
+        running = alive is None or alive()  # asked BEFORE the read, so a line written just before the exit still counts
         try:
             with open(path, encoding='utf-8', errors='replace') as f:
                 f.seek(since_size)
@@ -431,6 +468,8 @@ def wait_log(path, pattern, timeout, since_size=0):
                     return m
         except FileNotFoundError:
             pass
+        if not running:
+            raise SystemExit(f'the process writing {path} ended before {pattern} appeared')
         time.sleep(2)
     raise SystemExit(f'timeout waiting for {pattern} in {path}')
 
@@ -754,6 +793,7 @@ def record_server_jvm(node, st, tries=6):
 def server(node):
     lock_wait_if_busy()
     st = load_state(node)
+    prebuild = None  # a local NeoForge node's artifacts build, which holds the lock until the server takes it
     if REMOTE and st.get('remote_kill_unconfirmed'):
         # a stop could not confirm its remote kill, so a server of that checkout may still be running there: never a
         # second one on it (#230; server() used not to look at the flag). Repeat the kill and refuse until confirmed.
@@ -775,11 +815,31 @@ def server(node):
         log = os.path.join(node_dir(node), SERVER_DIR, 'logs', 'latest.log')
         if os.path.exists(log):
             os.remove(log)
+        if node_loader(node) == 'neoforge':
+            # The running server JVM holds ModDevGradle's artifact jars open, so a client of this worktree that had to
+            # build them later dies renaming its .tmp onto the held jar (#239): build them now, before anything holds
+            # them. The build's own Gradle process holds the smoke lock meanwhile (a cold build takes minutes), and
+            # hands it to the server's below.
+            args = [f':{node}:createMinecraftArtifacts']
+            prebuild = gradle_start(node, args, 'artifacts.gradle.log')
+            try:
+                lock_acquire(node, prebuild.pid)
+            except SystemExit:
+                subprocess.run(['taskkill', '/PID', str(prebuild.pid), '/T', '/F'], capture_output=True)
+                raise
+            try:
+                gradle_finish(node, prebuild, args, 'artifacts.gradle.log')
+            except SystemExit:
+                lock_release(node)
+                raise
         st['server'] = gradle(node, [f':{node}:runServer'] + run_switches(node, 'server'), 'server.gradle.log')
         st['serverStart'] = proc_start(st['server'])
     save_state(node, st)
     try:
-        lock_acquire(node, st['server'])
+        if prebuild is not None:
+            lock_hand_over(node, prebuild.pid, st['server'])
+        else:
+            lock_acquire(node, st['server'])
     except SystemExit:  # lost a race for the lock: take down what was just started
         subprocess.run(['taskkill', '/PID', str(st['server']), '/T', '/F'], capture_output=True)
         if REMOTE:
@@ -811,7 +871,8 @@ def server(node):
             lock_acquire(node, st['server'])
         m = remote_wait_done(node, st['server'], 3600, nonce)  # a fresh checkout configures every node first
     else:
-        m = wait_log(log, r'Done \(([0-9.]+)s\)!', 900)
+        pid, start = st['server'], st['serverStart']
+        m = wait_log(log, r'Done \(([0-9.]+)s\)!', 900, alive=lambda: same_process(proc_start(pid), start))
     print('server up', m.group(0), ('on ' + SERVER_HOST) if REMOTE else '')
     if REMOTE:
         ensure_reachable(node)
@@ -853,7 +914,13 @@ def client(node, side):
     st['client' + side] = gradle(node, [f':{node}:runClient'] + run_switches(node, 'client', side), f'client{side}.gradle.log')
     st['client' + side + 'Start'] = proc_start(st['client' + side])
     save_state(node, st)
-    m = wait_log(log, r'listening on http://127\.0\.0\.1:(\d+)', 900)
+    pid, start = st['client' + side], st['client' + side + 'Start']
+    try:
+        # a failed build or a crashed boot ends the Gradle tree: stop then, not after the full wait (#239)
+        m = wait_log(log, r'listening on http://127\.0\.0\.1:(\d+)', 900,
+                     alive=lambda: same_process(proc_start(pid), start))
+    except SystemExit as e:
+        raise SystemExit('client %s did not come up: %s; see build/smoke-mp/%s/client%s.gradle.log' % (side, e, node, side))
     port = int(m.group(1))
     end = time.time() + 60
     while time.time() < end:

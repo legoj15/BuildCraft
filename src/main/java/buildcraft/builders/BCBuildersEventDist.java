@@ -760,9 +760,9 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from SubmitCustomGeometryEvent (26.1) to render the block-throwing animation for each
-     *  active place task — items travel from the Builder toward their destination block. On 1.21.11
+     *  active place task — items travel from the Builder toward their destination block. Below 26.1
      *  this event is absent; the animation runs from {@link #renderAllBuilders} via
-     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
+     *  {@code renderPlaceTaskCubes} (PlaceTaskCubeRenderer) instead. */
     //? if >=26.1 {
     public void renderAllBuildersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
@@ -905,7 +905,7 @@ public enum BCBuildersEventDist {
                         );
                     }
                 }
-                // 1.21.11 place-task throwing animation (no SubmitCustomGeometryEvent here). Outside
+                // Below 26.1, the place-task throwing animation (no SubmitCustomGeometryEvent there). Outside
                 // the robotPos/break-task guards above because placing is independent of breaking.
                 //? if <26.1 {
                 /*renderPlaceTaskCubes(filler.builder, cameraPos, poseStack, partialTicks);*/
@@ -915,8 +915,8 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from SubmitCustomGeometryEvent (26.1) to render place-task items in world space via
-     *  SubmitNodeCollector. On 1.21.11 the animation runs from {@link #renderAllFillers} via
-     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
+     *  SubmitNodeCollector. Below 26.1 the animation runs from {@link #renderAllFillers} via
+     *  {@code renderPlaceTaskCubes} (PlaceTaskCubeRenderer) instead. */
     //? if >=26.1 {
     public void renderAllFillersCustomGeometry(BCLevelRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();

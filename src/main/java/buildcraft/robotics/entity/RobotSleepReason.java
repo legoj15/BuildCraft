@@ -46,9 +46,9 @@ public enum RobotSleepReason {
     /** The robot carries the empty board. */
     NO_PROGRAM,
     /** Several attempts in a row failed for any cause the board counts alike (a block that changed under the robot, one
-     *  it cannot break, a till or a use a claim refused): the boards whose give-up cannot say which. A break the world
-     *  refused is told apart and says {@link #PROTECTED} instead. Also a search that found only blocks it had failed on
-     *  lately. */
+     *  it cannot break, a till or plant a claim refused): the boards whose give-up cannot say which. A break the world
+     *  refused, a Stripes use and a Bomber drop are told apart and say {@link #PROTECTED} instead. Also a search that
+     *  found only blocks it had failed on lately. */
     WORK_FAILING,
     /** A station that has the tool, the cargo or room for it exists, but could not be used now: another robot holds
      *  it, it forbids this robot, its chunk is not loaded, it is past the flight's reach (of the robot, or of the

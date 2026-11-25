@@ -1,6 +1,6 @@
 # Handoff — 2026-11-22 (MinecraftForge port merged, nothing released)
 
-`main` now carries MinecraftForge as a third loader: `26.3-forge`, `26.2-forge`, `26.1.2-forge`, `1.21.11-forge` and `1.21.1-forge`, each with the whole mod, server and client. There is no Forge build for 1.21.10 and there will not be one. `mod_version` is still 2026.5.0. Nothing was pushed, tagged or published; the release tool holds Forge back (`heldBack` in the gitignored `release/config/release.json`) until the user lifts it.
+`main` now carries MinecraftForge as a third loader: `26.3-forge`, `26.2-forge`, `26.1.2-forge`, `1.21.11-forge` and `1.21.1-forge`, each with the whole mod, server and client. There is no Forge build for 1.21.10 and there will not be one. `mod_version` is still 2026.5.0. Nothing was pushed, tagged or published. The user lifted the Forge hold on 2026-11-24 (`heldBack` in the gitignored `release/config/release.json` is empty), so 2026.5.0 ships Forge; `fullTestSuite` on Server1 at b4186a0c9 passed all 17 nodes that day.
 
 The standing record is [forge-port.md](forge-port.md): toolchain, what each Forge line lacks and how it is served, every measured result. Issues #208, #209, #211, #212 and #213 close with the merge commit when it is pushed.
 

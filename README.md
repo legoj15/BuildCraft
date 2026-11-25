@@ -1,6 +1,6 @@
 ## BuildCraft Redux
 #### Formerly BuildCraft Unofficial
-#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge, and 26.3 on Fabric (in development)
+#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge and Fabric, and on MinecraftForge for all of those except 1.21.10
 
 ### Reporting an issue
 
@@ -32,11 +32,11 @@ Please check if the bug or feature request has been reported beforehand. Also, p
 **Please** mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
 
 ### Fabric
-A Fabric version of BuildCraft for **Minecraft 26.3** is built from the same source. It is in development and not released yet. It is the same mod, and it needs:
+A Fabric version of BuildCraft is available for every supported Minecraft version. It is the same mod, and it needs:
 
-* [Fabric Loader](https://fabricmc.net/use/) 0.19.4 or newer,
-* [Fabric API](https://modrinth.com/mod/fabric-api) 0.160.6+26.3 or newer,
-* [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) 26.3.1 or newer,
+* [Fabric Loader](https://fabricmc.net/use/),
+* [Fabric API](https://modrinth.com/mod/fabric-api),
+* [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port),
 * optionally Team Reborn Energy, so BuildCraft can share power with other mods' machines,
 * optionally JEI or REI, for browsing recipes.
 
@@ -46,6 +46,9 @@ Known differences from the NeoForge version:
 
 * The Robot Goggles can only be worn on the head (Curios and Accessories have no Fabric build for 26.3 yet).
 * Fluid amounts below a thousandth of a bucket do not transfer.
+
+### MinecraftForge
+A MinecraftForge version of BuildCraft is available for Minecraft 1.21.1, 1.21.11, 26.1.2, 26.2 and 26.3. There is no MinecraftForge version for 1.21.10. It is the same mod and needs nothing besides MinecraftForge itself. JEI is supported on 1.21.1; REI is not supported on MinecraftForge.
 
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` for 26.1.2 and newer, and `Java 21` for 1.21.x (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.

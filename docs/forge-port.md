@@ -14,7 +14,7 @@ Per-API evidence lives in [forge-seam-map.md](forge-seam-map.md) (272 rows, each
   or vanilla 26.1/26.2 differ; "The 26.2 and 26.1.2 lines (F8)"). The five Forge lines' version arms are one chain per file
   (`>=26.3` / `>=26.2` / `>=26.1` / `>=1.21.10` / else, each present only where that line differs).
 - **No 1.21.10 Forge node, ever** (user decision, #210: Forge takes no PRs for that branch).
-- Nothing ships until the user says so.
+- Ships from 2026.5.0 (the user lifted the hold on 2026-11-24).
 
 ## Toolchain
 
@@ -1069,8 +1069,8 @@ the call site in its `patches/`.
 - The seven client-class game tests are not registered on Forge (below): they need a Forge client game test (F6).
 - `StaticTablesLevelUnloadTester`'s chunk-owner probe runs on Forge only as far as `ForgeChunkTickets.claim` / `release` go; the
   rest of that test is shared.
-- The gitignored release tool knows `forge` and holds it back (`heldBack` in `release/config/release.json`): Forge nodes
-  are built and verified but not published until the user lifts the hold. The release test matrix
+- The gitignored release tool knows `forge`; its hold (`heldBack` in `release/config/release.json`) was emptied on
+  2026-11-24 for 2026.5.0, so Forge nodes publish with every release. The release test matrix
   (`testing/config/runtimes.json`) has all five Forge rows enabled with clients since the merge; the release rig has
   not been run with them.
 

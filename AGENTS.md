@@ -25,7 +25,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # server), -PbcUser=<name> and -PbcQuickPlayServer=<host:port> (a second client for the multiplayer rig) and -PwithMods.
 # Only 1.21.1-forge wires a recipe viewer (JEI; -Precipe_viewer=none for none). Quick-play works there through a client
 # mixin that starts Forge 52's game event bus before the join (QuickPlayMixin, #226).
-# Forge jars are built but held back from a release by the release tool's ship gate until the user says otherwise.
+# Forge jars ship with every release from 2026.5.0 on (the release tool's ship gate, `heldBack`, was emptied 2026-11-24).
 # Standing design, per-line facts and what is not exercised: docs/forge-port.md. Forge sources per line: .forge-ref/
 # (bash scripts/forge-sources-sync.sh), the Forge twin of .neoforge-ref/.
 # Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.

@@ -107,6 +107,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     };
     /** The most refused cells probed in one tick, so a large claimed volume is re-asked a few cells at a time. */
     private static final int FRAME_RETRY_PROBES_PER_TICK = 8;
+
+    /**
+     * The smallest frame is 3x3: its edge ring leaves one column inside to mine. A narrower area (markers or a box)
+     * is not taken, and the quarry lays out its default area instead.
+     */
+    private static final int MIN_FRAME_SIZE = 3;
     public final Box frameBox = new Box();
     final Box miningBox = new Box();
     private BoxIterator boxIterator;
@@ -296,6 +302,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return frameBox.isOnEdge(p);
     }
 
+    private static boolean fitsQuarry(Box area) {
+        return area.size().getX() >= MIN_FRAME_SIZE && area.size().getZ() >= MIN_FRAME_SIZE;
+    }
+
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         if (level == null || level.isClientSide()) {
             return;
@@ -310,14 +320,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BlockPos min = null, max = null;
         IAreaProvider provider = volumeBoxes.getTakeableAreaAt(areaPos);
         if (provider != null) {
-            min = provider.min();
-            max = provider.max();
-            int dx = max.getX() - min.getX();
-            int dz = max.getZ() - min.getZ();
-            if (dx < 3 || dz < 3) {
-                min = null;
-                max = null;
-            } else {
+            Box area = new Box(provider.min(), provider.max());
+            // The frame stands on the quarry's own level over the area's footprint: a box dragged with a wrench
+            // follows the player's look, so its bottom is often below (or its top above) the quarry, and a frame
+            // the quarry does not sit beside has no frame positions and fails the load-time validation. An area
+            // the quarry stands inside, or one with no column to mine, is left alone.
+            if (!area.contains(worldPosition) && fitsQuarry(area)) {
+                min = new BlockPos(area.min().getX(), worldPosition.getY(), area.min().getZ());
+                max = area.max();
                 provider.removeFromWorld();
             }
         }
@@ -349,7 +359,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 if (!box2.contains(areaPos)) {
                     continue;
                 }
-                if (box2.size().getX() < 3 || box2.size().getZ() < 3) {
+                if (!fitsQuarry(box2)) {
                     continue;
                 }
                 box2.expand(1);

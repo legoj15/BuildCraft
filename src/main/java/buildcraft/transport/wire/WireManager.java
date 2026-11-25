@@ -58,6 +58,16 @@ public class WireManager implements IWireManager {
         }
     }
 
+    /** Client only: recompute {@link #betweens} (this pipe's and its neighbours') on the next tick. The client works
+     *  the links out from synced state (the pipe, its connections, the neighbours' wires), which can arrive after the
+     *  first tick or change under it, so every sync and every neighbour removal asks again. A no-op on the server,
+     *  where resetting {@link #initialised} would rebuild the wire systems. */
+    public void requestBetweensRefresh() {
+        if (holder.getPipeWorld() != null && holder.getPipeWorld().isClientSide()) {
+            initialised = false;
+        }
+    }
+
     public void tick() {
         if (!initialised) {
             initialised = true;

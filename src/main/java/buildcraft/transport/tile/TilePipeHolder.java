@@ -233,6 +233,26 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (level != null && level.isClientSide()) {
             Platform.renderData().requestRenderDataUpdate(this);
             scheduleRenderUpdate = true;
+            // The wire links depend on the pipe and its connections, which this sync may have just delivered.
+            wireManager.requestBetweensRefresh();
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        // Neighbours drawing a wire link into this pipe drop it on their next tick (client only; the BER draws the
+        // links every frame, so no re-mesh is needed). Also fires on chunk unload, where the recompute is harmless.
+        if (level != null && level.isClientSide()) {
+            for (Direction side : Direction.values()) {
+                BlockPos neighbourPos = worldPosition.relative(side);
+                // Read the chunk's map directly: Level.getBlockEntity would create and insert a block entity, and an
+                // in-place chunk resend calls setRemoved while iterating that very map.
+                if (level.getChunkAt(neighbourPos).getBlockEntities().get(neighbourPos) instanceof TilePipeHolder neighbour
+                        && !neighbour.isRemoved()) {
+                    neighbour.wireManager.requestBetweensRefresh();
+                }
+            }
         }
     }
 
@@ -501,7 +521,12 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         // Prepare redstone outputs for this tick
         java.util.Arrays.fill(redstoneOutputsThisTick, 0);
 
+        boolean wireLinksRecomputed = !wireManager.initialised;
         wireManager.tick();
+        if (wireLinksRecomputed) {
+            // The collision shape includes the wire links, and a client-side recompute arrives with no sync to drop it.
+            invalidateCollisionShapeCache();
+        }
         if (pipe != null) {
             pipe.onTick();
             ContainedFluidDetonation.tickContainer(level, worldPosition, this);

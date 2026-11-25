@@ -12,5 +12,5 @@ Other than that, there are some minor bug fixes.
 - Robots no longer fly back and forth forever when their target sits inside a block they can't enter, such as a Picker going after an item lying on a pipe. A Picker or a fighting robot now does its job from beside it, and other robots give up on it.
 - Improved and fixed rendering of pipes that are being placed or in blueprints.
 - With ModernFix's dynamic resources option on, gates, facades and lenses show their proper item icons again, and pipe items get their colours back.
-- Pipe wires now join up straight away when a pipe next to them is replaced, instead of leaving gaps or loose ends until the world is reloaded.
+- Pipe wires now join up straight away when a pipe next to them is replaced, instead of leaving gaps or loose ends until the world is reloaded; a removed pipe also no longer leaves an invisible wire stub sticking out of its neighbour that you could bump into.
 - A Quarry placed against a marker area that was resized with a wrench now uses the resized area, even when the drag left the bottom of the box below the Quarry or its top above it. Markers and boxes now share one minimum of 3x3; anything narrower gets the default area instead.

@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
@@ -39,6 +40,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import buildcraft.api.capability.BCCapability;
 import buildcraft.api.core.BCLog;
@@ -234,26 +236,43 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             Platform.renderData().requestRenderDataUpdate(this);
             scheduleRenderUpdate = true;
             // The wire links depend on the pipe and its connections, which this sync may have just delivered.
-            wireManager.requestBetweensRefresh();
+            wireManager.requestBetweensRefresh(true);
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        // Neighbours drawing a wire link into this pipe drop it on their next tick (client only; the BER draws the
-        // links every frame, so no re-mesh is needed). Also fires on chunk unload, where the recompute is harmless.
-        if (level != null && level.isClientSide()) {
-            for (Direction side : Direction.values()) {
-                BlockPos neighbourPos = worldPosition.relative(side);
-                // Read the chunk's map directly: Level.getBlockEntity would create and insert a block entity, and an
-                // in-place chunk resend calls setRemoved while iterating that very map.
-                if (level.getChunkAt(neighbourPos).getBlockEntities().get(neighbourPos) instanceof TilePipeHolder neighbour
-                        && !neighbour.isRemoved()) {
-                    neighbour.wireManager.requestBetweensRefresh();
-                }
+        // Neighbours with a wire link into this pipe drop it on their next tick: on the client the BER draws the links
+        // every frame (no re-mesh needed), on the server they are part of the collision shape. Also fires on chunk
+        // unload, where the recompute is harmless (a pipe that loads back re-links its neighbours on its first tick).
+        requestNeighbourWireLinkRefresh();
+    }
+
+    /** Asks every loaded neighbouring pipe to recompute its wire links on its next tick, without loading a chunk. */
+    private void requestNeighbourWireLinkRefresh() {
+        if (level == null) {
+            return;
+        }
+        for (Direction side : Direction.values()) {
+            BlockPos neighbourPos = worldPosition.relative(side);
+            // Only a chunk already in memory (getChunkNow): Level.isLoaded is a ticket test on the server (a queued
+            // chunk passes, and getChunkAt would then load it) and always true on the client. Read the chunk's map
+            // directly: Level.getBlockEntity would create and insert a block entity, and an in-place chunk resend
+            // calls setRemoved while iterating that very map.
+            LevelChunk chunk = level.getChunkSource().getChunkNow(
+                SectionPos.blockToSectionCoord(neighbourPos.getX()), SectionPos.blockToSectionCoord(neighbourPos.getZ()));
+            if (chunk != null && chunk.getBlockEntities().get(neighbourPos) instanceof TilePipeHolder neighbour
+                    && !neighbour.isRemoved()) {
+                neighbour.wireManager.requestBetweensRefresh(false);
             }
         }
+    }
+
+    @Override
+    public void requestWireLinkRefresh() {
+        wireManager.requestBetweensRefresh(false);
+        requestNeighbourWireLinkRefresh();
     }
 
     /** Whether {@code pipeTag} (a {@link Pipe#writeToNbt} tag) holds the same kind of pipe as {@code pipe}. */
@@ -495,6 +514,12 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         cachedCollisionShape = shape;
     }
 
+    /** The composite collision shape includes the wire links. */
+    @Override
+    public void onWireLinksChanged() {
+        invalidateCollisionShapeCache();
+    }
+
     /** Drops the cached shape so the next query re-merges it. Called from every structural-change path. */
     private void invalidateCollisionShapeCache() {
         cachedCollisionShape = null;
@@ -521,12 +546,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         // Prepare redstone outputs for this tick
         java.util.Arrays.fill(redstoneOutputsThisTick, 0);
 
-        boolean wireLinksRecomputed = !wireManager.initialised;
         wireManager.tick();
-        if (wireLinksRecomputed) {
-            // The collision shape includes the wire links, and a client-side recompute arrives with no sync to drop it.
-            invalidateCollisionShapeCache();
-        }
         if (pipe != null) {
             pipe.onTick();
             ContainedFluidDetonation.tickContainer(level, worldPosition, this);
@@ -870,6 +890,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
                 }
             }
         }
+        // A blocking pluggable cuts a wire link across an unconnected face, which no connection change reports.
+        requestWireLinkRefresh();
         scheduleRenderUpdate();
         setChanged();
         return old;
@@ -959,6 +981,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public void scheduleNetworkUpdate(PipeMessageReceiver... parts) {
         // Connection changes come through here (Pipe.updateConnections) — they change the shape.
         invalidateCollisionShapeCache();
+        // ...and the wire links, which only bridge connected (or unblocked) sides.
+        wireManager.requestBetweensRefresh(false);
         Collections.addAll(networkUpdates, parts);
         scheduleRenderUpdate = true;
     }

@@ -59,6 +59,14 @@ public interface IPipeHolder extends IRedstoneStatementContainer {
     /** @param parts The parts that want to send a network update. */
     void scheduleNetworkUpdate(PipeMessageReceiver... parts);
 
+    /** Called after the wire manager recomputed this pipe's wire links (on either side). A holder whose shape
+     *  includes the links drops any cached shape here. */
+    default void onWireLinksChanged() {}
+
+    /** Called when something a wire link across a face depends on changed without the pipe's connections changing
+     *  (its colour, a pluggable): the holder recomputes its own wire links and its neighbours' on their next tick. */
+    default void requestWireLinkRefresh() {}
+
     /** Schedules a GUI network update, that is only the players who currently have a pipe element open in a GUI will be
      * updated.
      * 

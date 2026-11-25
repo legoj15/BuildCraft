@@ -229,6 +229,8 @@ public final class Pipe implements IPipe, IDebuggable {
             // render-data update + sendBlockUpdated immediately. Matches the comment
             // in PipeFlowFluids.setFluid that calls out paint as having its own render-update.
             holder.scheduleRenderUpdate();
+            // A structure pipe links wires across unconnected faces by colour, so no connection change reports it.
+            holder.requestWireLinkRefresh();
         }
     }
 

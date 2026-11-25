@@ -195,11 +195,26 @@ public final class NeoForgeClientRegistrationSinks implements ClientRegistration
 
     //? if >=1.21.10 {
     @Override
-    public void editItemModels(ItemModelEditor editor) {
-        // NeoForge hands the whole (mutable) baked set over; an editor sees each baked item model once, by its key.
-        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class,
-                event -> event.getBakingResult().itemStackModels().replaceAll(
-                        (id, baked) -> baked == null ? null : editor.edit(id, baked)));
+    public void editItemModels(java.util.function.Predicate<net.minecraft.world.item.Item> items, ItemModelEditor editor) {
+        // Keyed get/put over the chosen items' ids, never a whole-map replaceAll: a mod may swap the baked map for
+        // one whose bulk operations skip entries (ModernFix dynamic resources: its replaceAll probes each entry with null
+        // first and skips it when the answer is null, so no swap landed and the gate kept its barrier placeholder).
+        NeoForgeModBus.get().addListener(ModelEvent.ModifyBakingResult.class, event -> {
+            var models = event.getBakingResult().itemStackModels();
+            for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+                if (!items.test(item)) {
+                    continue;
+                }
+                Identifier id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+                var baked = models.get(id);
+                if (baked != null) {
+                    var edited = editor.edit(id, baked);
+                    if (edited != baked) {
+                        models.put(id, edited);
+                    }
+                }
+            }
+        });
     }
     //?} else {
     /*@Override

@@ -65,7 +65,8 @@ public class BCTransportClient {
         // un-swapped placeholder model), then the pipe item models.
         ClientPlatform.sinks().pipeBlockModel(BCTransportBlocks.PIPE_HOLDER, PipeBlockModelQuads.INSTANCE);
         //? if >=1.21.10 {
-        ClientPlatform.sinks().editItemModels(BCTransportClient::editItemModel);
+        ClientPlatform.sinks().editItemModels(item -> item instanceof buildcraft.api.transport.pipe.IItemPipe,
+                BCTransportClient::editItemModel);
         //?} else {
         /*ClientPlatform.sinks().editBakedModels(BCTransportClient::onModifyBakingResult);*/
         //?}
@@ -137,7 +138,7 @@ public class BCTransportClient {
     //? if >=1.21.10 {
     /**
      * Wraps each pipe item's JSON model in a {@link PipeItemModel}, which paints it (the item-model editor of
-     * {@code ClientRegistrationSinks}: every baked item model passes through here). The pipe_holder block model is
+     * {@code ClientRegistrationSinks}, handed each pipe item's model). The pipe_holder block model is
      * swapped by {@code ClientRegistrationSinks.pipeBlockModel}, registered just before this.
      */
     public static ItemModel editItemModel(Identifier id, ItemModel baked) {

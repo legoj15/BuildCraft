@@ -417,6 +417,17 @@ function Initialize-RunDir([string]$Node) {
             'showLoadWarnings = false' | Set-Content -LiteralPath $neoClient -Encoding utf8
         }
     }
+    # ModernFix (-PwithMods=modernfix) runs with its dynamic-resources option on: that option replaces the baked model
+    # maps BC edits, the case the item-model-swaps scenario checks. Off by default upstream, so the file is written here.
+    if ($ModAliases -contains 'modernfix') {
+        $mfConfig = Join-Path $runDir 'config/modernfix-mixins.properties'
+        New-Item -ItemType Directory -Force -Path (Split-Path $mfConfig) | Out-Null
+        $mfLines = @()
+        if (Test-Path -LiteralPath $mfConfig) {
+            $mfLines = @(Get-Content -LiteralPath $mfConfig | Where-Object { $_ -notmatch '^mixin\.perf\.dynamic_resources\s*=' })
+        }
+        ($mfLines + 'mixin.perf.dynamic_resources=true') | Set-Content -LiteralPath $mfConfig -Encoding utf8
+    }
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
 

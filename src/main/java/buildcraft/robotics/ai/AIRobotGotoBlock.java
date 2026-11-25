@@ -38,6 +38,8 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     private double finalX, finalY, finalZ;
     private double maxDistance = 0;
     private BlockPos lastBlockInPath;
+    /** The cell the robot was last sent to: where it stands when it stops short of a hard target. */
+    private BlockPos currentStep;
     private boolean loadedFromNBT;
 
     /** Hard cap on total search expansions — 7.1.x ran this search on a background thread bounded to
@@ -91,9 +93,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         robot.undock();
         // Already at the target block? PathFinding(start == end) would return the degenerate out-and-back, so
         // succeed immediately rather than fly a pointless loop.
-        BlockPos here = robot.blockPosition();
-        if (here.getX() == (int) Math.floor(finalX) && here.getY() == (int) Math.floor(finalY)
-                && here.getZ() == (int) Math.floor(finalZ)) {
+        if (isTarget(robot.blockPosition())) {
             setSuccess(true);
             terminate();
         }
@@ -174,7 +174,19 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             BlockPos next = path.getFirst();
             prevDistance = Double.MAX_VALUE;
 
-            if (isFirst || blocks().isSoft(next)) {
+            if (maxDistance == 0 && isTarget(next) && blocks().isChunkLoaded(next) && !blocks().isSoft(next)) {
+                // The step refused is the target cell itself (an item lying on a pipe, a mob on a slab): the finder
+                // always routes into the exact target whether or not it is soft, so a re-plan finds this same route
+                // and the robot flew back and forth forever (7.1.x did too). The robot is beside the target, as near
+                // as it can get: that is the arrival, snapped onto the cell it was last sent to by update()'s
+                // empty-path check. Ahead of the isFirst rule, which waves through any step taken while prevDistance
+                // is unset - as it is when a robot resting on a cell centre has not moved yet. A target in an unloaded
+                // chunk is not hard, only unknown: it stays on the re-plan below. A flight read back from a save with
+                // only the target left has sent the robot nowhere yet; it stops on the cell it stands on.
+                path.clear();
+                lastBlockInPath = currentStep != null ? currentStep : robot.blockPosition();
+            } else if (isFirst || blocks().isSoft(next)) {
+                currentStep = next;
                 setDestination(robot, next.getX() + 0.5, next.getY() + 0.5, next.getZ() + 0.5);
                 robot.aimItemAt(next);
             } else {
@@ -190,6 +202,11 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                 expansions = 0;
             }
         }
+    }
+
+    private boolean isTarget(BlockPos pos) {
+        return pos.getX() == (int) Math.floor(finalX) && pos.getY() == (int) Math.floor(finalY)
+                && pos.getZ() == (int) Math.floor(finalZ);
     }
 
     private SoftBlockAccess blocks() {

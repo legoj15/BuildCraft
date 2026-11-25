@@ -9,5 +9,6 @@ Other than that, there are some minor bug fixes.
 - The description of the "Mine Player Protected Blocks" setting is more descriptive
 - Speaking of which, with "Mine Player Protected Blocks" off, a Builder, Quarry, Mining Well or Stripes pipe that a claim mod stops from breaking a block now skips it and carries on, instead of retrying it forever or stalling. The Builder's status now says the block was refused.
 - Robots now actually report and acknowledge when an action was rejected due to being within a claim instead of retrying forever.
+- Robots no longer fly back and forth forever when their target sits inside a block they can't enter, such as a Picker going after an item lying on a pipe. They now stop beside it and do the job.
 - Improved and fixed rendering of pipes that are being placed or in blueprints.
 - A Quarry placed against a marker area that was resized with a wrench now uses the resized area, even when the drag left the bottom of the box below the Quarry or its top above it. Markers and boxes now share one minimum of 3x3; anything narrower gets the default area instead.

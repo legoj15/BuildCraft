@@ -187,6 +187,62 @@ public class AIRobotGotoBlockTest {
                 "the arrival puts the robot exactly on the centre of the last path cell");
     }
 
+    /** A target cell that is not soft (a dropped item resting on a pipe, a mob standing on a slab): the finder routes
+     *  into it, and the step into it is rejected. Re-planning only finds the same route, so the robot flew back and
+     *  forth forever doing nothing. The flight must end beside the target instead, as an arrival. */
+    @Test
+    public void aHardTargetCellEndsTheFlightBesideIt() {
+        Set<BlockPos> soft = new HashSet<>();
+        for (int x = 0; x <= 2; x++) {
+            soft.add(new BlockPos(x, 0, 0));
+        }
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 3, 0, 0);
+        gotoBlock.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+
+        for (int i = 0; i < 100 && flyer.aims.isEmpty(); i++) {
+            gotoBlock.update();
+        }
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the search plans a path and aims its first step");
+
+        for (int i = 0; i < 40 && parent.ended == null; i++) {
+            flyToAimedCellAndOvershoot(flyer, gotoBlock);
+        }
+
+        Assertions.assertSame(gotoBlock, parent.ended, "the flight ends instead of re-planning into the target forever");
+        Assertions.assertTrue(gotoBlock.success(), "ending beside an unenterable target is an arrival");
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(3, 0, 0)), "the robot is never aimed into the hard cell");
+        Assertions.assertEquals(new Vec3(2.5, 0.5, 0.5), flyer.position(),
+                "the robot rests on the centre of the cell beside the target, not inside it");
+    }
+
+    /** The same hard target, from a robot resting on the centre of the cell beside it (where every flight's arrival
+     *  snap leaves one): it is not moving, so the step check runs before any distance was measured, which is the
+     *  case the first-step rule waves through unchecked. The robot must still not be sent into the target. */
+    @Test
+    public void aRestingRobotBesideAHardTargetIsNotSentIntoIt() {
+        FlyingRobot resting = new FlyingRobot();
+        resting.moving = false;
+        resting.setPosition(new Vec3(2.5, 0.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(resting, 3, 0, 0);
+        gotoBlock.blockAccess = Set.of(new BlockPos(2, 0, 0))::contains;
+        RecordingParent parent = new RecordingParent(resting);
+        parent.startDelegateAI(gotoBlock);
+
+        for (int i = 0; i < 100 && parent.ended == null; i++) {
+            gotoBlock.update();
+        }
+
+        Assertions.assertSame(gotoBlock, parent.ended, "the flight ends beside the target");
+        Assertions.assertTrue(gotoBlock.success(), "as an arrival");
+        Assertions.assertFalse(resting.aims.contains(new BlockPos(3, 0, 0)), "the robot is never aimed into the hard cell");
+    }
+
     /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an
      *  odd coordinate rounded to its even neighbour on reload, and the restored flight aimed one cell off. The
      *  observable is {@code start()}'s "already there" check, made against the restored target. */
@@ -391,9 +447,11 @@ public class AIRobotGotoBlockTest {
             aims.add(pos);
         }
 
+        boolean moving = true;
+
         @Override
         public boolean isMoving() {
-            return true;
+            return moving;
         }
     }
 

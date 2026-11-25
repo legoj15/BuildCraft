@@ -40,6 +40,16 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     private BlockPos lastBlockInPath;
     /** The cell the robot was last sent to: where it stands when it stops short of a hard target. */
     private BlockPos currentStep;
+    /** Whether ending beside a target cell the robot cannot enter counts as arriving ({@link #stopBesideHardTarget}).
+     *  Saved with the flight, so a reloaded one ends as the uninterrupted one would. */
+    private boolean stopBesideHardTarget;
+    /** Set when the flight ends refused by a hard target it may not stop beside: the empty-path end then fails. */
+    private boolean hardTargetRefused;
+    /** Set when the flight ended beside a hard target as an arrival ({@link #stoppedBesideTarget}). */
+    private boolean stoppedBeside;
+    /** True only while the stored-path constructor takes its first step. The hard-target check waits for start(),
+     *  when the caller has set the opt-in (and a test its block oracle). */
+    private boolean constructing;
     private boolean loadedFromNBT;
 
     /** Hard cap on total search expansions — 7.1.x ran this search on a background thread bounded to
@@ -85,7 +95,22 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         finalX = lastBlockInPath.getX();
         finalY = lastBlockInPath.getY();
         finalZ = lastBlockInPath.getZ();
+        constructing = true;
         setNextInPath();
+        constructing = false;
+    }
+
+    /** Lets this flight end beside its target when the target cell is one the robot cannot enter (an item lying on a
+     *  pipe, a mob on a slab), as an arrival. For callers whose work reaches a cell away, the Picker's pickup and the
+     *  attack's swing; every other flight to such a cell fails instead, since it needs to be IN the cell. */
+    public AIRobotGotoBlock stopBesideHardTarget() {
+        stopBesideHardTarget = true;
+        return this;
+    }
+
+    /** Whether this flight's success was ending beside a target cell it could not enter rather than in it. */
+    public boolean stoppedBesideTarget() {
+        return stoppedBeside;
     }
 
     @Override
@@ -96,6 +121,13 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         if (isTarget(robot.blockPosition())) {
             setSuccess(true);
             terminate();
+            return;
+        }
+        // A stored path whose first step (taken unchecked in the constructor) is a hard target: the robot stands
+        // beside it already.
+        if (path != null && !path.isEmpty() && isHardTarget(path.getFirst())) {
+            endAtHardTarget();
+            finishFlight();
         }
     }
 
@@ -151,20 +183,32 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         }
 
         if (path != null && path.size() == 0) {
-            robot.setDeltaMovement(Vec3.ZERO);
-
-            if (lastBlockInPath != null) {
-                // Snap onto the last path cell's centre, as 7.1.x did (posX/Y/Z = cell + 0.5): the last step only
-                // ends once the robot has stalled or overshot, which leaves it a few tenths of a block off. Double
-                // maths, not 7.1.x's 0.5F, so the half-block survives far from the origin. Every flight has one: a
-                // fresh search sets it from its result, a flight handed a stored path (or read back from a save)
-                // from that path's last cell. Not 7.1.x, whose stored-path flights ended where they stood.
-                robot.setPos(lastBlockInPath.getX() + 0.5, lastBlockInPath.getY() + 0.5,
-                        lastBlockInPath.getZ() + 0.5);
-            }
-            setSuccess(true);
-            terminate();
+            finishFlight();
         }
+    }
+
+    /** Ends a flight whose path is used up: a failure if a hard target refused it, else an arrival on the centre of the
+     *  last path cell. */
+    private void finishFlight() {
+        robot.setDeltaMovement(Vec3.ZERO);
+
+        if (hardTargetRefused) {
+            setSuccess(false);
+            terminate();
+            return;
+        }
+
+        if (lastBlockInPath != null) {
+            // Snap onto the last path cell's centre, as 7.1.x did (posX/Y/Z = cell + 0.5): the last step only
+            // ends once the robot has stalled or overshot, which leaves it a few tenths of a block off. Double
+            // maths, not 7.1.x's 0.5F, so the half-block survives far from the origin. Every flight has one: a
+            // fresh search sets it from its result, a flight handed a stored path (or read back from a save)
+            // from that path's last cell. Not 7.1.x, whose stored-path flights ended where they stood.
+            robot.setPos(lastBlockInPath.getX() + 0.5, lastBlockInPath.getY() + 0.5,
+                    lastBlockInPath.getZ() + 0.5);
+        }
+        setSuccess(true);
+        terminate();
     }
 
     private void setNextInPath() {
@@ -174,17 +218,17 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             BlockPos next = path.getFirst();
             prevDistance = Double.MAX_VALUE;
 
-            if (maxDistance == 0 && isTarget(next) && blocks().isChunkLoaded(next) && !blocks().isSoft(next)) {
-                // The step refused is the target cell itself (an item lying on a pipe, a mob on a slab): the finder
-                // always routes into the exact target whether or not it is soft, so a re-plan finds this same route
-                // and the robot flew back and forth forever (7.1.x did too). The robot is beside the target, as near
-                // as it can get: that is the arrival, snapped onto the cell it was last sent to by update()'s
-                // empty-path check. Ahead of the isFirst rule, which waves through any step taken while prevDistance
-                // is unset - as it is when a robot resting on a cell centre has not moved yet. A target in an unloaded
-                // chunk is not hard, only unknown: it stays on the re-plan below. A flight read back from a save with
-                // only the target left has sent the robot nowhere yet; it stops on the cell it stands on.
-                path.clear();
-                lastBlockInPath = currentStep != null ? currentStep : robot.blockPosition();
+            if (!constructing && isHardTarget(next)) {
+                // The next step is the target cell itself and the robot cannot enter it (an item lying on a pipe, a
+                // mob on a slab, or a cell whose chunk is not loaded). The finder always routes into the exact target
+                // whether or not it is soft, so re-planning finds this same route: the robot flew back and forth
+                // forever (7.1.x did too). The robot is as near as it gets, so the flight ends here: an arrival on the
+                // cell it was last sent to for a caller that asked for it, a failure for the rest. Ahead of the
+                // isFirst rule, which waves through any step taken while prevDistance is unset - as it is when a robot
+                // resting on a cell centre has not moved yet. A flight read back from a save with only the target left
+                // has sent the robot nowhere yet: it fails, or (opted in) stops on the cell it stands on. update()'s
+                // empty-path check ends the flight.
+                endAtHardTarget();
             } else if (isFirst || blocks().isSoft(next)) {
                 currentStep = next;
                 setDestination(robot, next.getX() + 0.5, next.getY() + 0.5, next.getZ() + 0.5);
@@ -202,6 +246,21 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                 expansions = 0;
             }
         }
+    }
+
+    /** The exact target cell of a flight with no reach slack, when the robot cannot enter it. */
+    private boolean isHardTarget(BlockPos pos) {
+        return maxDistance == 0 && isTarget(pos) && !blocks().isSoft(pos);
+    }
+
+    /** Empties the path so the flight ends at a hard target: refused, or (opted in) arrived on the cell the robot was
+     *  last sent to, or the one it stands on. Drops the search too, whose result list the path is. */
+    private void endAtHardTarget() {
+        path.clear();
+        pathSearch = null;
+        hardTargetRefused = !stopBesideHardTarget;
+        stoppedBeside = stopBesideHardTarget;
+        lastBlockInPath = currentStep != null && !isTarget(currentStep) ? currentStep : robot.blockPosition();
     }
 
     private boolean isTarget(BlockPos pos) {
@@ -238,6 +297,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         nbt.putDouble("finalY", finalY);
         nbt.putDouble("finalZ", finalZ);
         nbt.putDouble("maxDistance", maxDistance);
+        nbt.putBoolean("stopBesideHardTarget", stopBesideHardTarget);
 
         if (path != null) {
             long[] asLong = new long[path.size()];
@@ -257,6 +317,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         finalY = NBTUtilBC.getDouble(nbt, "finalY", 0);
         finalZ = NBTUtilBC.getDouble(nbt, "finalZ", 0);
         maxDistance = NBTUtilBC.getDouble(nbt, "maxDistance", 0);
+        stopBesideHardTarget = NBTUtilBC.getBoolean(nbt, "stopBesideHardTarget", false);
 
         if (nbt.contains("path")) {
             //? if >=1.21.10 {

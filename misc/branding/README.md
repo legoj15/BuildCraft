@@ -32,11 +32,13 @@ The build also reads the mod's own gear textures (`src/main/resources/assets/bui
 | Output | Size | What it is |
 |---|---|---|
 | `src/main/resources/logo.png` | 1000x200 RGBA | Mod-list banner. Drawn on a 250x50 grid (NeoForge's banner box) with every logical pixel a 4x4 block. NeoForge 26.2 and later sample it NEAREST, so it is sharp at every whole GUI scale; the older lines filter it LINEAR (`logoBlur` defaults to true), which only softens edges. Transparent. |
-| `docs/store/img/banner.png` | 2000x500 | Store-page hero: the mark at x6 over the Filler build site, hazard tape top and bottom. Opaque. |
-| `docs/store/img/banner-wide.png` | 1920x1080 | Gallery / social card: an upright arrangement at x8 over the robot farm, everything inside the central 80%. |
-| `docs/store/img/logo-transparent.png` | 2000x400 RGBA | The mark alone (the 250x50 mark at x8), for placing anywhere. |
+| `docs/store/img/banner.webp` | 2000x500 | Store-page hero: the mark at x6 over the Filler build site, hazard tape top and bottom. Opaque. |
+| `docs/store/img/banner-wide.webp` | 1920x1080 | Gallery / social card: an upright arrangement at x8 over the robot farm, everything inside the central 80%. |
+| `docs/store/img/logo-transparent.webp` | 2000x400 RGBA | The mark alone (the 250x50 mark at x8), for placing anywhere. |
 
 Pixel art is only ever scaled by whole numbers with nearest-neighbour; only the screenshots are resampled smoothly.
+
+The store images are lossless WebP: a third to two thirds smaller than the PNGs were, with identical pixels, so `--check` still compares exactly. `logo.png` stays PNG because the mod loaders only read PNG.
 
 ## Common edits
 
@@ -49,7 +51,7 @@ Pixel art is only ever scaled by whole numbers with nearest-neighbour; only the 
 - The mark keeps the original BuildCraft logo's structure: crane on the left with its jib over the name, a heavy "Build" and a light "Craft", a hazard bar under the name, and the gears on the right (the material row and the obsidian column are gone).
 - REDUX replaces the old bar's plain stripes: yellow capitals on a black plate set into the hazard band, 11 px tall against the wordmark's 18, so it reads as part of the name.
 - The wordmark is light with a dark outline and a drop shadow, and the credit sits on a dark riveted plate, so the banner reads on NeoForge's dark panel and on white.
-- Palette: hazard yellow `#F6D03B` (bottom-row shade `#F6C400`) on band black `#1C1C1C`; crane steel `#E8E8E8`, `#9E9E9E`, `#686868`; outlines `#121212` (crane, band) and `#161616` (wordmark, over a `#000000` drop shadow); wordmark fill graded top to bottom, `#FFFFFF` to `#BEBEBE` for "Build" and `#C8C8C8` to `#949494` for "Craft". The nameplate is `#262626` with `#969696` and `#ECECEC` text.
+- Palette: hazard yellow `#FFED33` (bottom-row shade `#F3E124`) on band black `#212121`, matching the in-game Stripes write laser (`textures/lasers/stripes_write.png`); crane steel `#E8E8E8`, `#9E9E9E`, `#686868`; outlines `#121212` (crane, band) and `#161616` (wordmark, over a `#000000` drop shadow); wordmark fill graded top to bottom, `#FFFFFF` to `#BEBEBE` for "Build" and `#C8C8C8` to `#949494` for "Craft". The nameplate is `#262626` with `#969696` and `#ECECEC` text.
 
 ## Girder 7 font
 

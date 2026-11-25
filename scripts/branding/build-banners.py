@@ -8,9 +8,10 @@ Outputs (deterministic; a file is rewritten only when its pixels change, so a re
   src/main/resources/logo.png          in-game mod-list banner: 250x50 logical pixels, each a 4x4 block
                                        (1000x200 RGBA, transparent); NeoForge 26.2+ samples it NEAREST,
                                        the older lines LINEAR (logoBlur defaults to true)
-  docs/store/img/banner.png            store-page hero, 2000x500, opaque
-  docs/store/img/banner-wide.png       gallery / social preview, 1920x1080, opaque, mark inside the 10% safe area
-  docs/store/img/logo-transparent.png  the mark alone, 2000x400 RGBA (the 250x50 mark at x8)
+  docs/store/img/banner.webp           store-page hero, 2000x500, opaque
+  docs/store/img/banner-wide.webp      gallery / social preview, 1920x1080, opaque, mark inside the 10% safe area
+  docs/store/img/logo-transparent.webp the mark alone, 2000x400 RGBA (the 250x50 mark at x8)
+  The store images are lossless WebP (smaller than PNG, pixels exact); logo.png stays PNG, which the loaders require.
 
 Sources:
   misc/branding/lockup.png             hand-pixelled master: crane + "BuildCraft" + REDUX band (1 px = 1 logical px)
@@ -44,9 +45,9 @@ GEAR_TEXTURES = REPO / "src" / "main" / "resources" / "assets" / "buildcraftunof
 GEARS = ("wood", "stone", "iron", "gold", "diamond")  # no obsidian gear in this mod
 
 OUT_LOGO = REPO / "src" / "main" / "resources" / "logo.png"
-OUT_HERO = REPO / "docs" / "store" / "img" / "banner.png"
-OUT_WIDE = REPO / "docs" / "store" / "img" / "banner-wide.png"
-OUT_MARK = REPO / "docs" / "store" / "img" / "logo-transparent.png"
+OUT_HERO = REPO / "docs" / "store" / "img" / "banner.webp"
+OUT_WIDE = REPO / "docs" / "store" / "img" / "banner-wide.webp"
+OUT_MARK = REPO / "docs" / "store" / "img" / "logo-transparent.webp"
 
 # The credit line, as runs of (text, tone). Every version carries it; edit here and rebuild.
 CREDIT = (
@@ -65,7 +66,7 @@ EDGE = (18, 18, 18, 255)
 PLATE = (38, 38, 38, 255)
 RIVET = (96, 96, 96, 255)
 CLEAR = (0, 0, 0, 0)
-HAZARD = ((246, 208, 59, 255), (246, 196, 0, 255), (28, 28, 28, 255))  # the REDUX band's yellow, shade, black
+HAZARD = ((255, 237, 51, 255), (243, 225, 36, 255), (33, 33, 33, 255))  # the REDUX band's yellow, shade, black
 
 
 # --------------------------------------------------------------------------------------------- pixel font
@@ -288,9 +289,13 @@ OUTPUTS = (
 )
 
 
-def png_bytes(img: Image.Image) -> bytes:
+def encode(path: Path, img: Image.Image) -> bytes:
+    """PNG or lossless WebP by the output's suffix; no metadata, so the bytes depend only on the pixels."""
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)  # no metadata chunks, so the bytes depend only on the pixels
+    if path.suffix == ".webp":
+        img.save(buf, format="WEBP", lossless=True, quality=100, method=6, exact=True)
+    else:
+        img.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
 
 
@@ -382,7 +387,7 @@ def main(argv: list[str]) -> int:
         if path.exists() and pixel_diff(path, img) == 0:
             print(f"unchanged {rel}")  # same pixels: keep the bytes (no churn from another Pillow's encoder)
             continue
-        data = png_bytes(img)
+        data = encode(path, img)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
         print(f"wrote {rel} ({len(data) // 1024} KB)")

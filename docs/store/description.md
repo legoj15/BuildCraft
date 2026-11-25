@@ -43,6 +43,7 @@ Plug or paint them for separation, cover them with facades of any block to hide/
 
 ## Energy infrastructure
 ![Pipes](https://github.com/legoj15/BuildCraft/blob/main/docs/store/img/energy.webp?raw=true)
+
 Redstone, Stirling and Combustion engines power factories with BuildCraft's Minecraft Joules (MJ). Find infinite oil springs in deserts and
 oceans, pump it, refine it in the Distiller and Heat Exchanger, and burn the fuel. If you prefer utilizing universal Forge Energy,
 build FE Engines to use FE for BuildCraft machines, convert MJ to FE with the Dynamo, or enable automatic conversion in the mod settings.
@@ -55,7 +56,7 @@ Quarries carve out chunks of land down to the bedrock layer. Mark out a volume a
 Scan a building with the Architect Table and the Builder rebuilds it anywhere, block for block,
 down to every bit of data, including block inventories, states, and fluids.
 
-## Logic system for advanced players
+## Logic networks
 
 ![Gates](https://github.com/legoj15/BuildCraft/blob/main/docs/store/img/logic.webp?raw=true)
 
@@ -65,7 +66,7 @@ Logic Gates augment your existing pipes. When utilized correctly, you can make y
 
 ![Robots](https://github.com/legoj15/BuildCraft/blob/main/docs/store/img/robots.webp?raw=true)
 
-The robotics system that was left on 1.7.10 (a very long time ago) is back on all downloadable versions of the mod. You can again program robot boards, dock robots at stations on your pipes, and send
+The robotics system that was left on Minecraft 1.7.10 is back on all downloadable versions of the mod. You can again program robot boards, dock robots at stations on your pipes, and send
 them to farm, harvest, haul items and fluids, or fight, entirely controlled by logic gates.
 
 ---

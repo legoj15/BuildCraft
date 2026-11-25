@@ -2,7 +2,7 @@
 
 - **MinecraftForge support**, for those of you stuck with legacy modpacks. 1.21.10 is not supported by the Forge team, so I didn't bother with that version.
 - When in creative mode, clicking a tank's gauge with a bucket on the cursor now works like using a bucket in the world instead of voiding the fluid.
-- Minecraft 1.21.10 and later (NeoForge): right-clicking a tank while holding a stack of buckets now fills or empties just one of them.
+- Minecraft 1.21.10 and later (NeoForge): right-clicking a tank with a filled bucket no longer duplicates the bucket (you used to get the empty bucket and keep the full one), and holding a stack of buckets now fills or empties just one of them. Thank you for reporting, [user_pf5hyk9zed69zy64](https://www.curseforge.com/members/user_pf5hyk9zed69zy64)!
 
 Other than that, there are some minor bug fixes.
 

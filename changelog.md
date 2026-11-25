@@ -12,5 +12,6 @@ Other than that, there are some minor bug fixes.
 - Robots no longer fly back and forth forever when their target sits inside a block they can't enter, such as a Picker going after an item lying on a pipe. They now stop beside it and do the job.
 - Improved and fixed rendering of pipes that are being placed or in blueprints.
 - With ModernFix's dynamic resources option on, gates, facades and lenses show their proper item icons again, and pipe items get their colours back.
+- With Sodium installed (NeoForge), gate, lens, facade and painted pipe item icons are no longer drawn too dark.
 - Pipe wires now join up straight away when a pipe next to them is replaced, instead of leaving gaps or loose ends until the world is reloaded.
 - A Quarry placed against a marker area that was resized with a wrench now uses the resized area, even when the drag left the bottom of the box below the Quarry or its top above it. Markers and boxes now share one minimum of 3x3; anything narrower gets the default area instead.

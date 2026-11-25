@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:wire_link_drops_when_neighbour_removed",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 370,
+    "setup_ticks": 0,
+    "required": true
+}

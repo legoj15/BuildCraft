@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.DyeColor;
@@ -24,6 +25,7 @@ import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class WireManager implements IWireManager {
@@ -32,6 +34,10 @@ public class WireManager implements IWireManager {
     public final Set<EnumWirePart> poweredClient = EnumSet.noneOf(EnumWirePart.class);
     public final Map<EnumWireBetween, DyeColor> betweens = new EnumMap<>(EnumWireBetween.class);
     public boolean initialised = false;
+    /** Set by {@link #requestBetweensRefresh}; cleared by every {@link #updateBetweens}. */
+    private boolean betweensStale = false;
+    /** Whether the pending refresh also recomputes the neighbours' links (see {@link #requestBetweensRefresh}). */
+    private boolean neighboursStale = false;
 
     public WireManager(IPipeHolder holder) {
         this.holder = holder;
@@ -52,20 +58,15 @@ public class WireManager implements IWireManager {
         }
     }
 
-    public void validate() {
-        if (!holder.getPipeWorld().isClientSide()) {
-            initialised = false;
-        }
-    }
-
-    /** Client only: recompute {@link #betweens} (this pipe's and its neighbours') on the next tick. The client works
-     *  the links out from synced state (the pipe, its connections, the neighbours' wires), which can arrive after the
-     *  first tick or change under it, so every sync and every neighbour removal asks again. A no-op on the server,
-     *  where resetting {@link #initialised} would rebuild the wire systems. */
-    public void requestBetweensRefresh() {
-        if (holder.getPipeWorld() != null && holder.getPipeWorld().isClientSide()) {
-            initialised = false;
-        }
+    /** Recompute {@link #betweens} on the next tick. The links depend on this pipe's connections and its neighbours'
+     *  wires and presence, any of which can change without touching this pipe's own wire parts: a neighbour removed
+     *  or replaced, a connection made or broken, and on the client a sync arriving after the first tick. Separate
+     *  from {@link #initialised}, which on the server would also rebuild the wire systems.
+     *  @param neighbours also recompute the neighbours' links: a client sync may carry wires of this pipe that a
+     *      neighbour links to, and on the client nothing else tells that neighbour. */
+    public void requestBetweensRefresh(boolean neighbours) {
+        betweensStale = true;
+        neighboursStale |= neighbours;
     }
 
     public void tick() {
@@ -77,6 +78,8 @@ public class WireManager implements IWireManager {
                 }
             }
             updateBetweens(false);
+        } else if (betweensStale) {
+            updateBetweens(!neighboursStale);
         }
     }
 
@@ -134,6 +137,11 @@ public class WireManager implements IWireManager {
 
     @Override
     public void updateBetweens(boolean recursive) {
+        if (!recursive) {
+            neighboursStale = false;
+        }
+        // A neighbour's recursive pass recomputes these links but must not swallow a pending neighbour pass.
+        betweensStale = neighboursStale;
         betweens.clear();
         parts.forEach((part, color) -> {
             for (EnumWireBetween between : EnumWireBetween.VALUES) {
@@ -154,10 +162,17 @@ public class WireManager implements IWireManager {
                 }
             }
         });
+        holder.onWireLinksChanged();
 
         if (!recursive) {
             for (Direction side : Direction.values()) {
-                BlockEntity tile = holder.getPipeWorld().getBlockEntity(holder.getPipePos().relative(side));
+                BlockPos neighbourPos = holder.getPipePos().relative(side);
+                // getBlockEntity would load (or generate) a chunk not in memory on the server; isLoaded is only a
+                // ticket test there, so ask for presence.
+                if (!BlockUtil.isChunkPresent(holder.getPipeWorld(), neighbourPos)) {
+                    continue;
+                }
+                BlockEntity tile = holder.getPipeWorld().getBlockEntity(neighbourPos);
                 if (tile instanceof IPipeHolder) {
                     ((IPipeHolder) tile).getWireManager().updateBetweens(true);
                 }

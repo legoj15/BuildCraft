@@ -76,6 +76,8 @@ public class TileQuarryAreaAdoptionTester {
             // 2x5 and 1x1 boxes leave no column to mine: the default area, and the box stays.
             checkFallsBackToDefault(helper, boxes, quarryRel, new BlockPos(1, 2, 1), new BlockPos(2, 2, 5));
             checkFallsBackToDefault(helper, boxes, quarryRel, new BlockPos(2, 2, 5), new BlockPos(2, 2, 5));
+            // A 5x3 box around the quarry itself is big enough but would put the quarry inside its own frame.
+            checkFallsBackToDefault(helper, boxes, quarryRel, new BlockPos(1, 2, 4), new BlockPos(5, 2, 6));
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
@@ -113,11 +115,11 @@ public class TileQuarryAreaAdoptionTester {
             if (!quarry.frameBox.isInitialized()
                 || !quarry.frameBox.min().equals(defMin)
                 || quarry.frameBox.max().getX() != defMax.getX() || quarry.frameBox.max().getZ() != defMax.getZ()) {
-                throw new IllegalStateException("a box " + min + ".." + max + " is too small for a quarry: expected the "
+                throw new IllegalStateException("a box " + min + ".." + max + " cannot be a quarry frame: expected the "
                     + "default frame from " + defMin + ", got " + quarry.frameBox);
             }
             if (!boxes.volumeBoxes.contains(small)) {
-                throw new IllegalStateException("a box too small to adopt must not be consumed");
+                throw new IllegalStateException("a box the quarry cannot adopt must not be consumed");
             }
         } finally {
             boxes.volumeBoxes.remove(small);

@@ -71,8 +71,8 @@ public class AIRobotAttack extends AIRobot {
         }
 
         if (robot.position().distanceTo(target.position()) > ATTACK_RANGE) {
-            startDelegateAI(new AIRobotGotoBlock(robot,
-                    Mth.floor(target.getX()), Mth.floor(target.getY()), Mth.floor(target.getZ())).stopBesideHardTarget());
+            startDelegateAI(new AIRobotGotoBlock(robot, Mth.floor(target.getX()), Mth.floor(target.getY()),
+                    Mth.floor(target.getZ())).stopBesideHardTarget());
             robot.setItemActive(false);
             return;
         }
@@ -100,12 +100,13 @@ public class AIRobotAttack extends AIRobot {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        if (ai instanceof AIRobotGotoBlock) {
+        if (ai instanceof AIRobotGotoBlock flight) {
             // A flight that stopped beside a mob on a slab or a pipe may still leave it out of reach (a diagonal
             // approach to the far corner): the same as never getting there.
-            if (!ai.success() || (((AIRobotGotoBlock) ai).stoppedBesideTarget() && target != null
+            if (!flight.success() || (flight.stoppedBesideTarget() && target != null
                     && !target.isRemoved() && robot.position().distanceTo(target.position()) > ATTACK_RANGE)) {
                 robot.unreachableEntityDetected(target);
+                setSuccess(false);
             }
             terminate();
         }

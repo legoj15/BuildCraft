@@ -1,0 +1,25 @@
+{
+ "name": "item-model-swaps",
+ "mods": ["modernfix", "sodium"],
+ "base": [0, 150, 0],
+ "steps": [
+  { "label": "creative, noon", "do": "cmd", "run": ["gamemode creative @p", "?time set noon", "?weather clear"] },
+  { "do": "tp", "at": [0, 1, 3], "yaw": 180, "pitch": 0 },
+  { "do": "hold", "item": "minecraft:air" },
+  {
+   "label": "hotbar: three gates, a lens, a facade, a pipe",
+   "do": "cmd",
+   "run": [
+    "?clear @p",
+    "item replace entity @p hotbar.0 with buildcraftunofficial:plug_gate[minecraft:custom_data={gate:{logic:0b,material:1b,modifier:0b}}]",
+    "item replace entity @p hotbar.1 with buildcraftunofficial:plug_gate[minecraft:custom_data={gate:{logic:1b,material:2b,modifier:1b}}]",
+    "item replace entity @p hotbar.2 with buildcraftunofficial:plug_gate[minecraft:custom_data={gate:{logic:0b,material:3b,modifier:3b}}]",
+    "item replace entity @p hotbar.3 with buildcraftunofficial:plug_lens[minecraft:custom_data={colour:\"red\",isFilter:0b}]",
+    "item replace entity @p hotbar.4 with buildcraftunofficial:plug_facade[minecraft:custom_data={facade:{isHollow:0b,states:[{state:{Name:\"minecraft:oak_planks\"}}]}}]",
+    "item replace entity @p hotbar.5 with buildcraftunofficial:pipe_cobble_item"
+   ]
+  },
+  { "do": "wait", "ms": 1500 },
+  { "do": "shot", "name": "hotbar", "look": "Hotbar slots 1-3 show 3D gates (not a barrier, not blank), slot 4 a red lens, slot 5 an oak facade (not bricks), slot 6 a cobblestone pipe" }
+ ]
+}

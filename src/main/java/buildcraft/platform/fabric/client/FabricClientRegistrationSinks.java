@@ -352,10 +352,12 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
 
     //? if >=1.21.10 {
     @Override
-    public void editItemModels(ItemModelEditor editor) {
+    public void editItemModels(java.util.function.Predicate<net.minecraft.world.item.Item> items, ItemModelEditor editor) {
         // A per-item after-bake modifier, registered afresh on every model load; itemId() is the item model's key.
         ModelLoadingPlugin.register(context -> context.modifyItemModelAfterBake().register(
-                (model, itemContext) -> model == null ? null : editor.edit(itemContext.itemId(), model)));
+                (model, itemContext) -> model == null
+                        || !items.test(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(itemContext.itemId()))
+                        ? model : editor.edit(itemContext.itemId(), model)));
     }
 
     @Override

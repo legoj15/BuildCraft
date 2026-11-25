@@ -79,7 +79,7 @@ public class BCSiliconClient {
     //? if >=1.21.10 {
     /**
      * Swaps the facade, gate and lens items' JSON models for the dynamic ones (the item-model editor of
-     * {@code ClientRegistrationSinks}: every baked item model passes through here, each time the models bake).
+     * {@code ClientRegistrationSinks}, handed just these three items' models each time the models bake).
      */
     public static ItemModel editItemModel(Identifier id, ItemModel baked) {
         if (id.equals(BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get()))) {
@@ -266,7 +266,9 @@ public class BCSiliconClient {
     public static void initClient() {
         ClientPlatform.sinks().onModelsBaking(BCSiliconClient::onModifyBakingResult);
         //? if >=1.21.10 {
-        ClientPlatform.sinks().editItemModels(BCSiliconClient::editItemModel);
+        ClientPlatform.sinks().editItemModels(item -> item == BCSiliconItems.PLUG_FACADE.get()
+                || item == BCSiliconItems.PLUG_GATE.get() || item == BCSiliconItems.PLUG_LENS.get(),
+                BCSiliconClient::editItemModel);
         ClientPlatform.sinks().onModelsBaked(buildcraft.platform.event.HookOrder.DEFAULT,
                 BCSiliconClient::onModelsBakedForDedup);
         //?} else {

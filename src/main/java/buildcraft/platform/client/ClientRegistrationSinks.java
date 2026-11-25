@@ -114,14 +114,16 @@ public interface ClientRegistrationSinks {
 
     //? if >=1.21.10 {
     /**
-     * Edits each baked item model, one at a time, each time the models bake and before they go live: the editor is
-     * handed every item model with the id it is filed under (the item model id, an item's registry id by default) and
-     * returns the model to use, {@code baked} itself to keep it (NeoForge: {@code itemStackModels().replaceAll} in
-     * {@code ModelEvent.ModifyBakingResult}; Fabric: a {@code ModelModifier.AfterBakeItem} modifier, whose
-     * {@code itemId()} is the same key). There is no whole-set edit, as Fabric API has none: a hook that needs the
-     * block-state models reads them from the live {@code ModelManager} once {@link #onModelsBaked} has run.
+     * Edits the baked item models of the items {@code items} accepts, one at a time, each time the models bake and
+     * before they go live: the editor is handed each with the id it is filed under (the item's registry id) and returns
+     * the model to use, {@code baked} itself to keep it (NeoForge/Forge: keyed {@code get}/{@code put} on
+     * {@code itemStackModels()} in {@code ModelEvent.ModifyBakingResult}, never a bulk {@code replaceAll}, which a
+     * replaced map such as ModernFix's dynamic-resources one does not honour; Fabric: a
+     * {@code ModelModifier.AfterBakeItem} modifier, whose {@code itemId()} is the same key). Keep {@code items} narrow:
+     * under ModernFix each model looked up is baked. There is no whole-set edit, as Fabric API has none: a hook that
+     * needs the block-state models reads them from the live {@code ModelManager} once {@link #onModelsBaked} has run.
      */
-    void editItemModels(ItemModelEditor editor);
+    void editItemModels(java.util.function.Predicate<net.minecraft.world.item.Item> items, ItemModelEditor editor);
 
     /** Swaps a baked item model for another; see {@link #editItemModels}. */
     @FunctionalInterface

@@ -506,6 +506,7 @@ public class BuildCraftGameTests {
 
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
+        reg.accept("buildcraftunofficial:quarry_adopts_resized_marker_box", () -> buildcraft.builders.tile.TileQuarryAreaAdoptionTester::adoptsResizedMarkerBox);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);

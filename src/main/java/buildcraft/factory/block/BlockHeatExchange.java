@@ -24,7 +24,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -104,6 +106,19 @@ public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchang
         Direction facing = context.getHorizontalDirection().getOpposite();
         BlockState state = BCWaterlogging.placementState(defaultBlockState().setValue(FACING, facing), context);
         return updateConnections(state, context.getLevel(), context.getClickedPos(), facing);
+    }
+
+    // A rotated or mirrored state (a blueprint built turned, a structure block) turns the facing with it. PART and
+    // CONNECTED_LEFT/RIGHT are relative to the facing, so a rotation leaves them as they are; the next neighbour
+    // update recomputes the connections (updateNeighbourShape).
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.setValue(FACING, mirror.mirror(state.getValue(FACING)));
     }
 
     @Override

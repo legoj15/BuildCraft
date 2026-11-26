@@ -654,6 +654,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_diamond_filter_rows", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesDiamondFilterRows);
         // A gate's statements read a face, so their sides (and the pipe-direction actions) turn with the blueprint.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_gate_statement_sides", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesGateStatementSides);
+        // A machine whose tile saves a direction turns it with the blueprint: an engine's orientation, a flood gate's
+        // open sides (the block state only draws them) and a Builder's saved turn.
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_engine_orientation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesEngineOrientation);
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_flood_gate_sides", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesFloodGateSides);
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_builder_rotation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesBuilderRotation);
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);

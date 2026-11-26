@@ -16,7 +16,9 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -84,6 +86,17 @@ public class BlockLaser extends BlockBCTile_Waterloggable<TileLaser> {
         // Face opposite the direction the player is looking (laser points away from placement surface)
         return BCWaterlogging.placementState(
             defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite()), context);
+    }
+
+    // The beam points along FACING, so a rotated or mirrored state (a blueprint built turned, a structure block) must turn it.
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.setValue(FACING, mirror.mirror(state.getValue(FACING)));
     }
 
     @Nullable

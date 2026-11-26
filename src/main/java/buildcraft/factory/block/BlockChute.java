@@ -20,7 +20,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -41,6 +43,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.block.BlockBCTile_Waterloggable;
+import buildcraft.lib.block.ConnectedSides;
 import buildcraft.platform.transfer.TransferAccess;
 
 /**
@@ -84,6 +87,20 @@ public class BlockChute extends BlockBCTile_Waterloggable<TileChute> {
         BlockState state = BCWaterlogging.placementState(
             defaultBlockState().setValue(FACING, context.getClickedFace()), context);
         return computeAllConnections(context.getLevel(), context.getClickedPos(), state);
+    }
+
+    // The intake face and the drawn connections both name sides, so a rotated or mirrored state (a blueprint built
+    // turned, a structure block) turns FACING and moves each connected side with it.
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return ConnectedSides.rotate(state.setValue(FACING, rotation.rotate(state.getValue(FACING))),
+            CONNECTED_MAP, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return ConnectedSides.mirror(state.setValue(FACING, mirror.mirror(state.getValue(FACING))),
+            CONNECTED_MAP, mirror);
     }
 
     @Override

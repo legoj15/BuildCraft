@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -182,6 +183,12 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock, Simp
     public BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rot) {
         return state.setValue(BuildCraftProperties.BLOCK_FACING_6,
                 rot.rotate(state.getValue(BuildCraftProperties.BLOCK_FACING_6)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, Mirror mirror) {
+        return state.setValue(BuildCraftProperties.BLOCK_FACING_6,
+                mirror.mirror(state.getValue(BuildCraftProperties.BLOCK_FACING_6)));
     }
 
     @Nullable

@@ -10,12 +10,14 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -28,8 +30,10 @@ import buildcraft.api.enums.EnumOptionalSnapshotType;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.lib.block.BlockBCTile_Directional;
+import buildcraft.lib.block.RotatedTileData;
+import buildcraft.lib.misc.NBTUtilBC;
 
-public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> {
+public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> implements RotatedTileData {
     //? if <26.3 {
     /*public static final MapCodec<BlockBuilder> CODEC = simpleCodec(BlockBuilder::new);
     *///?}
@@ -62,6 +66,18 @@ public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> {
         return defaultBlockState()
             .setValue(FACING, context.getHorizontalDirection().getOpposite())
             .setValue(SNAPSHOT_TYPE, EnumOptionalSnapshotType.NONE);
+    }
+
+    /** The block's own facing turns with the blueprint (it is a horizontal directional block), and the turn the tile
+     *  saved as {@code rotation} (the ordinal of the {@link Rotation} that maps its blueprint item's facing onto that
+     *  facing) is composed with the same rotation, or the Builder would lay its blueprint out the old way until it
+     *  resolved the blueprint again. A turn that is no {@link Rotation}, or none saved, is left as it is. */
+    @Override
+    public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        int saved = NBTUtilBC.getInt(tileNbt, "rotation", -1);
+        if (saved >= 0 && saved < Rotation.values().length) {
+            tileNbt.putInt("rotation", Rotation.values()[saved].getRotated(rotation).ordinal());
+        }
     }
 
     @Nullable

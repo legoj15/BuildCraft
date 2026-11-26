@@ -203,8 +203,10 @@ foreach ($candidate in @($PlaySave, $PlaySeed) | Where-Object { $null -ne $_ }) 
 }
 $WantFresh = $FreshSave -or ($ScenarioData.PSObject.Properties['freshSave'] -and $ScenarioData.freshSave)
 if ($WantFresh -and $PlaySave -eq $SaveName) { Write-Host "note: a fresh save applies to a named save only; this run plays '$SaveName' as it is" }
-# Optional dev-runtime mods: the scenario's "mods" aliases plus -Mods, in that order, each once. Empty = no -PwithMods.
-$ModAliases = @(@(if ($ScenarioData.PSObject.Properties['mods']) { $ScenarioData.mods }) + $Mods |
+# Optional dev-runtime mods: the scenario's "mods" and "requiredMods" aliases plus -Mods, in that order, each once.
+# Empty = no -PwithMods.
+$ModAliases = @(@(if ($ScenarioData.PSObject.Properties['mods']) { $ScenarioData.mods }) +
+        @(if ($ScenarioData.PSObject.Properties['requiredMods']) { $ScenarioData.requiredMods }) + $Mods |
         ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
 
 # ── Bridge plumbing ──────────────────────────────────────────────────────────

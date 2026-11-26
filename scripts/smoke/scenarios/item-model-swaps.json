@@ -21,6 +21,6 @@
    ]
   },
   { "do": "wait", "ms": 1500 },
-  { "do": "shot", "name": "hotbar", "look": "Hotbar slots 1-3 show 3D gates (not a barrier, not blank), slot 4 a red lens, slot 5 an oak facade (not bricks), slot 6 a cobblestone pipe" }
+  { "do": "shot", "name": "hotbar", "look": "Hotbar slots 1-3 show 3D gates (not a barrier, not blank), slot 4 a red lens, slot 5 an oak facade (not bricks), slot 6 a cobblestone pipe; all as bright as the vanilla blocks would be (Sodium once drew them at about 40%: the white gate frame grey, the oak facade dark brown)" }
  ]
 }

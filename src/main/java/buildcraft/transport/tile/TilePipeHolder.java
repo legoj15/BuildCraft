@@ -22,7 +22,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -39,7 +38,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
@@ -49,8 +47,6 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
-import buildcraft.api.transport.IWireManager;
-import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -76,8 +72,8 @@ import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
-import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.wire.SavedDataWireSystems;
+import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
 @SuppressWarnings("this-escape")
@@ -278,11 +274,11 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         return chunk != null && !chunk.getBlockState(worldPosition).is(getBlockState().getBlock());
     }
 
-    /** Server only: has the wire systems through this pipe rebuilt at the next wire tick. A pipe without wires is in
-     *  no system and links to nothing, so it asks for nothing. */
+    /** Server only: has the wire systems through this pipe rebuilt at the next wire tick. A pipe without wires that
+     *  no system names asks for nothing. */
     private void markWireSystemsStale() {
-        if (level instanceof ServerLevel && !wireManager.parts.isEmpty()) {
-            SavedDataWireSystems.get(level).markStale(worldPosition);
+        if (level instanceof ServerLevel) {
+            SavedDataWireSystems.get(level).markStaleIfWired(worldPosition, !wireManager.parts.isEmpty());
         }
     }
 

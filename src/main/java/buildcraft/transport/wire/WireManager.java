@@ -67,10 +67,10 @@ public class WireManager implements IWireManager {
     public void tick() {
         if (!initialised) {
             initialised = true;
-            if (!holder.getPipeWorld().isClientSide() && !parts.isEmpty()) {
+            if (!holder.getPipeWorld().isClientSide()) {
                 // The wire tick at the end of this level tick builds each system once, however many of its pipes
                 // loaded together.
-                getWireSystems().markStale(holder.getPipePos());
+                getWireSystems().markStaleIfWired(holder.getPipePos(), !parts.isEmpty());
             }
             updateBetweens(false);
         } else if (betweensStale) {

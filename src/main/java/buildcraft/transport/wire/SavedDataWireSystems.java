@@ -38,7 +38,6 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.util.datafix.DataFixTypes;
 
 
-import buildcraft.api.core.BCLog;
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -98,7 +97,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     private record EmitterColour(WireSystem.WireElement emitter, DyeColor colour) {}
 
     /** What each emitter said, per colour, when it was last read in a chunk in memory. A gate in a chunk that is not
-     *  in memory cannot change, so this is still what it says; never saved. */
+     *  in memory cannot change, so this is still what it says. Never saved, and an entry goes with the last system
+     *  of its colour that holds the emitter ({@link #removeWireSystem}). */
     private final Map<EmitterColour, Boolean> lastEmitting = new HashMap<>();
 
     private final Map<WireSystem.WireElement, List<WireSystem>> elementsToWireSystemsIndex = new HashMap<>();
@@ -194,6 +194,14 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                 return systems.isEmpty() ? null : systems;
             });
         });
+        // What an emitter last said is kept only while a system of that colour still holds it.
+        for (WireSystem.WireElement element : wireSystem.elements) {
+            if (element.type == WireSystem.WireElement.Type.EMITTER_SIDE
+                    && getWireSystemsWithElementAsReadOnlyList(element).stream()
+                        .noneMatch(other -> other.color == wireSystem.color)) {
+                lastEmitting.remove(new EmitterColour(element, wireSystem.color));
+            }
+        }
         markStructureChanged();
     }
 
@@ -222,10 +230,29 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         staleHolders.add(pos.immutable());
     }
 
+    /** {@link #markStale} for a pipe that may have nothing to do with wires: it is marked when it has wires, or when
+     *  a system still names a wire at its position (its wires went without the systems being told: NBT written into
+     *  it before its first tick, or a save that already held such a system). A pipe with neither is in no system and
+     *  links to nothing. */
+    public void markStaleIfWired(BlockPos pos, boolean hasWires) {
+        if (hasWires || namesWireAt(pos)) {
+            markStale(pos);
+        }
+    }
+
+    private boolean namesWireAt(BlockPos pos) {
+        for (EnumWirePart part : EnumWirePart.VALUES) {
+            if (elementsToWireSystemsIndex.containsKey(new WireSystem.WireElement(pos, part))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Builds the system of every seed that is a wire in a chunk in memory, replacing the same-colour systems it
      *  overlaps. Every wire part a replaced system held is rebuilt too, so no part that was in a system is left
-     *  without one. A seed in a chunk that is not in memory is skipped (a chunk is never loaded here): its pipe
-     *  rebuilds on its first tick when it loads. */
+     *  without one. A seed whose chunk is not in memory is skipped: its pipe rebuilds on its first tick when it
+     *  loads. (The walk itself follows {@code IPipeHolder.getNeighbourPipe}, as it always has.) */
     private void rebuild(Collection<WireSystem.WireElement> seeds) {
         Deque<WireSystem.WireElement> queue = new ArrayDeque<>(seeds);
         Set<WireSystem.WireElement> built = new HashSet<>();
@@ -305,7 +332,9 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         //     another mod) → TilePipeHolder.setRemoved → markStale
         //   • Pluggable, colour or connection change → IPipeHolder.requestWireLinkRefresh
         //                              → TilePipeHolder.markWireSystemsStale → markStale
-        //   • Both of the above drain through rebuildStale at the top of this method.
+        //   • NBT read into a pipe that has already ticked (/data, another mod)
+        //                              → TilePipeHolder.readData → markStale
+        //   • Every markStale drains through rebuildStale at the top of this method.
         //   • Gate emit state change → GateLogic.resolveActions sets gatesChanged = true directly
         //                              whenever the resolved wireBroadcasts set differs from
         //                              the previous one. (GateLogic is the sole IWireEmitter

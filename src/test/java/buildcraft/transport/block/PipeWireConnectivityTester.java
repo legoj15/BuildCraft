@@ -8,6 +8,8 @@ package buildcraft.transport.block;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
+import com.google.common.collect.ImmutableList;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -375,7 +377,8 @@ public class PipeWireConnectivityTester {
                             // A WireManager with no parts is the saved form of "no wires".
                             tag.put("wires", new WireManager(east).writeToNbt());
                             //? if >=1.21.10 {
-                            east.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+                            east.loadCustomOnly(
+                                TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
                             //?} else {
                             /*east.loadCustomOnly(tag, level.registryAccess());*/
                             //?}
@@ -404,6 +407,30 @@ public class PipeWireConnectivityTester {
             helper::succeed, "wire system never followed the NBT write", () -> {
                 helper.setBlock(westRel, Blocks.AIR);
                 helper.setBlock(eastRel, Blocks.AIR);
+            });
+    }
+
+    /** A pipe with no wires drops, on its first tick, a wire system that still names a wire at its position: the wire
+     *  went without the systems being told (NBT written into the pipe before it first ticked, or a save that already
+     *  held such a system). Left registered, the system keeps joining its other wires through a wire that is gone.
+     *  Built straight from one element, as a system read back from disk is. (#250) */
+    public static void testFirstTickDropsSystemNamingMissingWire(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 2, 2);
+        TilePipeHolder tile = placePipe(helper, rel);
+        SavedDataWireSystems wireSystems = SavedDataWireSystems.get(helper.getLevel());
+        WireSystem ghost = new WireSystem(ImmutableList.of(
+            new WireSystem.WireElement(helper.absolutePos(rel), EnumWirePart.EAST_DOWN_NORTH)), DyeColor.YELLOW);
+        wireSystems.addWireSystem(ghost, false);
+
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINK_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINK_WORK_TICKS,
+                () -> tile.wireManager.initialised && systemsOf(helper, rel, EnumWirePart.EAST_DOWN_NORTH).isEmpty(),
+                () -> "the pipe " + (tile.wireManager.initialised ? "ticked" : "never ticked")
+                    + " and the system naming its missing wire is still registered"),
+            helper::succeed, "system naming a missing wire never dropped", () -> {
+                wireSystems.removeWireSystem(ghost);
+                helper.setBlock(rel, Blocks.AIR);
             });
     }
 }

@@ -186,7 +186,8 @@ public final class WireSystem {
     public boolean update(SavedDataWireSystems wireSystems, boolean stored) {
         boolean powered = false;
         for (WireElement element : elements) {
-            if (element.type == WireElement.Type.EMITTER_SIDE && wireSystems.isEmitterEmitting(element, color, stored)) {
+            if (element.type == WireElement.Type.EMITTER_SIDE
+                    && wireSystems.isEmitterEmitting(element, color, stored)) {
                 powered = true;
             }
         }

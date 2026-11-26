@@ -635,6 +635,10 @@ public class BuildCraftGameTests {
         // Blueprint replaceNbt wiring: a charged quarry/laser, scanned and rebuilt through each real build path, starts with no stored energy.
         reg.accept("buildcraftunofficial:blueprint_build_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildDropsStoredEnergy);
         reg.accept("buildcraftunofficial:blueprint_build_without_checks_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildWithoutChecksDropsStoredEnergy);
+        // A machine built from a blueprint starts with no working area of its own: a Filler loses its box, and a Builder its path
+        // and the index into it, and works out its own box from its blueprint and its own position.
+        reg.accept("buildcraftunofficial:machine_schematic_builds_filler_without_its_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsFillerWithoutItsBox);
+        reg.accept("buildcraftunofficial:machine_schematic_builds_builder_with_its_own_box_and_no_path", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsBuilderWithItsOwnBoxAndNoPath);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);

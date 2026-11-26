@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:machine_schematic_builds_builder_with_its_own_box_and_no_path",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 100,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -250,10 +250,11 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     /** Builds the system of every seed that is a wire in a chunk in memory, replacing the same-colour systems it
-     *  overlaps. Every wire part a replaced system held is re-seeded, so none that is still a wire in a chunk in
-     *  memory is left without a system. A seed whose chunk is not in memory is skipped and stays in no system until
-     *  its pipe rebuilds on its first tick after loading: a rebuild cuts a system at the edge of the loaded world,
-     *  and a gate beyond that edge stops counting. The walk itself crosses to a neighbour through
+     *  overlaps. Every wire part a replaced system held is re-seeded, so none of those that is still a wire in a
+     *  chunk in memory is left without a system. A seed whose chunk is not in memory is skipped and stays in no
+     *  system until a rebuild covers it again (its own pipe's first tick after loading, or a walk that crosses into
+     *  its chunk): a rebuild cuts a system at the edge of the loaded world, and a gate beyond that edge stops
+     *  counting. The walk itself crosses to a neighbour through
      *  {@code IPipeHolder.getNeighbourPipe}, whose loaded check is the chunk's ticket, so it can complete the load
      *  of a neighbouring chunk that is queued but not yet in memory; it never reaches one that has no ticket. */
     private void rebuild(Collection<WireSystem.WireElement> seeds) {

@@ -43,6 +43,12 @@ import buildcraft.transport.wire.WireSystem;
  * placement actually completes a connection — not for an isolated wire — so the
  * predicate must distinguish four cases: isolated, in-cube neighbour matching colour,
  * in-cube neighbour wrong colour, and cross-tile neighbour matching colour.
+ *
+ * <p>A second group pins what the server keeps for wires that cross between pipes: the drawn links
+ * ({@code WireManager.betweens}, part of the collision shape) and the wire systems
+ * ({@link SavedDataWireSystems}). Both must follow a neighbour's removal, a blocking pluggable, a repaint, a pipe
+ * connection forming or breaking, and NBT written into a pipe; and a pipe with no wires must drop a saved system
+ * that still names a wire at its position.
  */
 public class PipeWireConnectivityTester {
 

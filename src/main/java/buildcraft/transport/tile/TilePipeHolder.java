@@ -129,10 +129,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
         }
-        CompoundTag wireTag = wireManager.writeToNbt();
-        if (!wireTag.isEmpty()) {
-            output.store("wires", CompoundTag.CODEC, wireTag);
-        }
+        // Always stored, an empty part list included: readData takes a tag without it to mean no wires.
+        output.store("wires", CompoundTag.CODEC, wireManager.writeToNbt());
         // Save pluggables
         CompoundTag plugTag = new CompoundTag();
         for (Direction face : Direction.values()) {
@@ -226,7 +224,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             eventBus.registerHandler(plug);
         }
         // Load wire data. A save always carries the key (an empty part list for a pipe with no wires), so a tag
-        // without it names no wires, as one without "plugs" names no pluggables.
+        // without a readable "wires" entry names no wires, as one without "plugs" names no pluggables.
         input.read("wires", CompoundTag.CODEC).ifPresentOrElse(wireManager::readFromNbt, wireManager.parts::clear);
         // After data sync (e.g. colour change), refresh the model on the client
         if (level != null && level.isClientSide()) {

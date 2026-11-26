@@ -43,7 +43,10 @@ import buildcraft.transport.wire.WireSystem;
  * {@code logic_transportation} advancement. The advancement should fire when a wire
  * placement actually completes a connection — not for an isolated wire — so the
  * predicate must distinguish four cases: isolated, in-cube neighbour matching colour,
- * in-cube neighbour wrong colour, and cross-tile neighbour matching colour.
+ * in-cube neighbour wrong colour, and cross-tile neighbour matching colour. A
+ * cross-tile neighbour of the same colour counts only when the wire rule
+ * ({@link WireSystem#canWireConnect}) links the two pipes, which the polling test
+ * pins for two pipes that do not connect and for a blocking pluggable across the face.
  *
  * <p>A second group pins what the server keeps for wires that cross between pipes. The wire systems
  * ({@link SavedDataWireSystems}) must follow a neighbour's removal, a blocking pluggable, a repaint, a pipe
@@ -135,6 +138,76 @@ public class PipeWireConnectivityTester {
                 EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW),
             "Same-colour wires on adjacent tiles at the touching corners must register as connected");
         helper.succeed();
+    }
+
+    /** Three rigs in the one arena, each a west pipe at x=1 and an east pipe at x=2, y=2 holding the same-colour
+     *  wires at the touching corners, as {@link #testCrossTileSameColourConnected} links them. The control's two
+     *  cobblestone item pipes connect on their first tick, so {@link BlockPipeHolder#isWireConnected} answers
+     *  true from both pipes from then on. A cobblestone item pipe beside a stone item pipe never connects to it,
+     *  and a blocking pluggable on either facing side cuts a structure pipe's link, so there the predicate must
+     *  answer false, from both pipes of each rig. The cross-tile half of the predicate is the wire rule
+     *  ({@link WireSystem#canWireConnect}), not the mere presence of a same-colour wire at the touching corner.
+     *  (#256) */
+    public static void testCrossTileNeedsAWireLink(GameTestHelper helper) {
+        BlockPos controlWestRel = new BlockPos(1, 2, 1);
+        BlockPos controlEastRel = new BlockPos(2, 2, 1);
+        BlockPos unconnectedWestRel = new BlockPos(1, 2, 3);
+        BlockPos unconnectedEastRel = new BlockPos(2, 2, 3);
+        BlockPos blockedWestRel = new BlockPos(1, 2, 5);
+        BlockPos blockedEastRel = new BlockPos(2, 2, 5);
+        TilePipeHolder controlWest = placePipe(helper, controlWestRel,
+            new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        TilePipeHolder controlEast = placePipe(helper, controlEastRel,
+            new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        TilePipeHolder unconnectedWest = placePipe(helper, unconnectedWestRel,
+            new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        TilePipeHolder unconnectedEast = placePipe(helper, unconnectedEastRel,
+            new ItemStack(BCTransportItems.PIPE_STONE_ITEM.get()));
+        TilePipeHolder blockedWest = placePipe(helper, blockedWestRel);
+        TilePipeHolder blockedEast = placePipe(helper, blockedEastRel);
+        controlWest.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        controlEast.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+        unconnectedWest.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        unconnectedEast.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+        blockedWest.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        blockedEast.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+        // The blocker cuts the link from either side, whatever the pipes say about their connection.
+        blockedWest.replacePluggable(Direction.EAST,
+            new PluggableBlocker(BCTransportPlugs.blocker, blockedWest, Direction.EAST));
+
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINK_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINK_WORK_TICKS,
+                () -> BlockPipeHolder.isWireConnected(helper.getLevel(), helper.absolutePos(controlWestRel),
+                    controlWest, EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW),
+                () -> "the connected cobblestone pipes never counted as wire-linked"),
+            () -> {
+                helper.assertFalse(
+                    BlockPipeHolder.isWireConnected(helper.getLevel(), helper.absolutePos(unconnectedWestRel),
+                        unconnectedWest, EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW),
+                    "Two pipes that do not connect must not register as wire-linked (asked from the cobblestone pipe)");
+                helper.assertFalse(
+                    BlockPipeHolder.isWireConnected(helper.getLevel(), helper.absolutePos(unconnectedEastRel),
+                        unconnectedEast, EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW),
+                    "Two pipes that do not connect must not register as wire-linked (asked from the stone pipe)");
+                helper.assertFalse(
+                    BlockPipeHolder.isWireConnected(helper.getLevel(), helper.absolutePos(blockedWestRel),
+                        blockedWest, EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW),
+                    "A blocking pluggable across the face must cut the cross-tile wire link (asked from the west pipe)");
+                helper.assertFalse(
+                    BlockPipeHolder.isWireConnected(helper.getLevel(), helper.absolutePos(blockedEastRel),
+                        blockedEast, EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW),
+                    "A blocking pluggable across the face must cut the cross-tile wire link (asked from the east pipe)");
+                helper.succeed();
+            },
+            "the cross-tile rigs never settled", () -> {
+                helper.setBlock(controlWestRel, Blocks.AIR);
+                helper.setBlock(controlEastRel, Blocks.AIR);
+                helper.setBlock(unconnectedWestRel, Blocks.AIR);
+                helper.setBlock(unconnectedEastRel, Blocks.AIR);
+                helper.setBlock(blockedWestRel, Blocks.AIR);
+                helper.setBlock(blockedEastRel, Blocks.AIR);
+            });
     }
 
     /** Poll budget, counted from the cell ticking, for the link to form and then to drop (#243). */

@@ -91,6 +91,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_connectivity_in_cube_same_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeSameColourConnected);
         reg.accept("buildcraftunofficial:wire_connectivity_in_cube_different_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeDifferentColourNotConnected);
         reg.accept("buildcraftunofficial:wire_connectivity_cross_tile_same_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileSameColourConnected);
+        reg.accept("buildcraftunofficial:wire_connectivity_cross_tile_needs_a_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileNeedsAWireLink);
         reg.accept("buildcraftunofficial:wire_link_drops_when_neighbour_removed", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileLinkDropsWhenNeighbourRemoved);
         reg.accept("buildcraftunofficial:wire_system_follows_unconnected_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsUnconnectedLink);
         reg.accept("buildcraftunofficial:wire_system_follows_connection", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsConnection);

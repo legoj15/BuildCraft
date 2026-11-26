@@ -47,6 +47,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.api.blocks.ICustomPaintHandler;
+import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
@@ -64,6 +65,7 @@ import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
+import buildcraft.transport.wire.WireSystem;
 
 public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock,
         PlayerBreakGuard, PickStackBlock, BlockParticleEffects, ExplosionArmouredBlock, PositionalSoundBlock,
@@ -562,26 +564,32 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     /**
-     * Whether the wire just placed at {@code wirePart} on {@code tile} now shares a connection
-     * with a same-colour wire — either an in-cube neighbour part on the same tile, or a wire on
-     * an adjacent {@link TilePipeHolder} reached through one of the six face offsets. Used to
-     * gate the {@code logic_transportation} advancement: laying down an isolated wire segment
-     * does not unlock it; completing a connection does.
+     * Whether the wire just placed at {@code wirePart} on {@code tile} is linked by the one wire-link
+     * rule ({@link WireSystem#canWireConnect}, the same rule the server's wire systems and the drawn
+     * links are built with) to a same-colour wire. The rule walks the wire positions one step from the
+     * placed part: the neighbouring corners inside the same pipe block, and the touching corner of a
+     * neighbouring pipe only for a face it lets a wire link across. Used to gate the
+     * {@code logic_transportation} advancement: laying down an isolated wire segment does not unlock
+     * it, and neither does a same-colour wire the rule does not link (a blocking pluggable on either
+     * facing side, or two pipes that neither connect nor are structure pipes); completing a connection
+     * does.
      */
     static boolean isWireConnected(Level level, BlockPos pos, TilePipeHolder tile,
                                    buildcraft.api.transport.EnumWirePart wirePart,
                                    DyeColor colour) {
-        buildcraft.api.transport.WireNode from = new buildcraft.api.transport.WireNode(pos, wirePart);
-        for (Direction dir : Direction.values()) {
-            buildcraft.api.transport.WireNode to = from.offset(dir);
-            if (to.pos == from.pos) {
-                if (tile.getWireManager().getColorOfPart(to.part) == colour) {
+        for (WireSystem.WireElement element : WireSystem.getConnectedElementsOfElement(tile,
+                new WireSystem.WireElement(pos, wirePart))) {
+            if (element.blockPos.equals(pos)) {
+                // A corner of this pipe itself; the rule returns every in-cube neighbour.
+                if (tile.getWireManager().getColorOfPart(element.wirePart) == colour) {
                     return true;
                 }
             } else {
-                BlockEntity neighbour = level.getBlockEntity(to.pos);
-                if (neighbour instanceof TilePipeHolder other
-                    && other.getWireManager().getColorOfPart(to.part) == colour) {
+                // A touching corner of a neighbouring pipe that canWireConnect has accepted, so that pipe
+                // exists and its chunk is loaded (the rule reads it through getNeighbourTile's isLoaded guard).
+                BlockEntity neighbour = level.getBlockEntity(element.blockPos);
+                if (neighbour instanceof IPipeHolder holder
+                    && holder.getWireManager().getColorOfPart(element.wirePart) == colour) {
                     return true;
                 }
             }

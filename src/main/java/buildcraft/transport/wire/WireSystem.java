@@ -72,7 +72,9 @@ public final class WireSystem {
      *  {@link SavedDataWireSystems}'s rebuild to leave no wire without one (#251).
      *  <p>A pipe marked for a connection update recomputes on its next tick, so while one of the two lags (a tick at
      *  most, or for as long as its chunk is loaded but not ticking) a new connection links nothing yet; the lagging
-     *  pipe's own recompute then asks for the refresh that forms the link. */
+     *  pipe's own recompute then asks for the refresh that forms the link. No pair disagrees for longer than that,
+     *  because a ticking pipe always finds its face neighbours loaded and so never skips one when it recomputes.
+     *  The links depend on that holding; {@code TilePipeHolder.getNeighbourTile} has the argument. */
     public static boolean canWireConnect(IPipeHolder holder, Direction side) {
         IPipe pipe = holder.getPipe();
         if (pipe == null) {

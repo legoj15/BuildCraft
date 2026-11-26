@@ -50,6 +50,9 @@ public class SchematicMachineAreaTester {
         source.box.reset();
         source.box.setMin(helper.absolutePos(new BlockPos(0, 3, 0)));
         source.box.setMax(helper.absolutePos(new BlockPos(2, 4, 2)));
+        // What onPlacedBy leaves on a Filler placed against a volume box. A copy that kept it would take any volume
+        // box behind it on its first tick, the box of the Filler it was copied from included.
+        source.markerBox = false;
         source.inverted = true;
         try {
             SchematicBlockDefault captured = capture(helper, sourcePos);
@@ -60,6 +63,8 @@ public class SchematicMachineAreaTester {
             TileFiller built = (TileFiller) level.getBlockEntity(helper.absolutePos(builtPos));
             helper.assertTrue(built != null, "The built Filler must have its block entity");
             helper.assertFalse(built.box.isInitialized(), "The built Filler must start with no box, got " + built.box);
+            helper.assertTrue(built.markerBox,
+                    "The built Filler must not be marked as owing its box to a volume box behind it");
             helper.assertTrue(built.inverted, "The built Filler must keep its invert flag");
             helper.assertTrue(NBTUtilBC.getBoolean(captured.tileNbt, "box_initialized", false),
                     "Building must not edit the stored blueprint (it still holds the box)");

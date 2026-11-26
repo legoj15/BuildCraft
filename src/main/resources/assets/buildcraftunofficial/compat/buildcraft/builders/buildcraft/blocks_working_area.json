@@ -17,6 +17,14 @@
     },
     {
         "selectors": [
+            "buildcraftunofficial:filler"
+        ],
+        "replaceNbt": {
+            "markerBox": null
+        }
+    },
+    {
+        "selectors": [
             "buildcraftunofficial:architect"
         ],
         "replaceNbt": {

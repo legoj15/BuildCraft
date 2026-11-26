@@ -25,12 +25,14 @@ public final class ConnectedSides {
     private ConnectedSides() {
     }
 
-    /** {@code state} with each side of {@code sides} connected the way the side {@code rotation} turns into was. */
+    /** {@code state} with the connection of each side of {@code sides} moved to the side {@code rotation} turns it
+     *  into. */
     public static BlockState rotate(BlockState state, Map<Direction, Property<Boolean>> sides, Rotation rotation) {
         return turn(state, sides, rotation::rotate);
     }
 
-    /** {@code state} with each side of {@code sides} connected the way the side {@code mirror} swaps it with was. */
+    /** {@code state} with the connection of each side of {@code sides} moved to the side {@code mirror} swaps it
+     *  with. */
     public static BlockState mirror(BlockState state, Map<Direction, Property<Boolean>> sides, Mirror mirror) {
         return turn(state, sides, mirror::mirror);
     }

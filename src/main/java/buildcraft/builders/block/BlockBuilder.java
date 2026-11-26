@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -74,6 +75,9 @@ public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> implement
      *  resolved the blueprint again. A turn that is no {@link Rotation}, or none saved, is left as it is. */
     @Override
     public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        if (!(tileNbt.get("rotation") instanceof NumericTag)) {
+            return;
+        }
         int saved = NBTUtilBC.getInt(tileNbt, "rotation", -1);
         if (saved >= 0 && saved < Rotation.values().length) {
             tileNbt.putInt("rotation", Rotation.values()[saved].getRotated(rotation).ordinal());

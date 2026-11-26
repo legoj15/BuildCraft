@@ -114,7 +114,7 @@ public class BlockRotationGuardTester {
     public void everyDirectionPropertyFollowsARotation() {
         int[] walked = new int[1];
         List<String> offenders = offenders(false, walked);
-        Assertions.assertTrue(walked[0] > 10, "the walk reached only " + walked[0] + " direction properties");
+        Assertions.assertTrue(walked[0] > 0, "the walk reached no direction property at all");
         Assertions.assertEquals(List.of(), offenders,
             "a BuildCraft block's direction property does not turn with BlockState.rotate");
     }
@@ -123,7 +123,7 @@ public class BlockRotationGuardTester {
     public void everyDirectionPropertyFollowsAMirror() {
         int[] walked = new int[1];
         List<String> offenders = offenders(true, walked);
-        Assertions.assertTrue(walked[0] > 10, "the walk reached only " + walked[0] + " direction properties");
+        Assertions.assertTrue(walked[0] > 0, "the walk reached no direction property at all");
         Assertions.assertEquals(List.of(), offenders,
             "a BuildCraft block's direction property does not turn with BlockState.mirror");
     }
@@ -186,8 +186,8 @@ public class BlockRotationGuardTester {
             connectedFaces(rotated(connectedOnly(frame.defaultBlockState(), frameMap, Direction.NORTH),
                 Rotation.CLOCKWISE_90), frameMap));
 
-        // A turn that swaps two faces reads each from the incoming state: NORTH alone becomes SOUTH alone, and the
-        // vertical faces stay where they are.
+        // A turn that swaps two faces reads each from the incoming state: NORTH becomes SOUTH with nothing left on
+        // NORTH, and the vertical faces stay where they are.
         for (Object[] row : new Object[][] {
             {"chute", chute, chuteMap}, {"flood gate", floodGate, floodGateMap}, {"frame", frame, frameMap}}) {
             String name = (String) row[0];

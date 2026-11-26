@@ -109,8 +109,9 @@ public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchang
     }
 
     // A rotated or mirrored state (a blueprint built turned, a structure block) turns the facing with it. PART and
-    // CONNECTED_LEFT/RIGHT are relative to the facing, so a rotation leaves them as they are; the next neighbour
-    // update recomputes the connections (updateNeighbourShape).
+    // CONNECTED_LEFT/RIGHT are relative to the facing, so a rotation leaves them as they are. A mirror swaps the two
+    // sides of the facing, so the left and right connections trade places; the tile assigns PART again when it next
+    // checks its chain, and the next neighbour update recomputes the connections (updateNeighbourShape).
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
@@ -118,7 +119,12 @@ public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchang
 
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
-        return state.setValue(FACING, mirror.mirror(state.getValue(FACING)));
+        if (mirror == Mirror.NONE) {
+            return state;
+        }
+        return state.setValue(FACING, mirror.mirror(state.getValue(FACING)))
+            .setValue(CONNECTED_LEFT, state.getValue(CONNECTED_RIGHT))
+            .setValue(CONNECTED_RIGHT, state.getValue(CONNECTED_LEFT));
     }
 
     @Override

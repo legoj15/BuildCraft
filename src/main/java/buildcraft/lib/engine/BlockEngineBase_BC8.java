@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -126,6 +127,10 @@ public abstract class BlockEngineBase_BC8 extends Block
      *  captured with. A value that is no direction is left as it is. */
     @Override
     public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        // A tag with no orientation, or one that is not a number, is left as it is.
+        if (!(tileNbt.get("orientation") instanceof NumericTag)) {
+            return;
+        }
         Direction saved = NBTUtilBC.getDirectionOrNull(tileNbt, "orientation", (byte) -1);
         if (saved != null) {
             tileNbt.putByte("orientation", (byte) rotation.rotate(saved).ordinal());

@@ -100,8 +100,14 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
         new Machine("quarry", BCBuildersBlocks.QUARRY::get,
             tile -> {
                 // A task mid-way has already been paid for: its power is energy too. Loaded before the battery is
-                // set, because the load writes every key it does not carry back to its default.
-                load(tile, longs("currentTaskId", 0, "task_power", CHARGE));
+                // set, because the load writes every key it does not carry back to its default. The quarry stands
+                // against its frame (the tile is at the origin, the frame starts one block east of it, the mining box
+                // is the frame's inside): a quarry that does not drops its box on load, and its task with it.
+                load(tile, longs("currentTaskId", 0, "task_power", CHARGE,
+                    "frame_init", 1, "frame_minX", 1, "frame_minY", 0, "frame_minZ", -2,
+                    "frame_maxX", 5, "frame_maxY", 4, "frame_maxZ", 2,
+                    "box_init", 1, "box_minX", 2, "box_minY", -60, "box_minZ", -1,
+                    "box_maxX", 4, "box_maxY", 3, "box_maxZ", 1));
                 fill(((TileQuarry) tile).getBattery());
             },
             tile -> ((TileQuarry) tile).getBattery().getStored()
@@ -246,7 +252,8 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             Assertions.assertEquals(0L, machine.stored().applyAsLong(rebuilt),
                 mode + ": the rebuilt machine must start with no stored energy: " + placed);
 
-            // Only the energy goes: whatever else the machine was scanned with is rebuilt as it was. In IGNORE mode
+            // The energy goes, and nothing else but a working area: whatever else the machine was scanned with is
+            // rebuilt as it was. In IGNORE mode
             // the inventories go as well, which is not what is under test here; every other key still has to be kept
             // in that mode, so a regression that drops configuration on the IGNORE path is caught. A machine that
             // works an area drops that too ({@link #aRebuiltMachineHoldsNoWorkingArea} pins it), and is not
@@ -382,14 +389,18 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     }
 
     private static final List<Area> AREAS = List.of(
-        // TileFiller.writeData: the box, then the pattern, the invert flag and the owner.
+        // TileFiller.writeData: the box and the flag that says it came from a volume box behind the Filler (false for
+        // a Filler placed against one; a copy that kept it would adopt whatever box lies behind it), then the pattern,
+        // the invert flag and the owner.
         new Area("filler", BCBuildersBlocks.FILLER::get,
             tag(tag -> {
                 putBox(tag);
+                tag.putBoolean("markerBox", false);
                 tag.putBoolean("inverted", true);
                 putOwner(tag);
             }),
-            BOX_KEYS, List.of(), List.of("inverted", "patternStatement", "ownerUUID", "ownerName")),
+            concat(BOX_KEYS, "markerBox"), List.of(),
+            List.of("inverted", "patternStatement", "ownerUUID", "ownerName")),
         // TileArchitectTable.writeData: the box, the scan flags that belong to it, then the table's own settings.
         new Area("architect", BCBuildersBlocks.ARCHITECT::get,
             tag(tag -> {

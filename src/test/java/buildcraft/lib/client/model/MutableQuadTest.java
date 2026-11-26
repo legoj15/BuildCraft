@@ -33,7 +33,7 @@ public class MutableQuadTest {
         }
     }
 
-    /** The face turns with the vertices (#176): the item draws on 1.21.1, 1.21.11 and 26.x light a quad by its face, so a
+    /** The face turns with the vertices (#176): the item draws on 1.21.1 and 1.21.11+ Forge light a quad by its face, so a
      *  stale one shades a rotated plug (a lens baked WEST and turned NORTH still claimed WEST). Each face is checked against
      *  where the same rotation carries a vertex sitting on that face's unit vector. */
     @Test

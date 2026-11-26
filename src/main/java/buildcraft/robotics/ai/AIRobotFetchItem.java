@@ -157,9 +157,10 @@ public class AIRobotFetchItem extends AIRobot {
             if (Math.floor(target.getX()) != Math.floor(robot.position().x)
                     || Math.floor(target.getY()) != Math.floor(robot.position().y)
                     || Math.floor(target.getZ()) != Math.floor(robot.position().z)) {
+                // An item lying on a pipe or stuck in a block is picked up from beside its cell.
                 startDelegateAI(new AIRobotGotoBlock(robot,
                         (int) Math.floor(target.getX()), (int) Math.floor(target.getY()),
-                        (int) Math.floor(target.getZ())));
+                        (int) Math.floor(target.getZ())).stopBesideHardTarget());
             }
         } else {
             // No item was found, terminate this AI

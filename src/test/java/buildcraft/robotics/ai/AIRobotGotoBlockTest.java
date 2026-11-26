@@ -199,7 +199,7 @@ public class AIRobotGotoBlockTest {
         FlyingRobot flyer = new FlyingRobot();
         flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
 
-        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 3, 0, 0);
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 3, 0, 0).stopBesideHardTarget();
         gotoBlock.blockAccess = soft::contains;
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(gotoBlock);
@@ -213,9 +213,11 @@ public class AIRobotGotoBlockTest {
             flyToAimedCellAndOvershoot(flyer, gotoBlock);
         }
 
-        Assertions.assertSame(gotoBlock, parent.ended, "the flight ends instead of re-planning into the target forever");
+        Assertions.assertSame(gotoBlock, parent.ended,
+                "the flight ends instead of re-planning into the target forever");
         Assertions.assertTrue(gotoBlock.success(), "ending beside an unenterable target is an arrival");
-        Assertions.assertFalse(flyer.aims.contains(new BlockPos(3, 0, 0)), "the robot is never aimed into the hard cell");
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(3, 0, 0)),
+                "the robot is never aimed into the hard cell");
         Assertions.assertEquals(new Vec3(2.5, 0.5, 0.5), flyer.position(),
                 "the robot rests on the centre of the cell beside the target, not inside it");
     }
@@ -229,7 +231,7 @@ public class AIRobotGotoBlockTest {
         resting.moving = false;
         resting.setPosition(new Vec3(2.5, 0.5, 0.5));
 
-        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(resting, 3, 0, 0);
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(resting, 3, 0, 0).stopBesideHardTarget();
         gotoBlock.blockAccess = Set.of(new BlockPos(2, 0, 0))::contains;
         RecordingParent parent = new RecordingParent(resting);
         parent.startDelegateAI(gotoBlock);
@@ -240,7 +242,60 @@ public class AIRobotGotoBlockTest {
 
         Assertions.assertSame(gotoBlock, parent.ended, "the flight ends beside the target");
         Assertions.assertTrue(gotoBlock.success(), "as an arrival");
-        Assertions.assertFalse(resting.aims.contains(new BlockPos(3, 0, 0)), "the robot is never aimed into the hard cell");
+        Assertions.assertFalse(resting.aims.contains(new BlockPos(3, 0, 0)),
+                "the robot is never aimed into the hard cell");
+    }
+
+    /** A flight that did not ask to stop beside a hard target (a station approach, a bomber's hover cell) needs to be
+     *  in the cell: it fails there, rather than looping or claiming an arrival it never made. */
+    @Test
+    public void aHardTargetFailsAFlightThatMustReachTheCell() {
+        Set<BlockPos> soft = new HashSet<>();
+        for (int x = 0; x <= 2; x++) {
+            soft.add(new BlockPos(x, 0, 0));
+        }
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 3, 0, 0);
+        gotoBlock.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+
+        for (int i = 0; i < 100 && flyer.aims.isEmpty(); i++) {
+            gotoBlock.update();
+        }
+        for (int i = 0; i < 40 && parent.ended == null; i++) {
+            flyToAimedCellAndOvershoot(flyer, gotoBlock);
+        }
+
+        Assertions.assertSame(gotoBlock, parent.ended,
+                "the flight ends instead of re-planning into the target forever");
+        Assertions.assertFalse(gotoBlock.success(), "a flight that must reach the cell fails at an unenterable one");
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(3, 0, 0)),
+                "the robot is never aimed into the hard cell");
+    }
+
+    /** A stored path whose only cell is a hard target (taken unchecked in the constructor) ends in start(): a failure
+     *  for a flight that must reach the cell, an arrival where the robot stands for one that opted in. */
+    @Test
+    public void aStoredPathOntoAHardTargetEndsWithoutFlyingIntoIt() {
+        for (boolean optIn : new boolean[] {false, true}) {
+            FlyingRobot flyer = new FlyingRobot();
+            flyer.setPosition(new Vec3(2.5, 0.5, 0.5));
+            AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, new LinkedList<>(List.of(new BlockPos(3, 0, 0))));
+            if (optIn) {
+                flight.stopBesideHardTarget();
+            }
+            flight.blockAccess = pos -> false;
+            RecordingParent parent = new RecordingParent(flyer);
+            parent.startDelegateAI(flight);
+
+            Assertions.assertSame(flight, parent.ended, "the flight ends at once (opt-in " + optIn + ")");
+            Assertions.assertEquals(optIn, flight.success(), "fails unless opted in (opt-in " + optIn + ")");
+            Assertions.assertEquals(new Vec3(2.5, 0.5, 0.5), flyer.position(),
+                    "the robot stays beside the target (opt-in " + optIn + ")");
+        }
     }
 
     /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an

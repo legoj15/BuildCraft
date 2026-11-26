@@ -70,12 +70,9 @@ public class FacadeItemModel implements ItemModel {
     private static final LoadingCache<KeyPlugFacade, FacadeQuads> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
-            // The block baker's quads, given the item normals the GUI cache's toBakedItem adds (Sodium draws them dark
-            // without, #245).
             List<BakedQuad> translucent = PlugBakerFacade.INSTANCE.bake(translucentTwin(key));
-            List<BakedQuad> quads = new ArrayList<>();
-            for (BakedQuad q : PlugBakerFacade.INSTANCE.bake(key)) quads.add(MutableQuad.forItem(q));
-            for (BakedQuad q : translucent) quads.add(MutableQuad.forItem(q));
+            List<BakedQuad> quads = new ArrayList<>(PlugBakerFacade.INSTANCE.bake(key));
+            quads.addAll(translucent);
             return new FacadeQuads(quads, !translucent.isEmpty());
         }));
 
@@ -94,7 +91,7 @@ public class FacadeItemModel implements ItemModel {
                     quad.vertex_1.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
                     quad.vertex_2.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
                     quad.vertex_3.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                    quads.add(translucent ? quad.toBakedItemTranslucent() : quad.toBakedItem());
+                    quads.add(translucent ? quad.toBakedTranslucent() : quad.toBakedItem());
                     anyTranslucent |= translucent;
                 }
             }

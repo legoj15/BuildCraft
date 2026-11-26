@@ -275,25 +275,9 @@ public class MutableQuad {
         //?}
     }
 
-    /** {@link #toBakedBlock()} for an item model: the same quad, plus an explicit face normal where the loader keeps
-     * one (see {@code ClientModels.itemNormals}: Sodium otherwise draws BC's item quads dark, #245). */
+    /** On MC 26.1+, block and item use the same vertex format. Alias for {@link #toBakedBlock()} on every node. */
     public BakedQuad toBakedItem() {
-        return forItem(toBakedBlock());
-    }
-
-    /** {@link #toBakedTranslucent()} for an item model, with the explicit face normal {@link #toBakedItem()} adds. */
-    public BakedQuad toBakedItemTranslucent() {
-        return forItem(toBakedTranslucent());
-    }
-
-    /** A quad baked for a block (by {@link #toBakedBlock()} or a block baker) made fit for an item model: the explicit
-     * face normal {@link #toBakedItem()} adds. */
-    public static BakedQuad forItem(BakedQuad quad) {
-        //? if >=1.21.11 {
-        return buildcraft.platform.client.ClientPlatform.models().itemNormals(quad);
-        //?} else {
-        /*return quad;*/
-        //?}
+        return toBakedBlock();
     }
 
     // Reusable scratch vectors for renderVertex. Block-entity renderers are called
@@ -462,10 +446,10 @@ public class MutableQuad {
     public void setCalculatedNormal() {
         Vector3f n = getCalculatedNormal();
         // Normalise: getCalculatedNormal returns the raw edge cross-product, whose length is the quad's
-        // area — well under 1 for small quads. 1.21.11+ ignores baked vertex normals (it bakes with
-        // BakedNormals.UNSPECIFIED and lights by the quad's face; see setFaceFromCalculatedNormal), but the 1.21.10 int[] vertex path packs this normal
-        // directly, so a sub-unit normal there produces too-dark GUI item diffuse (e.g. gates/lenses).
-        // Normalising is correct on every line and inert where the baked normal is ignored.
+        // area — well under 1 for small quads. 1.21.11+ ignores these vertex normals (NeoForge bakes the quad's
+        // geometric normal instead, Forge and vanilla light by its face; see setFaceFromCalculatedNormal), but the
+        // 1.21.10 int[] vertex path packs this normal directly, so a sub-unit normal there produces too-dark GUI item
+        // diffuse (e.g. gates/lenses). Normalising is correct on every line and inert where the normal is ignored.
         if (n.lengthSquared() > 1.0e-6f) {
             n.normalize();
         }
@@ -474,10 +458,10 @@ public class MutableQuad {
 
     /** Points {@link #getFace()} at the axis direction nearest this quad's geometric normal. {@link #rotate} turns the
      * face with the vertices, but the free-angle turns ({@link #rotateX} and friends), warps and translations never touch
-     * it, yet the 1.21.11+ item draws light a quad
-     * by its face alone (vanilla's {@code putBulkData}; NeoForge too unless the quad carries baked normals, which BC's
-     * do not), while Fabric's item mesh lights it by the geometric normal. A quad turned away from its original face
-     * is therefore lit differently on the two loaders until this realigns it. A degenerate quad keeps its face. */
+     * it, yet a 1.21.11+ item draw without baked normals lights a quad by its face alone (vanilla's {@code putBakedQuad},
+     * so Forge), while NeoForge (which BC gives the geometric normal, #245) and Fabric's item mesh light it by the
+     * geometry. A quad turned away from its original face is therefore lit differently across loaders until this
+     * realigns it. A degenerate quad keeps its face. */
     public MutableQuad setFaceFromCalculatedNormal() {
         Vector3f n = getCalculatedNormal();
         float ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
@@ -884,8 +868,8 @@ public class MutableQuad {
         rotateVertex(from, to, vertex_2);
         rotateVertex(from, to, vertex_3);
         translatef(ox, oy, oz);
-        // The face turns with the vertices: it is the quad's BakedQuad direction, which lights the item draws on 1.21.1,
-        // 1.21.11 and 26.x (and culls in the world), so leaving the source side there shaded every rotated plug (#176).
+        // The face turns with the vertices: it is the quad's BakedQuad direction, which lights the item draws on 1.21.1
+        // and on 1.21.11+ Forge (and culls in the world), so leaving the source side there shaded every rotated plug (#176).
         if (face != null) {
             face = rotateDirection(from, to, face);
         }

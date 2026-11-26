@@ -427,6 +427,7 @@ function Initialize-RunDir([string]$Node) {
             $mfLines = @(Get-Content -LiteralPath $mfConfig | Where-Object { $_ -notmatch '^mixin\.perf\.dynamic_resources\s*=' })
         }
         ($mfLines + 'mixin.perf.dynamic_resources=true') | Set-Content -LiteralPath $mfConfig -Encoding utf8
+        Write-Host "[$Node] note: config/modernfix-mixins.properties sets mixin.perf.dynamic_resources=true"
     }
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
@@ -714,6 +715,14 @@ function Get-SkipReason([string]$Node) {
     if ($ScenarioData.PSObject.Properties['mods']) { $own = @($ScenarioData.mods | Where-Object { $_ }) }
     if ($own.Count -and -not @($own | Where-Object { Test-NodeDefinesMod $Node $_ }).Count) {
         return "needs a dev mod this node does not define ($($own -join ', '): no withmod.<alias> in versions/$Node/gradle.properties)"
+    }
+    # "requiredMods" is all-of, for a scenario that checks a mod pairing: it is skipped unless the node defines every one
+    # (item-model-swaps checks ModernFix, and Sodium alone on the other nodes would pass without testing anything).
+    if ($ScenarioData.PSObject.Properties['requiredMods']) {
+        $missing = @($ScenarioData.requiredMods | Where-Object { $_ -and -not (Test-NodeDefinesMod $Node $_) })
+        if ($missing.Count) {
+            return "needs every one of its required dev mods ($($missing -join ', ') missing: no withmod.<alias> in versions/$Node/gradle.properties)"
+        }
     }
     # A top-level "englishOnly": true marks a scenario that clicks by English widget text, which a translated client
     # does not match. (The batch recognises this reason by its wording: Invoke-SmokeBatch.ps1.)

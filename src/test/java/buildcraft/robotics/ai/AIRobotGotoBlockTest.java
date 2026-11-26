@@ -25,8 +25,8 @@ import buildcraft.api.robots.IRobotAccess;
  *  that {@code PathFinding(start == end)} yields the degenerate 3-cell out-and-back, so a robot already on
  *  the target would otherwise fly a pointless loop. Termination is observed through a recording parent, the
  *  only observable of {@code start()}'s short-circuit: {@code terminate()} is what fires
- *  {@code delegateAIEnded}, and {@code success()} alone cannot pin it (it defaults to true and is never set
- *  false in {@code start()}). */
+ *  {@code delegateAIEnded}, and {@code success()} alone cannot pin it (it defaults to true, and the
+ *  short-circuit sets it true). */
 public class AIRobotGotoBlockTest {
 
     private final MockRobotAccess robot = new MockRobotAccess();
@@ -110,9 +110,10 @@ public class AIRobotGotoBlockTest {
     public void aPathStepThatTurnsHardIsNeverFlownIntoOnTheNextTick() {
         // A planned path whose next cell stops being soft mid-flight (a chunk unloaded under it, a wall placed):
         // setNextInPath rejects the step and drops the path. The path list is the PathFinding's own result, so
-        // re-reading that result on the next tick would hand back the rejected cell as an unchecked "first" step
-        // and aim the robot straight into it. The goto must re-plan from where it is (here: no way through, so
-        // it fails) and never aim at the rejected cell.
+        // re-reading that result on the next tick would hand back the same list, rejected cell first: the flight
+        // would reject it again every tick and never re-plan (7.1.x, whose first step went unchecked, aimed the
+        // robot straight into it). The goto must re-plan from where it is (here: no way through, so it fails) and
+        // never aim at the rejected cell.
         Set<BlockPos> soft = new HashSet<>();
         for (int x = 0; x <= 6; x++) {
             soft.add(new BlockPos(x, 0, 0));
@@ -224,7 +225,7 @@ public class AIRobotGotoBlockTest {
 
     /** The same hard target, from a robot resting on the centre of the cell beside it (where every flight's arrival
      *  snap leaves one): it is not moving, so the step check runs before any distance was measured, which is the
-     *  case the first-step rule waves through unchecked. The robot must still not be sent into the target. */
+     *  case 7.1.x's first-step rule waved through unchecked. The robot must still not be sent into the target. */
     @Test
     public void aRestingRobotBesideAHardTargetIsNotSentIntoIt() {
         FlyingRobot resting = new FlyingRobot();
@@ -276,8 +277,9 @@ public class AIRobotGotoBlockTest {
                 "the robot is never aimed into the hard cell");
     }
 
-    /** A stored path whose only cell is a hard target (taken unchecked in the constructor) ends in start(): a failure
-     *  for a flight that must reach the cell, an arrival where the robot stands for one that opted in. */
+    /** A stored path whose only cell is a hard target: its first step is refused when the flight starts, and that ends
+     *  it at once. A failure for a flight that must reach the cell, an arrival where the robot stands for one that
+     *  opted in. */
     @Test
     public void aStoredPathOntoAHardTargetEndsWithoutFlyingIntoIt() {
         for (boolean optIn : new boolean[] {false, true}) {
@@ -293,9 +295,56 @@ public class AIRobotGotoBlockTest {
 
             Assertions.assertSame(flight, parent.ended, "the flight ends at once (opt-in " + optIn + ")");
             Assertions.assertEquals(optIn, flight.success(), "fails unless opted in (opt-in " + optIn + ")");
+            Assertions.assertFalse(flyer.aims.contains(new BlockPos(3, 0, 0)),
+                    "the robot is never aimed at the hard cell (opt-in " + optIn + ")");
             Assertions.assertEquals(new Vec3(2.5, 0.5, 0.5), flyer.position(),
                     "the robot stays beside the target (opt-in " + optIn + ")");
         }
+    }
+
+    /** A stored path's first cell is checked like every other step: one that has turned hard since the path was found
+     *  is not flown into. The flight re-plans from where the robot is (here there is no way round, so it fails). */
+    @Test
+    public void aStoredPathWhoseFirstCellTurnedHardIsNeverFlownInto() {
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+        AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, new LinkedList<>(List.of(new BlockPos(1, 0, 0),
+                new BlockPos(2, 0, 0), new BlockPos(3, 0, 0))));
+        flight.blockAccess = Set.of(new BlockPos(0, 0, 0), new BlockPos(2, 0, 0), new BlockPos(3, 0, 0))::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(flight);
+
+        for (int i = 0; i < 100 && parent.ended == null; i++) {
+            flight.update();
+        }
+
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(1, 0, 0)),
+                "the first cell has turned hard, so the robot is never aimed at it");
+        Assertions.assertSame(flight, parent.ended, "the re-plan finds no way round the hard cell, so the flight ends");
+        Assertions.assertFalse(flight.success(), "and fails rather than reporting arrival");
+    }
+
+    /** The reloaded twin of the above: the saved path's first cell is the one the robot was flying toward, not the one
+     *  it stands in, so it is checked too. A flight read back from a save is never started in the game, only cycled. */
+    @Test
+    public void aReloadedFlightWhoseNextCellTurnedHardIsNeverFlownInto() {
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+        CompoundTag saved = new CompoundTag();
+        new AIRobotGotoBlock(flyer, new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0))))
+                .writeSelfToNBT(saved);
+
+        AIRobotGotoBlock reloaded = new AIRobotGotoBlock(flyer);
+        reloaded.loadSelfFromNBT(saved);
+        reloaded.blockAccess = Set.of(new BlockPos(0, 0, 0), new BlockPos(2, 0, 0))::contains;
+
+        for (int i = 0; i < 100 && reloaded.success(); i++) {
+            reloaded.update();
+        }
+
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(1, 0, 0)),
+                "the cell the robot was flying toward has turned hard, so it is never aimed at");
+        Assertions.assertFalse(reloaded.success(), "the re-plan finds no way round the hard cell, so the flight fails");
     }
 
     /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an
@@ -350,7 +399,7 @@ public class AIRobotGotoBlockTest {
         LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
                 new BlockPos(3, 0, 0)));
         AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, path);
-        gotoBlock.blockAccess = pos -> false; // every step after the first has turned hard
+        gotoBlock.blockAccess = new BlockPos(1, 0, 0)::equals; // every step after the first has turned hard
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(gotoBlock);
 
@@ -410,7 +459,7 @@ public class AIRobotGotoBlockTest {
         reader.blockAccess = soft::contains;
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(reader);
-        reader.update(); // the reloaded flight's first cycle aims its next step
+        reader.update(); // an ordinary cycle: the first step was taken when the test started the flight
         Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the reloaded flight resumes its path");
 
         flyUntilItEnds(flyer, reader, parent);
@@ -421,18 +470,21 @@ public class AIRobotGotoBlockTest {
     }
 
     /** The same for a flight built from a stored path (what a search-and-goto hands its goto leg): 7.1.x never set
-     *  {@code lastBlockInPath} for it, so it ended where its last step stalled; the fresh-search flight snaps. */
+     *  {@code lastBlockInPath} for it, so it ended where its last step stalled; the fresh-search flight snaps. The path
+     *  starts on the robot's own cell, as a found path does, which is not soft here: the robot may always take a step
+     *  onto the cell it stands in. */
     @Test
     public void aFlightBuiltFromAStoredPathSnapsOntoTheLastPathCell() {
         FlyingRobot flyer = new FlyingRobot();
         flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
-        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
-                new BlockPos(3, 0, 0)));
+        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0),
+                new BlockPos(2, 0, 0), new BlockPos(3, 0, 0)));
         AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, path);
-        flight.blockAccess = pos -> pos.getY() == 0 && pos.getZ() == 0 && pos.getX() >= 0 && pos.getX() <= 3;
+        flight.blockAccess = pos -> pos.getY() == 0 && pos.getZ() == 0 && pos.getX() >= 1 && pos.getX() <= 3;
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(flight);
-        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the stored path's first step is aimed at construction");
+        Assertions.assertFalse(flyer.aims.isEmpty(),
+                "fixture: the stored path's first step is aimed when the flight starts");
 
         flyUntilItEnds(flyer, flight, parent);
 
@@ -451,6 +503,7 @@ public class AIRobotGotoBlockTest {
         LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
                 new BlockPos(3, 0, 0)));
         AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, path);
+        flight.blockAccess = pos -> true;
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(flight);
         Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the robot is flying the stored path");
@@ -475,7 +528,7 @@ public class AIRobotGotoBlockTest {
         reloaded.blockAccess = pos -> true;
         RecordingParent parent = new RecordingParent(flyer);
         parent.startDelegateAI(reloaded);
-        reloaded.update(); // the first cycle aims the next step and sets the velocity
+        reloaded.update(); // a cycle with the flight under way: a step is aimed and the velocity set
         Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the reloaded robot is flying");
 
         reloaded.abort();

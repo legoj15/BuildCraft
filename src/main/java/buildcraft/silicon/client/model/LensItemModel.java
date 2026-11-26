@@ -115,8 +115,8 @@ public class LensItemModel implements ItemModel {
             }
         }
         mq.setCalculatedNormal();
-        // NeoForge lights an item quad by its face and Fabric by the geometry, so a face that disagrees with the
-        // geometry drew the lens at the ambient floor (0.4) on NeoForge 1.21.11+ and fully lit on Fabric (#173).
+        // Forge lights an item quad by its face and Fabric and NeoForge (#245) by the geometry, so a face that disagrees
+        // with the geometry drew the lens at the ambient floor (0.4) on face-lit draws and fully lit elsewhere (#173).
         // Realigned, both agree; in the inventory both draw it fully lit, as 1.12.2 did: its lens item was not gui3d,
         // so the GUI drew it with lighting off.
         mq.setFaceFromCalculatedNormal();

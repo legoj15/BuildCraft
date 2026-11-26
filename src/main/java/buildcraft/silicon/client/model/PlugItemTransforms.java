@@ -88,7 +88,7 @@ final class PlugItemTransforms {
      * about the cell centre, rotate X then Y, scale, then translate (1/16 units). The left-hand poses are their own
      * numbers, not mirrors. Gate and lens share them. The caller then realigns the quad's normal and face with its
      * geometry ({@link MutableQuad#setCalculatedNormal}, {@link MutableQuad#setFaceFromCalculatedNormal}): the
-     * free-angle turns leave the face behind, and the 1.21.11+ and 26.x item draws light a quad by its face (#176).
+     * free-angle turns leave the face behind, and the 1.21.11+ item draws on Forge light a quad by its face (#176).
      */
     static void bakeHandPose(MutableQuad mq, ItemDisplayContext hand) {
         float rotX, rotY, ty, tz, scale;

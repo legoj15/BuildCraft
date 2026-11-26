@@ -14,6 +14,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 //? if >=1.21.11 {
 import net.neoforged.neoforge.client.model.quad.BakedColors;
+import net.neoforged.neoforge.client.model.quad.BakedNormals;
 //?}
 
 import buildcraft.platform.client.ClientModels;
@@ -56,11 +57,13 @@ public final class NeoForgeClientModels implements ClientModels {
         *///?}
     }
 
+    // Also bakes the quad's geometric normal, as vanilla's FaceBakery does for every model quad (#245): Sodium's item
+    // draw reads a quad with UNSPECIFIED normals as a garbage normal and renders BC's item icons dark.
     @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
         return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
                 quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.direction(),
-                quad.materialInfo(), quad.bakedNormals(), BakedColors.of(argb0, argb1, argb2, argb3));
+                quad.materialInfo(), faceNormal(quad), BakedColors.of(argb0, argb1, argb2, argb3));
     }
 
     @Override
@@ -68,11 +71,12 @@ public final class NeoForgeClientModels implements ClientModels {
         return quad.bakedColors().color(vertex);
     }
     //?} elif >=1.21.11 {
-    /*@Override
+    /*// Also bakes the geometric normal, as vanilla's FaceBakery does (#245; see the 26.x arm).
+    @Override
     public BakedQuad withVertexColours(BakedQuad quad, int argb0, int argb1, int argb2, int argb3) {
         return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
                 quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.tintIndex(),
-                quad.direction(), quad.sprite(), quad.shade(), quad.lightEmission(), quad.bakedNormals(),
+                quad.direction(), quad.sprite(), quad.shade(), quad.lightEmission(), faceNormal(quad),
                 BakedColors.of(argb0, argb1, argb2, argb3), quad.hasAmbientOcclusion());
     }
 
@@ -87,6 +91,18 @@ public final class NeoForgeClientModels implements ClientModels {
         // The quads carry their BakedColors, which NeoForge's item draw multiplies in.
         layer.prepareQuadList().addAll(quads);
     }*/
+    //?}
+
+    //? if >=1.21.11 {
+    /** The quad's own normals, or its geometric face normal where it carries none (a degenerate quad stays
+     * UNSPECIFIED). */
+    private static BakedNormals faceNormal(BakedQuad quad) {
+        if (!quad.bakedNormals().equals(BakedNormals.UNSPECIFIED)) {
+            return quad.bakedNormals();
+        }
+        return BakedNormals.of(BakedNormals.computeQuadNormal(
+                quad.position0(), quad.position1(), quad.position2(), quad.position3()));
+    }
     //?}
 
     //? if <1.21.10 {

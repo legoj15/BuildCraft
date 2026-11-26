@@ -238,7 +238,7 @@ public class SchematicBlockPipeTester {
                 "Captured wires should be RED on EAST_DOWN_NORTH and BLUE on WEST_UP_SOUTH, got " + captured);
 
         // Expected corners written out as literals: CLOCKWISE_90 takes EAST to SOUTH and NORTH to EAST,
-        // CLOCKWISE_180 swaps each horizontal axis, COUNTERCLOCKWISE_90 takes EAST to NORTH and NORTH to WEST.
+        // CLOCKWISE_180 takes EAST to WEST and NORTH to SOUTH, COUNTERCLOCKWISE_90 takes EAST to NORTH and NORTH to WEST.
         Map<EnumWirePart, DyeColor> cw90 = wiresOf(schematic.getRotated(Rotation.CLOCKWISE_90));
         helper.assertTrue(cw90.equals(wires(EnumWirePart.EAST_DOWN_SOUTH, DyeColor.RED,
                 EnumWirePart.WEST_UP_NORTH, DyeColor.BLUE)),

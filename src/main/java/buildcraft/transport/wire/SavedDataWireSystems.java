@@ -272,7 +272,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
      *  <p>{@code dropped} receives every system this pass takes out, with the power it had, and loses it again when
      *  an identical system is put back: a built system that has the colour and the set of elements of one it took out
      *  is that system rebuilt, so the old instance goes back in (the walk orders elements by where it started, so a
-     *  rebuilt copy has another {@link WireSystem#getWiresHashCode()}, the key the client holds). The structure flag
+     *  rebuilt copy can have another {@link WireSystem#getWiresHashCode()}, the key the client holds). The structure flag
      *  is set only when a system appeared, went or changed; a kept system whose power flipped goes out through
      *  {@link #changedSystems}. */
     private void rebuild(Collection<WireSystem.WireElement> seeds, Map<WireSystem, Boolean> dropped) {
@@ -331,6 +331,11 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
      *  it started, so a rebuilt copy of a system matches here and never through {@link WireSystem#equals}. */
     private static boolean isSameSystem(WireSystem a, WireSystem b) {
         if (a.color != b.color || a.elements.size() != b.elements.size()) {
+            return false;
+        }
+        // Most candidates of one colour and size are other systems, and asking for one shared element tells them
+        // apart without building the two sets.
+        if (!a.elements.isEmpty() && !b.elements.contains(a.elements.get(0))) {
             return false;
         }
         return new HashSet<>(a.elements).equals(new HashSet<>(b.elements));

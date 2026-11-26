@@ -23,7 +23,8 @@ public interface PacketContext {
     @Nullable
     Player player();
 
-    /** Runs {@code work} on the receiving side's main thread (NeoForge {@code enqueueWork}, Fabric {@code execute}). */
+    /** Runs {@code work} on the receiving side's main thread (NeoForge and Forge {@code enqueueWork}, Fabric
+     *  {@code execute}). */
     void runOnMain(Runnable work);
 
     /** Runs {@code work} on the receiving side's main thread with the player on this side, or not at all when

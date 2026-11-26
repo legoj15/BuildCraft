@@ -140,6 +140,9 @@ public class PipeWireConnectivityTester {
         helper.succeed();
     }
 
+    /** Poll budget, counted from the cell ticking, for the link to form and then to drop (#243). */
+    private static final int LINK_WORK_TICKS = 60;
+
     /** Three rigs in the one arena, each a west pipe at x=1 and an east pipe at x=2, y=2 holding the same-colour
      *  wires at the touching corners, as {@link #testCrossTileSameColourConnected} links them. The control's two
      *  cobblestone item pipes connect on their first tick, so {@link BlockPipeHolder#isWireConnected} answers
@@ -209,9 +212,6 @@ public class PipeWireConnectivityTester {
                 helper.setBlock(blockedEastRel, Blocks.AIR);
             });
     }
-
-    /** Poll budget, counted from the cell ticking, for the link to form and then to drop (#243). */
-    private static final int LINK_WORK_TICKS = 60;
 
     /** The server wire systems holding {@code part} of the pipe at {@code relPos}. */
     private static List<WireSystem> systemsOf(GameTestHelper helper, BlockPos relPos, EnumWirePart part) {

@@ -61,8 +61,9 @@ public class PipeWireChunkLoadTester {
     /** How long the released chunk may take to leave memory. */
     private static final int UNLOAD_TICKS = 200;
 
-    /** How long the wire may take to be in a system again once the chunk is held again: the load hook runs at the head
-     *  of the level's next block entity tick, and the wire tick that rebuilds runs at the end of that tick. */
+    /** The least the wire gets to be in a system again once the chunk is held again: the load hook runs at the head of
+     *  the level's next block entity tick, and the wire tick that rebuilds runs at the end of that tick. The two waits
+     *  share one poll, so whatever the unload leaves of {@link #UNLOAD_TICKS} is added to this. */
     private static final int REJOIN_TICKS = 100;
 
     /** The far chunk, the pipe in it and the wire's systems; {@link #close} takes it all down on every exit. */

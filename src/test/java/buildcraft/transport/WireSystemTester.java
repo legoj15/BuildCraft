@@ -283,11 +283,12 @@ public class WireSystemTester {
      * most rebuilds are exactly that (a wired pipe that connects to a chest placed beside it, a wired pipe whose
      * chunk loads), and flagging them sends every watching player the whole structure again for nothing. The old
      * instance matters because the client keys its copy of a system by the server's
-     * {@link WireSystem#getWiresHashCode()}, which the walk's element order decides: a rebuilt copy started from
-     * another seed has another key.
+     * {@link WireSystem#getWiresHashCode()}, which the order of the walk's wire parts decides: a rebuilt copy
+     * started from another seed can have another key.
      * <p>
-     * The same is pinned for the stale path ({@code markStale} + tick), which most loads take. The contrast at the
-     * end keeps the test honest: a second wire joining the first is a real change, and that must still flag.
+     * The same is pinned for the stale path ({@code markStale} + tick), which most loads take. Each path has its
+     * contrast, which keeps the test honest: a gate taken off, and a second wire joining the first, are real
+     * changes and must still be reported.
      */
     public static void testRebuildThatChangesNothingKeepsSystemAndFlags(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
@@ -313,12 +314,24 @@ public class WireSystemTester {
         helper.assertTrue(rebuilt.get(0) == system,
             "The instance the rebuild took out must be the one registered again, or the client's key is stale");
 
+        // The stale path. A tick clears both flags as it ends, so what the tick did is read from the saved data's
+        // dirty mark, which it sets only when it had a structure change or a power flip to send.
+        wireSystems.setDirty(false);
         wireSystems.markStale(helper.absolutePos(pipePos));
         wireSystems.tick();
+        helper.assertFalse(wireSystems.isDirty(),
+            "A stale rebuild that changes nothing must leave the tick nothing to send or save");
         List<WireSystem> stale = wireSystems.getWireSystemsWithElement(element);
         helper.assertTrue(stale.size() == 1,
             "The stale rebuild still leaves exactly one system holding the wire, got " + stale.size());
         helper.assertTrue(stale.get(0) == system, "The stale rebuild must also put the old instance back");
+
+        // The contrast for the stale path: taking the gate off drops the system's emitter, a real change.
+        tile.replacePluggable(Direction.UP, null);
+        wireSystems.markStale(helper.absolutePos(pipePos));
+        wireSystems.tick();
+        helper.assertTrue(wireSystems.isDirty(), "A stale rebuild that changes a system must be sent and saved");
+        wireSystems.setDirty(false);
 
         // A second wire joining the first really does change the structure, so the flag must set.
         tile.getWireManager().addPart(EnumWirePart.EAST_UP_NORTH, DyeColor.RED);

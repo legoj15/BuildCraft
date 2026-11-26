@@ -83,7 +83,7 @@ public class LensItemModel implements ItemModel {
                 quads.add(mq.toBakedItem());
             }
 
-            // Bake translucent quads (coloured glass overlay) — use toBakedTranslucent so the
+            // Bake translucent quads (coloured glass overlay) — use toBakedItemTranslucent so the
             // quad is routed to the correct render layer and vertex colours are preserved via BakedColors
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), false)) {
                 transformForItem(mq, key.quadSet(), false);

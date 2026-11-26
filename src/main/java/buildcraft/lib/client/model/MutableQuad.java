@@ -286,7 +286,9 @@ public class MutableQuad {
         return forItem(toBakedTranslucent());
     }
 
-    private static BakedQuad forItem(BakedQuad quad) {
+    /** A quad baked for a block (by {@link #toBakedBlock()} or a block baker) made fit for an item model: the explicit
+     * face normal {@link #toBakedItem()} adds. */
+    public static BakedQuad forItem(BakedQuad quad) {
         //? if >=1.21.11 {
         return buildcraft.platform.client.ClientPlatform.models().itemNormals(quad);
         //?} else {

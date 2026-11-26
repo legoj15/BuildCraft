@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -334,17 +335,52 @@ public class AIRobotGotoBlockTest {
         new AIRobotGotoBlock(flyer, new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0))))
                 .writeSelfToNBT(saved);
 
-        AIRobotGotoBlock reloaded = new AIRobotGotoBlock(flyer);
+        ReloadedFlight reloaded = new ReloadedFlight(flyer);
         reloaded.loadSelfFromNBT(saved);
         reloaded.blockAccess = Set.of(new BlockPos(0, 0, 0), new BlockPos(2, 0, 0))::contains;
 
-        for (int i = 0; i < 100 && reloaded.success(); i++) {
+        for (int i = 0; i < 100 && !reloaded.ended; i++) {
             reloaded.update();
         }
 
         Assertions.assertFalse(flyer.aims.contains(new BlockPos(1, 0, 0)),
                 "the cell the robot was flying toward has turned hard, so it is never aimed at");
-        Assertions.assertFalse(reloaded.success(), "the re-plan finds no way round the hard cell, so the flight fails");
+        Assertions.assertTrue(reloaded.ended, "the re-plan finds no way round the hard cell, so the flight ends");
+        Assertions.assertFalse(reloaded.success(), "and fails rather than reporting arrival");
+    }
+
+    /** A found path starts with the cell the robot was in when its search began. A robot moved out of that cell while
+     *  the search ran (knocked back, say) no longer stands in it, so when the cell is not soft the step back into it is
+     *  refused like any other: the flight re-plans from where the robot now is, and arrives. 7.1.x flew the robot back
+     *  into the cell. */
+    @Test
+    public void aRobotMovedOutOfAHardCellDuringItsSearchRePlansFromWhereItIs() {
+        Set<BlockPos> soft = Set.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0), new BlockPos(0, 0, 1),
+                new BlockPos(1, 0, 1));
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5)); // a cell that is not soft
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 2, 0, 0);
+        gotoBlock.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+        gotoBlock.update(); // the search is made, starting from the robot's cell
+        flyer.setPosition(new Vec3(0.5, 0.5, 1.5)); // and the robot is moved before the search has run
+        gotoBlock.update(); // the search finishes: its path starts on the cell the robot was moved out of
+        Assertions.assertTrue(flyer.aims.isEmpty() && parent.ended == null,
+                "the step back into the hard cell is refused: nothing is aimed and the flight goes on to re-plan");
+
+        for (int i = 0; i < 100 && flyer.aims.isEmpty() && parent.ended == null; i++) {
+            gotoBlock.update();
+        }
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: a path is planned and its first step aimed");
+        flyUntilItEnds(flyer, gotoBlock, () -> parent.ended != null);
+
+        Assertions.assertFalse(flyer.aims.contains(new BlockPos(0, 0, 0)),
+                "the robot is never sent back into the hard cell it was moved out of");
+        Assertions.assertSame(gotoBlock, parent.ended, "the flight ends instead of re-planning forever");
+        Assertions.assertTrue(gotoBlock.success(), "by arriving, on the path re-planned from where the robot is");
+        Assertions.assertEquals(new Vec3(2.5, 0.5, 0.5), flyer.position(), "on the centre of its target cell");
     }
 
     /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an
@@ -416,13 +452,13 @@ public class AIRobotGotoBlockTest {
     }
 
     /** Every step of a flight ends a little off its cell (the distance grows, the AI moves on); the last one ends the
-     *  flight. Drives {@code flight} to its end that way. */
-    private static void flyUntilItEnds(FlyingRobot flyer, AIRobotGotoBlock flight, RecordingParent parent) {
-        for (int i = 0; i < 20 && parent.ended == null; i++) {
+     *  flight. Drives {@code flight} that way until {@code ended} reports it over, and never cycles it after that. */
+    private static void flyUntilItEnds(FlyingRobot flyer, AIRobotGotoBlock flight, BooleanSupplier ended) {
+        for (int i = 0; i < 20 && !ended.getAsBoolean(); i++) {
             BlockPos aimed = flyer.aims.getLast();
             flyer.setPosition(new Vec3(aimed.getX() + 0.5, aimed.getY() + 0.5, aimed.getZ() + 0.5));
             flight.update();
-            if (parent.ended == null) {
+            if (!ended.getAsBoolean()) {
                 flyer.setPosition(new Vec3(aimed.getX() + 0.65, aimed.getY() + 0.6, aimed.getZ() + 0.4));
                 flight.update();
             }
@@ -454,17 +490,15 @@ public class AIRobotGotoBlockTest {
         Assertions.assertTrue(saved.contains("path"), "fixture: the save carries the planned path");
         flyer.aims.clear();
 
-        AIRobotGotoBlock reader = new AIRobotGotoBlock(flyer);
+        ReloadedFlight reader = new ReloadedFlight(flyer);
         reader.loadSelfFromNBT(saved);
         reader.blockAccess = soft::contains;
-        RecordingParent parent = new RecordingParent(flyer);
-        parent.startDelegateAI(reader);
-        reader.update(); // an ordinary cycle: the first step was taken when the test started the flight
+        reader.update(); // never started, only cycled, as in the game: its first cycle takes its first step
         Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the reloaded flight resumes its path");
 
-        flyUntilItEnds(flyer, reader, parent);
+        flyUntilItEnds(flyer, reader, () -> reader.ended);
 
-        Assertions.assertSame(reader, parent.ended, "fixture: the reloaded flight arrives");
+        Assertions.assertTrue(reader.ended, "fixture: the reloaded flight arrives");
         Assertions.assertEquals(new Vec3(3.5, 0.5, 0.5), flyer.position(),
                 "a reloaded flight snaps onto the centre of the last path cell, as an uninterrupted one does");
     }
@@ -486,7 +520,7 @@ public class AIRobotGotoBlockTest {
         Assertions.assertFalse(flyer.aims.isEmpty(),
                 "fixture: the stored path's first step is aimed when the flight starts");
 
-        flyUntilItEnds(flyer, flight, parent);
+        flyUntilItEnds(flyer, flight, () -> parent.ended != null);
 
         Assertions.assertSame(flight, parent.ended, "fixture: the flight arrives");
         Assertions.assertEquals(new Vec3(3.5, 0.5, 0.5), flyer.position(),
@@ -526,9 +560,7 @@ public class AIRobotGotoBlockTest {
         AIRobotGotoBlock reloaded = new AIRobotGotoBlock(flyer);
         reloaded.loadSelfFromNBT(saved);
         reloaded.blockAccess = pos -> true;
-        RecordingParent parent = new RecordingParent(flyer);
-        parent.startDelegateAI(reloaded);
-        reloaded.update(); // a cycle with the flight under way: a step is aimed and the velocity set
+        reloaded.update(); // never started, only cycled: the first cycle takes the first step and sets the velocity
         Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the reloaded robot is flying");
 
         reloaded.abort();
@@ -544,6 +576,23 @@ public class AIRobotGotoBlockTest {
         gotoBlock.update();
         flyer.setPosition(new Vec3(aimed.getX() + 0.51, aimed.getY() + 0.5, aimed.getZ() + 0.5));
         gotoBlock.update();
+    }
+
+    /** A flight to read back from a save and drive as the game does: never started, only cycled. The game attaches a
+     *  loaded flight under its parent; here it has none, so it records for itself that it ended, by arriving, failing
+     *  or being aborted. */
+    private static class ReloadedFlight extends AIRobotGotoBlock {
+        boolean ended;
+
+        ReloadedFlight(IRobotAccess robot) {
+            super(robot);
+        }
+
+        @Override
+        public void end() {
+            super.end();
+            ended = true;
+        }
     }
 
     /** A robot in flight that records every block it is aimed at. */

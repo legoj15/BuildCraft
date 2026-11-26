@@ -27,6 +27,7 @@ import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.PositionUtil;
+import buildcraft.lib.test.FarChunk;
 
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -235,6 +236,39 @@ public class WireSystemTester {
             "Wire should de-power once the gate stops emitting");
         helper.assertFalse(wireSystems.gatesChanged,
             "gatesChanged should reset to false after the second recompute");
+        helper.succeed();
+    }
+
+    // ---------- Test #4: recomputing wire power never loads a chunk ----------
+
+    /**
+     * The wire systems are saved data and survive their chunks unloading, so the recompute that follows a gate
+     * change walks every system of the level — and before #248 it read each system's gates through
+     * {@code Level.getBlockEntity}, loading on the server thread every chunk that held one. A gate in a chunk that
+     * is not in memory cannot change, so the recompute must leave it alone: the emitter answers what it said when
+     * it was last read, and a system whose emitter was never read (loaded from disk, chunks not loaded since)
+     * keeps the power state it was saved with. Everything runs inside one tick — a {@link FarChunk}'s ticket only
+     * lasts to the end of the tick it loaded in. (#248)
+     */
+    public static void testRecomputeLeavesAbsentEmitterChunkUnloaded(GameTestHelper helper) {
+        FarChunk far = FarChunk.load(helper, 1888);
+        // local column 24 is in the chunk east of the far one, which FarChunk guarantees is not in memory
+        BlockPos gatePos = far.pos(24, 64, 8);
+        helper.assertTrue(far.isAbsent(1, 0), "precondition: the chunk beside the far chunk is not in memory");
+        SavedDataWireSystems wireSystems = SavedDataWireSystems.get(helper.getLevel());
+        WireSystem system = new WireSystem(ImmutableList.of(
+            new WireSystem.WireElement(gatePos, EnumWirePart.WEST_UP_NORTH),
+            new WireSystem.WireElement(gatePos, Direction.UP)), DyeColor.RED);
+        wireSystems.addWireSystem(system, true);
+        try {
+            wireSystems.gatesChanged = true;
+            wireSystems.tick();
+            helper.assertTrue(far.isAbsent(1, 0), "recomputing wire power must not load the chunk of an emitter");
+            helper.assertTrue(Boolean.TRUE.equals(wireSystems.wireSystems.get(system)),
+                "a system whose emitter was never read keeps the power state it was saved with");
+        } finally {
+            wireSystems.removeWireSystem(system);
+        }
         helper.succeed();
     }
 

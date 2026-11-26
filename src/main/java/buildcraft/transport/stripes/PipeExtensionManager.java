@@ -273,14 +273,12 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
 
     /**
      * Takes a pipe out of its cell without its removal spilling anything: its cargo and parts travel on in the saved
-     * copy (or come back down the line), so the in-transit fallback is told the drops are handled, and its wires
-     * leave their wire systems as a player's break makes them. Its pluggables are told they are detached, as on any
-     * removal: the copy carries new ones.
+     * copy (or come back down the line), so the in-transit fallback is told the drops are handled. Its pluggables are
+     * told they are detached, as on any removal: the copy carries new ones.
      */
     private static void removeQuietly(ServerLevel w, BlockPos pos) {
         if (w.getBlockEntity(pos) instanceof TilePipeHolder tile) {
             tile.markDropsHandled();
-            tile.wireManager.invalidate();
         }
         w.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }

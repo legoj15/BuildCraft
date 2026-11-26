@@ -840,18 +840,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 // for this reason; the call is unconditional.
                 tile.dropPipeItems(level, pos);
             }
-            // Proactively disconnect this pipe from any wire systems it participates in,
-            // before the BlockEntity is removed. Doing this here (rather than in
-            // TilePipeHolder#setRemoved) ensures cleanup runs only on real destruction —
-            // setRemoved() is also called during chunk unload/save, and mutating
-            // SavedDataWireSystems mid-serialization causes a save hang.
             if (!level.isClientSide()) {
                 // This player break owns the removal's drops — survival dropped everything above,
                 // creative deliberately dropped nothing. Flag the tile so the non-player cargo
                 // fallback in TilePipeHolder#preRemoveSideEffects / onRemove (which the upcoming
                 // level.removeBlock still triggers) does not drop the in-transit cargo a second time.
                 tile.markDropsHandled();
-                tile.wireManager.invalidate();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);

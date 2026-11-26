@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:wire_system_follows_connection",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 370,
+    "setup_ticks": 0,
+    "required": true
+}

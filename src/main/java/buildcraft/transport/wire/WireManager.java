@@ -53,12 +53,6 @@ public class WireManager implements IWireManager {
         return holder;
     }
 
-    public void invalidate() {
-        if (!holder.getPipeWorld().isClientSide()) {
-            removePartsFromSystem(parts.keySet());
-        }
-    }
-
     /** Recompute {@link #betweens} on the next tick. The links depend on this pipe's connections and its neighbours'
      *  wires and presence, any of which can change without touching this pipe's own wire parts: a neighbour removed
      *  or replaced, a connection made or broken, and on the client a sync arriving after the first tick. Separate
@@ -74,9 +68,9 @@ public class WireManager implements IWireManager {
         if (!initialised) {
             initialised = true;
             if (!holder.getPipeWorld().isClientSide()) {
-                for (EnumWirePart part : parts.keySet()) {
-                    getWireSystems().buildAndAddWireSystem(new WireSystem.WireElement(holder.getPipePos(), part));
-                }
+                // The wire tick at the end of this level tick builds each system once, however many of its pipes
+                // loaded together.
+                getWireSystems().markStaleIfWired(holder.getPipePos(), !parts.isEmpty());
             }
             updateBetweens(false);
         } else if (betweensStale) {

@@ -118,6 +118,8 @@ public final class WireSystem {
         this.cachedChunkPoses = computeChunkPoses();
     }
 
+    /** Walks the wires linked to {@code startElement}, reading only the world: registering the result, and replacing
+     *  the same-colour systems it overlaps, is {@link SavedDataWireSystems}'s job. */
     public WireSystem(SavedDataWireSystems wireSystems, WireElement startElement) {
         Map<BlockPos, IPipeHolder> holdersCache = new HashMap<>();
         Set<WireElement> walked = new HashSet<>();
@@ -150,10 +152,6 @@ public final class WireSystem {
                             }
                         }
                         if (tempColor != null && colorOfPart == tempColor) {
-                            DyeColor colorButFinal = tempColor;
-                            wireSystems.getWireSystemsWithElement(element).stream()
-                                .filter(wireSystem -> wireSystem != this && wireSystem.color == colorButFinal)
-                                .forEach(wireSystems::removeWireSystem);
                             elementBuilder.add(element);
                             queue.addAll(getConnectedElementsOfElement(wireSystems.world, element));
                             Arrays.stream(Direction.values()).forEach(side -> queue.add(new WireElement(element.blockPos, side)));

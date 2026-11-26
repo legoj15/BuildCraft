@@ -92,6 +92,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_connectivity_in_cube_different_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeDifferentColourNotConnected);
         reg.accept("buildcraftunofficial:wire_connectivity_cross_tile_same_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileSameColourConnected);
         reg.accept("buildcraftunofficial:wire_link_drops_when_neighbour_removed", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileLinkDropsWhenNeighbourRemoved);
+        reg.accept("buildcraftunofficial:wire_system_follows_unconnected_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsUnconnectedLink);
+        reg.accept("buildcraftunofficial:wire_system_follows_connection", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsConnection);
 
         // Per-player wire-colour tracking gating the colorful_electrician advancement
         reg.accept("buildcraftunofficial:wire_colours_fresh_attachment_empty", () -> buildcraft.transport.WireColoursPlacedTester::testFreshAttachmentEmpty);

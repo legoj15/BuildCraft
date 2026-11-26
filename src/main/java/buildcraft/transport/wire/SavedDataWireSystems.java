@@ -6,10 +6,14 @@
 
 package buildcraft.transport.wire;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +21,7 @@ import java.util.Set;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -39,6 +44,7 @@ import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.platform.Platform;
@@ -93,6 +99,9 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     public final Map<WireSystem.WireElement, IWireEmitter> emittersCache = new HashMap<>();
 
     private final Map<WireSystem.WireElement, List<WireSystem>> elementsToWireSystemsIndex = new HashMap<>();
+    /** Blocks whose wire systems are stale, drained by {@link #tick()}. Not saved: a pipe that loads rebuilds its
+     *  own systems on its first tick. */
+    private final Set<BlockPos> staleHolders = new LinkedHashSet<>();
 
     public SavedDataWireSystems(@Nullable ServerLevel level) {
         this.world = level;
@@ -200,19 +209,72 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     public void buildAndAddWireSystem(WireSystem.WireElement element) {
-        WireSystem wireSystem = new WireSystem(this, element);
-        if (!wireSystem.isEmpty()) {
-            this.addWireSystem(wireSystem, false);
+        rebuild(List.of(element));
+    }
+
+    /** The wire systems through the pipe at {@code pos} no longer match what its wires can link to (a pluggable, a
+     *  colour or a connection changed there, or the pipe is gone); they are rebuilt at the next {@link #tick()}, once
+     *  however many changes land in a tick. Only records the position, so it is safe to call from a block entity's
+     *  removal. */
+    public void markStale(BlockPos pos) {
+        staleHolders.add(pos.immutable());
+    }
+
+    /** Builds the system of every seed that is a wire in a chunk in memory, replacing the same-colour systems it
+     *  overlaps. Every wire part a replaced system held is rebuilt too, so no part that was in a system is left
+     *  without one. A seed in a chunk that is not in memory is skipped (a chunk is never loaded here): its pipe
+     *  rebuilds on its first tick when it loads. */
+    private void rebuild(Collection<WireSystem.WireElement> seeds) {
+        Deque<WireSystem.WireElement> queue = new ArrayDeque<>(seeds);
+        Set<WireSystem.WireElement> built = new HashSet<>();
+        while (!queue.isEmpty()) {
+            WireSystem.WireElement seed = queue.remove();
+            if (seed.type != WireSystem.WireElement.Type.WIRE_PART || built.contains(seed)
+                    || !BlockUtil.isChunkPresent(world, seed.blockPos)) {
+                continue;
+            }
+            WireSystem wireSystem = new WireSystem(this, seed);
+            if (wireSystem.isEmpty()) {
+                continue;
+            }
+            for (WireSystem.WireElement element : wireSystem.elements) {
+                if (element.type != WireSystem.WireElement.Type.WIRE_PART) {
+                    continue;
+                }
+                for (WireSystem old : getWireSystemsWithElement(element)) {
+                    if (old.color == wireSystem.color) {
+                        removeWireSystem(old);
+                        queue.addAll(old.elements);
+                    }
+                }
+            }
+            addWireSystem(wireSystem, false);
             wireSystems.put(wireSystem, wireSystem.update(this));
+            built.addAll(wireSystem.elements);
         }
         markStructureChanged();
     }
 
-    public void rebuildWireSystemsAround(IPipeHolder holder) {
-        Arrays.stream(EnumWirePart.values())
-            .flatMap(part -> WireSystem.getConnectedElementsOfElement(world, new WireSystem.WireElement(holder.getPipePos(), part)).stream())
-            .distinct()
-            .forEach(this::buildAndAddWireSystem);
+    /** Drops every system through a stale block, whatever its colour (so a system naming a wire that is no longer
+     *  there goes too), and rebuilds from what those systems held plus the block's own eight wire positions: a
+     *  position without a wire, or a block without a pipe, builds nothing. */
+    private void rebuildStale() {
+        if (staleHolders.isEmpty()) {
+            return;
+        }
+        Set<WireSystem.WireElement> seeds = new LinkedHashSet<>();
+        for (BlockPos pos : staleHolders) {
+            for (EnumWirePart part : EnumWirePart.VALUES) {
+                WireSystem.WireElement element = new WireSystem.WireElement(pos, part);
+                for (WireSystem wireSystem : getWireSystemsWithElement(element)) {
+                    removeWireSystem(wireSystem);
+                    seeds.addAll(wireSystem.elements);
+                }
+                seeds.add(element);
+            }
+        }
+        staleHolders.clear();
+        rebuild(seeds);
     }
 
     public IWireEmitter getEmitter(WireSystem.WireElement element) {
@@ -245,14 +307,17 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     public void tick() {
+        rebuildStale();
         // Wakeup matrix (all paths confirmed by audit 2026-05-19):
         //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
         //                              / removeWireSystem → markStructureChanged
-        //   • Pipe BE load / unload  → WireManager.tick (first call) / WireManager.invalidate
+        //   • Pipe BE load           → WireManager.tick (first call) → buildAndAddWireSystem
         //                              → markStructureChanged
-        //   • Pluggable add/remove   → TilePipeHolder.replacePluggable → rebuildWireSystemsAround
-        //                              → markStructureChanged (only when old or new pluggable
-        //                              is an IWireEmitter)
+        //   • Pipe removed (any cause but a chunk unload: player, /setblock, /fill, explosion,
+        //     another mod) → TilePipeHolder.setRemoved → markStale
+        //   • Pluggable, colour or connection change → IPipeHolder.requestWireLinkRefresh
+        //                              → TilePipeHolder.markWireSystemsStale → markStale
+        //   • Both of the above drain through rebuildStale at the top of this method.
         //   • Gate emit state change → GateLogic.resolveActions sets gatesChanged = true directly
         //                              whenever the resolved wireBroadcasts set differs from
         //                              the previous one. (GateLogic is the sole IWireEmitter

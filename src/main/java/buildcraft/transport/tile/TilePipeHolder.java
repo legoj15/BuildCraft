@@ -26,6 +26,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
 //?}
@@ -76,6 +77,7 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
 import buildcraft.transport.wire.WireManager;
+import buildcraft.transport.wire.SavedDataWireSystems;
 import buildcraft.transport.pipe.PipeEventBus;
 
 @SuppressWarnings("this-escape")
@@ -246,7 +248,31 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         // Neighbours with a wire link into this pipe drop it on their next tick: on the client the BER draws the links
         // every frame (no re-mesh needed), on the server they are part of the collision shape. Also fires on chunk
         // unload, where the recompute is harmless (a pipe that loads back re-links its neighbours on its first tick).
+        // The server wire systems must drop this pipe too, but only when the pipe is really gone: on a chunk unload
+        // they are saved as they stand, and a pipe that loads back rebuilds them on its first tick.
         requestNeighbourWireLinkRefresh();
+        if (level instanceof ServerLevel && wasBlockReplaced()) {
+            markWireSystemsStale();
+        }
+    }
+
+    /** Whether this block entity is going because its block was replaced, rather than its chunk unloading. Vanilla
+     *  writes the new block state into the chunk before it removes the block entity ({@code LevelChunk.setBlockState},
+     *  on every supported line), and an unloading chunk still holds the pipe block, so the chunk's state at this
+     *  position tells the two apart. Reads only a chunk already in memory and never a block entity: an unloading
+     *  chunk calls {@code setRemoved} while iterating its block entities. */
+    private boolean wasBlockReplaced() {
+        LevelChunk chunk = level.getChunkSource().getChunkNow(
+            SectionPos.blockToSectionCoord(worldPosition.getX()), SectionPos.blockToSectionCoord(worldPosition.getZ()));
+        return chunk != null && !chunk.getBlockState(worldPosition).is(getBlockState().getBlock());
+    }
+
+    /** Server only: has the wire systems through this pipe rebuilt at the next wire tick. A pipe without wires is in
+     *  no system and links to nothing, so it asks for nothing. */
+    private void markWireSystemsStale() {
+        if (level instanceof ServerLevel && !wireManager.parts.isEmpty()) {
+            SavedDataWireSystems.get(level).markStale(worldPosition);
+        }
     }
 
     /** Asks every loaded neighbouring pipe to recompute its wire links on its next tick, without loading a chunk. */
@@ -273,6 +299,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public void requestWireLinkRefresh() {
         wireManager.requestBetweensRefresh(false);
         requestNeighbourWireLinkRefresh();
+        // On the server the wire systems follow the same links as the drawn ones.
+        markWireSystemsStale();
     }
 
     /** Whether {@code pipeTag} (a {@link Pipe#writeToNbt} tag) holds the same kind of pipe as {@code pipe}. */
@@ -868,29 +896,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
                     }
                 }
             }
-            // If the pluggable being added or removed is a wire emitter (e.g. a gate with a
-            // Pipe Signal action), the wire system needs to re-walk its elements so it picks
-            // up (or drops) this emitter side. Without this, placing a gate AFTER the wires
-            // already exist means the wire system was built with no emitter elements and the
-            // wires never glow even when the gate fires — visible only after the player breaks
-            // and re-places a wire (which forces WireManager.addPart → buildAndAddWireSystem).
-            boolean oldWasEmitter = old instanceof buildcraft.api.transport.IWireEmitter;
-            boolean newIsEmitter = with instanceof buildcraft.api.transport.IWireEmitter;
-            if (oldWasEmitter || newIsEmitter) {
-                buildcraft.transport.wire.SavedDataWireSystems wireSystems =
-                    buildcraft.transport.wire.SavedDataWireSystems.get(level);
-                wireSystems.rebuildWireSystemsAround(this);
-                // Also rebuild systems anchored on connected neighbour pipes — wires on a
-                // neighbour can extend through this pipe to reach the new/removed emitter.
-                for (Direction dir : Direction.values()) {
-                    IPipe neighbour = getNeighbourPipe(dir);
-                    if (neighbour != null) {
-                        wireSystems.rebuildWireSystemsAround(neighbour.getHolder());
-                    }
-                }
-            }
         }
-        // A blocking pluggable cuts a wire link across an unconnected face, which no connection change reports.
+        // A blocking pluggable cuts a wire link across an unconnected face, which no connection change reports, and a
+        // wire emitter joins or leaves the wire systems through this pipe.
         requestWireLinkRefresh();
         scheduleRenderUpdate();
         setChanged();

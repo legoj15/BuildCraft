@@ -53,12 +53,6 @@ public class WireManager implements IWireManager {
         return holder;
     }
 
-    public void invalidate() {
-        if (!holder.getPipeWorld().isClientSide()) {
-            removePartsFromSystem(parts.keySet());
-        }
-    }
-
     /** Recompute {@link #betweens} on the next tick. The links depend on this pipe's connections and its neighbours'
      *  wires and presence, any of which can change without touching this pipe's own wire parts: a neighbour removed
      *  or replaced, a connection made or broken, and on the client a sync arriving after the first tick. Separate

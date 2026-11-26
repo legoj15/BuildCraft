@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -51,8 +52,15 @@ public final class WireSystem {
     public final ImmutableList<WireElement> elements;
     public final DyeColor color;
 
+    /** Hands out {@link #clientKey}s: one per system instance for as long as the JVM runs. */
+    private static final AtomicInteger NEXT_CLIENT_KEY = new AtomicInteger();
+
     private final transient int cachedHashCode;
-    private final transient int cachedWiresHashCode;
+    /** The number clients know this system by. It belongs to the instance, so two systems never share one (a
+     *  hash of the wires could collide, and one of the two would then never reach the client), and a system
+     *  rebuilt as a new instance is a new system to the clients: {@link SavedDataWireSystems}'s rebuild puts an
+     *  unchanged system's old instance back for that reason. */
+    private final int clientKey = NEXT_CLIENT_KEY.getAndIncrement();
     /** Distinct chunks of {@link #elements} — several elements share a pipe's chunk. Cached because
      *  {@link #isPlayerWatching} walks it for player×system pairs in {@link SavedDataWireSystems#tick()}. */
     private final transient Set<ChunkPos> cachedChunkPoses;
@@ -133,7 +141,6 @@ public final class WireSystem {
         this.color = color;
 
         this.cachedHashCode = this.computeHashCode();
-        this.cachedWiresHashCode = this.computeCachedWiresHashCode();
         this.cachedChunkPoses = computeChunkPoses();
     }
 
@@ -189,7 +196,6 @@ public final class WireSystem {
         this.color = tempColor;
 
         this.cachedHashCode = this.computeHashCode();
-        this.cachedWiresHashCode = this.computeCachedWiresHashCode();
         this.cachedChunkPoses = computeChunkPoses();
     }
 
@@ -236,13 +242,8 @@ public final class WireSystem {
         return false;
     }
 
-    public int getWiresHashCode() {
-        return this.cachedWiresHashCode;
-    }
-
-    private int computeCachedWiresHashCode() {
-        return elements.stream().filter(element -> element.type == WireElement.Type.WIRE_PART)
-                .mapToInt(WireElement::hashCode).reduce(1, (hashCode, elementHashCode) -> hashCode * 31 + elementHashCode);
+    public int getClientKey() {
+        return this.clientKey;
     }
 
     public CompoundTag writeToNBT() {
@@ -267,7 +268,6 @@ public final class WireSystem {
         color = DyeColor.byId(NBTUtilBC.getInt(nbt, "color", 0));
 
         this.cachedHashCode = this.computeHashCode();
-        this.cachedWiresHashCode = this.computeCachedWiresHashCode();
         this.cachedChunkPoses = computeChunkPoses();
     }
 

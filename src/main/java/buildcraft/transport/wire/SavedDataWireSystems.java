@@ -271,8 +271,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
      *  memory; it never reaches one that has no ticket.
      *  <p>{@code dropped} receives every system this pass takes out, with the power it had, and loses it again when
      *  an identical system is put back: a built system that has the colour and the set of elements of one it took out
-     *  is that system rebuilt, so the old instance goes back in (the walk orders elements by where it started, so a
-     *  rebuilt copy can have another {@link WireSystem#getWiresHashCode()}, the key the client holds). The structure flag
+     *  is that system rebuilt, so the old instance goes back in (a rebuilt copy is another instance with
+     *  another {@link WireSystem#getClientKey()}, the key the client holds, and so a new system to it). The structure flag
      *  is set only when a system appeared, went or changed; a kept system whose power flipped goes out through
      *  {@link #changedSystems}. */
     private void rebuild(Collection<WireSystem.WireElement> seeds, Map<WireSystem, Boolean> dropped) {
@@ -328,7 +328,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     /** Whether two systems are one and the same: same colour, same set of elements. The walk orders elements by where
-     *  it started, so a rebuilt copy of a system matches here and never through {@link WireSystem#equals}. */
+     *  it started, so a rebuilt copy of a system matches here and not always through {@link WireSystem#equals}. */
     private static boolean isSameSystem(WireSystem a, WireSystem b) {
         if (a.color != b.color || a.elements.size() != b.elements.size()) {
             return false;
@@ -431,7 +431,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
             if (structureChanged || !changedSystems.isEmpty() || !resendDue.isEmpty()) {
                 for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
                     Map<Integer, WireSystem> changedWires = new HashMap<>();
-                    Map<Integer, Boolean> hashesPowered = new HashMap<>();
+                    Map<Integer, Boolean> keysPowered = new HashMap<>();
                     if (structureChanged || resendDue.contains(player)) {
                         // This is the whole structure, so whatever chunk deliveries asked for is answered by it
                         // and the pacing interval restarts from here.
@@ -440,8 +440,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                         for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
                             WireSystem ws = entry.getKey();
                             if (ws.isPlayerWatching(player)) {
-                                changedWires.put(ws.getWiresHashCode(), ws);
-                                hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
+                                changedWires.put(ws.getClientKey(), ws);
+                                keysPowered.put(ws.getClientKey(), entry.getValue());
                             }
                         }
                     } else {
@@ -449,15 +449,15 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                         for (WireSystem ws : changedSystems) {
                             Boolean powered = wireSystems.get(ws);
                             if (powered != null && ws.isPlayerWatching(player)) {
-                                hashesPowered.put(ws.getWiresHashCode(), powered);
+                                keysPowered.put(ws.getClientKey(), powered);
                             }
                         }
                     }
                     if (!changedWires.isEmpty()) {
                         Platform.network().sendToPlayer(player, new PayloadWireSystems(changedWires));
                     }
-                    if (!hashesPowered.isEmpty()) {
-                        Platform.network().sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
+                    if (!keysPowered.isEmpty()) {
+                        Platform.network().sendToPlayer(player, new PayloadWireSystemsPowered(keysPowered));
                     }
                 }
             }

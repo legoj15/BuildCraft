@@ -41,8 +41,8 @@ public class PayloadWireSystems implements CustomPacketPayload {
 
     private static void encode(FriendlyByteBuf buf, PayloadWireSystems msg) {
         buf.writeInt(msg.wireSystems.size());
-        msg.wireSystems.forEach((wiresHashCode, wireSystem) -> {
-            buf.writeInt(wiresHashCode);
+        msg.wireSystems.forEach((clientKey, wireSystem) -> {
+            buf.writeInt(clientKey);
             List<WireSystem.WireElement> elements = wireSystem.elements.stream()
                 .filter(element -> element.type == WireSystem.WireElement.Type.WIRE_PART)
                 .collect(Collectors.toList());
@@ -55,7 +55,7 @@ public class PayloadWireSystems implements CustomPacketPayload {
         Map<Integer, WireSystem> systems = new HashMap<>();
         int count = buf.readInt();
         for (int i = 0; i < count; i++) {
-            int wiresHashCode = buf.readInt();
+            int clientKey = buf.readInt();
             int localCount = buf.readInt();
 
             ImmutableList.Builder<WireSystem.WireElement> elements = ImmutableList.builder();
@@ -63,7 +63,7 @@ public class PayloadWireSystems implements CustomPacketPayload {
                 elements.add(new WireSystem.WireElement(buf));
             }
             WireSystem wireSystem = new WireSystem(elements.build(), null);
-            systems.put(wiresHashCode, wireSystem);
+            systems.put(clientKey, wireSystem);
         }
         return new PayloadWireSystems(systems);
     }

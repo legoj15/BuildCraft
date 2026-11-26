@@ -76,7 +76,7 @@ import buildcraft.lib.test.LoaderTestEvents;
  * resend itself is paced: one at once, then at most one per {@link SavedDataWireSystems#RESEND_INTERVAL_TICKS}.
  * <p>
  * A third group pins what a rebuild reports: one that rebuilds a system it just took out puts the old instance back
- * (the client keys its copy by {@link WireSystem#getWiresHashCode()}, which the walk's element order decides) and
+ * (the client knows a system by {@link WireSystem#getClientKey()}, which belongs to the instance) and
  * leaves the structure flag alone, so only a system that appeared, went or changed reaches the clients.
  */
 public class WireSystemTester {
@@ -282,9 +282,8 @@ public class WireSystemTester {
      * A rebuild that reproduces the system that was there must put the old instance back and leave both flags alone:
      * most rebuilds are exactly that (a wired pipe that connects to a chest placed beside it, a wired pipe whose
      * chunk loads), and flagging them sends every watching player the whole structure again for nothing. The old
-     * instance matters because the client keys its copy of a system by the server's
-     * {@link WireSystem#getWiresHashCode()}, which the order of the walk's wire parts decides: a rebuilt copy
-     * started from another seed can have another key.
+     * instance matters because the client knows a system by the server's {@link WireSystem#getClientKey()},
+     * which belongs to the instance: a rebuilt copy is a new system to the client.
      * <p>
      * The same is pinned for the stale path ({@code markStale} + tick), which most loads take. Each path has its
      * contrast, which keeps the test honest: a gate taken off, and a second wire joining the first, are real

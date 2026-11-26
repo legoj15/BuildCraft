@@ -420,8 +420,9 @@ function Initialize-RunDir([string]$Node) {
         }
     }
     # ModernFix (-PwithMods=modernfix) runs with its dynamic-resources option on: that option replaces the baked model
-    # maps BC edits, the case the item-model-swaps scenario checks. Off by default upstream, so the file is written here.
-    if ($ModAliases -contains 'modernfix') {
+    # maps BC edits, the case the item-model-swaps scenario checks. Off by default upstream, so the file is written here,
+    # on a node that defines the alias.
+    if (($ModAliases -contains 'modernfix') -and (Test-NodeDefinesMod $Node 'modernfix')) {
         $mfConfig = Join-Path $runDir 'config/modernfix-mixins.properties'
         New-Item -ItemType Directory -Force -Path (Split-Path $mfConfig) | Out-Null
         $mfLines = @()

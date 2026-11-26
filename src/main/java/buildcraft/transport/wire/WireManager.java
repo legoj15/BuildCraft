@@ -56,7 +56,7 @@ public class WireManager implements IWireManager {
     /** Recompute {@link #betweens} on the next tick. The links depend on this pipe's connections and its neighbours'
      *  wires and presence, any of which can change without touching this pipe's own wire parts: a neighbour removed
      *  or replaced, a connection made or broken, and on the client a sync arriving after the first tick. Separate
-     *  from {@link #initialised}, which on the server would also rebuild the wire systems.
+     *  from {@link #initialised}, which only records that this pipe has ticked once.
      *  @param neighbours also recompute the neighbours' links: a client sync may carry wires of this pipe that a
      *      neighbour links to, and on the client nothing else tells that neighbour. */
     public void requestBetweensRefresh(boolean neighbours) {
@@ -67,11 +67,6 @@ public class WireManager implements IWireManager {
     public void tick() {
         if (!initialised) {
             initialised = true;
-            if (!holder.getPipeWorld().isClientSide()) {
-                // The wire tick at the end of this level tick builds each system once, however many of its pipes
-                // loaded together.
-                getWireSystems().markStaleIfWired(holder.getPipePos(), !parts.isEmpty());
-            }
             updateBetweens(false);
         } else if (betweensStale) {
             updateBetweens(!neighboursStale);
@@ -229,6 +224,12 @@ public class WireManager implements IWireManager {
         return nbt;
     }
 
+    /** No wires at all, which is what a pipe tag without wire data names. The client's lit corners go with them. */
+    public void clearParts() {
+        parts.clear();
+        poweredClient.clear();
+    }
+
     public void readFromNbt(CompoundTag nbt) {
         parts.clear();
         int[] wiresArray = NBTUtilBC.getIntArray(nbt, "parts", new int[0]);
@@ -248,5 +249,7 @@ public class WireManager implements IWireManager {
             }
             parts.put(EnumWirePart.VALUES[partIndex], colour);
         }
+        // A corner whose wire is gone is not lit; the set is always empty on the server.
+        poweredClient.retainAll(parts.keySet());
     }
 }

@@ -13,6 +13,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -58,7 +59,12 @@ public class PayloadWireSystemsPowered implements CustomPacketPayload {
 
     public static void handle(PayloadWireSystemsPowered message, PacketContext ctx) {
         ctx.runOnMain(() -> {
-            Level world = ctx.player().level();
+            // No local player when the connection closed before this ran.
+            Player player = ctx.player();
+            if (player == null) {
+                return;
+            }
+            Level world = player.level();
             for (Map.Entry<Integer, Boolean> hashPowered : message.hashesPowered.entrySet()) {
                 WireSystem wireSystem = ClientWireSystems.INSTANCE.wireSystems.get(hashPowered.getKey());
                 if (wireSystem == null) continue;

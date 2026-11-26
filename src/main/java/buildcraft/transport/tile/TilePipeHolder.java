@@ -114,6 +114,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     // second time during the same removal. See dropPipeCargo for the full breakdown.
     private boolean dropsHandled = false;
 
+    /** Set by the load hook ({@link #onLoaded}); from then on the wire systems know this pipe. */
+    private boolean joinedLevel = false;
 
     public TilePipeHolder(BlockPos pos, BlockState state) {
         super(BCTransportBlockEntities.PIPE_HOLDER.get(), pos, state);
@@ -225,18 +227,19 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         }
         // Load wire data. A save always carries the key (an empty part list for a pipe with no wires), so a tag
         // without a readable "wires" entry names no wires, as one without "plugs" names no pluggables.
-        input.read("wires", CompoundTag.CODEC).ifPresentOrElse(wireManager::readFromNbt, wireManager.parts::clear);
+        input.read("wires", CompoundTag.CODEC).ifPresentOrElse(wireManager::readFromNbt, wireManager::clearParts);
         // After data sync (e.g. colour change), refresh the model on the client
         if (level != null && level.isClientSide()) {
             Platform.renderData().requestRenderDataUpdate(this);
             scheduleRenderUpdate = true;
             // The wire links depend on the pipe and its connections, which this sync may have just delivered.
             wireManager.requestBetweensRefresh(true);
-        } else if (level instanceof ServerLevel && wireManager.initialised) {
-            // A read into a pipe that has already ticked (a data command, another mod's write) may have changed
-            // anything its connections, wire links and wire systems depend on; the systems are marked stale whether
-            // or not wires are left, because the read may have removed them all. A pipe that has not ticked yet
-            // builds all of this on its first tick.
+        } else if (level instanceof ServerLevel && joinedLevel) {
+            // A read into a pipe that has joined the level, ticked or not (a data command, another mod's write), may
+            // have changed anything its connections, wire links and wire systems depend on; the systems are marked
+            // stale whether or not wires are left, because the read may have removed them all. A pipe that has not
+            // joined the level yet is marked by onLoaded, and builds its connections and drawn links on its first
+            // tick.
             if (pipe != null) {
                 pipe.markForUpdate();
             }
@@ -253,7 +256,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         // every frame (no re-mesh needed), on the server they are part of the collision shape. Also fires on chunk
         // unload, where the recompute is harmless (a pipe that loads back re-links its neighbours on its first tick).
         // The server wire systems must drop this pipe too, but only when the pipe is really gone: on a chunk unload
-        // they are saved as they stand, and a pipe that loads back rebuilds them on its first tick.
+        // they are saved as they stand, and a pipe that loads back rebuilds them when it joins the level.
         requestNeighbourWireLinkRefresh();
         if (level instanceof ServerLevel && wasBlockReplaced()) {
             markWireSystemsStale();
@@ -350,6 +353,10 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     @Override
     protected void onLoaded() {
         super.onLoaded();
+        // The wire tick at the end of this level tick builds each system once, however many of its pipes loaded
+        // together. This must not wait for a tick: a chunk in memory but not ticking never ticks its pipes (#257).
+        joinedLevel = true;
+        markWireSystemsStale();
         if (pipe != null) {
             pipe.onLoad();
         }

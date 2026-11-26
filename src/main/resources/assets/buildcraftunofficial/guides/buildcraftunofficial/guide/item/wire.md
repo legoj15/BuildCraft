@@ -37,6 +37,8 @@ A Gate is used to provide a signal to a pipe wire which is transmitted to other 
 
 A signal can only be On or Off and will travel over an indefinite distance (unlike redstone).
 
+Wires only carry signals through loaded chunks: a gate in an unloaded chunk should not be relied on until its area is loaded again.
+
 Pipe wire is available in all 16 colours.
 
 ## Wire Placement

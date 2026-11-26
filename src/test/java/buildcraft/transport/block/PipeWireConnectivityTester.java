@@ -32,6 +32,7 @@ import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.BCTransportPlugs;
 import buildcraft.transport.plug.PluggableBlocker;
+import buildcraft.transport.plug.PluggablePowerAdaptor;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.EnumWireBetween;
 import buildcraft.transport.wire.SavedDataWireSystems;
@@ -349,6 +350,104 @@ public class PipeWireConnectivityTester {
             }),
             helper::succeed, "wire system never followed the pipe connection", () -> {
                 helper.setBlock(westRel, Blocks.AIR);
+                helper.setBlock(eastRel, Blocks.AIR);
+            });
+    }
+
+    /** Wires on a kinesis pipe and on the pipe whose Power Adaptor faces it stay in separate wire systems, each wire
+     *  in exactly one, and no wire link is drawn across the adaptor. The kinesis pipes keep their tile connection to
+     *  the adaptor (that is how power reaches the wooden pipe), but that connection is one pipe's alone, and a wire
+     *  rule that answers from it alone links the wires from the kinesis side while cutting them from the adaptor's —
+     *  so a wire-system walk depends on where it starts, and one rebuild pass strands a wire in no system. (#251) */
+    public static void testWireSystemCutByPowerAdaptor(GameTestHelper helper) {
+        BlockPos westRel = new BlockPos(2, 2, 2);
+        BlockPos midRel = new BlockPos(3, 2, 2);
+        BlockPos eastRel = new BlockPos(4, 2, 2);
+        TilePipeHolder west = placePipe(helper, westRel, new ItemStack(BCTransportItems.PIPE_STONE_POWER.get()));
+        TilePipeHolder mid = placePipe(helper, midRel, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+        TilePipeHolder east = placePipe(helper, eastRel, new ItemStack(BCTransportItems.PIPE_STONE_POWER.get()));
+        west.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        mid.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+        mid.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        east.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+        // The wooden pipe's behaviour is an MJ receiver, which the adaptor exposes to the kinesis pipes, so both
+        // kinesis pipes connect to the adaptor faces while the wooden pipe connects to neither of them.
+        mid.replacePluggable(Direction.WEST,
+            new PluggablePowerAdaptor(BCTransportPlugs.powerAdaptor, mid, Direction.WEST));
+        mid.replacePluggable(Direction.EAST,
+            new PluggablePowerAdaptor(BCTransportPlugs.powerAdaptor, mid, Direction.EAST));
+
+        EntityArenaUtil.forceLoadCell(helper);
+        int[] phase = { 0 };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINK_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINK_WORK_TICKS, () -> {
+                switch (phase[0]) {
+                    case 0 -> {
+                        // The precondition of the bug: both kinesis pipes count the adaptor face connected, while the
+                        // adaptor's own pipe counts neither. Mark all three stale in one pass, west first — the
+                        // order that left a wire without a system before the fix.
+                        if (west.getPipe().isConnected(Direction.EAST) && east.getPipe().isConnected(Direction.WEST)) {
+                            SavedDataWireSystems.get(helper.getLevel()).markStale(helper.absolutePos(westRel));
+                            SavedDataWireSystems.get(helper.getLevel()).markStale(helper.absolutePos(midRel));
+                            SavedDataWireSystems.get(helper.getLevel()).markStale(helper.absolutePos(eastRel));
+                            phase[0] = 1;
+                        }
+                        return false;
+                    }
+                    default -> {
+                        // The cut: the four wires in three systems (the adaptor's pipe's two wires share theirs), the
+                        // rule answering the same from both pipes, no link drawn across either adaptor face, and the
+                        // kinesis pipes still connected to the adaptor, so power still flows.
+                        boolean westCutFromMid = inSeparateSystems(helper, westRel, EnumWirePart.EAST_DOWN_NORTH,
+                            midRel, EnumWirePart.WEST_DOWN_NORTH);
+                        boolean eastCutFromMid = inSeparateSystems(helper, eastRel, EnumWirePart.WEST_DOWN_NORTH,
+                            midRel, EnumWirePart.EAST_DOWN_NORTH);
+                        boolean westCutFromEast = inSeparateSystems(helper, westRel, EnumWirePart.EAST_DOWN_NORTH,
+                            eastRel, EnumWirePart.WEST_DOWN_NORTH);
+                        boolean midWiresTogether = inOneSystem(helper, midRel, EnumWirePart.WEST_DOWN_NORTH, midRel,
+                            EnumWirePart.EAST_DOWN_NORTH);
+                        boolean sameAnswerFromBothPipes = !WireSystem.canWireConnect(west, Direction.EAST)
+                            && !WireSystem.canWireConnect(mid, Direction.WEST)
+                            && !WireSystem.canWireConnect(mid, Direction.EAST)
+                            && !WireSystem.canWireConnect(east, Direction.WEST);
+                        // Each pipe draws its own half of a link into its neighbour, so all four halves are read.
+                        boolean noLinkDrawnAcrossAdaptor =
+                            !west.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH)
+                                && !mid.getWireManager().betweens.containsKey(EnumWireBetween.WEST_DOWN_NORTH)
+                                && !mid.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH)
+                                && !east.getWireManager().betweens.containsKey(EnumWireBetween.WEST_DOWN_NORTH);
+                        boolean powerStillFlows = west.getPipe().isConnected(Direction.EAST)
+                            && east.getPipe().isConnected(Direction.WEST);
+                        return westCutFromMid && eastCutFromMid && westCutFromEast && midWiresTogether
+                            && sameAnswerFromBothPipes && noLinkDrawnAcrossAdaptor && powerStillFlows;
+                    }
+                }
+            }, () -> {
+                if (phase[0] == 0) {
+                    return "the kinesis pipes never connected to the power adaptor (west "
+                        + (west.getPipe().isConnected(Direction.EAST) ? "did" : "did not") + ", east "
+                        + (east.getPipe().isConnected(Direction.WEST) ? "did" : "did not") + ")";
+                }
+                return "the wires are not cut from the adaptor: the west kinesis pipe's wire is in "
+                    + systemsOf(helper, westRel, EnumWirePart.EAST_DOWN_NORTH).size() + " system(s), the adaptor's"
+                    + " pipe's west wire in " + systemsOf(helper, midRel, EnumWirePart.WEST_DOWN_NORTH).size()
+                    + ", its east wire in " + systemsOf(helper, midRel, EnumWirePart.EAST_DOWN_NORTH).size()
+                    + ", the east kinesis pipe's wire in "
+                    + systemsOf(helper, eastRel, EnumWirePart.WEST_DOWN_NORTH).size() + " (0 = left in no system)"
+                    + (west.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH)
+                        ? ", a link is still drawn from the west kinesis pipe across the adaptor" : "")
+                    + (mid.getWireManager().betweens.containsKey(EnumWireBetween.WEST_DOWN_NORTH)
+                        ? ", a link is still drawn from the adaptor's pipe to the west kinesis pipe" : "")
+                    + (mid.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH)
+                        ? ", a link is still drawn from the adaptor's pipe to the east kinesis pipe" : "")
+                    + (east.getWireManager().betweens.containsKey(EnumWireBetween.WEST_DOWN_NORTH)
+                        ? ", a link is still drawn from the east kinesis pipe across the adaptor" : "")
+                    + (!west.getPipe().isConnected(Direction.EAST) || !east.getPipe().isConnected(Direction.WEST)
+                        ? ", and a kinesis pipe lost its power connection to the adaptor" : "");
+            }),
+            helper::succeed, "the power adaptor never cut the wire system", () -> {
+                helper.setBlock(westRel, Blocks.AIR);
+                helper.setBlock(midRel, Blocks.AIR);
                 helper.setBlock(eastRel, Blocks.AIR);
             });
     }

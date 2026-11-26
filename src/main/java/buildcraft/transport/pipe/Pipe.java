@@ -314,6 +314,8 @@ public final class Pipe implements IPipe, IDebuggable {
                 // If YES blocking pluggable → fall through to tile entity capability check below.
                 // This matches 1.12.2 behavior: kinesis pipes discover the power adaptor's
                 // MJ capabilities as ConnectedType.TILE through the fallthrough path.
+                // Wires do not follow that tile connection: WireSystem.canWireConnect tests
+                // the pluggables first, so no wire links across a blocking pluggable (#251).
                 var oPlug = oPipe.getHolder().getPluggable(facing.getOpposite());
                 if (oPlug == null || !oPlug.isBlocking()) {
                     if (canPipesConnect(facing, this, oPipe)) {

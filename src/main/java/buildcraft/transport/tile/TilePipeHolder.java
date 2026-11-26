@@ -916,7 +916,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public BlockEntity getNeighbourTile(Direction side) {
         BlockPos neighbour = worldPosition.relative(side);
         // Level.getBlockEntity loads an unloaded chunk synchronously. This guard never changes what a TICKING pipe
-        // sees (so Pipe.updateConnections, which runs only from Pipe.onTick, cannot drop a cross-border connection):
+        // sees (so Pipe.updateConnections from Pipe.onTick cannot drop a cross-border connection; its one off-tick
+        // caller, PipeExtensionManager.sendBack, recomputes a stripes pipe that moved into the cell this tick, which
+        // has no connection of that cell to lose):
         // a block entity ticks only while LevelChunk.isTicking holds, i.e. its chunk's full status, derived from its
         // ticket level (GenerationChunkHolder.getFullStatus -> ChunkLevel.fullStatus), is BLOCK_TICKING (level <= 32),
         // plus Level.tickBlockEntities' shouldTickBlocksAt. ChunkTracker gives every neighbour chunk a level of at

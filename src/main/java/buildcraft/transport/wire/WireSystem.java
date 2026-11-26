@@ -42,6 +42,7 @@ import buildcraft.api.transport.WireNode;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -60,8 +61,18 @@ public final class WireSystem {
         return elements.contains(element);
     }
 
-    /** Checks to see if the given holder could connect a wire across the specified side even if a matching wire wasn't
-     * there. */
+    /** Whether a wire may link from the pipe at {@code holder} into the neighbouring pipe across {@code side}.
+     *  <p>A blocking pluggable on either facing side cuts the link, whatever the pipes say about their connection.
+     *  That is tested first because a kinesis pipe beside a Power Adaptor on a pipe that takes power (or beside a
+     *  Docking Station holding a robot) has a connection across that face (a tile connection, which is how the power
+     *  gets in) that the pluggable's own pipe does not have. Otherwise a pipe connection links the wires only when
+     *  BOTH pipes report it, and a structure pipe links across an unconnected face when the two pipes' colours allow
+     *  it. Every clause reads the same from either pipe, so the answer does too: the wire-system walk
+     *  ({@link #getConnectedElementsOfElement}) relies on that to build the same system wherever it starts, and
+     *  {@link SavedDataWireSystems}'s rebuild to leave no wire without one (#251).
+     *  <p>A pipe marked for a connection update recomputes on its next tick, so while one of the two lags (a tick at
+     *  most, or for as long as its chunk is loaded but not ticking) a new connection links nothing yet; the lagging
+     *  pipe's own recompute then asks for the refresh that forms the link. */
     public static boolean canWireConnect(IPipeHolder holder, Direction side) {
         IPipe pipe = holder.getPipe();
         if (pipe == null) {
@@ -71,17 +82,23 @@ public final class WireSystem {
         if (oPipe == null) {
             return false;
         }
-        if (pipe.isConnected(side)) {
-            return true;
-        }
-        if ((holder.getPluggable(side) != null && holder.getPluggable(side).isBlocking())
-            || (oPipe.getHolder().getPluggable(side.getOpposite()) != null && oPipe.getHolder().getPluggable(side.getOpposite()).isBlocking())) {
+        if (isBlockingPluggable(holder, side) || isBlockingPluggable(oPipe.getHolder(), side.getOpposite())) {
             return false;
+        }
+        if (pipe.isConnected(side) && oPipe.isConnected(side.getOpposite())) {
+            return true;
         }
         if (pipe.getDefinition().flowType == PipeApi.flowStructure || oPipe.getDefinition().flowType == PipeApi.flowStructure) {
             return pipe.getColour() == null || oPipe.getColour() == null || pipe.getColour() == oPipe.getColour();
         }
         return false;
+    }
+
+    /** Whether the pipe holds a pluggable on that face whose {@code isBlocking()} is true: of BuildCraft's own, every
+     *  one except a hollow facade and a lens. */
+    private static boolean isBlockingPluggable(IPipeHolder holder, Direction side) {
+        PipePluggable pluggable = holder.getPluggable(side);
+        return pluggable != null && pluggable.isBlocking();
     }
 
     public static List<WireElement> getConnectedElementsOfElement(IPipeHolder holder, WireElement element) {

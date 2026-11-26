@@ -358,6 +358,9 @@ public final class Pipe implements IPipe, IDebuggable {
             // → full BE sync → client re-parses all 6 pluggables NBT and 27 chunk sections re-mesh.
             // That feedback loop is what caused the 80–95 ms FPS spikes on every gate ON/OFF.
             getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            // Wire links only bridge connected (or unblocked) faces. Here, not in scheduleNetworkUpdate, which also
+            // fires on every Emzuli extraction and other behaviour syncs that cannot change a link.
+            holder.requestWireLinkRefresh();
         }
         } finally {
             _profiler.pop();

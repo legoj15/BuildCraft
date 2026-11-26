@@ -34,7 +34,8 @@ public class WireManager implements IWireManager {
     public final Set<EnumWirePart> poweredClient = EnumSet.noneOf(EnumWirePart.class);
     public final Map<EnumWireBetween, DyeColor> betweens = new EnumMap<>(EnumWireBetween.class);
     public boolean initialised = false;
-    /** Set by {@link #requestBetweensRefresh}; cleared by every {@link #updateBetweens}. */
+    /** Set by {@link #requestBetweensRefresh}; cleared by a non-recursive {@link #updateBetweens}. A recursive pass
+     *  (a neighbour recomputing this pipe) leaves it set while {@link #neighboursStale} is pending. */
     private boolean betweensStale = false;
     /** Whether the pending refresh also recomputes the neighbours' links (see {@link #requestBetweensRefresh}). */
     private boolean neighboursStale = false;

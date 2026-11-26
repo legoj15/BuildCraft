@@ -981,8 +981,6 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     public void scheduleNetworkUpdate(PipeMessageReceiver... parts) {
         // Connection changes come through here (Pipe.updateConnections) — they change the shape.
         invalidateCollisionShapeCache();
-        // ...and the wire links, which only bridge connected (or unblocked) sides.
-        wireManager.requestBetweensRefresh(false);
         Collections.addAll(networkUpdates, parts);
         scheduleRenderUpdate = true;
     }

@@ -32,9 +32,9 @@ import buildcraft.lib.test.MainSourceSet;
  * {@link ClearableTwinGuardTest} for the wipe hooks, but it compares the two lists rather than the two methods'
  * existence.
  * <p>
- * Read from source rather than run: a key written under a condition (the pipe holder saves {@code wires} only when
- * a wire exists) would never show in an empty tile, and the keys are the same on every node. Anything the guard cannot
- * follow (the output handed to another method, a key that is not a literal) fails the test instead of passing
+ * Read from source rather than run: a key written under a condition (the pipe holder saves {@code plugs} only when
+ * a pluggable exists) would never show in an empty tile, and the keys are the same on every node. Anything the guard
+ * cannot follow (the output handed to another method, a key that is not a literal) fails the test instead of passing
  * vacuously, so teach the guard or list the key by hand in that case.
  */
 public class RemoveComponentsTwinGuardTest {

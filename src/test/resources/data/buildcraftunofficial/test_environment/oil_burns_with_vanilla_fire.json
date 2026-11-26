@@ -1,4 +1,9 @@
 {
     "type": "minecraft:all_of",
-    "definitions": []
+    "definitions": [
+        {
+            "type": "minecraft:weather",
+            "weather": "clear"
+        }
+    ]
 }

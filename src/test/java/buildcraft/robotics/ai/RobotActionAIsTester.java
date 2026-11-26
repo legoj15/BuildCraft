@@ -71,6 +71,8 @@ public class RobotActionAIsTester {
     private static final int DROP_WORK_TICKS = 60;
     private static final int SEARCH_WORK_TICKS = 60;
     private static final int KNIGHT_WORK_TICKS = 200;
+    /** The butcher's work budget, counted from the cell ticking: reaching the cow and felling it. */
+    private static final int BUTCHER_WORK_TICKS = 280;
 
     // ---------- AIRobotBreak: the progress formula ----------
 
@@ -120,7 +122,7 @@ public class RobotActionAIsTester {
     // ---------- AIRobotBreak: it breaks the way a player does ----------
 
     /** The work budget of {@link #breakPostsTheRealBreakEventAndWearsTheToolOnce}'s gate: the scenario runs on the
-     *  first tick the cell is entity-ticking, so this only has to cover that one poll (the budget adds
+     *  first tick the cell's block entities tick, so this only has to cover that one poll (the budget adds
      *  {@code EntityArenaUtil.CELL_READY_TICKS}, and the manifest's {@code max_ticks} stays above the sum). */
     private static final int BREAK_EVENT_WORK_TICKS = 20;
 
@@ -706,7 +708,9 @@ public class RobotActionAIsTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
         helper.getLevel().addFreshEntity(robot);
 
-        EntityArenaUtil.tickUntil(helper, 360, EntityArenaUtil.whenCellTicking(helper, 80, 280, cow::isDeadOrDying), () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BUTCHER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BUTCHER_WORK_TICKS,
+                        cow::isDeadOrDying), () -> {
             helper.assertTrue(wolf.isAlive() && wolf.getHealth() == wolfHealth,
                     "the tamed wolf was nearer than the cow and must not have been touched (health " + wolfHealth
                             + " -> " + wolf.getHealth() + ", alive " + wolf.isAlive() + ")");

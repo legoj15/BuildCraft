@@ -53,7 +53,7 @@ import buildcraft.lib.marker.MarkerSubCache;
  *     {@code onLoad} is deferred to {@code tickBlockEntities}), so {@link Session#isRegistered} +
  *     {@link Session#awaitThen} replace the old {@code runAfterDelay(2)} guesses. The cell's chunks are
  *     force-loaded (5x5 around each corner) because the framework forces only the one chunk under the
- *     arena's north-west corner, and a wait's budget starts only once the whole cell is entity-ticking: that
+ *     arena's north-west corner, and a wait's budget starts only once block entities tick in the whole cell: that
  *     registration itself needs only a loaded chunk, but what a marker test observes next (a path marker popping on
  *     a scheduled block tick, the drop it leaves, a connection held across ticks) needs the chunk ticking, and a
  *     budget counted from tick 1 would charge the chunk promotion to the code under test.</li>

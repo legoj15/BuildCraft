@@ -29,8 +29,9 @@ import buildcraft.lib.test.EntityArenaUtil;
  */
 public class ArchitectScanRefusalTester {
 
-    /** Polls spent waiting for the arena cell to tick, and spent on the work once it does. */
-    private static final int READY = 40;
+    /** Polls spent on the work once the arena cell's block entities tick. The wait for that is the shared
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}: it covers a read on another thread, which a shorter wait of this
+     *  test's own would not. */
     private static final int WORK = 60;
 
     /** A box the width of the arena cell (6 by 7) and this many blocks tall: the height is what pushes the box past
@@ -57,8 +58,8 @@ public class ArchitectScanRefusalTester {
         big.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
         small.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
 
-        EntityArenaUtil.tickUntil(helper, READY + WORK,
-            EntityArenaUtil.whenCellTicking(helper, READY, WORK, () -> big.isScanRefused() && small.isScanning(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WORK,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WORK, () -> big.isScanRefused() && small.isScanning(),
                 () -> "the over-limit table refused=" + big.isScanRefused() + " scanning=" + big.isScanning()
                     + ", the small one scanning=" + small.isScanning()),
             () -> {

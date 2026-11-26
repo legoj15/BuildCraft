@@ -345,7 +345,7 @@ public final class EntityArenaUtil {
      *  because the wait is the chunk promotion's and the entity read's, never the test's. The server does not pace
      *  its ticks, so a tick count alone bounds no IO; each not-ready poll therefore parks the server thread
      *  ({@link #cellReady}), which makes these polls worth at least {@code CELL_READY_TICKS * PARK_NANOS} of
-     *  wall-clock time (6 s). Write it qualified in a budget sum: {@code GameTestPollBudgetTester} reads it from this
+     *  wall-clock time (6 s) on a server thread nobody interrupts. Write it qualified in a budget sum: {@code GameTestPollBudgetTester} reads it from this
      *  file by that spelling (a static import is not read), as a literal. */
     public static final int CELL_READY_TICKS = 300;
 
@@ -357,7 +357,7 @@ public final class EntityArenaUtil {
 
     /** Parks the server thread the first time it is asked in each game tick, so the cost of waiting is one park per
      *  tick whatever the number of waiting tests, and a poll budget counted in ticks has a floor in wall time. The
-     *  thread and the clock are parameters so the once-per-tick rule is unit-testable. */
+     *  park itself is a parameter so the once-per-tick rule is unit-testable. */
     static final class Pacer {
         private final long parkNanos;
         private final LongConsumer park;
@@ -380,7 +380,18 @@ public final class EntityArenaUtil {
     }
 
     /** Shared by every gate of the server: they all run on its one thread. */
-    private static final Pacer PACER = new Pacer(PARK_NANOS, LockSupport::parkNanos);
+    private static final Pacer PACER = new Pacer(PARK_NANOS, EntityArenaUtil::parkFor);
+
+    /** Parks this thread for {@code nanos}: again after a park that returns early, until the time is up. An
+     *  interrupted thread is not parked at all (a park returns at once then), and its flag is left as it is. */
+    private static void parkFor(long nanos) {
+        long deadline = System.nanoTime() + nanos;
+        long left = nanos;
+        while (left > 0 && !Thread.currentThread().isInterrupted()) {
+            LockSupport.parkNanos(left);
+            left = deadline - System.nanoTime();
+        }
+    }
 
     /** The readiness test of a cell gate: whether block entities tick in the whole cell ({@link #isCellTicking}). A
      *  poll that finds it not ready first parks the server thread ({@link #PACER}), so the chunk IO that readiness

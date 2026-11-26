@@ -364,7 +364,7 @@ public class ElectronicLibraryTester {
 
     /**
      * Run {@code steps} in order, each on the first tick its condition holds, then succeed; fail naming the step
-     * still waiting once {@code workTicks} have passed. The clock starts when the library's cell is entity-ticking
+     * still waiting once {@code workTicks} have passed. The clock starts when block entities tick in the library's cell
      * (the force-load of the cell is done here), not at the test's first tick: a tile in a chunk that starts ticking
      * late would otherwise spend the budget on the machine. The first poll is the first tick the tile can have ticked
      * on, so the steps see a library that has been running since then. Built on {@code EntityArenaUtil.tickUntil}, so

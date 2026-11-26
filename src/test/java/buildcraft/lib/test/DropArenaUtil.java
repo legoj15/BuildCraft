@@ -64,7 +64,8 @@ public final class DropArenaUtil {
     public static final int POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + WORK_TICKS + SETTLE_TICKS;
 
     /**
-     * Runs {@code act} once the test's cell is entity-ticking, waits for every drop {@code expected} names to appear,
+     * Runs {@code act} once block entities tick in the test's cell (its entities tick by then too), waits for every
+     * drop {@code expected} names to appear,
      * settles, asserts, and passes the test.
      *
      * @param act       places and fills the block, then breaks or removes it ({@link #breakBlock},

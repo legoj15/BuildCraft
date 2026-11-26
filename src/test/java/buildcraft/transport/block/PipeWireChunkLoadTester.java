@@ -66,7 +66,9 @@ public class PipeWireChunkLoadTester {
      *  share one poll, so whatever the unload leaves of {@link #UNLOAD_TICKS} is added to this. */
     private static final int REJOIN_TICKS = 100;
 
-    /** The far chunk, the pipe in it and the wire's systems; {@link #close} takes it all down on every exit. */
+    /** The far chunk, the pipe in it and the wire's systems. {@link #close} runs on every exit: it releases the chunk
+     *  and removes the systems, and removes the pipe when its chunk is in memory (a failure between the unload and
+     *  the second hold leaves the pipe in the far chunk's save, which no other test reads). */
     private static final class Rig {
         final ServerLevel level;
         final SavedDataWireSystems wireSystems;

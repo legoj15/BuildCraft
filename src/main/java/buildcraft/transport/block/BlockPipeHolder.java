@@ -572,7 +572,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
      * {@code logic_transportation} advancement: laying down an isolated wire segment does not unlock
      * it, and neither does a same-colour wire the rule does not link (a blocking pluggable on either
      * facing side, or two pipes that neither connect nor are structure pipes); completing a connection
-     * does.
+     * does. Two pipes whose connection has not been worked out yet (it is on a pipe's next tick) are not
+     * linked yet either, as in the wire systems: a wire placed in that tick does not count.
      */
     static boolean isWireConnected(Level level, BlockPos pos, TilePipeHolder tile,
                                    buildcraft.api.transport.EnumWirePart wirePart,

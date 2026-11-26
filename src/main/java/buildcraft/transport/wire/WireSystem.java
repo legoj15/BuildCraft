@@ -56,10 +56,11 @@ public final class WireSystem {
     private static final AtomicInteger NEXT_CLIENT_KEY = new AtomicInteger();
 
     private final transient int cachedHashCode;
-    /** The number clients know this system by. It belongs to the instance, so two systems never share one (a
-     *  hash of the wires could collide, and one of the two would then never reach the client), and a system
-     *  rebuilt as a new instance is a new system to the clients: {@link SavedDataWireSystems}'s rebuild puts an
-     *  unchanged system's old instance back for that reason. */
+    /** The number the server sends this system to clients under. It belongs to the instance, so two systems never
+     *  share one (a hash of the wires could collide, and one of the two would then never reach the client), and a
+     *  system rebuilt as a new instance is a new system to the clients: {@link SavedDataWireSystems}'s rebuild puts
+     *  an unchanged system's old instance back for that reason. A client keeps its copies under the number it was
+     *  sent; the number a client-side copy draws for itself is never used. */
     private final int clientKey = NEXT_CLIENT_KEY.getAndIncrement();
     /** Distinct chunks of {@link #elements} — several elements share a pipe's chunk. Cached because
      *  {@link #isPlayerWatching} walks it for player×system pairs in {@link SavedDataWireSystems#tick()}. */

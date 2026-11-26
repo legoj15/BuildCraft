@@ -52,7 +52,8 @@ public enum PatternParameterFacing implements IStatementParameter {
     }
 
     public static PatternParameterFacing readFromNbt(CompoundTag nbt) {
-        return values()[MathUtil.clamp(NBTUtilBC.getByte(nbt, "v", (byte) 0), 0, 6)];
+        // Clamped to the last constant: an index past it (a hand-edited or damaged tag) would otherwise throw.
+        return values()[MathUtil.clamp(NBTUtilBC.getByte(nbt, "v", (byte) 0), 0, values().length - 1)];
     }
 
     public static PatternParameterFacing get(Direction face) {

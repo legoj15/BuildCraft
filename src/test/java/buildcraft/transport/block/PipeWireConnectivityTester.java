@@ -11,9 +11,15 @@ import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+//? if >=1.21.10 {
+import net.minecraft.world.level.storage.TagValueInput;
+//?}
 import net.minecraft.world.phys.shapes.CollisionContext;
 
 import buildcraft.api.transport.EnumWirePart;
@@ -27,6 +33,7 @@ import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.EnumWireBetween;
 import buildcraft.transport.wire.SavedDataWireSystems;
+import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.wire.WireSystem;
 
 /**
@@ -334,6 +341,67 @@ public class PipeWireConnectivityTester {
                 return "removing the blocker never rejoined it";
             }),
             helper::succeed, "wire system never followed the pipe connection", () -> {
+                helper.setBlock(westRel, Blocks.AIR);
+                helper.setBlock(eastRel, Blocks.AIR);
+            });
+    }
+
+    /** NBT written into a pipe that is already live (a data command, another mod's write) replaces its pipe,
+     *  pluggables and wire parts, so the server's wire systems, wire links and the pipe's connections must follow
+     *  what was written: before #250 the read refreshed only the client, leaving the server describing the wires
+     *  that were there before the write — a system still reaching into a pipe whose wires were removed, and a link
+     *  still drawn (and solid, in the collision shape) into it. (#250) */
+    public static void testWireSystemFollowsNbtWrite(GameTestHelper helper) {
+        BlockPos westRel = new BlockPos(2, 2, 2);
+        BlockPos eastRel = new BlockPos(3, 2, 2);
+        TilePipeHolder west = placePipe(helper, westRel);
+        TilePipeHolder east = placePipe(helper, eastRel, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+        west.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+        east.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+
+        EntityArenaUtil.forceLoadCell(helper);
+        int[] phase = { 0 };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINK_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINK_WORK_TICKS, () -> {
+                switch (phase[0]) {
+                    case 0 -> {
+                        // The wires share a system, the link is drawn and the east pipe has ticked.
+                        if (inOneSystem(helper, westRel, EnumWirePart.EAST_DOWN_NORTH, eastRel,
+                            EnumWirePart.WEST_DOWN_NORTH)
+                                && west.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH)
+                                && east.wireManager.initialised) {
+                            ServerLevel level = helper.getLevel();
+                            CompoundTag tag = east.saveCustomOnly(level.registryAccess());
+                            // A WireManager with no parts is the saved form of "no wires".
+                            tag.put("wires", new WireManager(east).writeToNbt());
+                            //? if >=1.21.10 {
+                            east.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+                            //?} else {
+                            /*east.loadCustomOnly(tag, level.registryAccess());*/
+                            //?}
+                            phase[0] = 1;
+                        }
+                        return false;
+                    }
+                    default -> {
+                        // The east pipe has no wires left, the west wire keeps a system that no longer names the
+                        // east element, and the link into the east pipe is gone.
+                        WireSystem.WireElement eastWire =
+                            new WireSystem.WireElement(helper.absolutePos(eastRel), EnumWirePart.WEST_DOWN_NORTH);
+                        List<WireSystem> westSystems = systemsOf(helper, westRel, EnumWirePart.EAST_DOWN_NORTH);
+                        return east.getWireManager().parts.isEmpty()
+                            && !westSystems.isEmpty()
+                            && westSystems.stream().noneMatch(system -> system.hasElement(eastWire))
+                            && !west.getWireManager().betweens.containsKey(EnumWireBetween.EAST_DOWN_NORTH);
+                    }
+                }
+            }, () -> {
+                if (phase[0] == 0) {
+                    return "the wires never shared a system before the NBT write";
+                }
+                return "the wire system never followed the NBT write";
+            }),
+            helper::succeed, "wire system never followed the NBT write", () -> {
                 helper.setBlock(westRel, Blocks.AIR);
                 helper.setBlock(eastRel, Blocks.AIR);
             });

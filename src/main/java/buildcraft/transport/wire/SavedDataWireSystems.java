@@ -31,7 +31,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
 //? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -43,7 +42,6 @@ import buildcraft.api.core.BCLog;
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
-import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -96,7 +94,12 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     /** How many systems have an element in each chunk. Lets {@link #onChunkSent} ignore the (vast majority
      *  of) chunks with no wires in O(1), so terrain streaming never triggers a full wire resend. */
     private final Map<ChunkPos, Integer> systemsPerChunk = new HashMap<>();
-    public final Map<WireSystem.WireElement, IWireEmitter> emittersCache = new HashMap<>();
+
+    private record EmitterColour(WireSystem.WireElement emitter, DyeColor colour) {}
+
+    /** What each emitter said, per colour, when it was last read in a chunk in memory. A gate in a chunk that is not
+     *  in memory cannot change, so this is still what it says; never saved. */
+    private final Map<EmitterColour, Boolean> lastEmitting = new HashMap<>();
 
     private final Map<WireSystem.WireElement, List<WireSystem>> elementsToWireSystemsIndex = new HashMap<>();
     /** Blocks whose wire systems are stale, drained by {@link #tick()}. Not saved: a pipe that loads rebuilds its
@@ -140,7 +143,6 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     public void markStructureChanged() {
         structureChanged = true;
         gatesChanged = true;
-        emittersCache.clear();
     }
 
     public List<WireSystem> getWireSystemsWithElement(WireSystem.WireElement element) {
@@ -249,7 +251,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                 }
             }
             addWireSystem(wireSystem, false);
-            wireSystems.put(wireSystem, wireSystem.update(this));
+            wireSystems.put(wireSystem, wireSystem.update(this, false));
             built.addAll(wireSystem.elements);
         }
         markStructureChanged();
@@ -277,33 +279,19 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         rebuild(seeds);
     }
 
-    public IWireEmitter getEmitter(WireSystem.WireElement element) {
-        if (element.type == WireSystem.WireElement.Type.EMITTER_SIDE) {
-            if (!emittersCache.containsKey(element)) {
-                BlockEntity tile = world.getBlockEntity(element.blockPos);
-                if (tile instanceof IPipeHolder holder) {
-                    PipePluggable plug = holder.getPluggable(element.emitterSide);
-                    if (plug instanceof IWireEmitter emitter) {
-                        emittersCache.put(element, emitter);
-                    }
-                }
-                if (!emittersCache.containsKey(element)) {
-                    throw new IllegalStateException("Tried to get a wire element when none existed! THIS IS A BUG " + element);
-                }
-            }
-            return emittersCache.get(element);
+    /** Whether the emitter on that pipe side is emitting {@code color}. Never loads a chunk: an emitter whose chunk
+     *  is not in memory answers what it said when it was last read, or {@code unseen} when it never was (a system
+     *  loaded from disk whose chunks have not loaded since). */
+    public boolean isEmitterEmitting(WireSystem.WireElement element, DyeColor color, boolean unseen) {
+        EmitterColour key = new EmitterColour(element, color);
+        if (!BlockUtil.isChunkPresent(world, element.blockPos)) {
+            Boolean last = lastEmitting.get(key);
+            return last != null ? last : unseen;
         }
-        return null;
-    }
-
-    public boolean isEmitterEmitting(WireSystem.WireElement element, DyeColor color) {
-        BlockEntity tile = world.getBlockEntity(element.blockPos);
-        if (tile instanceof IPipeHolder holder) {
-            if (holder.getPluggable(element.emitterSide) instanceof IWireEmitter) {
-                return getEmitter(element).isEmitting(color);
-            }
-        }
-        return false;
+        boolean emitting = world.getBlockEntity(element.blockPos) instanceof IPipeHolder holder
+            && holder.getPluggable(element.emitterSide) instanceof IWireEmitter emitter && emitter.isEmitting(color);
+        lastEmitting.put(key, emitting);
+        return emitting;
     }
 
     public void tick() {
@@ -311,8 +299,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         // Wakeup matrix (all paths confirmed by audit 2026-05-19):
         //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
         //                              / removeWireSystem → markStructureChanged
-        //   • Pipe BE load           → WireManager.tick (first call) → buildAndAddWireSystem
-        //                              → markStructureChanged
+        //   • Pipe BE load           → WireManager.tick (first call) → markStale
+        //                              → rebuildStale → markStructureChanged
         //   • Pipe removed (any cause but a chunk unload: player, /setblock, /fill, explosion,
         //     another mod) → TilePipeHolder.setRemoved → markStale
         //   • Pluggable, colour or connection change → IPipeHolder.requestWireLinkRefresh
@@ -330,7 +318,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         // we recompute only when something actually changed.
         if (gatesChanged) {
             wireSystems.replaceAll((wireSystem, oldPowered) -> {
-                boolean newPowered = wireSystem.update(this);
+                boolean newPowered = wireSystem.update(this, oldPowered);
                 if (oldPowered != newPowered) {
                     changedSystems.add(wireSystem);
                 }

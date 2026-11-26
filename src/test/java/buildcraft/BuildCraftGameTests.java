@@ -94,6 +94,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_link_drops_when_neighbour_removed", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileLinkDropsWhenNeighbourRemoved);
         reg.accept("buildcraftunofficial:wire_system_follows_unconnected_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsUnconnectedLink);
         reg.accept("buildcraftunofficial:wire_system_follows_connection", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsConnection);
+        reg.accept("buildcraftunofficial:wire_system_follows_nbt_write", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsNbtWrite);
 
         // Per-player wire-colour tracking gating the colorful_electrician advancement
         reg.accept("buildcraftunofficial:wire_colours_fresh_attachment_empty", () -> buildcraft.transport.WireColoursPlacedTester::testFreshAttachmentEmpty);
@@ -1062,6 +1063,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_chunk_delivery_queues_only_wire_chunks", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires);
         reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
         reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
+        reg.accept("buildcraftunofficial:wire_recompute_leaves_absent_emitter_chunk_unloaded", () -> buildcraft.transport.WireSystemTester::testRecomputeLeavesAbsentEmitterChunkUnloaded);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
         // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an

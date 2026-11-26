@@ -178,11 +178,19 @@ public final class WireSystem {
         return elements.stream().noneMatch(element -> element.type == WireElement.Type.WIRE_PART);
     }
 
-    public boolean update(SavedDataWireSystems wireSystems) {
-        return elements.stream()
-            .filter(element -> element.type == WireElement.Type.EMITTER_SIDE)
-            .map(element -> wireSystems.isEmitterEmitting(element, color))
-            .reduce(Boolean::logicalOr).orElse(false);
+    /** Whether any emitter of this system is emitting its colour. Never loads a chunk: an emitter whose chunk is out
+     *  of memory answers what it said when it was last read, and one that was never read is taken to agree with
+     *  {@code stored} — the system's current power state — so a system saved as powered stays so until its chunks
+     *  load. Every emitter in memory is read (the loop does not stop at the first hit) so each one's answer is
+     *  remembered for the next time its chunk is not. */
+    public boolean update(SavedDataWireSystems wireSystems, boolean stored) {
+        boolean powered = false;
+        for (WireElement element : elements) {
+            if (element.type == WireElement.Type.EMITTER_SIDE && wireSystems.isEmitterEmitting(element, color, stored)) {
+                powered = true;
+            }
+        }
+        return powered;
     }
 
     public Stream<ChunkPos> getChunkPosesAsStream() {

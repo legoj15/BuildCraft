@@ -239,6 +239,17 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             scheduleRenderUpdate = true;
             // The wire links depend on the pipe and its connections, which this sync may have just delivered.
             wireManager.requestBetweensRefresh(true);
+        } else if (level instanceof ServerLevel && wireManager.initialised) {
+            // A read into a pipe that has already ticked (a data command, another mod's write) may have changed
+            // anything its connections, wire links and wire systems depend on; the systems are marked stale whether
+            // or not wires are left, because the read may have removed them all. A pipe that has not ticked yet
+            // builds all of this on its first tick.
+            if (pipe != null) {
+                pipe.markForUpdate();
+            }
+            wireManager.requestBetweensRefresh(false);
+            requestNeighbourWireLinkRefresh();
+            SavedDataWireSystems.get(level).markStale(worldPosition);
         }
     }
 

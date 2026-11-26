@@ -74,6 +74,10 @@ import buildcraft.lib.test.LoaderTestEvents;
  * {@code Platform.gameHooks().onChunkSent} that {@code BCTransport} registers). Both used to go to every player of
  * the level. Deliveries come in bursts, so the
  * resend itself is paced: one at once, then at most one per {@link SavedDataWireSystems#RESEND_INTERVAL_TICKS}.
+ * <p>
+ * A third group pins what a rebuild reports: one that rebuilds a system it just took out puts the old instance back
+ * (the client keys its copy by {@link WireSystem#getWiresHashCode()}, which the walk's element order decides) and
+ * leaves the structure flag alone, so only a system that appeared, went or changed reaches the clients.
  */
 public class WireSystemTester {
 
@@ -269,6 +273,134 @@ public class WireSystemTester {
         } finally {
             wireSystems.removeWireSystem(system);
         }
+        helper.succeed();
+    }
+
+    // ---------- Rebuild identity: a rebuild that changes nothing is not a change ----------
+
+    /**
+     * A rebuild that reproduces the system that was there must put the old instance back and leave both flags alone:
+     * most rebuilds are exactly that (a wired pipe that connects to a chest placed beside it, a wired pipe whose
+     * chunk loads), and flagging them sends every watching player the whole structure again for nothing. The old
+     * instance matters because the client keys its copy of a system by the server's
+     * {@link WireSystem#getWiresHashCode()}, which the walk's element order decides: a rebuilt copy started from
+     * another seed has another key.
+     * <p>
+     * The same is pinned for the stale path ({@code markStale} + tick), which most loads take. The contrast at the
+     * end keeps the test honest: a second wire joining the first is a real change, and that must still flag.
+     */
+    public static void testRebuildThatChangesNothingKeepsSystemAndFlags(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeStructurePipe(helper, pipePos);
+        EnumWirePart part = EnumWirePart.WEST_UP_NORTH;
+        tile.getWireManager().addPart(part, DyeColor.RED);
+        installGateOn(tile, Direction.UP);
+
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+        WireSystem.WireElement element = new WireSystem.WireElement(helper.absolutePos(pipePos), part);
+        List<WireSystem> systems = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(systems.size() == 1,
+            "Precondition: exactly one wire system holds the wire, got " + systems.size());
+        WireSystem system = systems.get(0);
+
+        wireSystems.buildAndAddWireSystem(element);
+        helper.assertFalse(wireSystems.structureChanged,
+            "A rebuild that rebuilds the system it took out must not flag a structure change");
+        helper.assertFalse(wireSystems.gatesChanged,
+            "A rebuild that rebuilds the system it took out must not mark the gates dirty either");
+        List<WireSystem> rebuilt = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(rebuilt.size() == 1, "The wire is still held by exactly one system, got " + rebuilt.size());
+        helper.assertTrue(rebuilt.get(0) == system,
+            "The instance the rebuild took out must be the one registered again, or the client's key is stale");
+
+        wireSystems.markStale(helper.absolutePos(pipePos));
+        wireSystems.tick();
+        List<WireSystem> stale = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(stale.size() == 1,
+            "The stale rebuild still leaves exactly one system holding the wire, got " + stale.size());
+        helper.assertTrue(stale.get(0) == system, "The stale rebuild must also put the old instance back");
+
+        // A second wire joining the first really does change the structure, so the flag must set.
+        tile.getWireManager().addPart(EnumWirePart.EAST_UP_NORTH, DyeColor.RED);
+        helper.assertTrue(wireSystems.structureChanged,
+            "A rebuild that grows the system is a real structure change and must flag");
+        helper.succeed();
+    }
+
+    /**
+     * A kept system goes back with the power it had, and the rebuild recomputes it from the live emitters: a wire
+     * that was powered stays powered through a stale rebuild. Losing that is the failure mode of any "drop and
+     * re-register" shortcut that registers the kept system as unpowered and never updates it.
+     */
+    public static void testRebuildKeepsPowerOfKeptSystem(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeStructurePipe(helper, pipePos);
+        EnumWirePart part = EnumWirePart.WEST_UP_NORTH;
+        tile.getWireManager().addPart(part, DyeColor.RED);
+        PluggableGate gate = installGateOn(tile, Direction.UP);
+
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+        gate.emitWire(DyeColor.RED);
+        wireSystems.gatesChanged = true;
+        wireSystems.tick();
+        helper.assertTrue(tile.getWireManager().isPowered(part),
+            "Precondition: the wire is powered after the gate emits and the wire system ticks");
+
+        BlockPos absPos = helper.absolutePos(pipePos);
+        WireSystem.WireElement element = new WireSystem.WireElement(absPos, part);
+        List<WireSystem> systems = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(systems.size() == 1,
+            "Precondition: exactly one wire system holds the wire, got " + systems.size());
+        WireSystem system = systems.get(0);
+
+        wireSystems.markStale(absPos);
+        wireSystems.tick();
+        helper.assertTrue(tile.getWireManager().isPowered(part),
+            "A system the rebuild put back must keep its power");
+        List<WireSystem> stale = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(stale.size() == 1, "The wire is still held by exactly one system, got " + stale.size());
+        helper.assertTrue(stale.get(0) == system,
+            "The instance registered before the stale mark must be the one registered after it");
+        helper.succeed();
+    }
+
+    /**
+     * The power flip of a kept system is not a structure change, but it is a change: the rebuild itself recomputes
+     * the kept system (the gate's emit is not announced through {@code gatesChanged} here), and the flip must go out
+     * through {@code changedSystems} as a power-only update, with the store holding the new value.
+     */
+    public static void testRebuildReportsPowerChangeOfKeptSystem(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeStructurePipe(helper, pipePos);
+        EnumWirePart part = EnumWirePart.WEST_UP_NORTH;
+        tile.getWireManager().addPart(part, DyeColor.RED);
+        PluggableGate gate = installGateOn(tile, Direction.UP);
+
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+        helper.assertFalse(tile.getWireManager().isPowered(part),
+            "Precondition: the wire is unpowered before the gate emits");
+
+        BlockPos absPos = helper.absolutePos(pipePos);
+        WireSystem.WireElement element = new WireSystem.WireElement(absPos, part);
+        List<WireSystem> systems = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(systems.size() == 1,
+            "Precondition: exactly one wire system holds the wire, got " + systems.size());
+        WireSystem system = systems.get(0);
+
+        // emitWire only seeds the gate's broadcast set (GateLogic.emitWire); the wire system is not told, so the
+        // rebuild is what has to notice.
+        gate.emitWire(DyeColor.RED);
+        wireSystems.buildAndAddWireSystem(element);
+
+        List<WireSystem> rebuilt = wireSystems.getWireSystemsWithElement(element);
+        helper.assertTrue(rebuilt.size() == 1, "The wire is still held by exactly one system, got " + rebuilt.size());
+        helper.assertTrue(rebuilt.get(0) == system, "The rebuild must put the old instance back, power flip or not");
+        helper.assertFalse(wireSystems.structureChanged,
+            "A power flip of a kept system is not a structure change");
+        helper.assertTrue(wireSystems.changedSystems.contains(system),
+            "A kept system whose power flipped must go out through changedSystems as a power-only update");
+        helper.assertTrue(Boolean.TRUE.equals(wireSystems.wireSystems.get(system)),
+            "The store must hold the recomputed power of the kept system");
         helper.succeed();
     }
 

@@ -1071,6 +1071,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
         reg.accept("buildcraftunofficial:wire_recompute_leaves_absent_emitter_chunk_unloaded", () -> buildcraft.transport.WireSystemTester::testRecomputeLeavesAbsentEmitterChunkUnloaded);
 
+        // Wire rebuild identity - a rebuild that reproduces the system it took out puts the old instance back (the
+        // client keys its copy by getWiresHashCode, which the walk's element order decides) and flags nothing; only
+        // a system that appeared, went or changed reaches the clients, and a kept system's power flip goes out as a
+        // power-only update.
+        reg.accept("buildcraftunofficial:wire_rebuild_changing_nothing_leaves_structure_flag", () -> buildcraft.transport.WireSystemTester::testRebuildThatChangesNothingKeepsSystemAndFlags);
+        reg.accept("buildcraftunofficial:wire_rebuild_keeps_power_of_kept_system", () -> buildcraft.transport.WireSystemTester::testRebuildKeepsPowerOfKeptSystem);
+        reg.accept("buildcraftunofficial:wire_rebuild_reports_power_change_of_kept_system", () -> buildcraft.transport.WireSystemTester::testRebuildReportsPowerChangeOfKeptSystem);
+
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
         // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an
         // inbound NBT data sync — the client desync this guards against.

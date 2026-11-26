@@ -44,6 +44,8 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
 
+import buildcraft.core.statements.BCStatement;
+
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.IdAllocator;
@@ -243,9 +245,11 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
      * <li>{@code kind}: a statement registered under it is asked to rotate, so one that carries a direction in its
      * identity (the pipe-direction actions, one statement per face) is stored as the statement of the rotated face;
      * an unknown kind stays.</li>
-     * <li>each parameter is turned by {@link FullStatement#rotateParameters(CompoundTag, int)}: read, asked to rotate
-     * and stored again only when that gave a different parameter (none of the gate's own parameters carries a
-     * direction, so none is rewritten today); one that does not read stays.</li>
+     * <li>the parameters are turned by the statement that owns them ({@link BCStatement#rotateParametersOf}): each is
+     * read, the statement turns the list (a filler pattern a gate beside a Filler holds as an action turns its
+     * own, whose quarter-turn count depends on its facing; any other statement turns each parameter alone, and none of
+     * the gate's own parameters names a direction) and a parameter is stored again only when that gave a different
+     * one; one that does not read stays. A kind that does not resolve turns each parameter alone.</li>
      * </ul>
      * The 1.12.2 layout, with {@code kind} and {@code side} at the root of the statement tag, is upgraded by
      * {@link #readConfigData} and never occurs in a tag {@link #writeToNbt()} wrote, so it is not handled here.
@@ -288,7 +292,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         if (kind != null && turnedKind != null && turnedKind != kind) {
             identity.putString("kind", turnedKind.getUniqueTag());
         }
-        FullStatement.rotateParameters(statement, quarterTurns);
+        BCStatement.rotateParametersOf(statement, kind, quarterTurns);
     }
 
     // Runtime display state (on/off glow, lit trigger/action slots): sent to clients in the block-entity update tag, never saved to disk — see TilePipeHolder.getUpdateTag.

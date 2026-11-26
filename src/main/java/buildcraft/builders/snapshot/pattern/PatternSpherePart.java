@@ -103,7 +103,8 @@ public final class PatternSpherePart extends Pattern implements IFillerPatternSh
      * to its turned face, and the count is the one that picks exactly those faces round the turned facing: the second
      * face of a quarter sphere, the second and third of an eighth in either order (the shape is the set of its open
      * faces, and a turn does not always keep which of the three is the facing). It is not always one more: a face on
-     * the X axis and one on the Z axis are picked by different counts.
+     * the X axis and one on the Z axis are picked by different counts. A count the tag lacks reads as NONE, so a
+     * quarter or eighth sphere with none saved gets the turned count written when it is not NONE.
      */
     @Override
     public IStatementParameter[] rotateParameters(IStatementParameter[] params) {

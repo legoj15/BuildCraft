@@ -51,7 +51,8 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
      * of Z with its across axis (south on X, east on Z) reversed, which reverses the count (a quarter becomes three
      * quarters, see {@link #mirroredCount}); one standing in the plane of Z lands in the plane of X with the across
      * axis kept, so its count is as it was. A shape with no rotation slot (Square, Octagon) ignores any count and is
-     * left as it is.
+     * left as it is. A count the tag lacks reads as NONE, so a shape lying flat with none saved gets a QUARTER count
+     * written.
      */
     @Override
     public IStatementParameter[] rotateParameters(IStatementParameter[] params) {

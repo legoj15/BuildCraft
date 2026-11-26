@@ -30,21 +30,26 @@ import buildcraft.builders.snapshot.pattern.parameter.PatternParameterAxis;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterCenter;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
-import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterXZDir;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterYDir;
+import buildcraft.core.statements.BCStatement;
 
 /**
  * A Filler in a blueprint that is built rotated turns its pattern with it: the patterns lay their shape out in world
  * axes inside the Filler's box (the Filler's own facing never enters), so a half sphere that opened NORTH has to open
  * EAST after a quarter turn clockwise, or the blueprint builds a different shape. Two layers are pinned. Each
  * parameter's own {@code rotateLeft} (one call is one clockwise quarter turn: NORTH becomes EAST, UP and DOWN stay),
- * and the pattern's {@link Pattern#rotateParameters} over a whole parameter list, which is checked against what the
- * shape really is: for every pattern, every value of every parameter and several boxes that are not square, the turned
- * parameters in the box turned one quarter clockwise fill exactly the cells of the original shape turned the same way,
- * and four turns bring the parameters back. A parameter that turns alone with a pattern that does not read it as a
- * world direction, or a pattern whose quarter-turn parameter depends on another (the sphere parts and the 2D shapes),
- * fails there naming the pattern, the parameters and the cell.
+ * and the statement's {@link BCStatement#rotateParameters} over a whole parameter list, which is checked against what
+ * the shape really is: for every pattern, every value of every parameter and four boxes whose two horizontal sizes
+ * differ, the turned parameters in the box turned one quarter clockwise fill exactly the cells of the original shape
+ * turned the same way, and four turns bring the parameters back. That is a check of the boxes tried, not
+ * a proof for every size: two shapes rasterise their outline in a way that is not symmetric under a turn, so in some
+ * boxes no choice of parameters gives the turned image cell for cell. The Arc standing on the X axis (its curve is
+ * drawn by direction-dependent line steps) and the flat Octagon (stepped diagonals that start from the side vertex);
+ * the Octagon in the one box tried where it differs is skipped below, and the Arc happens to hold in all four. A
+ * parameter that turns alone with a pattern that does not read it as a world direction, or a pattern whose
+ * quarter-turn parameter depends on another (the sphere parts and the 2D shapes), fails there naming the pattern, the
+ * parameters and the cell.
  */
 public class PatternRotationTest {
 
@@ -90,15 +95,6 @@ public class PatternRotationTest {
         }
         assertFourTurnsReturn(PatternParameterAxis.values());
         assertFourTurnsReturn(PatternParameterXZDir.values());
-    }
-
-    /** The quarter-turn count of a shape means a different turn depending on the parameters beside it (the plane the
-     *  shape lies in, the face a sphere part opens on), so on its own it is never turned: its pattern turns it. */
-    @Test
-    public void theRotationCountIsNotTurnedAlone() {
-        for (PatternParameterRotation count : PatternParameterRotation.values()) {
-            Assertions.assertSame(count, count.rotateLeft());
-        }
     }
 
     private static void assertFourTurnsReturn(IStatementParameter[] all) {
@@ -154,8 +150,8 @@ public class PatternRotationTest {
 
     @Test
     public void everyPatternTurnsItsShapeWithItsParameters() {
-        // Boxes that are not square and not flat, so a turn that swaps the two horizontal sizes shows.
-        BlockPos[] boxes = { new BlockPos(5, 4, 7), new BlockPos(6, 3, 4), new BlockPos(4, 5, 4), new BlockPos(3, 3, 5) };
+        // Boxes whose two horizontal sizes differ, so a turn that swaps them shows.
+        BlockPos[] boxes = { new BlockPos(5, 4, 7), new BlockPos(6, 3, 4), new BlockPos(4, 5, 6), new BlockPos(3, 3, 5) };
         // The first failure of each pattern and how many it had, so one broken pattern does not hide another.
         Map<String, String> firstFailure = new LinkedHashMap<>();
         Map<String, Integer> failureCount = new LinkedHashMap<>();
@@ -175,12 +171,15 @@ public class PatternRotationTest {
                         + Arrays.toString(again));
                     continue;
                 }
-                if (pattern == BCBuildersStatements.PATTERN_OCTAGON && params[0] == PatternParameterAxis.Y) {
-                    // The flat Octagon's diagonals are stepped lines that start from the side vertex, so the staircase
-                    // of the corner differs by a cell between a box and the same box turned. It has no parameter to turn.
-                    continue;
-                }
                 for (BlockPos box : boxes) {
+                    if (pattern == BCBuildersStatements.PATTERN_OCTAGON && params[0] == PatternParameterAxis.Y
+                        && box.equals(boxes[0])) {
+                        // In this box the flat Octagon and the turned one differ in 8 columns of the hollow outline (4 of
+                        // the filled ones), the same on every layer: its diagonals are stepped lines that start from the
+                        // side vertex, so each corner side lands on other cells once the box is turned. It has no
+                        // parameter to turn, and the same shape in the other three boxes does match.
+                        continue;
+                    }
                     checked++;
                     String mismatch = firstMismatch(shape, box, params, turned);
                     if (mismatch != null) {

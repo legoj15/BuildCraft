@@ -27,9 +27,15 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
+import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.transport.EnumWirePart;
 
+import buildcraft.builders.BCBuildersStatements;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.statement.StatementTypeParam;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.BCSiliconStatements;
@@ -382,10 +388,11 @@ public class SchematicBlockPipeTester {
     /**
      * A gate's statements read a neighbouring face, so the logic tag a rotated blueprint carries must name the rotated
      * face: GateLogic.rotateNbt turns each statement's side, and a statement that carries its direction in its identity
-     * (the pipe-direction actions) is swapped for the one of the rotated face. The centre, an unknown statement and a
-     * malformed one are left as they are, and the input tag is never touched. The end-to-end case captures a gate
-     * mounted on a pipe's NORTH face with a sided trigger and a direction action, and checks the rotated blueprint
-     * builds the gate on EAST reading EAST.
+     * (the pipe-direction actions) is swapped for the one of the rotated face. A filler pattern held as an action
+     * turns its parameter list by the pattern's own rule (a quarter sphere's count follows its facing). The centre, an
+     * unknown statement and a malformed one are left as they are, and the input tag is never touched. The end-to-end
+     * case captures a gate mounted on a pipe's NORTH face with a sided trigger and a direction action, and checks the
+     * rotated blueprint builds the gate on EAST reading EAST.
      */
     public static void pipeSchematicRotatesGateStatementSides(GameTestHelper helper) {
         String lightKind = BCSiliconStatements.TRIGGER_LIGHT_HIGH.getUniqueTag();
@@ -408,17 +415,26 @@ public class SchematicBlockPipeTester {
         logic.put("action[1]", statementTag(upAction, 6));
         logic.put("action[2]", statementTag(unknownKind, Direction.NORTH.get3DDataValue()));
         logic.put("action[3]", new CompoundTag());
+        // A filler pattern is a statement a gate beside a Filler can hold as an action, and a quarter sphere's third
+        // parameter (its quarter-turn count) means something only beside its facing, so only the pattern can turn it.
+        CompoundTag sphere = statementTag(BCBuildersStatements.PATTERN_QUARTER_SPHERE.getUniqueTag(), 6);
+        sphere.put("0", StatementTypeParam.INSTANCE.writeToNbt(PatternParameterHollow.FILLED_INNER));
+        sphere.put("1", StatementTypeParam.INSTANCE.writeToNbt(PatternParameterFacing.NORTH));
+        sphere.put("2", StatementTypeParam.INSTANCE.writeToNbt(PatternParameterRotation.NONE));
+        logic.put("action[4]", sphere);
         logic.putShort("connections", (short) 1);
         CompoundTag before = logic.copy();
 
         helper.assertTrue(GateLogic.rotateNbt(logic, Rotation.NONE) == logic,
                 "NONE must return the tag it was given");
+        // The quarter sphere's open faces are its facing and the face its count picks beside it (DOWN for NORTH and
+        // NONE): turned to EAST, the count that still picks DOWN is QUARTER, on SOUTH it is NONE again, on WEST QUARTER.
         assertGateStatements(helper, GateLogic.rotateNbt(logic, Rotation.CLOCKWISE_90), "CLOCKWISE_90",
-                Direction.EAST, Direction.SOUTH);
+                Direction.EAST, Direction.SOUTH, PatternParameterRotation.QUARTER);
         assertGateStatements(helper, GateLogic.rotateNbt(logic, Rotation.CLOCKWISE_180), "CLOCKWISE_180",
-                Direction.SOUTH, Direction.WEST);
+                Direction.SOUTH, Direction.WEST, PatternParameterRotation.NONE);
         assertGateStatements(helper, GateLogic.rotateNbt(logic, Rotation.COUNTERCLOCKWISE_90), "COUNTERCLOCKWISE_90",
-                Direction.WEST, Direction.NORTH);
+                Direction.WEST, Direction.NORTH, PatternParameterRotation.QUARTER);
         helper.assertTrue(logic.equals(before), "rotateNbt must not mutate the tag it was given");
 
         // End to end: a gate on the NORTH face, captured and rotated, builds on the EAST face reading EAST.
@@ -485,7 +501,8 @@ public class SchematicBlockPipeTester {
      * its kind, a parameter that carries no direction is not rewritten, and what is not a statement is left alone.
      */
     private static void assertGateStatements(GameTestHelper helper, CompoundTag rotated, String label,
-                                             Direction northBecomes, Direction eastBecomes) {
+                                             Direction northBecomes, Direction eastBecomes,
+                                             PatternParameterRotation sphereCount) {
         helper.assertTrue(sideOf(rotated, "trigger[0]") == northBecomes.get3DDataValue(),
                 label + ": a trigger on NORTH must read " + northBecomes + ", got side " + sideOf(rotated, "trigger[0]"));
         helper.assertTrue(sideOf(rotated, "trigger[1]") == 6,
@@ -513,8 +530,24 @@ public class SchematicBlockPipeTester {
                 label + ": an unknown statement keeps its kind and its side still turns, got side " + sideOf(rotated, "action[2]"));
         helper.assertTrue(NBTUtilBC.getCompound(rotated, "action[3]").isEmpty(),
                 label + ": a statement tag without an identity must be left as it was");
+        helper.assertTrue(kindOf(rotated, "action[4]").equals(BCBuildersStatements.PATTERN_QUARTER_SPHERE.getUniqueTag()),
+                label + ": a pattern action keeps its kind, got " + kindOf(rotated, "action[4]"));
+        PatternParameterFacing facing = PatternParameterFacing.get(northBecomes);
+        helper.assertTrue(parameterOf(rotated, "action[4]", 0) == PatternParameterHollow.FILLED_INNER,
+                label + ": a pattern's fill parameter names no direction and must stay");
+        helper.assertTrue(parameterOf(rotated, "action[4]", 1) == facing,
+                label + ": a pattern's facing NORTH must become " + facing + ", got " + parameterOf(rotated, "action[4]", 1));
+        helper.assertTrue(parameterOf(rotated, "action[4]", 2) == sphereCount,
+                label + ": the pattern turns its own quarter-turn count (the facing alone is not enough) to " + sphereCount
+                        + ", got " + parameterOf(rotated, "action[4]", 2));
         helper.assertTrue(NBTUtilBC.getShort(rotated, "connections", (short) 0) == 1,
                 label + ": the rest of the logic tag must be left as it was");
+    }
+
+    /** The parameter in slot {@code slot} of the statement tag under {@code key}, as {@code FullStatement} lays it out. */
+    private static IStatementParameter parameterOf(CompoundTag logic, String key, int slot) {
+        return StatementTypeParam.INSTANCE.readFromNbt(
+                NBTUtilBC.getCompound(NBTUtilBC.getCompound(logic, key), Integer.toString(slot)));
     }
 
     /** The {@code trigger[4]} of {@link #pipeSchematicRotatesGateStatementSides} once it reads {@code side}. */

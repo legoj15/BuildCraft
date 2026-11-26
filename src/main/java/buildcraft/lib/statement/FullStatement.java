@@ -252,8 +252,8 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
      * is left as it is, so a statement whose parameters name no direction is not rewritten. Anything else in the tag
      * is left alone, and a key that is not a one to three digit number is not a parameter.
      *
-     * @param quarterTurn one clockwise quarter turn of the whole parameter list: the array it is given is its own to
-     *            read, and it returns the turned list in the same slots (null for a slot that holds nothing)
+     * @param quarterTurn one clockwise quarter turn of the whole parameter list: the array it is given is its own copy,
+     *            and it returns the turned list in the same slots (null for a slot that holds nothing)
      */
     public static void rotateParameters(CompoundTag statement, int slots, int quarterTurns,
                                         UnaryOperator<IStatementParameter[]> quarterTurn) {
@@ -273,7 +273,8 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
                 original[Integer.parseInt(key)] = readParameter(tag);
             }
         }
-        IStatementParameter[] turned = original;
+        // The callee gets a copy, so what it does to the array it is given cannot change what is compared below.
+        IStatementParameter[] turned = original.clone();
         for (int i = 0; i < quarterTurns; i++) {
             turned = quarterTurn.apply(turned);
         }

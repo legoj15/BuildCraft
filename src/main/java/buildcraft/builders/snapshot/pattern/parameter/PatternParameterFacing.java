@@ -22,7 +22,6 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
@@ -52,8 +51,10 @@ public enum PatternParameterFacing implements IStatementParameter {
     }
 
     public static PatternParameterFacing readFromNbt(CompoundTag nbt) {
-        // Clamped to the last constant: an index past it (a hand-edited or damaged tag) would otherwise throw.
-        return values()[MathUtil.clamp(NBTUtilBC.getByte(nbt, "v", (byte) 0), 0, values().length - 1)];
+        // An index that is no constant (a hand-edited or damaged tag) reads as DOWN, the default a missing value gives
+        // and the sphere part's own; PatternParameterCenter falls back to its default the same way.
+        int index = NBTUtilBC.getByte(nbt, "v", (byte) 0);
+        return index >= 0 && index < values().length ? values()[index] : DOWN;
     }
 
     public static PatternParameterFacing get(Direction face) {

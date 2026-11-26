@@ -27,8 +27,8 @@ import buildcraft.api.filler.IFillerPattern;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.filler.FillerType;
-import buildcraft.builders.snapshot.pattern.Pattern;
 import buildcraft.builders.tile.TileFiller;
+import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.block.BlockBCTile_Directional;
 import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -54,9 +54,10 @@ public class BlockFiller extends BlockBCTile_Directional<TileFiller> implements 
      * A Filler lays its pattern out in world axes inside its box and never reads its own facing, so the direction
      * parameters saved under {@code patternStatement} (a {@link FullStatement} tag: {@code s} holds the pattern's
      * kind, which names no direction, and the numbered keys hold the parameters) turn with the blueprint, or the built
-     * Filler would shape its box another way. The pattern turns its own list ({@link Pattern#rotateParameters}), since
-     * some parameters mean something only beside others (a sphere part's quarter-turn count). A tag with no pattern is
-     * left as it is.
+     * Filler would shape its box another way. The pattern turns its own list ({@link BCStatement#rotateParameters}),
+     * since some parameters mean something only beside others (a sphere part's quarter-turn count). A tag with no
+     * {@code patternStatement} is left as it is; a kind that cannot be read falls back to the none pattern (the Filler
+     * reads it that way too), whose parameters are turned each by its own {@code rotateLeft}.
      */
     @Override
     public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
@@ -64,13 +65,8 @@ public class BlockFiller extends BlockBCTile_Directional<TileFiller> implements 
         if (statement == null) {
             return;
         }
-        int quarterTurns = FullStatement.quarterTurns(rotation);
         IFillerPattern kind = FillerType.INSTANCE.readFromNbt(NBTUtilBC.getCompound(statement, "s"));
-        if (kind instanceof Pattern pattern) {
-            FullStatement.rotateParameters(statement, pattern.maxParameters(), quarterTurns, pattern::rotateParameters);
-        } else {
-            FullStatement.rotateParameters(statement, quarterTurns);
-        }
+        BCStatement.rotateParametersOf(statement, kind, FullStatement.quarterTurns(rotation));
     }
 
     @Nullable

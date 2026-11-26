@@ -2,8 +2,10 @@ package buildcraft.lib.statement;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.function.UnaryOperator;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.Rotation;
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
@@ -219,6 +221,90 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
 
     public IStatementParameter[] getParameters() {
         return params;
+    }
+
+    // Rotation
+
+    /** How many clockwise quarter turns {@code rotation} is: {@link Rotation#CLOCKWISE_90} one,
+     * {@link Rotation#CLOCKWISE_180} two, {@link Rotation#COUNTERCLOCKWISE_90} three and {@link Rotation#NONE} none.
+     * One {@link IStatementParameter#rotateLeft()} is one of them. */
+    public static int quarterTurns(Rotation rotation) {
+        return switch (rotation) {
+            case CLOCKWISE_90 -> 1;
+            case CLOCKWISE_180 -> 2;
+            case COUNTERCLOCKWISE_90 -> 3;
+            default -> 0;
+        };
+    }
+
+    /** {@link #rotateParameters(CompoundTag, int, int, UnaryOperator)} with every parameter turned on its own by
+     * {@link IStatementParameter#rotateLeft()}. */
+    public static void rotateParameters(CompoundTag statement, int quarterTurns) {
+        rotateParameters(statement, 0, quarterTurns, FullStatement::rotateEach);
+    }
+
+    /**
+     * Turns, in place, the parameters of {@code statement}, a tag {@link #writeToNbt()} wrote: its numbered keys
+     * {@code "0"}, {@code "1"} and so on each hold one parameter tag. The parameters are read into one array (a slot
+     * with no key, or one that does not read, holds null; the array is at least {@code slots} long, so a slot the
+     * statement has but the tag lacks can still be filled), handed to {@code quarterTurn} once per quarter turn, and
+     * each slot that came back as a different parameter is stored again. A parameter that comes back as the same one
+     * is left as it is, so a statement whose parameters name no direction is not rewritten. Anything else in the tag
+     * is left alone, and a key that is not a one to three digit number is not a parameter.
+     *
+     * @param quarterTurn one clockwise quarter turn of the whole parameter list: the array it is given is its own to
+     *            read, and it returns the turned list in the same slots (null for a slot that holds nothing)
+     */
+    public static void rotateParameters(CompoundTag statement, int slots, int quarterTurns,
+                                        UnaryOperator<IStatementParameter[]> quarterTurn) {
+        int length = slots;
+        for (String key : NBTUtilBC.keysOf(statement)) {
+            if (isParameterKey(key)) {
+                length = Math.max(length, Integer.parseInt(key) + 1);
+            }
+        }
+        if (length == 0 || quarterTurns <= 0) {
+            return;
+        }
+        IStatementParameter[] original = new IStatementParameter[length];
+        for (String key : NBTUtilBC.keysOf(statement)) {
+            CompoundTag tag = isParameterKey(key) ? NBTUtilBC.getCompoundOrNull(statement, key) : null;
+            if (tag != null) {
+                original[Integer.parseInt(key)] = readParameter(tag);
+            }
+        }
+        IStatementParameter[] turned = original;
+        for (int i = 0; i < quarterTurns; i++) {
+            turned = quarterTurn.apply(turned);
+        }
+        for (int slot = 0; slot < length && slot < turned.length; slot++) {
+            if (turned[slot] != null && turned[slot] != original[slot]) {
+                statement.put(Integer.toString(slot), StatementTypeParam.INSTANCE.writeToNbt(turned[slot]));
+            }
+        }
+    }
+
+    private static IStatementParameter[] rotateEach(IStatementParameter[] params) {
+        IStatementParameter[] turned = new IStatementParameter[params.length];
+        for (int i = 0; i < params.length; i++) {
+            turned[i] = params[i] == null ? null : params[i].rotateLeft();
+        }
+        return turned;
+    }
+
+    /** Whether {@code key} is one of a statement tag's numbered parameter keys ({@code "0"}, {@code "1"}, ...). */
+    private static boolean isParameterKey(String key) {
+        return key.length() >= 1 && key.length() <= 3 && key.chars().allMatch(c -> c >= '0' && c <= '9');
+    }
+
+    /** The parameter {@code tag} holds, or null when it names none or cannot be read. */
+    private static IStatementParameter readParameter(CompoundTag tag) {
+        try {
+            return StatementTypeParam.INSTANCE.readFromNbt(tag);
+        } catch (RuntimeException e) {
+            // Blueprint data is not guaranteed well formed: a parameter that does not read is left as it is.
+            return null;
+        }
     }
 
     // Gui change listeners

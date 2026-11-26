@@ -18,18 +18,29 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
+import buildcraft.api.filler.IFillerPattern;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
+import buildcraft.api.statements.IStatementParameter;
 
 import buildcraft.builders.BCBuildersBlocks;
+import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.block.BlockBuilder;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterAxis;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterCenter;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterYDir;
+import buildcraft.builders.tile.TileFiller;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.statement.StatementTypeParam;
 
 /**
  * Machines turn with a blueprint that is built rotated. A block entity that saves a direction of its own (an engine's
@@ -197,6 +208,95 @@ public class SchematicMachineRotationTester {
         helper.assertTrue(rotationOf(captured.getRotated(Rotation.CLOCKWISE_90)) == 9,
                 "A rotation no Rotation has must be left as it was");
         helper.succeed();
+    }
+
+    /**
+     * A Filler lays its pattern out in world axes inside its box and never reads its own facing, so the direction
+     * parameters it saved turn with a rotated blueprint or the built Filler would shape its box another way. Each
+     * Filler is captured with a pattern, rotated by 90 degrees clockwise, built, and the built Filler's parameters read
+     * back: a hemisphere's open face NORTH is EAST, a quarter sphere's second open face (DOWN, chosen by its quarter
+     * turn count together with its face) stays DOWN, which takes a different count on the new face, a pyramid's apex
+     * NORTH is EAST, and a triangle lying flat is turned a quarter in its plane. The other turns are read from the
+     * rotated schematic's tag, the original keeps its own, and a tag with no pattern gains none.
+     */
+    public static void machineSchematicRotatesFillerPattern(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        IStatementParameter[][] given = {
+            {PatternParameterHollow.FILLED_INNER, PatternParameterFacing.NORTH},
+            {PatternParameterHollow.HOLLOW, PatternParameterFacing.NORTH, PatternParameterRotation.NONE},
+            {PatternParameterYDir.DOWN, PatternParameterCenter.NORTH},
+            {PatternParameterAxis.Y, PatternParameterHollow.HOLLOW, PatternParameterRotation.NONE}};
+        IFillerPattern[] patterns = {BCBuildersStatements.PATTERN_HEMI_SPHERE, BCBuildersStatements.PATTERN_QUARTER_SPHERE,
+            BCBuildersStatements.PATTERN_PYRAMID, BCBuildersStatements.PATTERN_TRIANGLE};
+        IStatementParameter[][] expected = {
+            {PatternParameterHollow.FILLED_INNER, PatternParameterFacing.EAST},
+            {PatternParameterHollow.HOLLOW, PatternParameterFacing.EAST, PatternParameterRotation.QUARTER},
+            {PatternParameterYDir.DOWN, PatternParameterCenter.EAST},
+            {PatternParameterAxis.Y, PatternParameterHollow.HOLLOW, PatternParameterRotation.QUARTER}};
+        for (int i = 0; i < patterns.length; i++) {
+            // Two blocks apart along Z inside the 6x7 cell, the copies three blocks along X from their sources.
+            BlockPos sourcePos = new BlockPos(1, 2, 2 * i);
+            helper.setBlock(sourcePos, BCBuildersBlocks.FILLER.get());
+            TileFiller source = (TileFiller) level.getBlockEntity(helper.absolutePos(sourcePos));
+            helper.assertTrue(source != null, "The placed Filler must have its block entity");
+            source.setPattern(patterns[i], given[i]);
+            SchematicBlockDefault captured = capture(helper, sourcePos);
+            String name = patterns[i].getUniqueTag();
+            assertPattern(helper, captured, patterns[i], given[i], name + " as captured");
+
+            SchematicBlockDefault rotated = captured.getRotated(Rotation.CLOCKWISE_90);
+            assertPattern(helper, rotated, patterns[i], expected[i], name + " rotated CLOCKWISE_90");
+
+            BlockPos builtPos = new BlockPos(4, 2, 2 * i);
+            helper.assertTrue(rotated.build(level, helper.absolutePos(builtPos)), name + ": the Filler should build");
+            TileFiller built = (TileFiller) level.getBlockEntity(helper.absolutePos(builtPos));
+            helper.assertTrue(built != null, "The built Filler must have its block entity");
+            helper.assertTrue(built.patternStatement.get() == patterns[i],
+                    name + ": the built Filler must keep its pattern, got " + built.patternStatement.get());
+            for (int slot = 0; slot < expected[i].length; slot++) {
+                helper.assertTrue(built.patternStatement.get(slot) == expected[i][slot],
+                        name + ": the built Filler's parameter " + slot + " must be " + expected[i][slot] + ", got "
+                                + built.patternStatement.get(slot));
+            }
+            assertPattern(helper, captured, patterns[i], given[i], name + " as captured, after rotating a copy");
+        }
+
+        // The other turns, on the hemisphere's NORTH face and a vertical one, and a tag that holds no pattern.
+        BlockPos hemiPos = new BlockPos(1, 2, 0);
+        SchematicBlockDefault hemi = capture(helper, hemiPos);
+        IStatementParameter[] hemiGiven = given[0];
+        assertPattern(helper, hemi.getRotated(Rotation.CLOCKWISE_180), BCBuildersStatements.PATTERN_HEMI_SPHERE,
+                new IStatementParameter[] {hemiGiven[0], PatternParameterFacing.SOUTH}, "hemisphere rotated CLOCKWISE_180");
+        assertPattern(helper, hemi.getRotated(Rotation.COUNTERCLOCKWISE_90), BCBuildersStatements.PATTERN_HEMI_SPHERE,
+                new IStatementParameter[] {hemiGiven[0], PatternParameterFacing.WEST}, "hemisphere rotated COUNTERCLOCKWISE_90");
+        assertPattern(helper, hemi.getRotated(Rotation.NONE), BCBuildersStatements.PATTERN_HEMI_SPHERE, hemiGiven,
+                "hemisphere rotated NONE");
+        TileFiller upFiller = (TileFiller) level.getBlockEntity(helper.absolutePos(hemiPos));
+        upFiller.setPattern(BCBuildersStatements.PATTERN_HEMI_SPHERE,
+                new IStatementParameter[] {PatternParameterHollow.FILLED_INNER, PatternParameterFacing.UP});
+        assertPattern(helper, capture(helper, hemiPos).getRotated(Rotation.CLOCKWISE_90),
+                BCBuildersStatements.PATTERN_HEMI_SPHERE,
+                new IStatementParameter[] {PatternParameterHollow.FILLED_INNER, PatternParameterFacing.UP},
+                "an UP face rotated CLOCKWISE_90");
+        hemi.tileNbt.remove("patternStatement");
+        helper.assertFalse(hemi.getRotated(Rotation.CLOCKWISE_90).tileNbt.contains("patternStatement"),
+                "A tag with no pattern must not gain one");
+        helper.succeed();
+    }
+
+    /** Checks the pattern kind and parameters of the Filler schematic's tag: {@code patternStatement}'s {@code s.kind}
+     *  and its numbered parameter tags, as {@code FullStatement.writeToNbt} lays them out. */
+    private static void assertPattern(GameTestHelper helper, SchematicBlockDefault schematic, IFillerPattern pattern,
+                                      IStatementParameter[] parameters, String label) {
+        CompoundTag statement = NBTUtilBC.getCompound(schematic.tileNbt, "patternStatement");
+        helper.assertTrue(NBTUtilBC.getString(NBTUtilBC.getCompound(statement, "s"), "kind", "").equals(pattern.getUniqueTag()),
+                label + ": the pattern kind must be kept, got " + statement);
+        for (int slot = 0; slot < parameters.length; slot++) {
+            IStatementParameter held = StatementTypeParam.INSTANCE.readFromNbt(
+                    NBTUtilBC.getCompound(statement, Integer.toString(slot)));
+            helper.assertTrue(held == parameters[slot],
+                    label + ": parameter " + slot + " must be " + parameters[slot] + ", got " + held);
+        }
     }
 
     /** Places an engine facing {@code facing} whose tile powers {@code facing} too, as a placed and settled one does. */

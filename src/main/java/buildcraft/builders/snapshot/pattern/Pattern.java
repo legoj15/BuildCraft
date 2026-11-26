@@ -43,4 +43,20 @@ public abstract class Pattern extends BCStatement implements IFillerPattern, IAc
     public IFillerPattern[] getPossible() {
         return BCBuildersStatements.PATTERNS;
     }
+
+    /**
+     * The parameters this pattern holds once what it belongs to is turned one clockwise quarter turn about the Y axis
+     * ({@code Rotation.CLOCKWISE_90}: NORTH becomes EAST), in the same slots, a slot that holds nothing kept as it
+     * was. The shape is laid out in world axes inside the Filler's box, so a Filler in a blueprint built rotated turns
+     * its parameters to keep the shape turned with the blueprint. Each parameter turns by its own
+     * {@link IStatementParameter#rotateLeft()}, which is all a pattern needs whose parameters name a direction or an
+     * axis on their own; a pattern with a parameter whose meaning depends on another one overrides this.
+     */
+    public IStatementParameter[] rotateParameters(IStatementParameter[] params) {
+        IStatementParameter[] turned = new IStatementParameter[params.length];
+        for (int i = 0; i < params.length; i++) {
+            turned[i] = params[i] == null ? null : params[i].rotateLeft();
+        }
+        return turned;
+    }
 }

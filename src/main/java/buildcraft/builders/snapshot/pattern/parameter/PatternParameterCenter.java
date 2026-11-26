@@ -86,10 +86,16 @@ public enum PatternParameterCenter implements IStatementParameter {
         return null;
     }
 
+    /** The pyramid's apex offset is a world direction (the shape is laid out in world axes): a quarter turn clockwise
+     *  about Y takes the offset (x, z) to (-z, x), so NORTH (0, -1) becomes EAST (1, 0) and CENTER stays. */
     @Override
     public IStatementParameter rotateLeft() {
-        // return new PatternParameterCenter(shiftLeft[direction % 9]);
-        return this;
+        for (PatternParameterCenter turned : values()) {
+            if (turned.offsetX == -offsetZ && turned.offsetZ == offsetX) {
+                return turned;
+            }
+        }
+        throw new IllegalStateException("No center turns from " + this);
     }
 
     @Override

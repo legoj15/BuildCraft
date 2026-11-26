@@ -36,8 +36,8 @@ import buildcraft.lib.misc.NBTUtilBC;
 public class SchematicMachineAreaTester {
 
     /**
-     * A Filler with a box, captured and built elsewhere, has none: the box is not copied, and what is not its area (the
-     * invert flag) is. The scan holds the box, so the stored blueprint is the one an older capture would have produced.
+     * A Filler with a box, captured and built elsewhere, has none and is not finished: the box and the finished flag are
+     * not copied, and what is not its area (the invert flag) is. The scan holds the box, so the stored blueprint is the one an older capture would have produced.
      */
     public static void machineSchematicBuildsFillerWithoutItsBox(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -58,6 +58,8 @@ public class SchematicMachineAreaTester {
             SchematicBlockDefault captured = capture(helper, sourcePos);
             helper.assertTrue(NBTUtilBC.getBoolean(captured.tileNbt, "box_initialized", false),
                     "The scan of a Filler with a box must hold it, got " + captured.tileNbt);
+            // A Filler that has filled its box saves finished (TileFiller.writeData), which has no public setter.
+            captured.tileNbt.putBoolean("finished", true);
 
             helper.assertTrue(captured.build(level, helper.absolutePos(builtPos)), "The Filler should build into the empty cell");
             TileFiller built = (TileFiller) level.getBlockEntity(helper.absolutePos(builtPos));
@@ -65,6 +67,8 @@ public class SchematicMachineAreaTester {
             helper.assertFalse(built.box.isInitialized(), "The built Filler must start with no box, got " + built.box);
             helper.assertTrue(built.markerBox,
                     "The built Filler must not be marked as owing its box to a volume box behind it");
+            helper.assertFalse(built.isFinished(),
+                    "The built Filler must not start out finished: once it had a box of its own it would stay parked");
             helper.assertTrue(built.inverted, "The built Filler must keep its invert flag");
             helper.assertTrue(NBTUtilBC.getBoolean(captured.tileNbt, "box_initialized", false),
                     "Building must not edit the stored blueprint (it still holds the box)");

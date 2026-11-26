@@ -20,7 +20,8 @@
             "buildcraftunofficial:filler"
         ],
         "replaceNbt": {
-            "markerBox": null
+            "markerBox": null,
+            "finished": null
         }
     },
     {

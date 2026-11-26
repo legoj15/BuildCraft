@@ -54,7 +54,6 @@ import buildcraft.lib.statement.ActionWrapper.ActionWrapperInternal;
 import buildcraft.lib.statement.ActionWrapper.ActionWrapperInternalSided;
 import buildcraft.lib.statement.FullStatement;
 import buildcraft.lib.statement.FullStatement.IStatementChangeListener;
-import buildcraft.lib.statement.StatementTypeParam;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.statement.TriggerWrapper.TriggerWrapperExternal;
 import buildcraft.lib.statement.TriggerWrapper.TriggerWrapperInternal;
@@ -244,8 +243,9 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
      * <li>{@code kind}: a statement registered under it is asked to rotate, so one that carries a direction in its
      * identity (the pipe-direction actions, one statement per face) is stored as the statement of the rotated face;
      * an unknown kind stays.</li>
-     * <li>each parameter is read, asked to rotate and stored again only when that gave a different parameter (none of
-     * the gate's own parameters carries a direction, so none is rewritten today); one that does not read stays.</li>
+     * <li>each parameter is turned by {@link FullStatement#rotateParameters(CompoundTag, int)}: read, asked to rotate
+     * and stored again only when that gave a different parameter (none of the gate's own parameters carries a
+     * direction, so none is rewritten today); one that does not read stays.</li>
      * </ul>
      * The 1.12.2 layout, with {@code kind} and {@code side} at the root of the statement tag, is upgraded by
      * {@link #readConfigData} and never occurs in a tag {@link #writeToNbt()} wrote, so it is not handled here.
@@ -254,7 +254,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         if (rotation == Rotation.NONE) {
             return logicNbt;
         }
-        int quarterTurns = quarterTurns(rotation);
+        int quarterTurns = FullStatement.quarterTurns(rotation);
         CompoundTag copy = logicNbt.copy();
         for (String key : NBTUtilBC.keysOf(copy)) {
             if (key.startsWith("trigger[") || key.startsWith("action[")) {
@@ -265,20 +265,6 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             }
         }
         return copy;
-    }
-
-    /** How many clockwise quarter turns {@code rotation} is. */
-    private static int quarterTurns(Rotation rotation) {
-        switch (rotation) {
-            case CLOCKWISE_90:
-                return 1;
-            case CLOCKWISE_180:
-                return 2;
-            case COUNTERCLOCKWISE_90:
-                return 3;
-            default:
-                return 0;
-        }
     }
 
     /** Turns one statement tag in place: its side, its kind and its parameters (see {@link #rotateNbt}). */
@@ -302,35 +288,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         if (kind != null && turnedKind != null && turnedKind != kind) {
             identity.putString("kind", turnedKind.getUniqueTag());
         }
-        for (String key : NBTUtilBC.keysOf(statement)) {
-            if (!isParameterKey(key)) {
-                continue;
-            }
-            CompoundTag parameterTag = NBTUtilBC.getCompoundOrNull(statement, key);
-            IStatementParameter parameter = parameterTag == null ? null : readParameter(parameterTag);
-            IStatementParameter turned = parameter;
-            for (int i = 0; turned != null && i < quarterTurns; i++) {
-                turned = turned.rotateLeft();
-            }
-            if (parameter != null && turned != null && turned != parameter) {
-                statement.put(key, StatementTypeParam.INSTANCE.writeToNbt(turned));
-            }
-        }
-    }
-
-    /** Whether {@code key} is one of a statement tag's numbered parameter keys ({@code "0"}, {@code "1"}, ...). */
-    private static boolean isParameterKey(String key) {
-        return !key.isEmpty() && key.chars().allMatch(c -> c >= '0' && c <= '9');
-    }
-
-    /** The parameter {@code tag} holds, or null when it names none or cannot be read. */
-    private static IStatementParameter readParameter(CompoundTag tag) {
-        try {
-            return StatementTypeParam.INSTANCE.readFromNbt(tag);
-        } catch (RuntimeException e) {
-            // Blueprint data is not guaranteed well formed: a parameter that does not read is left as it is.
-            return null;
-        }
+        FullStatement.rotateParameters(statement, quarterTurns);
     }
 
     // Runtime display state (on/off glow, lit trigger/action slots): sent to clients in the block-entity update tag, never saved to disk — see TilePipeHolder.getUpdateTag.

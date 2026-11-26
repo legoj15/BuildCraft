@@ -75,6 +75,9 @@ public enum PatternParameterRotation implements IStatementParameter {
         return null;
     }
 
+    /** Not turned on its own: a quarter-turn count means a different turn of the world depending on the parameters
+     *  beside it (the plane a 2D shape lies in, the face a sphere part opens on), so the pattern that reads it turns it
+     *  with them ({@code Pattern.rotateParameters}). */
     @Override
     public IStatementParameter rotateLeft() {
         return this;

@@ -389,17 +389,19 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     }
 
     private static final List<Area> AREAS = List.of(
-        // TileFiller.writeData: the box and the flag that says it came from a volume box behind the Filler (false for
-        // a Filler placed against one; a copy that kept it would adopt whatever box lies behind it), then the pattern,
-        // the invert flag and the owner.
+        // TileFiller.writeData: the box, the flag that says it came from a volume box behind the Filler (false for a
+        // Filler placed against one; a copy that kept it would adopt whatever box lies behind it) and the flag that
+        // says it finished filling that box (a copy that kept it would stay parked once it had a box of its own), then
+        // the pattern, the invert flag and the owner.
         new Area("filler", BCBuildersBlocks.FILLER::get,
             tag(tag -> {
                 putBox(tag);
                 tag.putBoolean("markerBox", false);
+                tag.putBoolean("finished", true);
                 tag.putBoolean("inverted", true);
                 putOwner(tag);
             }),
-            concat(BOX_KEYS, "markerBox"), List.of(),
+            concat(BOX_KEYS, "markerBox", "finished"), List.of(),
             List.of("inverted", "patternStatement", "ownerUUID", "ownerName")),
         // TileArchitectTable.writeData: the box, the scan flags that belong to it, then the table's own settings.
         new Area("architect", BCBuildersBlocks.ARCHITECT::get,

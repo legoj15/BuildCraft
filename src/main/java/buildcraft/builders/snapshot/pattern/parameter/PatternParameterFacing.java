@@ -91,9 +91,11 @@ public enum PatternParameterFacing implements IStatementParameter {
         return null;
     }
 
+    /** The sphere part's open face is a world direction (the shape is laid out in world axes), so a quarter turn
+     *  clockwise about Y moves a horizontal face to the next one (NORTH becomes EAST) and leaves UP and DOWN. */
     @Override
     public IStatementParameter rotateLeft() {
-        return this;
+        return face.getAxis().isHorizontal() ? get(face.getClockWise()) : this;
     }
 
     @Override

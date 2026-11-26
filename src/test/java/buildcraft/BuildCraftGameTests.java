@@ -663,6 +663,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_schematic_rotates_engine_orientation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesEngineOrientation);
         reg.accept("buildcraftunofficial:machine_schematic_rotates_flood_gate_sides", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesFloodGateSides);
         reg.accept("buildcraftunofficial:machine_schematic_rotates_builder_rotation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesBuilderRotation);
+        // A Filler lays its pattern out in world axes, so a rotated blueprint turns the direction parameters it saved.
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_filler_pattern", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesFillerPattern);
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);

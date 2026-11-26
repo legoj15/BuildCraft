@@ -11,21 +11,30 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
+import buildcraft.api.filler.IFillerPattern;
+
 import buildcraft.builders.BCBuildersBlockEntities;
+import buildcraft.builders.filler.FillerType;
+import buildcraft.builders.snapshot.pattern.Pattern;
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.lib.block.BlockBCTile_Directional;
+import buildcraft.lib.block.RotatedTileData;
+import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.statement.FullStatement;
 
-public class BlockFiller extends BlockBCTile_Directional<TileFiller> {
+public class BlockFiller extends BlockBCTile_Directional<TileFiller> implements RotatedTileData {
     //? if <26.3 {
     /*public static final MapCodec<BlockFiller> CODEC = simpleCodec(BlockFiller::new);
     *///?}
@@ -40,6 +49,29 @@ public class BlockFiller extends BlockBCTile_Directional<TileFiller> {
         return CODEC;
     }
     *///?}
+
+    /**
+     * A Filler lays its pattern out in world axes inside its box and never reads its own facing, so the direction
+     * parameters saved under {@code patternStatement} (a {@link FullStatement} tag: {@code s} holds the pattern's
+     * kind, which names no direction, and the numbered keys hold the parameters) turn with the blueprint, or the built
+     * Filler would shape its box another way. The pattern turns its own list ({@link Pattern#rotateParameters}), since
+     * some parameters mean something only beside others (a sphere part's quarter-turn count). A tag with no pattern is
+     * left as it is.
+     */
+    @Override
+    public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        CompoundTag statement = NBTUtilBC.getCompoundOrNull(tileNbt, "patternStatement");
+        if (statement == null) {
+            return;
+        }
+        int quarterTurns = FullStatement.quarterTurns(rotation);
+        IFillerPattern kind = FillerType.INSTANCE.readFromNbt(NBTUtilBC.getCompound(statement, "s"));
+        if (kind instanceof Pattern pattern) {
+            FullStatement.rotateParameters(statement, pattern.maxParameters(), quarterTurns, pattern::rotateParameters);
+        } else {
+            FullStatement.rotateParameters(statement, quarterTurns);
+        }
+    }
 
     @Nullable
     @Override

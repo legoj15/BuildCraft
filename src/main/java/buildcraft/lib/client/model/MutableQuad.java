@@ -275,9 +275,23 @@ public class MutableQuad {
         //?}
     }
 
-    /** On MC 26.1+, block and item use the same vertex format. Alias for {@link #toBakedBlock()} on every node. */
+    /** {@link #toBakedBlock()} for an item model: the same quad, plus an explicit face normal where the loader keeps
+     * one (see {@code ClientModels.itemNormals}: Sodium otherwise draws BC's item quads dark, #245). */
     public BakedQuad toBakedItem() {
-        return toBakedBlock();
+        return forItem(toBakedBlock());
+    }
+
+    /** {@link #toBakedTranslucent()} for an item model, with the explicit face normal {@link #toBakedItem()} adds. */
+    public BakedQuad toBakedItemTranslucent() {
+        return forItem(toBakedTranslucent());
+    }
+
+    private static BakedQuad forItem(BakedQuad quad) {
+        //? if >=1.21.11 {
+        return buildcraft.platform.client.ClientPlatform.models().itemNormals(quad);
+        //?} else {
+        /*return quad;*/
+        //?}
     }
 
     // Reusable scratch vectors for renderVertex. Block-entity renderers are called

@@ -301,7 +301,7 @@ public class PipeItemModel implements ItemModel {
             MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
-            quads.add(quad.toBakedBlock());
+            quads.add(quad.toBakedItem());
         }
     }
 
@@ -357,7 +357,7 @@ public class PipeItemModel implements ItemModel {
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
             quad.setTint(0);
-            quads.add(quad.toBakedTranslucent());
+            quads.add(quad.toBakedItemTranslucent());
         }
     }
 }
@@ -522,7 +522,7 @@ public class PipeItemModel implements net.minecraft.client.resources.model.Baked
             MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
-            quads.add(quad.toBakedBlock());
+            quads.add(quad.toBakedItem());
         }
     }
 
@@ -552,7 +552,7 @@ public class PipeItemModel implements net.minecraft.client.resources.model.Baked
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
             quad.setTint(0);
-            quads.add(quad.toBakedTranslucent());
+            quads.add(quad.toBakedItemTranslucent());
         }
     }
 }*/

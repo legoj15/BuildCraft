@@ -33,6 +33,17 @@ public interface ClientModels {
      * snapshot preview's {@code MutableQuad} path) reads it here to do the same.
      */
     int vertexColour(BakedQuad quad, int vertex);
+
+    /**
+     * {@code quad} for an item model, carrying its face normal explicitly where the loader's quad can hold one
+     * (NeoForge's baked normals). Sodium's item renderer on NeoForge lights a quad whose normal is left unspecified
+     * with the ambient term only, about 40% brightness: every BC item drawn from {@code MutableQuad}s (gates, lenses,
+     * facades, pipes) came out dark (#245). Vanilla's own draw takes the same normal from the face, so nothing changes
+     * without Sodium. Elsewhere the quad is returned as is.
+     */
+    default BakedQuad itemNormals(BakedQuad quad) {
+        return quad;
+    }
     //?}
 
     //? if >=26.3 {

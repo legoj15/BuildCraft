@@ -91,7 +91,7 @@ public class FacadeItemModel implements ItemModel {
                     quad.vertex_1.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
                     quad.vertex_2.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
                     quad.vertex_3.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
-                    quads.add(translucent ? quad.toBakedTranslucent() : quad.toBakedItem());
+                    quads.add(translucent ? quad.toBakedItemTranslucent() : quad.toBakedItem());
                     anyTranslucent |= translucent;
                 }
             }

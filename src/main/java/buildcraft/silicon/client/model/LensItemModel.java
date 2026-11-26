@@ -87,7 +87,7 @@ public class LensItemModel implements ItemModel {
             // quad is routed to the correct render layer and vertex colours are preserved via BakedColors
             for (MutableQuad mq : PlugBakerLens.bakeForItem(lk.colour(), lk.isFilter(), false)) {
                 transformForItem(mq, key.quadSet(), false);
-                quads.add(mq.toBakedTranslucent());
+                quads.add(mq.toBakedItemTranslucent());
             }
 
             return quads;

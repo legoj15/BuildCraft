@@ -23,6 +23,14 @@ import buildcraft.platform.client.ClientModels;
  * 1.21.1 {@code IDynamicBakedModel}s.
  */
 public final class NeoForgeClientModels implements ClientModels {
+    //? if >=1.21.11 {
+    /** The quad's face normal as NeoForge baked normals (what vanilla's draw derives from the face anyway). */
+    private static net.neoforged.neoforge.client.model.quad.BakedNormals faceNormal(BakedQuad quad) {
+        return net.neoforged.neoforge.client.model.quad.BakedNormals.of(
+                net.neoforged.neoforge.client.model.quad.BakedNormals.pack(quad.direction().getUnitVec3f()));
+    }
+    //?}
+
     //? if >=26.1 {
     //? if >=26.3 {
     @Override
@@ -64,6 +72,13 @@ public final class NeoForgeClientModels implements ClientModels {
     }
 
     @Override
+    public BakedQuad itemNormals(BakedQuad quad) {
+        return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
+                quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.direction(),
+                quad.materialInfo(), faceNormal(quad), quad.bakedColors());
+    }
+
+    @Override
     public int vertexColour(BakedQuad quad, int vertex) {
         return quad.bakedColors().color(vertex);
     }
@@ -74,6 +89,14 @@ public final class NeoForgeClientModels implements ClientModels {
                 quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.tintIndex(),
                 quad.direction(), quad.sprite(), quad.shade(), quad.lightEmission(), quad.bakedNormals(),
                 BakedColors.of(argb0, argb1, argb2, argb3), quad.hasAmbientOcclusion());
+    }
+
+    @Override
+    public BakedQuad itemNormals(BakedQuad quad) {
+        return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
+                quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3(), quad.tintIndex(),
+                quad.direction(), quad.sprite(), quad.shade(), quad.lightEmission(), faceNormal(quad),
+                quad.bakedColors(), quad.hasAmbientOcclusion());
     }
 
     @Override

@@ -84,4 +84,24 @@ public class MutableQuadTest {
             Assertions.assertEquals(want[i].colour_a, got[i].colour_a, "vertex " + i + " [A]");
         }
     }
+
+    //? if >=1.21.11 {
+    /** A baked quad carries its face normal (#245): Sodium's item draw lights a quad with UNSPECIFIED normals by a
+     *  garbage normal, which drew every BC item icon at about 44% brightness. */
+    @Test
+    public void testBakedQuadCarriesFaceNormal() {
+        for (Direction face : Direction.values()) {
+            MutableQuad q = buildcraft.lib.client.model.ModelUtil.createFace(face,
+                new org.joml.Vector3f(0.5f, 0.5f, 0.5f), new org.joml.Vector3f(0.25f, 0.25f, 0.25f), null);
+            var normals = q.toBakedBlock().bakedNormals();
+            for (int i = 0; i < 4; i++) {
+                org.joml.Vector3fc n = net.neoforged.neoforge.client.model.quad.BakedNormals.unpack(
+                    normals.normal(i), new org.joml.Vector3f());
+                Assertions.assertEquals(face.getStepX(), n.x(), 0.02f, face + " vertex " + i + " [X]");
+                Assertions.assertEquals(face.getStepY(), n.y(), 0.02f, face + " vertex " + i + " [Y]");
+                Assertions.assertEquals(face.getStepZ(), n.z(), 0.02f, face + " vertex " + i + " [Z]");
+            }
+        }
+    }
+    //?}
 }

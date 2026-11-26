@@ -37,7 +37,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * second asserts that its neighbour is absent. Offsets in use, which must stay at least 8 apart: 777
  * ({@code OilGenStructureTester}), 888, 999, 1111, 1222, 1333 ({@code PumpUnloadedChunkTester}), 1444
  * ({@code RobotPumpUnloadedChunkTester}), 1555 ({@code UnloadedChunkSearchTester}), 1666
- * ({@code GroundSearchTester}), 1777 ({@code RobotStationRigTester}), 1888 ({@code WireSystemTester}).
+ * ({@code GroundSearchTester}), 1777 ({@code RobotStationRigTester}), 1888 ({@code WireSystemTester}), 1999
+ * ({@code PipeWireChunkLoadTester}).
  *
  * <p>The chunk is real worldgen, so what stands in it is not controlled: a test writes every cell it depends on
  * ({@link #setRaw}) and puts them back ({@link #clearRaw}) when it is done. {@code setRaw} writes straight into the chunk

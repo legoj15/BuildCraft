@@ -98,6 +98,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_system_follows_nbt_write", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsNbtWrite);
         reg.accept("buildcraftunofficial:wire_system_missing_wire_dropped_on_load", () -> buildcraft.transport.block.PipeWireConnectivityTester::testLoadDropsSystemNamingMissingWire);
         reg.accept("buildcraftunofficial:wire_load_rejoins_stranded_wire", () -> buildcraft.transport.block.PipeWireConnectivityTester::testLoadRejoinsStrandedWire);
+        reg.accept("buildcraftunofficial:wire_chunk_load_rejoins_wire", () -> buildcraft.transport.block.PipeWireChunkLoadTester::testChunkLoadRejoinsWire);
         reg.accept("buildcraftunofficial:wire_system_cut_by_power_adaptor", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemCutByPowerAdaptor);
 
         // Per-player wire-colour tracking gating the colorful_electrician advancement

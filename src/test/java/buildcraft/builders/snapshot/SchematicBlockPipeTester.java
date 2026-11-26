@@ -257,6 +257,14 @@ public class SchematicBlockPipeTester {
         helper.assertTrue(none.equals(captured),
                 "NONE must keep the wires on the corners they were captured on, got " + none);
 
+        // Through the real reader: the rotated schematic built into the arena has its wires on the rotated corners.
+        TilePipeHolder built = buildAt(helper, schematic.getRotated(Rotation.CLOCKWISE_90), new BlockPos(3, 2, 1));
+        helper.assertTrue(built.getWireManager().getColorOfPart(EnumWirePart.EAST_DOWN_SOUTH) == DyeColor.RED
+                        && built.getWireManager().getColorOfPart(EnumWirePart.WEST_UP_NORTH) == DyeColor.BLUE
+                        && built.getWireManager().getColorOfPart(EnumWirePart.EAST_DOWN_NORTH) == null
+                        && built.getWireManager().getColorOfPart(EnumWirePart.WEST_UP_SOUTH) == null,
+                "The pipe built after CLOCKWISE_90 must hold RED on EAST_DOWN_SOUTH and BLUE on WEST_UP_NORTH only");
+
         helper.assertTrue(wiresOf(schematic).equals(captured),
                 "getRotated must not mutate the original schematic (its wires should still be the captured ones)");
         helper.succeed();

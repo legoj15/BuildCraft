@@ -48,8 +48,9 @@ public interface IStatementParameter extends IGuiSlot {
     }
 
     /** The parameter this one becomes when what it belongs to is turned one quarter turn clockwise about the Y axis
-     * ({@code Rotation.CLOCKWISE_90}: NORTH becomes EAST); itself unless it names a direction. A blueprint built
-     * rotated asks once per quarter turn. */
+     * ({@code Rotation.CLOCKWISE_90}: NORTH becomes EAST), or itself when it has nothing to turn or does not turn
+     * it (not every parameter that names a direction does: check the implementation). A gate in a blueprint that
+     * is built rotated asks each of its statements' parameters once per quarter turn. */
     IStatementParameter rotateLeft();
 
     /** @return An array of all the possible alternative params for this state. Note that the return array may contain

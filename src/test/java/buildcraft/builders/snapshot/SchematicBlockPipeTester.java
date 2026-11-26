@@ -5,7 +5,9 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -13,6 +15,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,6 +26,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
+import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -47,7 +51,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  * <p>This pins, for three pipes spanning all three flow kinds (item / fluid / power), that each
  * captured pipe schematic (a) routes to {@link SchematicBlockPipe} and (b) resolves the correct,
  * <em>distinct</em> pipe item — directly guarding against the "all pipes collapse to one item"
- * regression.
+ * regression. The class also covers the captured pipe under rotation: pluggables move to the
+ * rotated mounting faces and wires to the rotated corners, with the stored schematic left untouched.
  */
 public class SchematicBlockPipeTester {
 
@@ -190,6 +195,60 @@ public class SchematicBlockPipeTester {
     }
 
     /**
+     * A pipe's wires sit on the eight corners of the block and are stored by corner in the tile
+     * NBT, so a rotated blueprint must move each wire to its rotated corner or the wire run no
+     * longer lines up with the rotated pipes. Two colours and two heights, so a swapped colour or
+     * a lost y shows. getRotated must also leave the original untouched.
+     */
+    public static void pipeSchematicRotatesWireCorners(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(1, 2, 1);
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        tile.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.RED);
+        tile.getWireManager().addPart(EnumWirePart.WEST_UP_SOUTH, DyeColor.BLUE);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(relPos);
+        BlockState state = level.getBlockState(abs);
+        ISchematicBlock schematic = SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
+        helper.assertTrue(schematic instanceof SchematicBlockPipe,
+                "Pipe holder should route to SchematicBlockPipe, got " + schematic.getClass().getSimpleName());
+
+        Map<EnumWirePart, DyeColor> captured = wiresOf(schematic);
+        helper.assertTrue(captured.equals(wires(EnumWirePart.EAST_DOWN_NORTH, DyeColor.RED,
+                EnumWirePart.WEST_UP_SOUTH, DyeColor.BLUE)),
+                "Captured wires should be RED on EAST_DOWN_NORTH and BLUE on WEST_UP_SOUTH, got " + captured);
+
+        // Expected corners written out as literals: CLOCKWISE_90 takes EAST to SOUTH and NORTH to EAST,
+        // CLOCKWISE_180 swaps each horizontal axis, COUNTERCLOCKWISE_90 takes EAST to NORTH and NORTH to WEST.
+        Map<EnumWirePart, DyeColor> cw90 = wiresOf(schematic.getRotated(Rotation.CLOCKWISE_90));
+        helper.assertTrue(cw90.equals(wires(EnumWirePart.EAST_DOWN_SOUTH, DyeColor.RED,
+                EnumWirePart.WEST_UP_NORTH, DyeColor.BLUE)),
+                "CLOCKWISE_90 must move RED to EAST_DOWN_SOUTH and BLUE to WEST_UP_NORTH, got " + cw90);
+        Map<EnumWirePart, DyeColor> cw180 = wiresOf(schematic.getRotated(Rotation.CLOCKWISE_180));
+        helper.assertTrue(cw180.equals(wires(EnumWirePart.WEST_DOWN_SOUTH, DyeColor.RED,
+                EnumWirePart.EAST_UP_NORTH, DyeColor.BLUE)),
+                "CLOCKWISE_180 must move RED to WEST_DOWN_SOUTH and BLUE to EAST_UP_NORTH, got " + cw180);
+        Map<EnumWirePart, DyeColor> ccw90 = wiresOf(schematic.getRotated(Rotation.COUNTERCLOCKWISE_90));
+        helper.assertTrue(ccw90.equals(wires(EnumWirePart.WEST_DOWN_NORTH, DyeColor.RED,
+                EnumWirePart.EAST_UP_SOUTH, DyeColor.BLUE)),
+                "COUNTERCLOCKWISE_90 must move RED to WEST_DOWN_NORTH and BLUE to EAST_UP_SOUTH, got " + ccw90);
+        Map<EnumWirePart, DyeColor> none = wiresOf(schematic.getRotated(Rotation.NONE));
+        helper.assertTrue(none.equals(captured),
+                "NONE must keep the wires on the corners they were captured on, got " + none);
+
+        helper.assertTrue(wiresOf(schematic).equals(captured),
+                "getRotated must not mutate the original schematic (its wires should still be the captured ones)");
+        helper.succeed();
+    }
+
+    /**
      * A pluggable the blueprint cannot price is left off the pipe the Builder places, not placed for free. A
      * captured pipe with a blocker on UP is given, in its stored NBT, a gate that cannot be rebuilt on NORTH and one
      * from an add-on that is gone on SOUTH; built into an empty cell it must come out as a working pipe with the
@@ -303,6 +362,29 @@ public class SchematicBlockPipeTester {
 
     private static CompoundTag plugsOf(ISchematicBlock schematic) {
         return NBTUtilBC.getCompound(schematic.getTileNbtForRender(), "plugs");
+    }
+
+    /** The wires a captured pipe schematic carries, by corner ({@code wires.parts} of the tile NBT). */
+    private static Map<EnumWirePart, DyeColor> wiresOf(ISchematicBlock schematic) {
+        int[] parts = NBTUtilBC.getIntArray(
+                NBTUtilBC.getCompound(schematic.getTileNbtForRender(), "wires"), "parts", new int[0]);
+        Map<EnumWirePart, DyeColor> wires = new EnumMap<>(EnumWirePart.class);
+        // The same flat (part ordinal, colour id) pairs WireManager writes; a pair naming no part is skipped.
+        for (int i = 0; i + 1 < parts.length; i += 2) {
+            if (parts[i] >= 0 && parts[i] < EnumWirePart.VALUES.length) {
+                wires.put(EnumWirePart.VALUES[parts[i]], DyeColor.byId(parts[i + 1]));
+            }
+        }
+        return wires;
+    }
+
+    /** The expected wire map of the two-wire pipe this tester builds. */
+    private static Map<EnumWirePart, DyeColor> wires(EnumWirePart partA, DyeColor colourA,
+                                                     EnumWirePart partB, DyeColor colourB) {
+        Map<EnumWirePart, DyeColor> wires = new EnumMap<>(EnumWirePart.class);
+        wires.put(partA, colourA);
+        wires.put(partB, colourB);
+        return wires;
     }
 
     private static String itemNames(List<ItemStack> stacks) {

@@ -642,6 +642,9 @@ public class BuildCraftGameTests {
         // Pluggables must rotate with the blueprint: a plug on NORTH moves to EAST under a 90° CW
         // rotation, otherwise facades stay on captured faces after a rotated build and block flow.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
+        // Wire corners must rotate with the blueprint too: wires are stored by corner in the tile
+        // NBT and are not recomputed on placement, so the corners are remapped like the faces are.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_wire_corners", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesWireCorners);
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);

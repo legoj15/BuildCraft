@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
 import buildcraft.api.schematics.SchematicBlockContext;
+import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
@@ -199,37 +200,88 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
         // super hands the rotated copy its own copy of tileNbt. Pipes additionally need their face-indexed
         // pluggables rotated, so a facade captured on (say) NORTH lands on the face matching the
         // rotated blueprint instead of staying NORTH — where it would block the wrong pipe
-        // connection and cut off flow. Pipe connections themselves recompute on placement, so only
-        // the pluggable mounting faces need remapping here. Rotating the copy (never this.tileNbt) keeps
+        // connection and cut off flow. Pipe connections themselves recompute on placement, but wires
+        // are stored by corner and are not recomputed, so the pluggable mounting faces and the wire
+        // corners are both remapped here. Rotating the copy (never this.tileNbt) keeps
         // the unrotated schematic's data out of the rotated one's reach, rotation NONE included.
         if (rotated instanceof SchematicBlockPipe pipe && pipe.tileNbt != null) {
-            pipe.tileNbt = rotatePluggableFaces(pipe.tileNbt, rotation);
+            pipe.tileNbt = rotateFaceAndCornerData(pipe.tileNbt, rotation);
         }
         return rotated;
     }
 
     /**
-     * Return a copy of the pipe tile NBT with the {@code plugs} entries remapped onto rotated faces.
-     * UP/DOWN are unaffected (rotation is about the Y axis). The facade's mimicked block state is
-     * intentionally left unrotated: a directional facade (stairs, logs) keeps its captured
-     * orientation — only its mounting face moves, which is what the flow-blocking issue needs.
+     * Return a copy of the pipe tile NBT with the {@code plugs} entries remapped onto rotated faces and the
+     * {@code wires} pairs remapped onto rotated corners, or {@code original} itself when the rotation is
+     * {@link Rotation#NONE} or the tag carries neither {@code plugs} nor {@code wires}. UP/DOWN are unaffected
+     * (rotation is about the Y axis). The facade's mimicked block state is intentionally left unrotated: a
+     * directional facade (stairs, logs) keeps its captured orientation — only its mounting face moves, which is
+     * what the flow-blocking issue needs. A wire carries nothing but its corner and its colour, so moving the
+     * corner is the whole of its rotation.
      */
     @Nonnull
-    private static CompoundTag rotatePluggableFaces(@Nonnull CompoundTag original, Rotation rotation) {
-        if (rotation == Rotation.NONE || !original.contains("plugs")) {
+    private static CompoundTag rotateFaceAndCornerData(@Nonnull CompoundTag original, Rotation rotation) {
+        boolean hasPlugs = original.contains("plugs");
+        boolean hasWires = original.contains("wires");
+        if (rotation == Rotation.NONE || (!hasPlugs && !hasWires)) {
             return original;
         }
         CompoundTag copy = original.copy();
-        CompoundTag oldPlugs = NBTUtilBC.getCompound(copy, "plugs");
-        CompoundTag newPlugs = new CompoundTag();
-        for (Direction face : Direction.values()) {
-            CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
-            if (!entry.isEmpty()) {
-                newPlugs.put(rotation.rotate(face).getName(), entry);
+        if (hasPlugs) {
+            CompoundTag oldPlugs = NBTUtilBC.getCompound(copy, "plugs");
+            CompoundTag newPlugs = new CompoundTag();
+            for (Direction face : Direction.values()) {
+                CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
+                if (!entry.isEmpty()) {
+                    newPlugs.put(rotation.rotate(face).getName(), entry);
+                }
             }
+            copy.put("plugs", newPlugs);
         }
-        copy.put("plugs", newPlugs);
+        if (hasWires) {
+            // A copy of the old wires compound, so any key in it besides "parts" survives.
+            CompoundTag wires = NBTUtilBC.getCompound(copy, "wires").copy();
+            int[] parts = NBTUtilBC.getIntArray(wires, "parts", new int[0]);
+            int[] rotatedParts = new int[parts.length];
+            // Flat (part ordinal, colour id) pairs, as WireManager writes them. The blueprint data is not
+            // guaranteed well formed, so a pair naming no part and an unpaired trailing element are copied
+            // unchanged (the reader drops both) rather than letting this throw.
+            for (int i = 0; i < parts.length; i++) {
+                int part = parts[i];
+                if (i % 2 == 0 && i + 1 < parts.length && part >= 0 && part < EnumWirePart.VALUES.length) {
+                    part = rotateWirePart(EnumWirePart.VALUES[part], rotation).ordinal();
+                }
+                rotatedParts[i] = part;
+            }
+            wires.putIntArray("parts", rotatedParts);
+            copy.put("wires", wires);
+        }
         return copy;
+    }
+
+    /**
+     * The corner {@code part} sits on once the blueprint is rotated: a corner is the meeting point of one
+     * X-facing side (EAST or WEST), one Z-facing side (NORTH or SOUTH) and UP or DOWN, and rotating the two
+     * horizontal sides about the Y axis moves the corner with them. The vertical side, and so the part's
+     * {@code y}, is unchanged by a Y-axis rotation.
+     */
+    private static EnumWirePart rotateWirePart(EnumWirePart part, Rotation rotation) {
+        Direction xSide = part.x == Direction.AxisDirection.POSITIVE ? Direction.EAST : Direction.WEST;
+        Direction zSide = part.z == Direction.AxisDirection.POSITIVE ? Direction.SOUTH : Direction.NORTH;
+        Direction rotatedX = rotation.rotate(xSide);
+        Direction rotatedZ = rotation.rotate(zSide);
+        // Of the two rotated sides exactly one lies on each horizontal axis, whichever way the rotation went.
+        Direction.AxisDirection newX = rotatedX.getAxis() == Direction.Axis.X
+            ? rotatedX.getAxisDirection()
+            : rotatedZ.getAxisDirection();
+        Direction.AxisDirection newZ = rotatedX.getAxis() == Direction.Axis.Z
+            ? rotatedX.getAxisDirection()
+            : rotatedZ.getAxisDirection();
+        return EnumWirePart.get(
+            newX == Direction.AxisDirection.POSITIVE,
+            part.y == Direction.AxisDirection.POSITIVE,
+            newZ == Direction.AxisDirection.POSITIVE
+        );
     }
 
     /**

@@ -284,21 +284,23 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     /** Turns one statement tag in place: its side, its kind and its parameters (see {@link #rotateNbt}). */
     private static void rotateStatement(CompoundTag statement, Rotation rotation, int quarterTurns) {
         CompoundTag identity = NBTUtilBC.getCompoundOrNull(statement, "s");
-        if (identity != null) {
-            if (identity.contains("side")) {
-                int side = NBTUtilBC.getByte(identity, "side", (byte) 6);
-                if (side >= 0 && side < Direction.values().length) {
-                    identity.putByte("side", (byte) rotation.rotate(Direction.from3DDataValue(side)).get3DDataValue());
-                }
+        if (identity == null) {
+            // Not the layout writeToNbt writes: left whole.
+            return;
+        }
+        if (identity.contains("side")) {
+            int side = NBTUtilBC.getByte(identity, "side", (byte) 6);
+            if (side >= 0 && side < Direction.values().length) {
+                identity.putByte("side", (byte) rotation.rotate(Direction.from3DDataValue(side)).get3DDataValue());
             }
-            IStatement kind = StatementManager.statements.get(NBTUtilBC.getString(identity, "kind", ""));
-            IStatement turned = kind;
-            for (int i = 0; turned != null && i < quarterTurns; i++) {
-                turned = turned.rotateLeft();
-            }
-            if (kind != null && turned != null && turned != kind) {
-                identity.putString("kind", turned.getUniqueTag());
-            }
+        }
+        IStatement kind = StatementManager.statements.get(NBTUtilBC.getString(identity, "kind", ""));
+        IStatement turnedKind = kind;
+        for (int i = 0; turnedKind != null && i < quarterTurns; i++) {
+            turnedKind = turnedKind.rotateLeft();
+        }
+        if (kind != null && turnedKind != null && turnedKind != kind) {
+            identity.putString("kind", turnedKind.getUniqueTag());
         }
         for (String key : NBTUtilBC.keysOf(statement)) {
             if (!isParameterKey(key)) {

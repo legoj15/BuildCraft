@@ -234,9 +234,10 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
      * <li>a diamond pipe's filter rows ({@code pipe.beh.filters}), each row moved to the rotated face.</li>
      * </ul>
      * Left as captured: the facade's mimicked block state (a directional facade (stairs, logs) keeps its captured
-     * orientation; only its mounting face moves, which is what the flow-blocking issue needs), and the runtime state a
-     * running pipe rebuilds (the power flow's display arrays, the fluid flow's per-face sections, travelling items and
-     * the {@code con} connection mask).
+     * orientation; only its mounting face moves, which is what the flow-blocking issue needs), the power flow's display
+     * arrays and the fluid flow's per-face sections (a running pipe sets them again), and the {@code con} connection
+     * mask (recomputed on the pipe's first tick). Travelling items and fluid are cargo, which a build does not carry
+     * over.
      */
     @Nonnull
     private static CompoundTag rotateDirectionalData(@Nonnull CompoundTag original, Rotation rotation) {

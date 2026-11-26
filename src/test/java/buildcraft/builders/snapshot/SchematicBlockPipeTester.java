@@ -47,6 +47,7 @@ import buildcraft.transport.BCTransportStatements;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamondItem;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDirectional;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond;
 import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -238,7 +239,8 @@ public class SchematicBlockPipeTester {
                 "Captured wires should be RED on EAST_DOWN_NORTH and BLUE on WEST_UP_SOUTH, got " + captured);
 
         // Expected corners written out as literals: CLOCKWISE_90 takes EAST to SOUTH and NORTH to EAST,
-        // CLOCKWISE_180 takes EAST to WEST and NORTH to SOUTH, COUNTERCLOCKWISE_90 takes EAST to NORTH and NORTH to WEST.
+        // CLOCKWISE_180 takes EAST to WEST and NORTH to SOUTH, COUNTERCLOCKWISE_90 takes EAST to NORTH and NORTH to
+        // WEST.
         Map<EnumWirePart, DyeColor> cw90 = wiresOf(schematic.getRotated(Rotation.CLOCKWISE_90));
         helper.assertTrue(cw90.equals(wires(EnumWirePart.EAST_DOWN_SOUTH, DyeColor.RED,
                 EnumWirePart.WEST_UP_NORTH, DyeColor.BLUE)),
@@ -273,16 +275,16 @@ public class SchematicBlockPipeTester {
         BlockPos stripesPos = new BlockPos(1, 2, 5);
         placePipe(helper, northPos, iron);
         placePipe(helper, upPos, iron);
-        placePipe(helper, stripesPos, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        TilePipeHolder stripesTile = placePipe(helper, stripesPos, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        // The stripes pipe's working face has a public setter, so its captured tag comes from the real writer.
+        ((PipeBehaviourStripes) stripesTile.getPipe().getBehaviour()).setDirection(Direction.NORTH);
         SchematicBlockPipe north = capture(helper, northPos);
         SchematicBlockPipe up = capture(helper, upPos);
         SchematicBlockPipe stripes = capture(helper, stripesPos);
         // A pipe with no neighbour points nowhere, and PipeBehaviourDirectional.writeToNbt omits "currentDir" then, so
         // the captured tag is given the key it writes for a pipe that points somewhere (a Direction.name() string).
-        // PipeBehaviourStripes.writeToNbt stores its working face the same way under "direction".
         behaviourTag(north).put("currentDir", NBTUtilBC.writeEnum(Direction.NORTH));
         behaviourTag(up).put("currentDir", NBTUtilBC.writeEnum(Direction.UP));
-        behaviourTag(stripes).put("direction", NBTUtilBC.writeEnum(Direction.NORTH));
 
         TilePipeHolder builtNorth = buildAt(helper, north.getRotated(Rotation.CLOCKWISE_90), new BlockPos(3, 2, 1));
         helper.assertTrue(currentDirOf(builtNorth) == Direction.EAST,
@@ -290,6 +292,10 @@ public class SchematicBlockPipeTester {
         TilePipeHolder builtUp = buildAt(helper, up.getRotated(Rotation.CLOCKWISE_90), new BlockPos(3, 2, 3));
         helper.assertTrue(currentDirOf(builtUp) == Direction.UP,
                 "A pipe captured pointing UP must still point UP after a CLOCKWISE_90 build, got " + currentDirOf(builtUp));
+        TilePipeHolder builtStripes = buildAt(helper, stripes.getRotated(Rotation.CLOCKWISE_90), new BlockPos(3, 2, 5));
+        Direction stripesFace = ((PipeBehaviourStripes) builtStripes.getPipe().getBehaviour()).direction;
+        helper.assertTrue(stripesFace == Direction.EAST,
+                "A stripes pipe captured working NORTH must work EAST after a CLOCKWISE_90 build, got " + stripesFace);
 
         helper.assertTrue(directionKey(north.getRotated(Rotation.CLOCKWISE_180), "currentDir") == Direction.SOUTH,
                 "CLOCKWISE_180 must turn NORTH to SOUTH");
@@ -421,7 +427,7 @@ public class SchematicBlockPipeTester {
 
         SchematicBlockPipe rotated = (SchematicBlockPipe) captured.getRotated(Rotation.CLOCKWISE_90);
         helper.assertTrue(NBTUtilBC.getCompound(plugsOf(rotated), "north").isEmpty()
-                        && NBTUtilBC.getString(NBTUtilBC.getCompound(plugsOf(rotated), "east"), "id", "").contains("gate"),
+                        && !NBTUtilBC.getCompound(plugsOf(rotated), "east").isEmpty(),
                 "The gate must move from NORTH to EAST");
         CompoundTag rotatedLogic = gateLogicOf(rotated, "east");
         helper.assertTrue(sideOf(rotatedLogic, "trigger[0]") == Direction.EAST.get3DDataValue(),

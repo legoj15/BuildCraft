@@ -354,10 +354,11 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public void editItemModels(java.util.function.Predicate<net.minecraft.world.item.Item> items, ItemModelEditor editor) {
         // A per-item after-bake modifier, registered afresh on every model load; itemId() is the item model's key.
-        ModelLoadingPlugin.register(context -> context.modifyItemModelAfterBake().register(
-                (model, itemContext) -> model == null
-                        || !items.test(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(itemContext.itemId()))
-                        ? model : editor.edit(itemContext.itemId(), model)));
+        // A model id no item owns is passed through: the predicate is only ever asked about a registered item.
+        ModelLoadingPlugin.register(context -> context.modifyItemModelAfterBake().register((model, itemContext) -> {
+            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(itemContext.itemId()).orElse(null);
+            return model == null || item == null || !items.test(item) ? model : editor.edit(itemContext.itemId(), model);
+        }));
     }
 
     @Override

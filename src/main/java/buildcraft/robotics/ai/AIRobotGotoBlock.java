@@ -125,6 +125,8 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         // A stored path's first step is taken here, not in the constructor, so it goes through the same rule as every
         // later step with the caller's opt-in (stopBesideHardTarget) already set. The step may end the flight at a hard
         // target, which empties the path, or drop the path to re-plan, which update() carries out on the next cycle.
+        // (The game never starts a flight read back from a save, which takes this step on its first update(); one
+        // that is started anyway takes it here.)
         if (firstStepPending) {
             firstStepPending = false;
             setNextInPath();
@@ -231,9 +233,12 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                 endAtHardTarget();
             } else if (next.equals(robot.blockPosition()) || blocks().isSoft(next)) {
                 // The cell the robot stands in is always a step it may take: a robot must be able to leave a cell that
-                // is not soft, and a found path starts with it. Every other cell must be soft, the first cell of a
-                // stored or reloaded path included. (7.1.x waved through any step taken before a distance had been
-                // measured, which let a robot be aimed into a cell that had turned hard since the path was found.)
+                // is not soft, and a found path starts with the cell the robot was in when its search began. Every
+                // other cell must be soft: the first cell of a stored or reloaded path, and the start cell of a found
+                // path when the robot was moved out of it while the search ran (the flight then re-plans from where
+                // the robot is: it was stopped, so unless it is moved again the new path starts on the cell it stands
+                // in). 7.1.x waved through any step taken before a distance had been measured, which let a robot be
+                // aimed into a cell that had turned hard since the path was found.
                 currentStep = next;
                 setDestination(robot, next.getX() + 0.5, next.getY() + 0.5, next.getZ() + 0.5);
                 robot.aimItemAt(next);

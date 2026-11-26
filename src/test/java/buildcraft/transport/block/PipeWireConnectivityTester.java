@@ -35,7 +35,6 @@ import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.EnumWireBetween;
 import buildcraft.transport.wire.SavedDataWireSystems;
-import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.wire.WireSystem;
 
 /**
@@ -374,8 +373,8 @@ public class PipeWireConnectivityTester {
                                 && east.wireManager.initialised) {
                             ServerLevel level = helper.getLevel();
                             CompoundTag tag = east.saveCustomOnly(level.registryAccess());
-                            // A WireManager with no parts is the saved form of "no wires".
-                            tag.put("wires", new WireManager(east).writeToNbt());
+                            // A tag without the wires key names no wires, as one without plugs names no pluggables.
+                            tag.remove("wires");
                             //? if >=1.21.10 {
                             east.loadCustomOnly(
                                 TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));

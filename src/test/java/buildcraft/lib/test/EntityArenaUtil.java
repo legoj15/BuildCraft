@@ -6,8 +6,10 @@
 package buildcraft.lib.test;
 
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
@@ -28,6 +30,7 @@ import net.minecraft.world.level.storage.TagValueOutput;
 //?}
 
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.data.Box;
 
 /**
@@ -228,26 +231,84 @@ public final class EntityArenaUtil {
                 Vec3.atLowerCornerOf(gth.absolutePos(new BlockPos(CELL_SIZE_X, CELL_SIZE_Y, CELL_SIZE_Z))));
     }
 
-    /** Whether entities at {@code relPos} tick. Implies the entity section is accessible, i.e. an entity added
-     *  there is visible to {@code getEntitiesOfClass} at once. The framework waits only for the 1x1 structure's
-     *  own chunk, so a position two blocks in can sit in a neighbouring chunk that is not there yet (measured on
-     *  26.2 and 1.21.11: 6 of 50 samples were not yet entity-ticking at the test's first tick). A test that adds
-     *  an entity and then scans for it in the same tick must gate on this. */
+    /** The cell's four corners, relative to the arena origin, at ground level: every chunk the cell touches holds one
+     *  of them. */
+    private static final BlockPos[] CELL_CORNERS = {
+        BlockPos.ZERO,
+        new BlockPos(CELL_SIZE_X - 1, 0, 0),
+        new BlockPos(0, 0, CELL_SIZE_Z - 1),
+        new BlockPos(CELL_SIZE_X - 1, 0, CELL_SIZE_Z - 1)
+    };
+
+    /** Whether entities at {@code relPos} tick: the position's chunk is entity-ticking, so a robot or an item added
+     *  there ticks and is visible to {@code getEntitiesOfClass} at once. It does not say that block entities tick
+     *  there: a chunk ticks those only once its saved entities have also been read in on an IO thread and handed
+     *  over ({@link #areBlockEntitiesTicking}), which can come hundreds of ticks later on a server that runs its
+     *  ticks back to back. The framework waits only for the 1x1 structure's own chunk, so a position two blocks in
+     *  can sit in a neighbouring chunk that is not there yet (measured on 26.2 and 1.21.11: 6 of 50 samples were not
+     *  yet entity-ticking at the test's first tick). A test that adds an entity and then scans for it in the same
+     *  tick, or only watches an entity's own state, gates on this; one that waits on a pipe, a station or a machine
+     *  gates on {@link #areBlockEntitiesTicking}. */
     public static boolean isEntityTicking(GameTestHelper gth, BlockPos relPos) {
         return gth.getLevel().isPositionEntityTicking(gth.absolutePos(relPos));
     }
 
-    /** Whether every chunk the test's 6x7 cell touches is entity-ticking, read at the cell's four corners.
+    /** Whether block entities at {@code relPos} tick: {@link #isEntityTicking} there (which implies the chunk is at
+     *  least block-ticking) and the chunk's saved entities have been read in ({@code ServerLevel.areEntitiesLoaded}),
+     *  which {@code LevelChunk.isTicking} also requires before a block entity's tick runs, and which scheduled block
+     *  and fluid ticks wait for too. The read is IO on another thread, handed over by
+     *  {@code PersistentEntitySectionManager.tick} on a later server tick, so on a server that does not pace its ticks
+     *  it arrives after a wall-clock delay that is hundreds of ticks long (measured on all 17 nodes: up to 380 ms,
+     *  or 444 ticks). Entities never wait for it. A pipe, a docking station (it registers on its pipe's tick), a
+     *  machine or a fluid's scheduled tick needs this; a drop or spill scan does not. */
+    public static boolean areBlockEntitiesTicking(GameTestHelper gth, BlockPos relPos) {
+        return areBlockEntitiesTicking(gth.getLevel(), gth.absolutePos(relPos));
+    }
+
+    /** {@link #areBlockEntitiesTicking(GameTestHelper, BlockPos)} at an absolute position of any level, for a test
+     *  that reaches into another dimension (the Nether stage of the gas test). */
+    public static boolean areBlockEntitiesTicking(ServerLevel level, BlockPos pos) {
+        return level.isPositionEntityTicking(pos)
+                && level.areEntitiesLoaded(BlockUtil.chunkKey(pos.getX() >> 4, pos.getZ() >> 4));
+    }
+
+    /** {@code ready}, after parking the server thread (at most once per game tick, {@link #PACER}) when it is
+     *  {@code false}: the shape of a poll that waits on chunk work outside the cell gate (another dimension's chunks
+     *  loading), so that its tick budget is worth wall-clock time too. */
+    public static boolean readyOrPark(ServerLevel level, boolean ready) {
+        if (!ready) {
+            PACER.pace(level.getGameTime());
+        }
+        return ready;
+    }
+
+    /** Whether every chunk the test's 6x7 cell touches is entity-ticking, read at the cell's four corners; the
+     *  entity-only half of {@link #isCellTicking}.
      *  {@link #isEntityTicking} on the robot's own block is not enough: at a random block origin the cell crosses a
      *  chunk border in about 57% of runs (5/16 in x for its 6 blocks, 6/16 in z for its 7: 1 - 11/16 * 10/16 =
      *  146/256), and the chunk next door starts ticking later than the one the force-load was centred on (on
      *  26.3 with only the robot's chunk forced, the far corners came up on tick 20-23 while the robot's was ticking
-     *  on tick 1). Blocks, items and vines in that neighbour neither tick nor random-tick until it does. */
+     *  on tick 1). Blocks, items and vines in that neighbour neither tick nor random-tick until it does. Right for
+     *  a drop or spill scan; it does not promise that block entities tick ({@link #areBlockEntitiesTicking}). */
     public static boolean isCellEntityTicking(GameTestHelper gth) {
-        return isEntityTicking(gth, BlockPos.ZERO)
-                && isEntityTicking(gth, new BlockPos(CELL_SIZE_X - 1, 0, 0))
-                && isEntityTicking(gth, new BlockPos(0, 0, CELL_SIZE_Z - 1))
-                && isEntityTicking(gth, new BlockPos(CELL_SIZE_X - 1, 0, CELL_SIZE_Z - 1));
+        for (BlockPos corner : CELL_CORNERS) {
+            if (!isEntityTicking(gth, corner)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Whether block entities tick in every chunk the test's 6x7 cell touches ({@link #areBlockEntitiesTicking} at
+     *  the cell's four corners): what a poll that waits on a pipe, a station, a machine or a scheduled fluid tick
+     *  needs before its work budget starts. {@link #whenCellTicking} gates on this. */
+    public static boolean isCellTicking(GameTestHelper gth) {
+        for (BlockPos corner : CELL_CORNERS) {
+            if (!areBlockEntitiesTicking(gth, corner)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** {@link #forceLoadEntityArena(GameTestHelper, BlockPos)} for every chunk the test's cell touches (its four
@@ -256,10 +317,9 @@ public final class EntityArenaUtil {
      *  chunk forced the far corners of a straddling cell came up on tick 20-23; with the cell's chunks forced they
      *  were entity-ticking on tick 1 in every arena. */
     public static void forceLoadCell(GameTestHelper gth) {
-        forceLoadEntityArena(gth, BlockPos.ZERO);
-        forceLoadEntityArena(gth, new BlockPos(CELL_SIZE_X - 1, 0, 0));
-        forceLoadEntityArena(gth, new BlockPos(0, 0, CELL_SIZE_Z - 1));
-        forceLoadEntityArena(gth, new BlockPos(CELL_SIZE_X - 1, 0, CELL_SIZE_Z - 1));
+        for (BlockPos corner : CELL_CORNERS) {
+            forceLoadEntityArena(gth, corner);
+        }
     }
 
     /** The framework walls every test's structure in with barriers when it places it ({@code GameTestInfo.placeStructure}
@@ -279,24 +339,71 @@ public final class EntityArenaUtil {
         }
     }
 
-    /** How many ticks a cell-gated poll waits for its arena cell to start ticking before it fails the test as the
-     *  machine's load (the {@code readyTicks} of {@link #whenCellTicking}): the first half of such a poll's budget,
-     *  {@code EntityArenaUtil.CELL_READY_TICKS + <the test's own work budget>}. One shared value, because the wait is
-     *  the chunk promotion's, never the test's. Write it qualified in a budget sum: {@code GameTestPollBudgetTester}
-     *  reads it from this file by that spelling (a static import is not read), as a literal. */
+    /** How many ticks a cell-gated poll waits for its arena cell's block entities to start ticking before it fails
+     *  the test as the machine's load (the {@code readyTicks} of {@link #whenCellTicking}): the first half of such a
+     *  poll's budget, {@code EntityArenaUtil.CELL_READY_TICKS + <the test's own work budget>}. One shared value,
+     *  because the wait is the chunk promotion's and the entity read's, never the test's. The server does not pace
+     *  its ticks, so a tick count alone bounds no IO; each not-ready poll therefore parks the server thread
+     *  ({@link #cellReady}), which makes these polls worth at least {@code CELL_READY_TICKS * PARK_NANOS} of
+     *  wall-clock time (6 s). Write it qualified in a budget sum: {@code GameTestPollBudgetTester} reads it from this
+     *  file by that spelling (a static import is not read), as a literal. */
     public static final int CELL_READY_TICKS = 300;
 
-    /** A {@link #tickUntil} condition that starts the clock only once the cell is entity-ticking
-     *  ({@link #isCellEntityTicking}): it answers {@code false} until then, never asking {@code condition}, and then
+    /** How long a not-ready poll parks the server thread, at most once per game tick however many tests wait: long
+     *  enough that {@link #CELL_READY_TICKS} polls span seconds of wall clock, short enough that the park costs the
+     *  run about as much as the wait it covers (the entity read of a not-ready cell takes tens to hundreds of
+     *  milliseconds). */
+    private static final long PARK_NANOS = 20_000_000L;
+
+    /** Parks the server thread the first time it is asked in each game tick, so the cost of waiting is one park per
+     *  tick whatever the number of waiting tests, and a poll budget counted in ticks has a floor in wall time. The
+     *  thread and the clock are parameters so the once-per-tick rule is unit-testable. */
+    static final class Pacer {
+        private final long parkNanos;
+        private final LongConsumer park;
+        private long lastParkedTick = Long.MIN_VALUE;
+
+        Pacer(long parkNanos, LongConsumer park) {
+            this.parkNanos = parkNanos;
+            this.park = park;
+        }
+
+        /** Parks unless already parked in {@code gameTime}; whether it did. */
+        boolean pace(long gameTime) {
+            if (gameTime == lastParkedTick) {
+                return false;
+            }
+            lastParkedTick = gameTime;
+            park.accept(parkNanos);
+            return true;
+        }
+    }
+
+    /** Shared by every gate of the server: they all run on its one thread. */
+    private static final Pacer PACER = new Pacer(PARK_NANOS, LockSupport::parkNanos);
+
+    /** The readiness test of a cell gate: whether block entities tick in the whole cell ({@link #isCellTicking}). A
+     *  poll that finds it not ready first parks the server thread ({@link #PACER}), so the chunk IO that readiness
+     *  waits for gets wall-clock time instead of being outrun by back-to-back ticks. Passed to {@link #gateOnReady},
+     *  which stays pure budget arithmetic. */
+    static BooleanSupplier cellReady(GameTestHelper gth) {
+        return () -> readyOrPark(gth.getLevel(), isCellTicking(gth));
+    }
+
+    /** A {@link #tickUntil} condition that starts the clock only once the cell's block entities tick
+     *  ({@link #isCellTicking}): it answers {@code false} until then, never asking {@code condition}, and then
      *  gives {@code condition} {@code workTicks} polls to come true. Pass {@code readyTicks + workTicks} as the
      *  poll's own budget (a literal or a {@code static final int}, so {@code GameTestPollBudgetTester} can read it)
-     *  and keep the manifest's {@code max_ticks} above it.
+     *  and keep the manifest's {@code max_ticks} above it. Use it for a poll whose condition waits on something
+     *  that ticks in a block entity (a pipe, a station, a machine, a fluid's scheduled tick). Entities tick earlier
+     *  ({@link #isCellEntityTicking}), so a robot or an item is fine for the whole wait.
      *
-     *  <p>Chunk promotion is asynchronous, so how long a cell takes to start ticking depends on the machine, not on
-     *  the code under test; a budget that includes that wait flakes under load (see the two tests this was made
-     *  for). Gating the budget on the observed state separates the two failures: a cell that never ticks fails as
-     *  such, naming the machine, and a robot that is slow fails with how long it had once the cell was ticking.
-     *  Both fail through {@code gth.fail}, so the poll's cleanup still runs. */
+     *  <p>Chunk promotion and the entity read are asynchronous, so how long a cell takes to start ticking depends
+     *  on the machine, not on the code under test; a budget that includes that wait flakes under load (see the
+     *  tests this was made for). Gating the budget on the observed state separates the two failures: a cell that
+     *  never ticks fails as such, naming the machine, and a robot that is slow fails with how long it had once the
+     *  cell was ticking. While the cell is not ready each poll parks the server thread ({@link #cellReady}).
+     *  Both failures go through {@code gth.fail}, so the poll's cleanup still runs. */
     public static BooleanSupplier whenCellTicking(GameTestHelper gth, int readyTicks, int workTicks,
                                                   BooleanSupplier condition) {
         return whenCellTicking(gth, readyTicks, workTicks, condition, () -> null);
@@ -307,7 +414,7 @@ public final class EntityArenaUtil {
      *  {@code null}, is appended to the message, so a timeout names the side, source or item that never came. */
     public static BooleanSupplier whenCellTicking(GameTestHelper gth, int readyTicks, int workTicks,
                                                   BooleanSupplier condition, Supplier<String> stalled) {
-        return gateOnReady(() -> isCellEntityTicking(gth), gth::fail, readyTicks, workTicks, condition, stalled);
+        return gateOnReady(cellReady(gth), gth::fail, readyTicks, workTicks, condition, stalled);
     }
 
     /** The GameTestHelper-free core of {@link #whenCellTicking}: one call of the result is one tick's poll.
@@ -326,9 +433,9 @@ public final class EntityArenaUtil {
             if (readyAt[0] < 0) {
                 if (!ready.getAsBoolean()) {
                     if (poll >= readyTicks) {
-                        fail.accept("the arena cell never became entity-ticking within " + readyTicks
-                                + " ticks: its chunks were still being promoted, which is the machine's load and not"
-                                + " the code under test");
+                        fail.accept("the arena cell's block entities never started ticking within " + readyTicks
+                                + " ticks: its chunks were still being promoted or their entities read in, which is"
+                                + " the machine's load and not the code under test");
                     }
                     return false;
                 }
@@ -339,7 +446,7 @@ public final class EntityArenaUtil {
             }
             if (poll - readyAt[0] >= workTicks) {
                 String detail = stalled.get();
-                fail.accept("not done " + workTicks + " ticks after the cell became entity-ticking (on tick "
+                fail.accept("not done " + workTicks + " ticks after the cell's block entities started ticking (on tick "
                         + readyAt[0] + ")" + (detail == null ? "" : ": " + detail));
             }
             return false;

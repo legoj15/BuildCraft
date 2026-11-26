@@ -351,7 +351,10 @@ public class FluidFireTester {
                     }
                 }
                 case 5 -> {
-                    if (nether.isPositionEntityTicking(NETHER_SPOT)) {
+                    // The gas explodes on a fluid tick, which runs only where block entities tick: the chunk's saved
+                    // entities must be read in as well, and worldgen and that read take wall-clock time.
+                    if (EntityArenaUtil.readyOrPark(nether,
+                            EntityArenaUtil.areBlockEntitiesTicking(nether, NETHER_SPOT))) {
                         nether.setBlock(NETHER_SPOT, gas.defaultBlockState(), 3);
                         advance(stage, stageStart, polls);
                     }
@@ -365,7 +368,11 @@ public class FluidFireTester {
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GAS_WORK_TICKS,
             EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GAS_WORK_TICKS, machine,
                 () -> "stuck in stage " + stage[0] + " (0 build, 1 first blast and chain, 2 settle, 3 gasExplodes off,"
-                    + " 4 fire catches the guard, 5 the Nether's chunks load, 6 gas in the Nether)"),
+                    + " 4 fire catches the guard, 5 the Nether's chunks load, 6 gas in the Nether)"
+                    + (nether == null ? "" : "; at the Nether spot: entity-ticking "
+                        + nether.isPositionEntityTicking(NETHER_SPOT) + ", block entities ticking "
+                        + EntityArenaUtil.areBlockEntitiesTicking(nether, NETHER_SPOT) + ", block "
+                        + nether.getBlockState(NETHER_SPOT))),
             helper::succeed,
             "the gas never finished detonating",
             () -> {

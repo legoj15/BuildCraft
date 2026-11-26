@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /** {@link EntityArenaUtil#gateOnReady}: a robot test's work budget counts from the moment its arena cell is
- *  entity-ticking, not from the test's first tick.
+ *  ready (its block entities tick), not from the test's first tick; and {@link EntityArenaUtil.Pacer}: a waiting
+ *  server is parked once per game tick, however many gates wait.
  *
  *  <p>Why it exists: a forced chunk's promotion to entity-ticking is asynchronous and an arena can straddle a chunk
  *  border, so one half of the cell can start ticking ~20 ticks after the other on an idle machine (measured on 26.3
@@ -114,6 +115,23 @@ public class EntityArenaReadinessGateTest {
         }, 300, 5, () -> false), 20);
         Assertions.assertEquals(message[0], plain, "a null detail leaves the plain message");
         Assertions.assertNotEquals(plain, named, "and a named one is not the plain message");
+    }
+
+    @Test
+    void aWaitingServerIsParkedOncePerGameTickHoweverManyGatesWait() {
+        List<Long> parks = new ArrayList<>();
+        EntityArenaUtil.Pacer pacer = new EntityArenaUtil.Pacer(7L, parks::add);
+        int parked = 0;
+        for (int gate = 0; gate < 50; gate++) {
+            if (pacer.pace(100)) {
+                parked++;
+            }
+        }
+        Assertions.assertEquals(1, parked, "fifty gates waiting in one game tick cost one park, not fifty");
+        Assertions.assertEquals(List.of(7L), parks, "and it parks for the configured time");
+        Assertions.assertTrue(pacer.pace(101), "the next game tick parks again");
+        Assertions.assertFalse(pacer.pace(101), "once");
+        Assertions.assertEquals(List.of(7L, 7L), parks);
     }
 
     @Test

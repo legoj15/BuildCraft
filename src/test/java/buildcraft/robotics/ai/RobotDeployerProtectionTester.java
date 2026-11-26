@@ -90,7 +90,9 @@ public class RobotDeployerProtectionTester {
     /** Runs {@code body} once the whole arena cell is entity-ticking. The blast and melee tests spawn their mobs and
      *  sweep up their drops in the same tick, and an entity added to a chunk whose entities are not loaded yet is
      *  invisible to a scan: the bomber's blast then missed its cow, which was neither hurt nor asked about ("the
-     *  refused player was asked about" failed about one robot run in four). */
+     *  refused player was asked about" failed about one robot run in four). It is not
+     *  {@code EntityArenaUtil.whenCellTicking} on purpose: nothing here waits on a block entity, so the entity-only
+     *  predicate is the right one, and the whole budget is the readiness wait (the body is synchronous). */
     private static void whenCellTicking(GameTestHelper helper, Runnable body) {
         EntityArenaUtil.forceLoadCell(helper);
         EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,

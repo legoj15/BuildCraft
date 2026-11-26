@@ -48,8 +48,6 @@ import buildcraft.lib.test.LoaderTestEvents;
  */
 public class PipeBehaviourStripesMovesTester {
 
-    private static final int POLL_TICKS = 60;
-
     /** The work budget of the polls that wait on a pipe line, counted from the arena cell ticking: a poll's own
      *  budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
      *  manifest's {@code max_ticks} stays above that sum. The line spans up to four cells, the framework forces only
@@ -66,7 +64,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos feederRel = new BlockPos(1, 2, 2);
         BlockPos pipeRel = feederRel.east();
         BlockPos frontRel = pipeRel.east();
-        EntityArenaUtil.forceLoadEntityArena(helper, frontRel);
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
         connect(feeder, tile);
@@ -86,12 +84,11 @@ public class PipeBehaviourStripesMovesTester {
             }
             return false;
         });
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS, () -> {
+        // The stripes pipe breaks the cart on its own tick, so the clock starts when the cell's block entities tick.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS, () -> {
             switch (phase[0]) {
                 case 0 -> {
-                    if (!EntityArenaUtil.isEntityTicking(helper, frontRel)) {
-                        return false;
-                    }
                     //? if >=26.2 {
                     cart[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.MINECART, frontRel);
                     //?} else {
@@ -118,7 +115,7 @@ public class PipeBehaviourStripesMovesTester {
                     return cart[0].isRemoved();
                 }
             }
-        }, () -> {
+        }), () -> {
             helper.assertTrue(count(tile.getPipe().getFlow(), Items.MINECART) == 1,
                     "the broken cart's item travels back down the pipe, found "
                             + count(tile.getPipe().getFlow(), Items.MINECART));

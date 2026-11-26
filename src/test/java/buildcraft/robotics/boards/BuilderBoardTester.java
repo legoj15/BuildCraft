@@ -340,7 +340,9 @@ public class BuilderBoardTester {
     /** Runs {@code body} once the whole arena cell is entity-ticking. A test whose board drops its cargo (the dispose)
      *  and counts it on the same tick must: an item added to a chunk whose entities are not loaded yet is invisible
      *  to the scan, so the count reads 0 although the robot emptied its hold (the ~1-in-8 flake of
-     *  {@code robot_builder_board_gives_up_on_unreachable_builder}, reproduced on 26.3). */
+     *  {@code robot_builder_board_gives_up_on_unreachable_builder}, reproduced on 26.3). Entity-only on purpose, not
+     *  {@code EntityArenaUtil.whenCellTicking}: the body hand-cycles the board and reads the Builder's state without
+     *  waiting for it to tick, and the whole budget is the readiness wait. */
     private static void whenCellIsEntityTicking(GameTestHelper helper, Runnable body) {
         EntityArenaUtil.forceLoadCell(helper);
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS,

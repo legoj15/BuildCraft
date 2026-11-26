@@ -161,7 +161,9 @@ public class DeliveryUnloadedRequesterTester {
 
     /** Runs {@code body} once the whole arena cell is entity-ticking. The rig drops the goods and counts them in
      *  the same tick, and an item dropped into a chunk whose entities are not loaded yet is invisible to the count
-     *  (seen under fullTestSuite's parallel servers: "drops them" failed on tick 0 on 1.21.10). */
+     *  (seen under fullTestSuite's parallel servers: "drops them" failed on tick 0 on 1.21.10). It is not
+     *  {@code EntityArenaUtil.whenCellTicking} on purpose: the board is hand-cycled and nothing waits on a block
+     *  entity, so the entity-only predicate is the right one, and the whole budget is the readiness wait. */
     private static void whenCellTicking(GameTestHelper helper, Runnable body) {
         EntityArenaUtil.forceLoadCell(helper);
         EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,

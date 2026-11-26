@@ -336,7 +336,7 @@ public final class MarkerArenaUtil {
         }
 
         /** Polls once per tick for {@code condition}, then runs {@code then}. The budget {@code maxTicks} starts
-         *  counting only once the cell is entity-ticking ({@link EntityArenaUtil#isCellEntityTicking}), never from the
+         *  counting only once the cell's block entities tick ({@link EntityArenaUtil#isCellTicking}), never from the
          *  test's first tick: the cell crosses a chunk border in about 57% of runs and the half the test is not
          *  standing in starts ticking later, so a budget counted from tick 1 charges that chunk promotion to the
          *  code under test (the scheduled block ticks that pop a path marker, the drop it leaves for a scan). A cell
@@ -362,7 +362,7 @@ public final class MarkerArenaUtil {
         public void awaitThen(int maxTicks, BooleanSupplier condition, Runnable first, int gapTicks, Runnable second,
                               Supplier<String> failureMessage) {
             int pollTicks = EntityArenaUtil.CELL_READY_TICKS + maxTicks;
-            BooleanSupplier gated = EntityArenaUtil.gateOnReady(() -> EntityArenaUtil.isCellEntityTicking(gth),
+            BooleanSupplier gated = EntityArenaUtil.gateOnReady(EntityArenaUtil.cellReady(gth),
                 detail -> {
                     // The gate fails by throwing and the poll's own cleanup then runs, but the caches are dumped BEFORE
                     // anything is removed, so the report names what the markers looked like when the wait gave up.

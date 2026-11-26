@@ -128,16 +128,17 @@ here, not by leaving the other twins out of `nodes`). A top-level `"loaders"` sk
 nodes (reported as skipped, not as a failure): use it when a scenario needs a mod only one loader's dev runtime has.
 `"needs": ["recipeViewer"]` (top-level or on a step) says what the scenario or step asks of the dev runtime instead of naming
 loaders: a node that lacks it skips the scenario, or records the step as `skip`, with the reason. The capabilities:
-`recipeViewer` (any viewer, implied by the `"recipeViewer"` key, which also asks for that viewer by name), `devProperties`
-(implied by `gradleProperties`: `-PwithGuideMe` and the like; the Forge nodes wire none) and `devMods` (implied by `mods`,
-`requiredMods` and `-Mods`: the `-PwithMods` aliases, which every loader reads). A recipe viewer is per node, not per loader: a node has
-one when its `versions/<node>/gradle.properties` pins `jei_version` or `rei_version` (every NeoForge and Fabric node pins
-both; `1.21.1-forge` pins JEI alone; the other Forge nodes pin neither), so `rei-parity` skips on every Forge node. A
-scenario whose own `"mods"` the node defines none of (no `withmod.<alias>` in its `gradle.properties`) is skipped too, with
-that reason, instead of running bare; one defined alias is enough to run it, while every `"requiredMods"` alias must be defined (the other lanes of `crossmod-energy` need
-aliases only some nodes have). `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly": true` skips
-the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it clicks by English
-widget text.
+`recipeViewer` (any viewer, implied by the `"recipeViewer"` key, which also asks for that viewer by name),
+`devProperties` (implied by `gradleProperties`: `-PwithGuideMe` and the like; the Forge nodes wire none) and `devMods`
+(implied by `mods`, `requiredMods` and `-Mods`: the `-PwithMods` aliases, which every loader reads). A recipe viewer is
+per node, not per loader: a node has one when its `versions/<node>/gradle.properties` pins `jei_version` or
+`rei_version` (every NeoForge and Fabric node pins both; `1.21.1-forge` pins JEI alone; the other Forge nodes pin
+neither), so `rei-parity` skips on every Forge node. A scenario whose own `"mods"` the node defines none of (no
+`withmod.<alias>` in its `gradle.properties`) is skipped too, with that reason, instead of running bare; one defined
+alias is enough to run it (the other lanes of `crossmod-energy` need aliases only some nodes have), while every
+`"requiredMods"` alias must be defined. `gen_port_26_3.py` marks its JEI steps with `needs`. A top-level `"englishOnly":
+true` skips the whole scenario the same way under any `-Lang` other than `en_us` (see the `-Lang` notes below): it
+clicks by English widget text.
 
 A top-level `"startAt"` says where the client's first screen is: `"world"` (the default) quick-plays the save (a node's first run creates it
 through the menus), `"title"` boots the client without quick-play, waits for the title screen (loading overlay gone) and starts the steps there: no

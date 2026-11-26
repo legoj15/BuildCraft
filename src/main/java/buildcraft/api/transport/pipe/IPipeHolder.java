@@ -63,8 +63,9 @@ public interface IPipeHolder extends IRedstoneStatementContainer {
      *  includes the links drops any cached shape here. */
     default void onWireLinksChanged() {}
 
-    /** Called when something a wire link across a face depends on changed without the pipe's connections changing
-     *  (its colour, a pluggable): the holder recomputes its own wire links and its neighbours' on their next tick. */
+    /** Called when something a wire link across a face depends on changed (a connection, the pipe's colour, a
+     *  pluggable): the holder recomputes its own wire links and its neighbours' on their next tick, and on the
+     *  server has the wire systems through it rebuilt. */
     default void requestWireLinkRefresh() {}
 
     /** Schedules a GUI network update, that is only the players who currently have a pipe element open in a GUI will be

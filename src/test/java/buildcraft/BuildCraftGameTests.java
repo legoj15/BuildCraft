@@ -96,6 +96,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_system_follows_connection", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsConnection);
         reg.accept("buildcraftunofficial:wire_system_follows_nbt_write", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsNbtWrite);
         reg.accept("buildcraftunofficial:wire_system_missing_wire_dropped_on_first_tick", () -> buildcraft.transport.block.PipeWireConnectivityTester::testFirstTickDropsSystemNamingMissingWire);
+        reg.accept("buildcraftunofficial:wire_system_cut_by_power_adaptor", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemCutByPowerAdaptor);
 
         // Per-player wire-colour tracking gating the colorful_electrician advancement
         reg.accept("buildcraftunofficial:wire_colours_fresh_attachment_empty", () -> buildcraft.transport.WireColoursPlacedTester::testFreshAttachmentEmpty);

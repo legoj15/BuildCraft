@@ -252,7 +252,9 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     /** Builds the system of every seed that is a wire in a chunk in memory, replacing the same-colour systems it
      *  overlaps. Every wire part a replaced system held is rebuilt too, so no part that was in a system is left
      *  without one. A seed whose chunk is not in memory is skipped: its pipe rebuilds on its first tick when it
-     *  loads. (The walk itself follows {@code IPipeHolder.getNeighbourPipe}, as it always has.) */
+     *  loads. The walk itself crosses to a neighbour through {@code IPipeHolder.getNeighbourPipe}, whose loaded
+     *  check is the chunk's ticket, so it can complete the load of a neighbouring chunk that is queued but not yet
+     *  in memory; it never reaches one that has no ticket. */
     private void rebuild(Collection<WireSystem.WireElement> seeds) {
         Deque<WireSystem.WireElement> queue = new ArrayDeque<>(seeds);
         Set<WireSystem.WireElement> built = new HashSet<>();
@@ -326,15 +328,16 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         // Wakeup matrix (all paths confirmed by audit 2026-05-19):
         //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
         //                              / removeWireSystem → markStructureChanged
-        //   • Pipe BE load           → WireManager.tick (first call) → markStale
-        //                              → rebuildStale → markStructureChanged
+        //   • Pipe BE load           → WireManager.tick (first call) → markStaleIfWired
         //   • Pipe removed (any cause but a chunk unload: player, /setblock, /fill, explosion,
-        //     another mod) → TilePipeHolder.setRemoved → markStale
+        //     another mod) → TilePipeHolder.setRemoved → markWireSystemsStale → markStaleIfWired
         //   • Pluggable, colour or connection change → IPipeHolder.requestWireLinkRefresh
-        //                              → TilePipeHolder.markWireSystemsStale → markStale
+        //                              → TilePipeHolder.markWireSystemsStale → markStaleIfWired
         //   • NBT read into a pipe that has already ticked (/data, another mod)
         //                              → TilePipeHolder.readData → markStale
-        //   • Every markStale drains through rebuildStale at the top of this method.
+        //   • markStaleIfWired reaches markStale when the pipe has wires or a system still names
+        //     one at its position. Every markStale drains through rebuildStale at the top of this
+        //     method, which ends in markStructureChanged.
         //   • Gate emit state change → GateLogic.resolveActions sets gatesChanged = true directly
         //                              whenever the resolved wireBroadcasts set differs from
         //                              the previous one. (GateLogic is the sole IWireEmitter

@@ -13,6 +13,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.marker.MarkerCache;
@@ -113,16 +114,20 @@ public record MessageMarker(
     /**
      * Client-side handler. Dispatches to the appropriate MarkerSubCache.
      * <p>
-     * Already on the client main thread: the registrar's default {@code HandlerThread.MAIN} wraps it in NeoForge's
-     * {@code MainThreadPayloadHandler}, which enqueues it (FIFO with {@code MessageMarkerTrack}). So it never races
-     * the client-tick readers of the connection sets, and needs no {@code ctx.runOnMain} of its own.
+     * Already on the client main thread: every {@link buildcraft.platform.network.BCNetwork} implementation hands a
+     * payload to its handler on the receiving side's main thread. So it never races the client-tick readers of the
+     * connection sets, and needs no {@code ctx.runOnMain} of its own.
      */
     public static void handle(MessageMarker message, PacketContext ctx) {
         if (message.cacheId < 0 || message.cacheId >= MarkerCache.CACHES.size()) {
             BCLog.logger.warn("[lib.messages][marker] Invalid cache ID: " + message.cacheId);
             return;
         }
-        net.minecraft.world.level.Level world = ctx.player().level();
+        Player player = ctx.player();
+        if (player == null) {
+            return;
+        }
+        net.minecraft.world.level.Level world = player.level();
         MarkerCache<?> cache = MarkerCache.CACHES.get(message.cacheId);
         cache.getSubCache(world).handleMessageMain(message);
     }

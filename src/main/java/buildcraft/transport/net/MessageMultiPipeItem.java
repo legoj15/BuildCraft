@@ -117,9 +117,8 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
     // --- Client handler ---
 
     public static void handle(MessageMultiPipeItem message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            Level world = ctx.player().level();
-            if (world == null) return;
+        ctx.runOnMainWithPlayer(player -> {
+            Level world = player.level();
             for (var entry : message.items.entrySet()) {
                 BlockPos pos = entry.getKey();
                 BlockEntity tile = world.getBlockEntity(pos);

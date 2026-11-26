@@ -19,7 +19,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -75,13 +74,9 @@ public class PayloadWireSystems implements CustomPacketPayload {
     }
 
     public static void handle(PayloadWireSystems message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            // No local player when the connection closed before this ran. The systems belong to the level they were
-            // sent for, which is gone (its unload cleared them): they must not be put back for the next one.
-            Player player = ctx.player();
-            if (player == null) {
-                return;
-            }
+        ctx.runOnMainWithPlayer(player -> {
+            // Skipped when the client has no local player: the systems belong to the level they were sent for, which
+            // is gone (its unload cleared them), so they must not be put back for the next one.
             Set<WireSystem.WireElement> incoming = new HashSet<>();
             message.wireSystems.values().forEach(wireSystem -> incoming.addAll(wireSystem.elements));
             // A wire the old list held and the new one does not is in no system this player can see, so it is not

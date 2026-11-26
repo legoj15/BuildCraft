@@ -40,9 +40,9 @@ public record MessagePipeLandingEffect(
     }
 
     public static void handle(MessagePipeLandingEffect message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            Level level = ctx.player().level();
-            if (level != null && level.isClientSide()) {
+        ctx.runOnMainWithPlayer(player -> {
+            Level level = player.level();
+            if (level.isClientSide()) {
                 PipeHolderClientExtensions.spawnLandingParticles(level, message.pos, message.x, message.y, message.z, message.numberOfParticles);
             }
         });

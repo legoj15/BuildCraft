@@ -47,9 +47,10 @@ import buildcraft.transport.wire.WireSystem;
  *
  * <p>A second group pins what the server keeps for wires that cross between pipes. The wire systems
  * ({@link SavedDataWireSystems}) must follow a neighbour's removal, a blocking pluggable, a repaint, a pipe
- * connection forming or breaking, and NBT written into a pipe; and a pipe with no wires must drop a saved system
- * that still names a wire at its position. The drawn links ({@code WireManager.betweens}, part of the collision
- * shape) are asserted for the removal and the NBT write.
+ * connection forming or breaking, and NBT written into a pipe; a pipe with no wires must drop a saved system
+ * that still names a wire at its position when it loads; and a wired pipe's load hook alone must put a wire an
+ * earlier rebuild stranded back into a system. The drawn links ({@code WireManager.betweens}, part of the
+ * collision shape) are asserted for the removal and the NBT write.
  */
 public class PipeWireConnectivityTester {
 
@@ -514,11 +515,11 @@ public class PipeWireConnectivityTester {
             });
     }
 
-    /** A pipe with no wires drops, on its first tick, a wire system that still names a wire at its position: the wire
-     *  went without the systems being told (NBT written into the pipe before it first ticked, or a save that already
-     *  held such a system). Left registered, the system keeps joining its other wires through a wire that is gone.
-     *  Built straight from one element, as a system read back from disk is. (#250) */
-    public static void testFirstTickDropsSystemNamingMissingWire(GameTestHelper helper) {
+    /** A pipe with no wires drops, when it loads, a wire system that still names a wire at its position: the wire
+     *  went without the systems being told (NBT written into the pipe before it joined the level, or a save that
+     *  already held such a system). Left registered, the system keeps joining its other wires through a wire that is
+     *  gone. Built straight from one element, as a system read back from disk is. (#250) */
+    public static void testLoadDropsSystemNamingMissingWire(GameTestHelper helper) {
         BlockPos rel = new BlockPos(2, 2, 2);
         TilePipeHolder tile = placePipe(helper, rel);
         SavedDataWireSystems wireSystems = SavedDataWireSystems.get(helper.getLevel());
@@ -534,6 +535,47 @@ public class PipeWireConnectivityTester {
                     + " and the system naming its missing wire is still registered"),
             helper::succeed, "system naming a missing wire never dropped", () -> {
                 wireSystems.removeWireSystem(ghost);
+                helper.setBlock(rel, Blocks.AIR);
+            });
+    }
+
+    /** A wired pipe's load hook alone puts its wire back into a system: the systems holding it are removed (as a
+     *  rebuild that cut it off does), the pipe joins the level again, and the wire must be back in a system with no
+     *  tick of the pipe involved. The pipe has already ticked here, so only the load hook can bring the wire back;
+     *  the real case is a chunk in memory but not ticking, whose pipes never tick at all. (#257) */
+    public static void testLoadRejoinsStrandedWire(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 2, 2);
+        TilePipeHolder tile = placePipe(helper, rel);
+        tile.getWireManager().addPart(EnumWirePart.EAST_DOWN_NORTH, DyeColor.YELLOW);
+
+        EntityArenaUtil.forceLoadCell(helper);
+        int[] phase = { 0 };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINK_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINK_WORK_TICKS, () -> {
+                switch (phase[0]) {
+                    case 0 -> {
+                        // The wire has a system and the pipe has ticked; nothing but the load hook can rejoin it.
+                        if (tile.wireManager.initialised
+                                && !systemsOf(helper, rel, EnumWirePart.EAST_DOWN_NORTH).isEmpty()) {
+                            // Remove every system holding the wire, as a rebuild that cut it off does.
+                            systemsOf(helper, rel, EnumWirePart.EAST_DOWN_NORTH)
+                                .forEach(SavedDataWireSystems.get(helper.getLevel())::removeWireSystem);
+                            tile.onJoinedLevel();
+                            phase[0] = 1;
+                        }
+                        return false;
+                    }
+                    default -> {
+                        return !systemsOf(helper, rel, EnumWirePart.EAST_DOWN_NORTH).isEmpty();
+                    }
+                }
+            }, () -> {
+                if (phase[0] == 0) {
+                    return "the wire never had a system to strand";
+                }
+                return "the stranded wire never rejoined a system after its pipe's load hook ran";
+            }),
+            helper::succeed, "stranded wire never rejoined a system", () -> {
                 helper.setBlock(rel, Blocks.AIR);
             });
     }

@@ -647,6 +647,13 @@ public class BuildCraftGameTests {
         // Wire corners must rotate with the blueprint too: wires are stored by corner in the tile
         // NBT and are not recomputed on placement, so the corners are remapped like the faces are.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_wire_corners", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesWireCorners);
+        // A directional pipe's face (iron, wood, emerald, emzuli, daizuli) and a stripes pipe's working face are stored
+        // as compass names, so they turn with the blueprint too.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_pipe_direction", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPipeDirection);
+        // A diamond pipe's filter rows are indexed by face, so each row moves to the rotated face.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_diamond_filter_rows", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesDiamondFilterRows);
+        // A gate's statements read a face, so their sides (and the pipe-direction actions) turn with the blueprint.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_gate_statement_sides", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesGateStatementSides);
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);

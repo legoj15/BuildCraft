@@ -362,6 +362,21 @@ never on `setChunkForced`:
   board, `BlockUtil.drainStaysInLoadedChunks`) must have its neighbours loaded: `EntityArenaUtil.forceLoadCell(helper)`
   first, because the framework loads only the one chunk under the arena.
 
+## Tests that depend on the weather
+
+The Fabric and Forge game-test worlds persist between runs and their weather cycle runs; NeoForge's test server turns
+the cycle off. A test with `"environment": "minecraft:default"`, or with an environment of ours that has no definitions,
+therefore starts in whatever weather the last run ended in. Rain puts a fire out on a fire tick and blocks its spread,
+so `oil_burns_with_vanilla_fire` failed on a Fabric node whose saved world had started to rain ("the fire went out
+without burning anything", twice in a row on that node and on no other).
+
+A test whose outcome depends on the weather sets it: give the test its own `test_environment` holding
+`{"type": "minecraft:weather", "weather": "clear"}`, and call `level.setRainLevel(0)` in its first poll. The
+environment alone is not enough: the rain level eases down by 0.01 a tick and the world counts as raining until it is
+under 0.2 (measured: environment only, 5 of 5 runs failed in a raining world; with the level set, 6 of 6 passed), and
+the 1.21.1 nodes have no test environments (an environment only names the batch there, so its definitions never run).
+Name the weather in the failure message too, so the next odd failure says what the world was doing.
+
 ## To verify your test is actually running (not silently skipped)
 
 Note the "N GAME TESTS COMPLETE" count before and after. Each new test should bump N by 1. If it

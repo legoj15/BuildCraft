@@ -129,10 +129,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
         }
-        CompoundTag wireTag = wireManager.writeToNbt();
-        if (!wireTag.isEmpty()) {
-            output.store("wires", CompoundTag.CODEC, wireTag);
-        }
+        // Always stored, an empty part list included: readData takes a tag without it to mean no wires.
+        output.store("wires", CompoundTag.CODEC, wireManager.writeToNbt());
         // Save pluggables
         CompoundTag plugTag = new CompoundTag();
         for (Direction face : Direction.values()) {
@@ -225,10 +223,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
             eventBus.unregisterHandler(plug); // avoid duplicate registration
             eventBus.registerHandler(plug);
         }
-        // Load wire data
-        input.read("wires", CompoundTag.CODEC).ifPresent(wireTag -> {
-            wireManager.readFromNbt(wireTag);
-        });
+        // Load wire data. A save always carries the key (an empty part list for a pipe with no wires), so a tag
+        // without a readable "wires" entry names no wires, as one without "plugs" names no pluggables.
+        input.read("wires", CompoundTag.CODEC).ifPresentOrElse(wireManager::readFromNbt, wireManager.parts::clear);
         // After data sync (e.g. colour change), refresh the model on the client
         if (level != null && level.isClientSide()) {
             Platform.renderData().requestRenderDataUpdate(this);
@@ -263,11 +260,13 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         }
     }
 
-    /** Whether this block entity is going because its block was replaced, rather than its chunk unloading. Vanilla
-     *  writes the new block state into the chunk before it removes the block entity ({@code LevelChunk.setBlockState},
-     *  on every supported line), and an unloading chunk still holds the pipe block, so the chunk's state at this
-     *  position tells the two apart. Reads only a chunk already in memory and never a block entity: an unloading
-     *  chunk calls {@code setRemoved} while iterating its block entities. */
+    /** Whether this block entity is going because its block was removed or replaced by a different block, rather
+     *  than its chunk unloading. Vanilla writes the new block state into the chunk before it removes the block entity
+     *  ({@code LevelChunk.setBlockState}, on every supported line), and an unloading chunk still holds the pipe
+     *  block, so the chunk's state at this position tells the two apart. All pipes are one block: a pipe written
+     *  over a pipe keeps this block entity, and what changed reaches the wire systems through {@code readData}.
+     *  Reads only a chunk already in memory and never a block entity: an unloading chunk calls {@code setRemoved}
+     *  while iterating its block entities. */
     private boolean wasBlockReplaced() {
         LevelChunk chunk = level.getChunkSource().getChunkNow(
             SectionPos.blockToSectionCoord(worldPosition.getX()), SectionPos.blockToSectionCoord(worldPosition.getZ()));

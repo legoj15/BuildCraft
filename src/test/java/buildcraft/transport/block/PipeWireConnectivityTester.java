@@ -35,7 +35,6 @@ import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.EnumWireBetween;
 import buildcraft.transport.wire.SavedDataWireSystems;
-import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.wire.WireSystem;
 
 /**
@@ -44,6 +43,12 @@ import buildcraft.transport.wire.WireSystem;
  * placement actually completes a connection — not for an isolated wire — so the
  * predicate must distinguish four cases: isolated, in-cube neighbour matching colour,
  * in-cube neighbour wrong colour, and cross-tile neighbour matching colour.
+ *
+ * <p>A second group pins what the server keeps for wires that cross between pipes. The wire systems
+ * ({@link SavedDataWireSystems}) must follow a neighbour's removal, a blocking pluggable, a repaint, a pipe
+ * connection forming or breaking, and NBT written into a pipe; and a pipe with no wires must drop a saved system
+ * that still names a wire at its position. The drawn links ({@code WireManager.betweens}, part of the collision
+ * shape) are asserted for the removal and the NBT write.
  */
 public class PipeWireConnectivityTester {
 
@@ -374,8 +379,8 @@ public class PipeWireConnectivityTester {
                                 && east.wireManager.initialised) {
                             ServerLevel level = helper.getLevel();
                             CompoundTag tag = east.saveCustomOnly(level.registryAccess());
-                            // A WireManager with no parts is the saved form of "no wires".
-                            tag.put("wires", new WireManager(east).writeToNbt());
+                            // A tag without the wires key names no wires, as one without plugs names no pluggables.
+                            tag.remove("wires");
                             //? if >=1.21.10 {
                             east.loadCustomOnly(
                                 TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));

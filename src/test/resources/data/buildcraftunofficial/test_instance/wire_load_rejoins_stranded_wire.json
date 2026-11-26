@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:wire_system_missing_wire_dropped_on_first_tick",
+    "function": "buildcraftunofficial:wire_load_rejoins_stranded_wire",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 370,

@@ -9,6 +9,7 @@ A Pipe Wire is a pipe pluggable system used to transmit signals indefinitely dat
 <chapter name="Wire Mechanics"/>
 A Gate is used to provide a signal to a pipe wire which is transmitted to other connected pipe wires of the same colour.
 A signal can only be On or Off and will travel over an indefinite distance (unlike redstone).
+Wires only carry signals through loaded chunks: a gate in an unloaded chunk should not be relied on until its area is loaded again.
 Pipe wire is available in all 16 colours.
 
 <chapter name="Wire Placement"/>

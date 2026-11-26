@@ -103,7 +103,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
 
     private final Map<WireSystem.WireElement, List<WireSystem>> elementsToWireSystemsIndex = new HashMap<>();
     /** Blocks whose wire systems are stale, drained by {@link #tick()}. Not saved: a pipe that loads rebuilds its
-     *  own systems on its first tick. */
+     *  own systems when it joins the level. */
     private final Set<BlockPos> staleHolders = new LinkedHashSet<>();
 
     public SavedDataWireSystems(@Nullable ServerLevel level) {
@@ -232,8 +232,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
 
     /** {@link #markStale} for a pipe that may have nothing to do with wires: it is marked when it has wires, or when
      *  a system still names a wire at its position (its wires went without the systems being told: NBT written into
-     *  it before its first tick, or a save that already held such a system). A pipe with neither is in no system and
-     *  links to nothing. */
+     *  it before it joined the level, or a save that already held such a system). A pipe with neither is in no system
+     *  and links to nothing. */
     public void markStaleIfWired(BlockPos pos, boolean hasWires) {
         if (hasWires || namesWireAt(pos)) {
             markStale(pos);
@@ -254,8 +254,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
      *  chunk in memory is left without a system. That relies on both pipes of every link agreeing that it is one,
      *  which {@link WireSystem#canWireConnect} guarantees by answering the same from either pipe (a link only one
      *  side counted used to strand a part: #251). A seed whose chunk is not in memory is skipped and stays in no
-     *  system until a rebuild covers it again (its own pipe's first tick after loading, or a walk that crosses into
-     *  its chunk): a rebuild cuts a system at the edge of the loaded world, and a gate beyond that edge stops
+     *  system until a rebuild covers it again (its own pipe's load hook when its chunk loads, or a walk that crosses
+     *  into its chunk): a rebuild cuts a system at the edge of the loaded world, and a gate beyond that edge stops
      *  counting. The walk itself crosses to a neighbour through {@code IPipeHolder.getNeighbourPipe}, whose loaded
      *  check is the chunk's ticket, so it can complete the load of a neighbouring chunk that is queued but not yet in
      *  memory; it never reaches one that has no ticket. */
@@ -332,12 +332,13 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         // Wakeup matrix (all paths confirmed by audit 2026-05-19):
         //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
         //                              / removeWireSystem → markStructureChanged
-        //   • Pipe BE load           → WireManager.tick (first call) → markStaleIfWired
+        //   • Pipe BE load           → TilePipeHolder.onLoaded → markWireSystemsStale → markStaleIfWired,
+        //                              covering a chunk that loads without ticking
         //   • Pipe removed (any cause but a chunk unload: player, /setblock, /fill, explosion,
         //     another mod) → TilePipeHolder.setRemoved → markWireSystemsStale → markStaleIfWired
         //   • Pluggable, colour or connection change → IPipeHolder.requestWireLinkRefresh
         //                              → TilePipeHolder.markWireSystemsStale → markStaleIfWired
-        //   • NBT read into a pipe that has already ticked (/data, another mod)
+        //   • NBT read into a pipe that has joined the level (/data, another mod)
         //                              → TilePipeHolder.readData → markStale
         //   • markStaleIfWired reaches markStale when the pipe has wires or a system still names
         //     one at its position. Every markStale drains through rebuildStale at the top of this

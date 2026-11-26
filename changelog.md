@@ -9,7 +9,7 @@ Other than that, there are some minor bug fixes.
 - The description of the "Mine Player Protected Blocks" setting is more descriptive
 - Speaking of which, with "Mine Player Protected Blocks" off, a Builder, Quarry, Mining Well or Stripes pipe that a claim mod stops from breaking a block now skips it and carries on, instead of retrying it forever or stalling. The Builder's status now says the block was refused.
 - Robots now actually report and acknowledge when an action was rejected due to being within a claim instead of retrying forever.
-- Robots no longer fly back and forth forever when their target sits inside a block they can't enter, such as a Picker going after an item lying on a pipe. A Picker or a fighting robot now does its job from beside it, and other robots give up on it.
+- Robots no longer fly back and forth forever when their target sits inside a block they can't enter, such as a Picker going after an item lying on a pipe. A Picker or a fighting robot now does its job from beside it, and other robots give up on it. A robot also no longer flies into a block that turned up on the first step of a route it had already worked out; it looks for another way round instead.
 - Improved and fixed rendering of pipes that are being placed or in blueprints.
 - With ModernFix's dynamic resources option on, gates, facades and lenses show their proper item icons again, and pipe items get their colours back.
 - With Sodium installed (NeoForge), gate, lens, facade and painted pipe item icons are no longer drawn too dark.

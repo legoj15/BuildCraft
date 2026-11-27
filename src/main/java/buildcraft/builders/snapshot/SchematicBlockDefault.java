@@ -78,6 +78,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.BlueprintOwner;
 import buildcraft.lib.tile.BuiltFromBlueprint;
 
 import buildcraft.builders.block.BlockBuilder;
@@ -968,6 +969,10 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * captured {@link #tileNbt}, so a selector on tile data sees what the Architect saw, not what the strip or an
      * earlier rule left. Null when the schematic has no tile data.
      *
+     * <p>A BuildCraft block entity's owner is taken out of it ({@link BlueprintOwner#strip}), in code and not in a
+     * rule that would have to list every owner-bearing block: a built machine belongs to whoever builds it, and the
+     * caller stamps that owner on it ({@link BlueprintOwner#stamp}) once the build is over.
+     *
      * <p>The zone plans the capture carried ({@link ZoneMapPortability}) go to this world's zone store, each map
      * pointed at its entry. Map locations are not moved with the build: a zone, point or area map still names the
      * world coordinates it named where it was captured.
@@ -984,6 +989,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         CompoundTag placed = JsonRule.applyReplaceNbt(data, rules);
         ZoneMapPortability.settlePlans(placed);
+        BlueprintOwner.strip(placed, blockState.getBlock());
         return placed;
     }
 

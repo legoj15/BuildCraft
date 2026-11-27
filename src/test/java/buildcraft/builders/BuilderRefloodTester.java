@@ -107,6 +107,11 @@ public class BuilderRefloodTester {
         throw new IllegalStateException("no bed is registered");
     }
 
+    /** The first palette kind a caller's own schematics get (see the {@code extraKinds} overload of
+     *  {@link #setUpBuilder(GameTestHelper, int[], BlockPos[], List, List)}): extra {@code i} is kind
+     *  {@code FIRST_EXTRA_KIND + i}. */
+    public static final int FIRST_EXTRA_KIND = KIND_STATES.length;
+
     public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
     /** Consecutive quiet ticks that count as "the Builder stopped re-queuing". The sources re-flood a dry cell
@@ -138,7 +143,7 @@ public class BuilderRefloodTester {
      *  {@link #SLAB} (dry bottom oak slab), {@link #STONE}, {@link #AIR}, {@link #SNOW} (one snow layer),
      *  {@link #WET_SLAB}, {@link #DOOR}, {@link #DOOR_UPPER}, {@link #TORCH}, {@link #BED_FOOT} or {@link #BED_HEAD}. */
     private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[][] layers,
-            List<ISchematicEntity> entities) {
+            List<ISchematicEntity> entities, List<ISchematicBlock> extraKinds) {
         int length = layers[0].length;
         Blueprint blueprint = new Blueprint();
         blueprint.size = new BlockPos(1, layers.length, length);
@@ -152,6 +157,7 @@ public class BuilderRefloodTester {
                     "the schematic must resolve (and be air exactly for air) for " + state);
             blueprint.palette.add(schematic); // palette index == kind
         }
+        blueprint.palette.addAll(extraKinds); // the caller's own, from FIRST_EXTRA_KIND on
         blueprint.data = new int[layers.length * length];
         for (int y = 0; y < layers.length; y++) {
             for (int z = 0; z < length; z++) {
@@ -207,17 +213,25 @@ public class BuilderRefloodTester {
      *  positions relative to the column's first cell). Their items are the caller's to load. */
     public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls,
             List<ISchematicEntity> entities) {
-        return setUpBuilder(helper, new int[][] {column}, walls, entities);
+        return setUpBuilder(helper, new int[][] {column}, walls, entities, List.of());
+    }
+
+    /** {@link #setUpBuilder(GameTestHelper, int[], BlockPos[], List)} whose palette also holds {@code extraKinds}
+     *  (a schematic captured from a real machine, say), after the built-in kinds: a column entry of
+     *  {@link #FIRST_EXTRA_KIND} places the first of them. Their items are the caller's to load. */
+    public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls,
+            List<ISchematicEntity> entities, List<ISchematicBlock> extraKinds) {
+        return setUpBuilder(helper, new int[][] {column}, walls, entities, extraKinds);
     }
 
     /** {@link #setUpBuilder(GameTestHelper, int[], BlockPos[])} with a blueprint {@code layers.length} high
      *  ({@code layers[y]} the row at the column's height plus {@code y}). */
     public static TileBuilder setUpBuilder(GameTestHelper helper, int[][] layers, BlockPos[] walls) {
-        return setUpBuilder(helper, layers, walls, List.of());
+        return setUpBuilder(helper, layers, walls, List.of(), List.of());
     }
 
     private static TileBuilder setUpBuilder(GameTestHelper helper, int[][] layers, BlockPos[] walls,
-            List<ISchematicEntity> entities) {
+            List<ISchematicEntity> entities, List<ISchematicBlock> extraKinds) {
         // The whole cell: the Builder, its column and the outside water sources can sit in different chunks, and
         // each ticks (and flows) only once its own chunk does. A test that waits on any of it goes through drive,
         // which starts counting only when the cell ticks.
@@ -231,7 +245,7 @@ public class BuilderRefloodTester {
             helper.setBlock(wall, Blocks.STONE);
         }
         ItemStack blueprintStack = makeBlueprint(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5)), layers,
-                entities);
+                entities, extraKinds);
 
         helper.setBlock(BUILDER, BCBuildersBlocks.BUILDER.get().defaultBlockState()
                 .setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));

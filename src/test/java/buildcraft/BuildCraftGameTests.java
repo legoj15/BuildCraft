@@ -218,6 +218,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_claim_filler_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::fillerAsksLikeAPlayerAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
+        // A machine a Builder builds belongs to the Builder's owner (none, for a Builder nobody owns), never to the
+        // owner its blueprint was scanned from: the built tag carries no owner and the Builder stamps its own on it.
+        reg.accept("buildcraftunofficial:blueprint_builder_owns_what_it_builds", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::blueprintBuilderOwnsWhatItBuilds);
+        reg.accept("buildcraftunofficial:blueprint_builder_without_owner_builds_unowned_machine", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::unownedBlueprintBuilderBuildsAnUnownedMachine);
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.
         reg.accept("buildcraftunofficial:builder_stall_floating_torch_cant_stand", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderReportsAFloatingTorchAsCantStand);
         reg.accept("buildcraftunofficial:builder_stall_unbreakable_does_not_block_placing", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderPlacesAroundUnbreakableBlockAndReportsIt);
@@ -554,6 +558,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_placement_leaves_real_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementLeavesARealBlockStanding);
         reg.accept("buildcraftunofficial:fluidmode_placement_leaves_waterlogged_chest_whole", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementLeavesAWaterloggedChestWhole);
         reg.accept("buildcraftunofficial:schematic_single_failed_place_keeps_clicked_block", () -> buildcraft.builders.item.ItemSchematicSingleTester::testFailedPlacementKeepsTheClickedBlock);
+        // A machine or pipe a player builds from a single schematic belongs to that player, not to its captured owner.
+        reg.accept("buildcraftunofficial:schematic_single_places_machine_for_the_player", () -> buildcraft.builders.item.ItemSchematicSingleTester::testPlacedMachineBelongsToThePlacingPlayer);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_block_before_placing", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceBuilderBreaksWaterloggedBlockBeforePlacing);
         reg.accept("buildcraftunofficial:builder_two_cell_block_never_placeable_counts_as_built", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testTwoCellBlockItCanNeverPlaceCountsAsBuilt);
         reg.accept("buildcraftunofficial:builder_refund_to_full_grid_drops_leftover", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testRefundToAFullGridDropsTheLeftover);

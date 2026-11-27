@@ -322,8 +322,9 @@ public class TileQuarry extends TileBC_Neptune
     /**
      * A blueprint build calls no placement hook, and its rules take the original's area out of what it loads (a copy
      * must never work the original's pit), so a Quarry it builds is left with no box and would stay idle. It lays out
-     * its area as a placed one does. The owner is not touched: the Quarry keeps the one the blueprint saved, or none.
-     * A Quarry that somehow has a valid box keeps it.
+     * its area as a placed one does. The owner is not touched, and is not known yet: whoever built the Quarry stamps
+     * their own after the build, so nothing here may use it ({@link #layOutArea} does not). A Quarry that somehow has
+     * a valid box keeps it.
      */
     @Override
     public void onBuiltFromBlueprint() {

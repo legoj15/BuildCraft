@@ -41,6 +41,7 @@ import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.tile.BlueprintOwner;
 
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.snapshot.RequiredExtractor;
@@ -186,6 +187,9 @@ public class ItemSchematicSingle extends Item {
                                 ).isEmpty()
                             )) {
                                 if (schematicBlock.build(world, placePos)) {
+                                    // What a player places belongs to that player, not to whoever the schematic
+                                    // was captured from.
+                                    BlueprintOwner.stamp(world, placePos, player.getGameProfile());
                                     StackUtil.mergeSameItems(requiredItems).forEach(s ->
                                         itemTransactor.extract(
                                             RequiredExtractor.payer(s),

@@ -456,3 +456,11 @@ runner takes `-Mods a,b` for more (the batch wrapper passes `-Mods` on). All of 
 
 The Fabric dev run has no recipe viewer unless asked and Team Reborn Energy only through `tre` (or a mod that nests it: Tech Reborn,
 Energized Power); 1.21.x Fabric nodes carry it always.
+
+## Energy readout: `energy-overlay`
+
+A wrench click on a Creative Engine steps its output and puts the new figure over the hotbar. The server sends a raw
+amount and the client words it (`MessageEnergyOverlay`), so this is the one place that handler runs in a real client
+(#258). 16 steps, two shots, every loader. With `marker-relog` (the marker handlers across three disconnects) and the
+Fabric client game test (`:26.3-fabric:runClientGameTest`: pipes with wires and a gate, markers, a laser, screens) it is
+the in-client pass for a change to the clientbound packet handlers.

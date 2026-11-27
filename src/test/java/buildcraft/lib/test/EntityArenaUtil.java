@@ -432,6 +432,23 @@ public final class EntityArenaUtil {
         return gateOnReady(cellReady(gth), gth::fail, readyTicks, workTicks, condition, stalled);
     }
 
+    /** A gated condition in two parts: its first call runs {@code act} and answers {@code false}, every later call
+     *  asks {@code look}. Behind {@link #whenCellTicking} that puts the act on the first tick the whole cell ticks,
+     *  so nothing it starts runs unwatched while the gate is still shut: the shape for a test whose act starts
+     *  something that passes (stacks travelling down a pipe, a drop that falls). A failed assertion in
+     *  {@code act} fails the poll like one in the condition. */
+    public static BooleanSupplier actThenLook(Runnable act, BooleanSupplier look) {
+        boolean[] acted = { false };
+        return () -> {
+            if (!acted[0]) {
+                acted[0] = true;
+                act.run();
+                return false;
+            }
+            return look.getAsBoolean();
+        };
+    }
+
     /** {@link #whenCellTicking} for a poll that only looks for something that already exists or is made outside a
      *  block entity's tick: a drop the test made before the poll, or one a level-tick hook makes (the stripes
      *  pipe's extension manager). Entities tick before block entities do, by a dozen ticks on a loaded machine,

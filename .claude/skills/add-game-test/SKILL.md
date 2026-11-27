@@ -258,10 +258,15 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   with the park below (12 on a loaded machine, 2026-11-26). `whenCellTicking` is shut for that whole gap, which is
   what a condition that acts or counts needs, but an item the test dropped before the poll, or one a level-tick hook
   drops (the stripes pipe's extension manager), is already falling, and an arena has no floor: about ten ticks later
-  it is outside a 1.5 or 3 block scan. `robot_harvest_reaps_mature_wheat` lost its wheat that way whenever the gap
-  passed ten ticks, and `stripes_lone_pipe_drops_what_it_cannot_send_back` failed once in a full suite. Two ways out.
-  Make the drop inside the gated condition (its first call acts, later calls look: `DropArenaUtil.awaitDrops` is
-  built that way), or, when the drop has to come first, poll with `EntityArenaUtil.watchingCell(helper, READY, WORK,
+  it is outside a scan a block or two wide (the drop harness measured a radius of 1 lost on tick 9). The same goes
+  for anything else that passes: stacks sent down a pipe have travelled on some fifty ticks later. That gap lost
+  `robot_harvest_reaps_mature_wheat` its wheat whenever it passed ten ticks, and in full suite runs on a loaded
+  machine it failed `stripes_lone_pipe_drops_what_it_cannot_send_back` (gate open on tick 12) and
+  `stripes_item_pipe_extends_line` (tick 53). A negative check is hit the other way round: "nothing was dropped"
+  passes once the drop has fallen out of its box. Two ways out. Make the act the gate's first call
+  (`EntityArenaUtil.actThenLook(act, look)`: the first call acts, later calls look; the stripes move tests and
+  `DropArenaUtil.awaitDrops` are built that way), so nothing it starts runs while the gate is shut. Or, when the act
+  has to come first, poll with `EntityArenaUtil.watchingCell(helper, READY, WORK,
   look)`: it asks `look` from the tick the cell's entities tick and ends on a true answer, while the work budget
   still starts only with the block entities. `look` must be a pure look: no setup, no spawn, no count of its own
   polls, because its first calls come before block entities tick (a 20-poll hold on that gate could pass before
@@ -282,7 +287,9 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   working, a scheduled fluid tick) gets `forceLoadCell` and `whenCellTicking`, a one-block rig included: its chunk's
   promotion and entity read are the machine's clock, and a budget counted from tick 1 charges them to the code under
   test. A robot's first tick and a drop that must become visible to a scan are entities and need only the entity
-  predicate, but go through the same gate when they share a poll with such a block entity (the drop harness does).
+  predicate; they go through the same gate when they share a poll with such a block entity, and then the robot is
+  spawned or the drop made on the gate's first call, never before it (the drop harness does both; see the half-awake
+  gap above).
   Two kinds do not use it: a poll whose condition is itself `isEntityTicking`/`isCellEntityTicking`/
   `areBlockEntitiesTicking`/`isCellTicking` (its whole budget is the
   readiness wait and its body is synchronous), and a poll that drives the machine by hand on every poll tick (the

@@ -14,12 +14,15 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -34,6 +37,7 @@ import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.statement.StatementTypeParam;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -44,6 +48,10 @@ import buildcraft.silicon.gate.EnumGateMaterial;
 import buildcraft.silicon.gate.EnumGateModifier;
 import buildcraft.silicon.gate.GateLogic;
 import buildcraft.silicon.gate.GateVariant;
+import buildcraft.silicon.plug.FacadeInstance;
+import buildcraft.silicon.plug.FacadePhasedState;
+import buildcraft.silicon.plug.FacadeStateManager;
+import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.silicon.plug.PluggableGate;
 
 import buildcraft.transport.BCTransportBlocks;
@@ -474,6 +482,143 @@ public class SchematicBlockPipeTester {
                                 == BCTransportStatements.ACTION_PIPE_DIRECTION[Direction.EAST.ordinal()],
                 "The built gate's action must be the EAST pipe-direction action");
         helper.succeed();
+    }
+
+    /**
+     * A facade draws a block state, and a rotated blueprint turns that state with the pipe: an oak log lying along X
+     * lies along Z after a quarter turn and along X again after a half turn. The tag is the one
+     * {@code PluggableFacade.writeToNbt} writes ({@code plugs.north.data.facade.states[i].state}), made from real
+     * objects, with a facade that shows two states (the second has nothing to turn), is hollow and has its second
+     * state active. What the turn leaves alone: that second state, the facade's colours, hollow flag and active state,
+     * and every element the turn cannot read as a facade state (no state at all, an empty state, a block that does not
+     * exist, a property value the block lacks), none of which may throw. The input tag is never touched.
+     */
+    public static void pipeSchematicRotatesFacadeState(GameTestHelper helper) {
+        BlockState logAlongX = Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X);
+        BlockState logAlongZ = Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.Z);
+        BlockState stone = Blocks.STONE.defaultBlockState();
+        for (BlockState needed : List.of(logAlongX, logAlongZ, stone)) {
+            helper.assertTrue(FacadeStateManager.allFacadeStates.containsKey(needed),
+                    needed + " must be a state a facade may show on this server, or this test proves nothing");
+        }
+
+        FacadeInstance shown = new FacadeInstance(new FacadePhasedState[] {
+                FacadeStateManager.allFacadeStates.get(logAlongX).createPhased(DyeColor.RED),
+                FacadeStateManager.allFacadeStates.get(stone).createPhased(DyeColor.BLUE) }, true);
+        PluggableFacade facade = new PluggableFacade(BCSiliconPlugs.facade, null, Direction.NORTH, shown);
+        facade.activeState = 1;
+        CompoundTag entry = new CompoundTag();
+        entry.putString("id", BCSiliconPlugs.facade.identifier.toString());
+        entry.put("data", facade.writeToNbt());
+        // What a damaged or hand-made blueprint can carry after the two real states (the writer makes none of these).
+        CompoundTag facadeTag = NBTUtilBC.getCompound(NBTUtilBC.getCompound(entry, "data"), "facade");
+        ListTag writtenStates = NBTUtilBC.getList(facadeTag, "states", Tag.TAG_COMPOUND);
+        writtenStates.add(new CompoundTag());
+        writtenStates.add(facadeElement(new CompoundTag()));
+        writtenStates.add(facadeElement(namedState("buildcraftunofficial:no_such_block", null, null)));
+        writtenStates.add(facadeElement(namedState("minecraft:white_glazed_terracotta", "facing", "sideways")));
+        facadeTag.put("states", writtenStates);
+
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        placePipe(helper, pipePos, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        SchematicBlockPipe captured = capture(helper, pipePos);
+        CompoundTag plugs = new CompoundTag();
+        plugs.put(Direction.NORTH.getName(), entry);
+        captured.tileNbt.put("plugs", plugs);
+        CompoundTag input = captured.tileNbt.copy();
+        ListTag capturedStates = facadeStatesOf(input, "north");
+
+        ISchematicBlock quarter = captured.getRotated(Rotation.CLOCKWISE_90);
+        helper.assertTrue(NBTUtilBC.getCompound(plugsOf(quarter), "north").isEmpty()
+                        && !NBTUtilBC.getCompound(plugsOf(quarter), "east").isEmpty(),
+                "The facade must move from NORTH to EAST");
+        assertFacadeStatesAfterTurn(helper, plugsOf(quarter), "east", logAlongZ, input, capturedStates, "CLOCKWISE_90");
+
+        ISchematicBlock half = captured.getRotated(Rotation.CLOCKWISE_180);
+        assertFacadeStatesAfterTurn(helper, plugsOf(half), "south", logAlongX, input, capturedStates, "CLOCKWISE_180");
+
+        // The older layout the facade's reader still takes: the states at the root of its data, no "facade" key.
+        CompoundTag olderData = NBTUtilBC.getCompound(entry, "data").copy();
+        olderData.put("states",
+                NBTUtilBC.getList(NBTUtilBC.getCompound(olderData, "facade"), "states", Tag.TAG_COMPOUND).copy());
+        olderData.remove("facade");
+        CompoundTag olderEntry = entry.copy();
+        olderEntry.put("data", olderData);
+        CompoundTag olderPlugs = new CompoundTag();
+        olderPlugs.put(Direction.NORTH.getName(), olderEntry);
+        SchematicBlockPipe older = capture(helper, pipePos);
+        older.tileNbt.put("plugs", olderPlugs);
+        CompoundTag olderTurned = NBTUtilBC.getCompound(
+                NBTUtilBC.getCompound(plugsOf(older.getRotated(Rotation.CLOCKWISE_90)), "east"), "data");
+        BlockState olderFirst = BlockStateNbt.read(NBTUtilBC.getCompound(
+                NBTUtilBC.getCompound(NBTUtilBC.getList(olderTurned, "states", Tag.TAG_COMPOUND), 0), "state"));
+        helper.assertTrue(olderFirst == logAlongZ && !olderTurned.contains("facade"),
+                "A facade saved in the older layout (its states at the root of its data) must turn too and keep that"
+                        + " layout, got " + olderTurned);
+
+        helper.assertTrue(captured.tileNbt.equals(input), "getRotated must not mutate the original schematic");
+        helper.succeed();
+    }
+
+    /**
+     * Checks the facade of {@link #pipeSchematicRotatesFacadeState} on {@code face} of a rotated blueprint: the first
+     * state is {@code firstState}, still red; and every other thing about it is as captured in {@code input}.
+     */
+    private static void assertFacadeStatesAfterTurn(GameTestHelper helper, CompoundTag rotatedPlugs, String face,
+                                                    BlockState firstState, CompoundTag input,
+                                                    ListTag capturedStates, String label) {
+        CompoundTag entry = NBTUtilBC.getCompound(rotatedPlugs, face);
+        helper.assertTrue(BCSiliconPlugs.facade.identifier.toString().equals(NBTUtilBC.getString(entry, "id", "")),
+                label + ": the " + face + " entry must still be the facade, got " + entry);
+        CompoundTag data = NBTUtilBC.getCompound(entry, "data");
+        CompoundTag facadeTag = NBTUtilBC.getCompound(data, "facade");
+        ListTag states = NBTUtilBC.getList(facadeTag, "states", Tag.TAG_COMPOUND);
+        helper.assertTrue(states.size() == capturedStates.size(),
+                label + ": the facade must keep all " + capturedStates.size() + " states, got " + states.size());
+
+        CompoundTag first = NBTUtilBC.getCompound(states, 0);
+        BlockState read = BlockStateNbt.read(NBTUtilBC.getCompound(first, "state"));
+        helper.assertTrue(read == firstState,
+                label + ": the facade's first state must read back as " + firstState + ", got " + read);
+        helper.assertTrue(NBTUtilBC.readEnum(first.get("activeColour"), DyeColor.class) == DyeColor.RED,
+                label + ": the first state must keep its colour, got " + first);
+        for (int i = 1; i < capturedStates.size(); i++) {
+            helper.assertTrue(NBTUtilBC.getCompound(states, i).equals(NBTUtilBC.getCompound(capturedStates, i)),
+                    label + ": state " + i + " has nothing to turn or cannot be read, and must be left as captured, got "
+                            + NBTUtilBC.getCompound(states, i) + " for " + NBTUtilBC.getCompound(capturedStates, i));
+        }
+        CompoundTag capturedData = NBTUtilBC.getCompound(
+                NBTUtilBC.getCompound(NBTUtilBC.getCompound(input, "plugs"), "north"), "data");
+        helper.assertTrue(NBTUtilBC.getBoolean(facadeTag, "isHollow", false)
+                        == NBTUtilBC.getBoolean(NBTUtilBC.getCompound(capturedData, "facade"), "isHollow", false),
+                label + ": the facade must stay as hollow as it was");
+        helper.assertTrue(NBTUtilBC.getInt(data, "activeState", -1) == NBTUtilBC.getInt(capturedData, "activeState", -2),
+                label + ": the facade must keep its active state, got " + NBTUtilBC.getInt(data, "activeState", -1));
+    }
+
+    /** The {@code states} list of the facade on {@code face} of a pipe tile tag ({@code plugs.<face>.data.facade.states}). */
+    private static ListTag facadeStatesOf(CompoundTag tileNbt, String face) {
+        CompoundTag data = NBTUtilBC.getCompound(NBTUtilBC.getCompound(NBTUtilBC.getCompound(tileNbt, "plugs"), face), "data");
+        return NBTUtilBC.getList(NBTUtilBC.getCompound(data, "facade"), "states", Tag.TAG_COMPOUND);
+    }
+
+    /** One element of a facade's state list: the compound {@code FacadePhasedState.writeToNbt} writes, with the state set. */
+    private static CompoundTag facadeElement(CompoundTag state) {
+        CompoundTag element = new CompoundTag();
+        element.put("state", state);
+        return element;
+    }
+
+    /** A block state tag in the spelling {@code BlockStateNbt.write} uses on every node, naming one property when given. */
+    private static CompoundTag namedState(String block, String property, String value) {
+        CompoundTag state = new CompoundTag();
+        state.putString("Name", block);
+        if (property != null) {
+            CompoundTag properties = new CompoundTag();
+            properties.putString(property, value);
+            state.put("Properties", properties);
+        }
+        return state;
     }
 
     /** One statement as {@code TriggerType}/{@code ActionType} save it: the {@code s} compound of kind and side. */

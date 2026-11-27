@@ -27,6 +27,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.api.transport.EnumWirePart;
@@ -36,10 +37,12 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.GateLogic;
+import buildcraft.silicon.plug.FacadeStateManager;
 
 import buildcraft.transport.BCTransportPipes;
 import buildcraft.transport.block.BlockPipeHolder;
@@ -208,11 +211,11 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
         // keeps its captured compass direction there, so a rotated blueprint would point it the wrong way:
         // rotateDirectionalData turns the pluggables' mounting faces (a facade captured on NORTH would otherwise
         // block the wrong pipe connection and cut off flow), the wire corners (stored by corner and not recomputed
-        // on placement), the face a directional or stripes pipe points at, a diamond pipe's per-face filter rows
-        // and a gate's statement sides and direction-named statements. The facade's mimicked block state and the
-        // runtime state a running pipe rebuilds (flow display, connections) are deliberately not rotated. Rotating
-        // the copy (never this.tileNbt) keeps the unrotated schematic's data out of the rotated one's reach,
-        // rotation NONE included.
+        // on placement), the face a directional or stripes pipe points at, a diamond pipe's per-face filter rows,
+        // a gate's statement sides and direction-named statements, and the block state a facade shows (a log's
+        // axis). The runtime state a running pipe rebuilds (flow display, connections) is deliberately not rotated.
+        // Rotating the copy (never this.tileNbt) keeps the unrotated schematic's data out of the rotated one's
+        // reach, rotation NONE included.
         if (rotated instanceof SchematicBlockPipe pipe && pipe.tileNbt != null) {
             pipe.tileNbt = rotateDirectionalData(pipe.tileNbt, rotation);
         }
@@ -227,17 +230,19 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
      * <li>the {@code plugs} entries, moved onto rotated faces;</li>
      * <li>the logic of a gate among them ({@code plugs.<face>.data.data}): each statement's side and the
      * pipe-direction actions, see {@link GateLogic#rotateNbt};</li>
+     * <li>the block state each facade among them shows ({@code plugs.<face>.data.facade.states[i].state}): a log's
+     * axis, a glazed terracotta's facing. A state turns only when the turned state is one a facade may show
+     * ({@link #facadeMayShow}); one that cannot be read, or turns into a state the reader would not keep, stays as
+     * captured;</li>
      * <li>the {@code wires} pairs, moved onto rotated corners (a wire carries nothing but its corner and its colour,
      * so moving the corner is the whole of its rotation);</li>
      * <li>the face a directional pipe points at ({@code pipe.beh.currentDir}: wooden, iron, emerald, emzuli and
      * daizuli pipes) and the face a stripes pipe works at ({@code pipe.beh.direction});</li>
      * <li>a diamond pipe's filter rows ({@code pipe.beh.filters}), each row moved to the rotated face.</li>
      * </ul>
-     * Left as captured: the facade's mimicked block state (a directional facade (stairs, logs) keeps its captured
-     * orientation; only its mounting face moves, which is what the flow-blocking issue needs), the power flow's display
-     * arrays and the fluid flow's per-face sections (a running pipe sets them again), and the {@code con} connection
-     * mask (recomputed on the pipe's first tick). Travelling items and fluid are cargo, which a build does not carry
-     * over.
+     * Left as captured: the power flow's display arrays and the fluid flow's per-face sections (a running pipe sets
+     * them again), and the {@code con} connection mask (recomputed on the pipe's first tick). Travelling items and
+     * fluid are cargo, which a build does not carry over.
      */
     @Nonnull
     private static CompoundTag rotateDirectionalData(@Nonnull CompoundTag original, Rotation rotation) {
@@ -254,6 +259,7 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
                 CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
                 if (!entry.isEmpty()) {
                     rotateGateLogic(entry, rotation);
+                    rotateFacadeStates(entry, rotation);
                     newPlugs.put(rotation.rotate(face).getName(), entry);
                 }
             }
@@ -296,6 +302,80 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
         if (logic != null) {
             data.put("data", GateLogic.rotateNbt(logic, rotation));
         }
+    }
+
+    /**
+     * Turns, in place, the block states of the facade in a {@code plugs} entry ({@code {id, data}}); any other pluggable
+     * is left as it is. {@code PluggableFacade.writeToNbt} keeps the facade under the entry's {@code data.facade}
+     * (the same tag also takes the older layout its reader accepts, {@code states} at the root of {@code data}), and its
+     * {@code states} list holds one {@code {state, activeColour}} element per phase. Only an element's {@code state}
+     * can change, and only through {@link #rotatedFacadeState}; its colour, and the facade's {@code isHollow} and
+     * {@code activeState}, stay. The caller passes an entry of its own copy of the tile NBT.
+     */
+    private static void rotateFacadeStates(CompoundTag entry, Rotation rotation) {
+        if (BCSiliconPlugs.facade == null
+            || !BCSiliconPlugs.facade.identifier.toString().equals(NBTUtilBC.getString(entry, "id", ""))) {
+            return;
+        }
+        CompoundTag data = NBTUtilBC.getCompoundOrNull(entry, "data");
+        if (data == null) {
+            return;
+        }
+        // The reader's own test for the older layout: a "facade" key names the facade tag, and without one "states"
+        // sits at the root.
+        CompoundTag facade = data.contains("facade") ? NBTUtilBC.getCompoundOrNull(data, "facade") : data;
+        if (facade == null) {
+            return;
+        }
+        ListTag states = NBTUtilBC.getList(facade, "states", Tag.TAG_COMPOUND);
+        for (int i = 0; i < states.size(); i++) {
+            if (states.get(i) instanceof CompoundTag element) {
+                CompoundTag state = NBTUtilBC.getCompoundOrNull(element, "state");
+                CompoundTag turned = state == null ? null : rotatedFacadeState(state, rotation);
+                if (turned != null) {
+                    element.put("state", turned);
+                }
+            }
+        }
+    }
+
+    /**
+     * The tag of the block state in {@code stateTag} turned by {@code rotation}, or {@code null} when the facade keeps
+     * the tag it has: the state does not turn (a block with nothing to turn, or a turn that lands on the same state), a
+     * facade may not show it or the turned one (the reader maps a state it does not know to the default one, which is
+     * worse than the captured orientation), or the tag does not read back as written (a block this game lacks, a
+     * property value the block lacks: the state read is not the one the tag names, and turning it would invent one).
+     * Blueprint data is not guaranteed well formed, so a tag that fails to read is the same case, never an exception.
+     */
+    @Nullable
+    private static CompoundTag rotatedFacadeState(CompoundTag stateTag, Rotation rotation) {
+        try {
+            BlockState state = BlockStateNbt.read(stateTag);
+            if (!BlockStateNbt.readsBack(stateTag, state)) {
+                return null;
+            }
+            // Context-free, like SchematicBlockDefault.getRotated: a blueprint has no level or position to hand over.
+            @SuppressWarnings("deprecation")
+            BlockState turned = state.rotate(rotation);
+            if (turned == state || !facadeMayShow(state) || !facadeMayShow(turned)) {
+                return null;
+            }
+            return BlockStateNbt.write(turned);
+        } catch (RuntimeException e) {
+            LOGGER.debug("Leaving a facade's block state as captured: it cannot be turned ({})",
+                Snapshot.logSafe(e, 256));
+            return null;
+        }
+    }
+
+    /**
+     * Whether a facade keeps {@code state} when it reads it back ({@code FacadeStateManager.keepsOnRead}): it is one
+     * of the states the facade registry accepted (the display map {@code validFacadeStates} is narrowed by the
+     * client's look-alike pass and is not what a facade keeps), or facade generation is switched off, when the
+     * reader keeps any state as itself.
+     */
+    private static boolean facadeMayShow(BlockState state) {
+        return FacadeStateManager.keepsOnRead(state);
     }
 
     /**

@@ -422,6 +422,13 @@ public enum FacadeStateManager implements IFacadeRegistry {
         return info != null ? info : createFallbackInfo(state);
     }
 
+    /** Whether {@link #resolve} gives {@code state} back as itself: it is in {@link #allFacadeStates}, or generation
+     *  is switched off, when the fallback keeps any state. With generation on, a state outside the map reads as the
+     *  default one, so code that rewrites a saved facade state (a rotated blueprint) must not write such a state. */
+    public static boolean keepsOnRead(BlockState state) {
+        return generationDisabled || allFacadeStates.containsKey(state);
+    }
+
     /** Read-path fallback for a saved facade state that is not in {@link #allFacadeStates}.
      *  While generation is disabled the map is empty BY DESIGN rather than because the state is
      *  invalid — reconstruct an ad-hoc info so pre-existing facades keep their identity instead of

@@ -436,6 +436,40 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             concat(BOX_KEYS, "path_count", "currentBasePosIndex"),
             List.of("path_0_x", "path_0_y", "path_0_z", "path_1_x", "path_1_y", "path_1_z"),
             List.of("rotation", "canExcavate", "ownerUUID", "ownerName")),
+        // TileQuarry.writeData: the frame, the mining box inside it, the task under way and the drill's position. The
+        // quarry checks its boxes on load, but only that the block beside it lies on the frame's edge: a copy built
+        // anywhere along that edge would pass and work the original's area, so the rule has to take them out. The
+        // tile is at the origin and the frame starts one block east of it, so this fixture loads as a valid quarry.
+        new Area("quarry", BCBuildersBlocks.QUARRY::get,
+            tag(tag -> {
+                tag.putBoolean("frame_init", true);
+                tag.putInt("frame_minX", 1);
+                tag.putInt("frame_minY", 0);
+                tag.putInt("frame_minZ", -2);
+                tag.putInt("frame_maxX", 5);
+                tag.putInt("frame_maxY", 4);
+                tag.putInt("frame_maxZ", 2);
+                tag.putBoolean("box_init", true);
+                tag.putInt("box_minX", 2);
+                tag.putInt("box_minY", -60);
+                tag.putInt("box_minZ", -1);
+                tag.putInt("box_maxX", 4);
+                tag.putInt("box_maxY", 3);
+                tag.putInt("box_maxZ", 1);
+                tag.putByte("currentTaskId", (byte) 0);
+                tag.putInt("task_breakX", 2);
+                tag.putInt("task_breakY", 1);
+                tag.putInt("task_breakZ", 1);
+                tag.putBoolean("hasDrill", true);
+                tag.putDouble("drillX", 3.5);
+                tag.putDouble("drillY", 2.0);
+                tag.putDouble("drillZ", 0.5);
+                putOwner(tag);
+            }),
+            List.of("frame_init", "frame_minX", "frame_minY", "frame_minZ", "frame_maxX", "frame_maxY", "frame_maxZ",
+                "box_init", "box_minX", "box_minY", "box_minZ", "box_maxX", "box_maxY", "box_maxZ",
+                "currentTaskId", "task_breakX", "task_breakY", "task_breakZ", "hasDrill", "drillX", "drillY", "drillZ"),
+            List.of(), List.of("ownerUUID", "ownerName")),
         // TileMiner.writeData: the position being mined, the tube length that goes with it and the progress on it.
         new Area("mining_well", BCFactoryBlocks.MINING_WELL::get,
             tag(tag -> {

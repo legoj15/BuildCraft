@@ -15,8 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NumericTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -91,7 +91,8 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> implement
 
     // The connected booleans only draw the open sides; a rotated or mirrored state (a blueprint built turned, a
     // structure block) moves each one to the side it turns into. The sides the gate acts on are the tile's openSides,
-    // which a rotated blueprint turns through rotateTileData.
+    // which a rotated blueprint turns through rotateTileData. Nothing else does: a structure block, or a mirror,
+    // turns the drawing alone, and the gate goes on acting on the sides it was saved with until one is toggled.
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return ConnectedSides.rotate(state, CONNECTED_MAP, rotation);
@@ -106,8 +107,9 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> implement
      *  side bits move to the bits of the sides they turn into, and any bit above them is carried over unchanged. */
     @Override
     public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
-        // A tag with no mask, or one that is not a number, is left as it is.
-        if (!(tileNbt.get("openSides") instanceof NumericTag)) {
+        // A tag with no mask, or one that is not a byte (the only shape the gate writes), is left as it is: a mask
+        // of another number type reads as 0 on the newer Minecraft lines, and turning that would close every side.
+        if (!(tileNbt.get("openSides") instanceof ByteTag)) {
             return;
         }
         int sides = NBTUtilBC.getByte(tileNbt, "openSides", (byte) 0) & 0xFF;

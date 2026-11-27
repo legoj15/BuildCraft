@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -48,6 +49,7 @@ import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.lib.tile.BlueprintOwner;
 
 @SuppressWarnings("unchecked")
 public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> {
@@ -817,12 +819,22 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // won't handle fluids — acceptable because fluid-at-placement is mostly a vanilla
         // blockstate concern. Same overload also takes the container-contents mode so chests/
         // hoppers/etc. place either filled (INCLUDE — current behaviour) or empty (IGNORE).
+        BlockEntity before = tile.getWorldBC().getBlockEntity(placeTask.pos);
+        boolean placed;
         if (schematic instanceof SchematicBlockDefault def) {
             boolean includeContents = tile.getContainerContentsMode() != EnumContainerContentsMode.IGNORE;
-            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode(), includeContents)
-                ? PlaceResult.PLACED : PlaceResult.FAILED;
+            placed = def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode(), includeContents);
+        } else {
+            placed = schematic.build(tile.getWorldBC(), placeTask.pos);
         }
-        return schematic.build(tile.getWorldBC(), placeTask.pos) ? PlaceResult.PLACED : PlaceResult.FAILED;
+        if (!placed) {
+            return PlaceResult.FAILED;
+        }
+        // What the Builder built belongs to the Builder's owner (none, for a Builder nobody owns), whoever the
+        // blueprint was scanned from: a machine acts, and asks claim mods, as its owner. A build that placed
+        // nothing (the block entity found before it is still there) stamps nothing.
+        BlueprintOwner.stamp(tile.getWorldBC(), placeTask.pos, tile.getOwner(), before);
+        return PlaceResult.PLACED;
     }
 
     /**

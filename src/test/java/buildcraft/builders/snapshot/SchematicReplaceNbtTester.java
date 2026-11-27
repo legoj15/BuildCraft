@@ -8,10 +8,13 @@ package buildcraft.builders.snapshot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
+
+import com.mojang.authlib.GameProfile;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
@@ -29,6 +32,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.util.ProblemReporter;
 //?}
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -55,12 +59,14 @@ import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.tile.TileLaser;
 import buildcraft.silicon.tile.TileLaserTableBase;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportPipes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
+import buildcraft.transport.tile.TilePipeHolder;
 
 /**
  * A blueprint never rebuilds a machine with the stored energy it was scanned with. The scan keeps the machine's whole
@@ -402,7 +408,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 putOwner(tag);
             }),
             concat(BOX_KEYS, "markerBox", "finished"), List.of(),
-            List.of("inverted", "patternStatement", "ownerUUID", "ownerName")),
+            List.of("inverted", "patternStatement")),
         // TileArchitectTable.writeData: the box, the scan flags that belong to it, then the table's own settings.
         new Area("architect", BCBuildersBlocks.ARCHITECT::get,
             tag(tag -> {
@@ -415,7 +421,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 putOwner(tag);
             }),
             concat(BOX_KEYS, "isValid", "scanning", "scanRefused"), List.of(),
-            List.of("name", "markerBox", "snapshotType", "ownerUUID", "ownerName")),
+            List.of("name", "markerBox", "snapshotType")),
         // TileBuilder.writeData: the box, the path of base positions (a count, then three ints per position) and the
         // index into it, beside the turn and settings that are the Builder's own.
         new Area("builder", BCBuildersBlocks.BUILDER::get,
@@ -435,7 +441,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             }),
             concat(BOX_KEYS, "path_count", "currentBasePosIndex"),
             List.of("path_0_x", "path_0_y", "path_0_z", "path_1_x", "path_1_y", "path_1_z"),
-            List.of("rotation", "canExcavate", "ownerUUID", "ownerName")),
+            List.of("rotation", "canExcavate")),
         // TileQuarry.writeData: the frame, the mining box inside it, the task under way and the drill's position. The
         // quarry checks its boxes on load, but only that the block beside it lies on the frame's edge: a copy built
         // anywhere along that edge would pass and work the original's area, so the rule has to take them out. The
@@ -469,7 +475,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             List.of("frame_init", "frame_minX", "frame_minY", "frame_minZ", "frame_maxX", "frame_maxY", "frame_maxZ",
                 "box_init", "box_minX", "box_minY", "box_minZ", "box_maxX", "box_maxY", "box_maxZ",
                 "currentTaskId", "task_breakX", "task_breakY", "task_breakZ", "hasDrill", "drillX", "drillY", "drillZ"),
-            List.of(), List.of("ownerUUID", "ownerName")),
+            List.of(), List.of()),
         // TileMiner.writeData: the position being mined, the tube length that goes with it and the progress on it.
         new Area("mining_well", BCFactoryBlocks.MINING_WELL::get,
             tag(tag -> {
@@ -482,7 +488,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 putOwner(tag);
             }),
             List.of("hasCurrentPos", "currentPosX", "currentPosY", "currentPosZ", "wantedLength", "progress"),
-            List.of(), List.of("ownerUUID", "ownerName")),
+            List.of(), List.of()),
         // TileLaser.writeData: where the beam ends (laser_*, as doubles) and the cell it targets.
         new Area("laser", BCSiliconBlocks.LASER::get,
             tag(tag -> {
@@ -519,6 +525,15 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             Assertions.assertTrue(scanned.contains(key),
                 area.name() + ": the tile no longer saves \"" + key + "\": " + scanned);
         }
+        // The owner is no area, but it is the one other thing every one of these fixtures names: a machine that saves
+        // it (all but the laser) must have it in the scan, and a copy must not carry it (the same rule
+        // aRebuiltMachineIsNotOwnedByTheBlueprintsOwner checks for the machines of the energy list).
+        boolean owned = area.given().contains("ownerUUID");
+        for (String key : OWNER_KEYS) {
+            Assertions.assertEquals(owned, scanned.contains(key),
+                area.name() + ": the scan must hold the owner under \"" + key + "\" exactly when the tile saves one: "
+                    + scanned);
+        }
 
         CompoundTag scannedBefore = scanned.copy();
         SchematicBlockDefault schematic = schematic(block, scanned);
@@ -528,6 +543,10 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
 
             for (String key : area.removed()) {
                 Assertions.assertFalse(placed.contains(key), mode + ": \"" + key + "\" must not be built: " + placed);
+            }
+            for (String key : OWNER_KEYS) {
+                Assertions.assertFalse(placed.contains(key),
+                    mode + ": the blueprint's owner \"" + key + "\" must not be built: " + placed);
             }
             for (String key : area.kept()) {
                 Assertions.assertEquals(scannedBefore.get(key), placed.get(key), mode + ": \"" + key + "\" must be kept");
@@ -544,6 +563,10 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             for (String key : area.kept()) {
                 Assertions.assertEquals(scannedBefore.get(key), reloaded.get(key),
                     mode + ": \"" + key + "\" must survive the load");
+            }
+            for (String key : OWNER_KEYS) {
+                Assertions.assertFalse(reloaded.contains(key),
+                    mode + ": a rebuilt machine must have no owner of its own to save (\"" + key + "\"): " + reloaded);
             }
         }
         Assertions.assertEquals(scannedBefore, schematic.tileNbt, "building must not touch the schematic's own data");
@@ -562,6 +585,125 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
         }
         Assertions.assertEquals(expected, stored.tileNbtToPlace(true),
             area.name() + ": a stored blueprint must build without the working area too");
+        for (String key : OWNER_KEYS) {
+            Assertions.assertEquals(owned, stored.tileNbt.contains(key),
+                area.name() + ": the stored blueprint still holds the owner it was scanned with (\"" + key + "\"): "
+                    + stored.tileNbt);
+        }
+    }
+
+    // --- A rebuilt block is not owned by the blueprint's owner ---
+
+    private static final List<String> OWNER_KEYS = List.of("ownerUUID", "ownerName");
+
+    private static final UUID BLUEPRINT_OWNER = UUID.fromString(OWNER_ID);
+
+    /**
+     * Every machine and pipe a blueprint rebuilds belongs to whoever builds it (the Builder stamps its own owner on
+     * it, or none), so what the blueprint holds of the owner it was scanned from never reaches the placed tag: a
+     * machine loading it would otherwise act (dig, place, ask claim mods) as someone who never built it. Each machine
+     * of the energy list is given an owner, scanned, and built in both container modes: the built tag has neither
+     * owner key, is the very tag the same scan without its owner builds (what else the rules take out goes either
+     * way), and loads into a machine with no owner; the stored schematic is not touched. A tile that saves no owner
+     * has none to strip.
+     */
+    @Test
+    public void aRebuiltMachineIsNotOwnedByTheBlueprintsOwner() {
+        List<String> carriers = new ArrayList<>();
+        for (Machine machine : MACHINES) {
+            Block block = machine.block().get();
+            BlockEntity tile = newTile(block);
+            if (tile instanceof AbstractBCBlockEntity owned) {
+                owned.setOwner(new GameProfile(BLUEPRINT_OWNER, "Steve"));
+            }
+            CompoundTag scanned = save(tile);
+            boolean carries = scanned.contains("ownerUUID");
+            if (carries) {
+                carriers.add(machine.name());
+            }
+            CompoundTag scannedBefore = scanned.copy();
+            SchematicBlockDefault schematic = schematic(block, scanned);
+            for (boolean includeContents : new boolean[] {true, false}) {
+                String mode = machine.name() + (includeContents ? " (contents placed)" : " (contents ignored)");
+                CompoundTag placed = schematic.tileNbtToPlace(includeContents);
+                for (String key : OWNER_KEYS) {
+                    Assertions.assertFalse(placed.contains(key),
+                        mode + ": the blueprint's owner \"" + key + "\" must not be built: " + placed);
+                }
+                // The owner is the only difference it makes: a scan of the same machine with no owner builds the
+                // same tag (what else the rules take out, the energy and the area, goes either way).
+                CompoundTag ownerless = scannedBefore.copy();
+                for (String key : OWNER_KEYS) {
+                    ownerless.remove(key);
+                }
+                Assertions.assertEquals(schematic(block, ownerless).tileNbtToPlace(includeContents), placed,
+                    mode + ": building the scan must give what building it without its owner gives");
+                BlockEntity rebuilt = newTile(block);
+                load(rebuilt, placed.copy());
+                if (rebuilt instanceof AbstractBCBlockEntity ownable) {
+                    Assertions.assertNull(ownable.getOwner(), mode + ": the rebuilt machine must have no owner yet");
+                }
+            }
+            Assertions.assertEquals(scannedBefore, schematic.tileNbt, machine.name()
+                + ": building must not touch the schematic's own data");
+        }
+        // Liveness: a list whose tiles saved no owner at all would pass without testing anything.
+        Assertions.assertFalse(carriers.isEmpty(),
+            "at least one machine of the list must save an owner once given one, or this checks nothing");
+    }
+
+    /** A pipe holder saves its owner under the same two keys, beside the pipe, and a built pipe holds none. */
+    @Test
+    public void aRebuiltPipeIsNotOwnedByTheBlueprintsOwner() {
+        Block holder = BCTransportBlocks.PIPE_HOLDER.get();
+        CompoundTag stonePipe = compound("pipe", compound(
+            "def", StringTag.valueOf(BCTransportPipes.stoneItem.identifier), "beh", new CompoundTag()));
+        CompoundTag scanned = stonePipe.copy();
+        putOwner(scanned);
+
+        // The fixture is real: a pipe holder reads that owner back from these keys.
+        BlockEntity probe = newTile(holder);
+        load(probe, tag(SchematicReplaceNbtTester::putOwner));
+        Assertions.assertNotNull(((TilePipeHolder) probe).getOwner(),
+            "a pipe holder must read its owner from ownerUUID/ownerName");
+
+        for (boolean includeContents : new boolean[] {true, false}) {
+            Assertions.assertEquals(stonePipe, schematic(holder, scanned).tileNbtToPlace(includeContents),
+                "a rebuilt pipe keeps everything but the owner");
+        }
+        Assertions.assertTrue(scanned.contains("ownerUUID"), "building must not touch the schematic's own data");
+    }
+
+    /** The Filler's retired save shape held the owner in an {@code owner} child, which it still reads as a fallback. */
+    @Test
+    public void aRebuiltFillerLeavesTheRetiredOwnerChildBehind() {
+        Block filler = BCBuildersBlocks.FILLER.get();
+        CompoundTag legacy = compound("owner", compound(
+            "uuid", StringTag.valueOf(OWNER_ID), "name", StringTag.valueOf("Steve")));
+
+        BlockEntity probe = newTile(filler);
+        load(probe, legacy.copy());
+        Assertions.assertNotNull(((TileFiller) probe).getOwner(), "the Filler must still read the retired owner child");
+
+        CompoundTag placed = schematic(filler, legacy).tileNbtToPlace(true);
+        Assertions.assertFalse(placed.contains("owner"), "the retired owner child must not be built: " + placed);
+        BlockEntity rebuilt = newTile(filler);
+        load(rebuilt, placed.copy());
+        Assertions.assertNull(((TileFiller) rebuilt).getOwner(), "the rebuilt Filler must have no owner");
+    }
+
+    /**
+     * Only this mod's block entities are touched: another mod's tile may use these key names for something of its
+     * own, and its data is not ours to edit. A chest stands for it, with the keys on it.
+     */
+    @Test
+    public void aBlockOfAnotherModKeepsKeysThatLookLikeAnOwner() {
+        CompoundTag tag = tag(SchematicReplaceNbtTester::putOwner);
+        tag.put("owner", compound("uuid", StringTag.valueOf(OWNER_ID), "name", StringTag.valueOf("Steve")));
+        CompoundTag placed = schematic(Blocks.CHEST, tag).tileNbtToPlace(true);
+        for (String key : List.of("ownerUUID", "ownerName", "owner")) {
+            Assertions.assertEquals(tag.get(key), placed.get(key), "\"" + key + "\" is not ours to remove: " + placed);
+        }
     }
 
     // --- NBTUtilBC.merge: 1.12.2's replaceNbt semantics ---

@@ -78,6 +78,9 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.BlueprintOwner;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockFiller;
@@ -923,6 +926,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
+            notifyBuiltFromBlueprint(level, blockPos);
             return true;
         }
         // setBlock refused: it returns null only when the cell already holds the placed state, so there is nothing
@@ -966,6 +970,10 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * captured {@link #tileNbt}, so a selector on tile data sees what the Architect saw, not what the strip or an
      * earlier rule left. Null when the schematic has no tile data.
      *
+     * <p>A BuildCraft block entity's owner is taken out of it ({@link BlueprintOwner#strip}), in code and not in a
+     * rule that would have to list every owner-bearing block: a built machine belongs to whoever builds it, and the
+     * caller stamps that owner on it ({@link BlueprintOwner#stamp}) once the build is over.
+     *
      * <p>The zone plans the capture carried ({@link ZoneMapPortability}) go to this world's zone store, each map
      * pointed at its entry. Map locations are not moved with the build: a zone, point or area map still names the
      * world coordinates it named where it was captured.
@@ -982,6 +990,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         CompoundTag placed = JsonRule.applyReplaceNbt(data, rules);
         ZoneMapPortability.settlePlans(placed);
+        BlueprintOwner.strip(placed, blockState.getBlock());
         return placed;
     }
 
@@ -1022,6 +1031,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
         data.putInt("x", blockPos.getX());
         data.putInt("y", blockPos.getY());
         data.putInt("z", blockPos.getZ());
+        // Whatever made this tag, a block entity of this mod (or of an add-on built on its base class) never loads
+        // a blueprint's owner: BlueprintOwner.strip gates on the captured block, this on what is really loaded.
+        if (tileEntity instanceof AbstractBCBlockEntity) {
+            BlueprintOwner.stripKeys(data);
+        }
         try {
             //? if >=1.21.10 {
             tileEntity.loadWithComponents(
@@ -1044,6 +1058,28 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 BuiltInRegistries.BLOCK.getKey(level.getBlockState(blockPos).getBlock()), blockPos,
                 Snapshot.logSafe(e, 256));
             resetBlockEntity(level, blockPos);
+        }
+    }
+
+    /**
+     * Tells the block entity just built at {@code blockPos} that a blueprint built it ({@link BuiltFromBlueprint}), for
+     * a tile that takes something from the world on a placement the build never makes (a Quarry's area). Called by both
+     * build paths after the tile data step, so it runs whether or not the schematic held tile data, and on the fresh
+     * block entity {@link #loadTileData} falls back to; the block entity is read from the level here for that reason.
+     * Server side only. Guarded for the reason {@link #loadTileData} is: a tile that throws must not crash the
+     * server tick, which would recur on every restart while the Builder retries the cell. Here the failure is only
+     * logged (the block entity is not reset) and the placement still counts.
+     */
+    private static void notifyBuiltFromBlueprint(Level level, BlockPos blockPos) {
+        if (level.isClientSide() || !(level.getBlockEntity(blockPos) instanceof BuiltFromBlueprint built)) {
+            return;
+        }
+        try {
+            built.onBuiltFromBlueprint();
+        } catch (RuntimeException e) {
+            LOGGER.warn("Skipping the after-build step of {} at {}: its block entity failed it ({})",
+                BuiltInRegistries.BLOCK.getKey(level.getBlockState(blockPos).getBlock()), blockPos,
+                Snapshot.logSafe(e, 256));
         }
     }
 
@@ -1085,6 +1121,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
+            notifyBuiltFromBlueprint(level, blockPos);
             return true;
         }
         return false;

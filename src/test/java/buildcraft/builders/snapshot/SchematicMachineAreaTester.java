@@ -8,19 +8,28 @@ package buildcraft.builders.snapshot;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.builders.BCBuildersBlocks;
+import buildcraft.builders.BCBuildersConfig;
 import buildcraft.builders.BuilderRefloodTester;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
+import buildcraft.builders.tile.TileQuarry;
+import buildcraft.core.BCCoreConfig;
+import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
+import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.lib.misc.NBTUtilBC;
 
 /**
@@ -32,6 +41,10 @@ import buildcraft.lib.misc.NBTUtilBC;
  * the placed block entity, read after the real {@link SchematicBlockDefault#build}. A Filler loses its box. A Builder
  * loses its path and the index into it (an index past the single base position it falls back to would leave the copy
  * unable to resolve its blueprint at all) and works out its own box from its blueprint and its own position.
+ *
+ * <p>A Quarry takes its area when it is placed, and a blueprint build calls no placement hook, so the build tells it
+ * ({@code BuiltFromBlueprint}): it lays out the area of one a player placed, the volume box or markers behind it if
+ * there are any and its default area otherwise. The two Quarry tests below read the built tile, never the original's.
  */
 public class SchematicMachineAreaTester {
 
@@ -132,6 +145,193 @@ public class SchematicMachineAreaTester {
             }
         }
         helper.succeed();
+    }
+
+    /**
+     * A Quarry that a blueprint builds lays out its area as one a player placed does, and with nothing in the world to
+     * take, that is its default area behind it. The original's area is gone from what the blueprint builds (a copy must
+     * never work the original's pit), so the box a built Quarry holds is its own: the default box for ITS position and
+     * ITS facing, in a turned build too, where the block state's facing was turned before the build. Each built Quarry
+     * has no task and no drill, the original still has its own area, and the stored blueprint still holds it. Both
+     * ways a blueprint places a block ({@code build} and {@code buildWithoutChecks}) are covered, and a schematic
+     * with no saved data for the Quarry as well as one with.
+     *
+     * <p>The default area is 11 blocks wide and reaches far outside this cell. Nothing here ticks (the body is one
+     * tick), so no frame block is placed, no rig spawned, nothing mined; the chunk tickets the area takes at once are
+     * released by the removal, and every Quarry is removed before the test ends.
+     */
+    public static void machineSchematicBuildsQuarryWithItsDefaultArea(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos sourceRel = new BlockPos(1, 2, 1);
+        BlockPos sourceAbs = helper.absolutePos(sourceRel);
+        BlockPos builtRel = new BlockPos(4, 2, 5);
+        BlockPos turnedRel = new BlockPos(3, 2, 5);
+        try {
+            helper.setBlock(sourceRel, quarryState(Direction.SOUTH));
+            TileQuarry source = (TileQuarry) level.getBlockEntity(sourceAbs);
+            helper.assertTrue(source != null, "The placed Quarry must have its block entity");
+            // What a player's placement does: nothing is behind it, so it takes the default area.
+            source.onPlacedBy(null, ItemStack.EMPTY);
+            BlockPos[] sourceArea = defaultQuarryArea(sourceAbs, Direction.SOUTH);
+            assertFrame(helper, source, sourceArea, "The source Quarry must hold the default area from its placement");
+            SchematicBlockDefault captured = capture(helper, sourceRel);
+            helper.assertTrue(NBTUtilBC.getBoolean(captured.tileNbt, "frame_init", false),
+                    "The scan of a Quarry with an area must hold it, got " + captured.tileNbt);
+
+            // A SOUTH quarry lays its area out to the north, and the same blueprint turned a quarter clockwise builds
+            // a WEST quarry, whose area lies to the east.
+            checkBuiltQuarryHasItsDefaultArea(helper, captured, builtRel, Direction.SOUTH, source, "unrotated", false);
+            checkBuiltQuarryHasItsDefaultArea(helper, captured.getRotated(Rotation.CLOCKWISE_90), turnedRel,
+                    Direction.WEST, source, "turned", false);
+            // The build that skips the placement checks is the other path a blueprint places a block by, and a
+            // schematic that holds no saved data for the Quarry (nothing to load, so no load step) must still get its
+            // area from both.
+            SchematicBlockDefault dataless = captured.getRotated(Rotation.NONE);
+            dataless.tileNbt = null;
+            checkBuiltQuarryHasItsDefaultArea(helper, captured, builtRel, Direction.SOUTH, source, "unchecked", true);
+            checkBuiltQuarryHasItsDefaultArea(helper, dataless, builtRel, Direction.SOUTH, source, "dataless", false);
+            checkBuiltQuarryHasItsDefaultArea(helper, dataless, builtRel, Direction.SOUTH, source,
+                    "dataless unchecked", true);
+
+            assertFrame(helper, source, sourceArea, "Building must leave the source Quarry its own area");
+            helper.assertTrue(NBTUtilBC.getBoolean(captured.tileNbt, "frame_init", false),
+                    "Building must not edit the stored blueprint (it still holds the area)");
+        } finally {
+            helper.setBlock(sourceRel, Blocks.AIR);
+            helper.setBlock(builtRel, Blocks.AIR);
+            helper.setBlock(turnedRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A Quarry that a blueprint builds with a volume box behind it takes that box, as one placed there does: its frame
+     * stands over the box's footprint on the Quarry's own level and the box is used up. The blueprint holds no area of
+     * the original's, so what the built Quarry finds behind it is the only thing it can take. A Quarry that already
+     * holds an area is not given another by being told it was built from a blueprint.
+     */
+    public static void machineSchematicBuildsQuarryOntoAVolumeBox(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
+        BlockPos sourceRel = new BlockPos(1, 2, 1);
+        // Facing south, so the cell behind it, (2,2,5), is the box's.
+        BlockPos builtRel = new BlockPos(2, 2, 6);
+        BlockPos builtAbs = helper.absolutePos(builtRel);
+        BlockPos boxMin = helper.absolutePos(new BlockPos(1, 2, 2));
+        BlockPos boxMax = helper.absolutePos(new BlockPos(4, 2, 5));
+        VolumeBox box = null;
+        VolumeBox second = null;
+        try {
+            helper.setBlock(sourceRel, quarryState(Direction.SOUTH));
+            TileQuarry source = (TileQuarry) level.getBlockEntity(helper.absolutePos(sourceRel));
+            helper.assertTrue(source != null, "The placed Quarry must have its block entity");
+            // Placed before the box exists, so the original's own area is the default one and not the box.
+            source.onPlacedBy(null, ItemStack.EMPTY);
+            SchematicBlockDefault captured = capture(helper, sourceRel);
+
+            // The kind of box a resize leaves: confirmed, backed by no markers, and takeable by a machine.
+            box = VolumeBox.fromMarkers(level, boxMin, boxMax, List.of());
+            boxes.volumeBoxes.add(box);
+            helper.assertTrue(captured.build(level, builtAbs), "The Quarry should build into the empty cell");
+            TileQuarry built = (TileQuarry) level.getBlockEntity(builtAbs);
+            helper.assertTrue(built != null, "The built Quarry must have its block entity");
+            // The frame covers the box's footprint on the Quarry's level, and is at least the configured height.
+            int top = Math.max(boxMax.getY(), builtAbs.getY() + BCBuildersConfig.quarryFrameMinHeight.get());
+            assertFrame(helper, built, new BlockPos[] {
+                    new BlockPos(boxMin.getX(), builtAbs.getY(), boxMin.getZ()),
+                    new BlockPos(boxMax.getX(), top, boxMax.getZ())},
+                    "The built Quarry must take the volume box behind it");
+            helper.assertFalse(boxes.volumeBoxes.contains(box),
+                    "The volume box the built Quarry took must be used up");
+            // Told once more that a blueprint built it, a Quarry that holds an area takes nothing: a second box behind
+            // it stays where it is.
+            second = VolumeBox.fromMarkers(level, boxMin, boxMax, List.of());
+            boxes.volumeBoxes.add(second);
+            built.onBuiltFromBlueprint();
+            helper.assertTrue(boxes.volumeBoxes.contains(second),
+                    "A Quarry that already holds its area must not take the box behind it a second time");
+        } finally {
+            boolean removed = box != null && boxes.volumeBoxes.remove(box);
+            removed |= second != null && boxes.volumeBoxes.remove(second);
+            if (removed) {
+                boxes.markDirtyAndBroadcast();
+            }
+            helper.setBlock(sourceRel, Blocks.AIR);
+            helper.setBlock(builtRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Builds {@code schematic} at {@code builtRel} (through {@code buildWithoutChecks} when {@code withoutChecks}) and
+     * checks the Quarry it places: facing {@code facing}, the default area for its own position and facing as its frame
+     * box, the inside of that frame as its mining box (read from what the tile saves, since the box is not public), no
+     * task, no drill, and not the original's frame. Removes the Quarry.
+     */
+    private static void checkBuiltQuarryHasItsDefaultArea(GameTestHelper helper, SchematicBlockDefault schematic,
+            BlockPos builtRel, Direction facing, TileQuarry source, String how, boolean withoutChecks) {
+        ServerLevel level = helper.getLevel();
+        BlockPos builtAbs = helper.absolutePos(builtRel);
+        boolean placed = withoutChecks
+                ? schematic.buildWithoutChecks(level, builtAbs) : schematic.build(level, builtAbs);
+        helper.assertTrue(placed, "The " + how + " Quarry should build into the empty cell");
+        BlockState state = level.getBlockState(builtAbs);
+        Direction builtFacing = state.getValue(HorizontalDirectionalBlock.FACING);
+        helper.assertTrue(builtFacing == facing, "The " + how + " Quarry must face " + facing + ", got " + builtFacing);
+        TileQuarry built = (TileQuarry) level.getBlockEntity(builtAbs);
+        helper.assertTrue(built != null, "The " + how + " Quarry must have its block entity");
+
+        BlockPos[] area = defaultQuarryArea(builtAbs, facing);
+        assertFrame(helper, built, area, "The " + how + " built Quarry must lay out its default area");
+        helper.assertFalse(built.frameBox.min().equals(source.frameBox.min()),
+                "The " + how + " built Quarry must not have the original's frame, got " + built.frameBox);
+
+        // The mining box is the frame's inside: one in from its sides, below its top, down to the configured depth
+        // (the quarry's own level less that depth, or the bottom of the world).
+        CompoundTag saved = built.saveCustomOnly(level.registryAccess());
+        int floor = Math.max(level.getMinY(), builtAbs.getY() - BCCoreConfig.miningMaxDepth.get());
+        int[] expected = {area[0].getX() + 1, floor, area[0].getZ() + 1,
+                area[1].getX() - 1, area[1].getY() - 1, area[1].getZ() - 1};
+        String[] keys = {"box_minX", "box_minY", "box_minZ", "box_maxX", "box_maxY", "box_maxZ"};
+        helper.assertTrue(NBTUtilBC.getBoolean(saved, "box_init", false),
+                "The " + how + " built Quarry must have a mining box, got " + saved);
+        for (int i = 0; i < keys.length; i++) {
+            int actual = NBTUtilBC.getInt(saved, keys[i], Integer.MIN_VALUE);
+            helper.assertTrue(actual == expected[i], "The " + how + " built Quarry's mining box " + keys[i]
+                    + " must be " + expected[i] + " (the inside of its frame), got " + actual + " in " + saved);
+        }
+        helper.assertTrue(built.currentTask == null, "The " + how + " built Quarry must have no task");
+        helper.assertTrue(built.drillPos == null, "The " + how + " built Quarry must have no drill");
+        helper.setBlock(builtRel, Blocks.AIR);
+    }
+
+    /** The frame box of {@code quarry} must be exactly {@code area} ({min, max}). */
+    private static void assertFrame(GameTestHelper helper, TileQuarry quarry, BlockPos[] area, String what) {
+        helper.assertTrue(quarry.frameBox.isInitialized() && quarry.frameBox.min().equals(area[0])
+                        && quarry.frameBox.max().equals(area[1]),
+                what + ": expected " + area[0] + " to " + area[1] + ", got " + quarry.frameBox);
+    }
+
+    private static BlockState quarryState(Direction facing) {
+        return BCBuildersBlocks.QUARRY.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, facing);
+    }
+
+    /**
+     * The area a Quarry at {@code quarry} facing {@code facing} lays out when nothing is there to take, as {min, max}:
+     * 11 blocks wide (5 either side of the Quarry's line), from one block behind it to 11 blocks behind it, standing on
+     * its own level. The rule written out here, not asked of the production code. Its height is 4 above the floor,
+     * which the configured minimum frame height (4 by default) does not raise; a larger configured minimum would, so
+     * the top follows the config.
+     */
+    private static BlockPos[] defaultQuarryArea(BlockPos quarry, Direction facing) {
+        Direction back = facing.getOpposite();
+        Direction side = back.getClockWise();
+        BlockPos near = quarry.relative(back, 1).relative(side, 5);
+        BlockPos far = quarry.relative(back, 11).relative(side, -5);
+        int top = quarry.getY() + Math.max(4, BCBuildersConfig.quarryFrameMinHeight.get());
+        return new BlockPos[] {
+                new BlockPos(Math.min(near.getX(), far.getX()), quarry.getY(), Math.min(near.getZ(), far.getZ())),
+                new BlockPos(Math.max(near.getX(), far.getX()), top, Math.max(near.getZ(), far.getZ()))};
     }
 
     /** Wipes a Builder so removing it spills nothing into the world: the snapshot goes first (a task in flight refunds

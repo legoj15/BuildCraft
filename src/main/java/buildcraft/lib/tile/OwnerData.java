@@ -58,6 +58,13 @@ public final class OwnerData {
         return profileOf(NBTUtilBC.getString(in, "ownerUUID", ""), NBTUtilBC.getString(in, "ownerName", ""));
     }
 
+    /** Takes the owner {@link #writeOwner(CompoundTag, GameProfile)} wrote out of a plain tag, leaving the tag as it
+     *  is when it holds none. */
+    public static void removeOwner(CompoundTag tag) {
+        tag.remove("ownerUUID");
+        tag.remove("ownerName");
+    }
+
     private static void write(BiConsumer<String, String> put, @Nullable GameProfile owner) {
         if (owner != null && GameProfileUtil.getId(owner) != null) {
             put.accept("ownerUUID", GameProfileUtil.getId(owner).toString());

@@ -13,6 +13,10 @@ import net.minecraft.world.level.block.Rotation;
  * rotated asks the block to turn that data too: the block state rotates through {@code BlockState.rotate}, while what
  * the tile saved under its own keys (an engine's powered face, a flood gate's open sides, a Builder's saved turn)
  * stays as it was captured unless the block turns it here.
+ *
+ * <p>Only a blueprint built rotated calls this ({@code SchematicBlockDefault.getRotated}). A vanilla structure block
+ * turns the block state alone, and there is no mirror counterpart: what such a tile saved keeps its captured
+ * direction there.
  */
 public interface RotatedTileData {
     /**

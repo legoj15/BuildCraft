@@ -69,5 +69,43 @@
             "target_z": null,
             "has_target": null
         }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:quarry"
+        ],
+        "replaceNbt": {
+            "frame_init": null,
+            "frame_minX": null,
+            "frame_minY": null,
+            "frame_minZ": null,
+            "frame_maxX": null,
+            "frame_maxY": null,
+            "frame_maxZ": null,
+            "box_init": null,
+            "box_minX": null,
+            "box_minY": null,
+            "box_minZ": null,
+            "box_maxX": null,
+            "box_maxY": null,
+            "box_maxZ": null,
+            "currentTaskId": null,
+            "task_breakX": null,
+            "task_breakY": null,
+            "task_breakZ": null,
+            "task_frameX": null,
+            "task_frameY": null,
+            "task_frameZ": null,
+            "task_fromX": null,
+            "task_fromY": null,
+            "task_fromZ": null,
+            "task_toX": null,
+            "task_toY": null,
+            "task_toZ": null,
+            "hasDrill": null,
+            "drillX": null,
+            "drillY": null,
+            "drillZ": null
+        }
     }
 ]

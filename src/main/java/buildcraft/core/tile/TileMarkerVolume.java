@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.tile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -146,25 +145,6 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
             Block.popResource(level, p, new ItemStack(markerState.getBlock()));
             level.destroyBlock(p, false);
         }
-    }
-
-    /**
-     * The blocks {@link #removeFromWorld} breaks: every position of this marker's connection that holds a block (a
-     * marker of the connection, this one included), none without a connection. A machine about to take the markers
-     * asks protection mods about exactly these first.
-     */
-    public List<BlockPos> getRemovedPositions() {
-        VolumeConnection connection = getCurrentConnection();
-        if (level == null || connection == null) {
-            return List.of();
-        }
-        List<BlockPos> removed = new ArrayList<>();
-        for (BlockPos p : ImmutableList.copyOf(connection.getMarkerPositions())) {
-            if (!level.getBlockState(p).isAir()) {
-                removed.add(p);
-            }
-        }
-        return removed;
     }
 
     @Override

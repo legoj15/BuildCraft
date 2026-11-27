@@ -298,7 +298,7 @@ public class SchematicMachineAreaTester {
      * taking it breaks the markers: it asks claim mods about them first, and asks as whoever built it. Its owner is
      * set before it lays out its area, so the claim sees the builder (Bob) and never the mod's own profile, which an
      * unowned Quarry asks as. The claim watches the far marker, which the Quarry does not stand against, and allows
-     * the break; refusals are {@code TileQuarryMarkerProtectionTester}'s, on the same code path.
+     * the break; refusals are {@code MarkerTakingProtectionTester}'s, on the same code path.
      *
      * <p>The schematic is captured from a Quarry that was never placed (no area of its own to take the markers with),
      * and the built Quarry is removed in the tick it was built in, before it ever ticks.

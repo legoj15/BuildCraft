@@ -6,6 +6,7 @@
 
 package buildcraft.lib.tile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.Direction;
@@ -105,6 +106,27 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
                 cache.removeMarker(getBlockPos());
             }
         }
+    }
+
+    /**
+     * The blocks taking these markers breaks ({@code removeFromWorld} on a volume or path marker): every position of
+     * this marker's connection that holds a block, this marker's own included, and none without a connection. A
+     * machine about to take the markers asks protection mods about exactly these first
+     * ({@link buildcraft.lib.misc.BlockUtil#canMachineBreakAll}).
+     */
+    public List<BlockPos> getRemovedPositions() {
+        C connection = getCurrentConnection();
+        if (level == null || connection == null) {
+            return List.of();
+        }
+        List<BlockPos> removed = new ArrayList<>();
+        // A copy: breaking a marker edits the connection's own list.
+        for (BlockPos p : new ArrayList<>(connection.getMarkerPositions())) {
+            if (!level.getBlockState(p).isAir()) {
+                removed.add(p);
+            }
+        }
+        return removed;
     }
 
     protected void disconnectFromOthers() {

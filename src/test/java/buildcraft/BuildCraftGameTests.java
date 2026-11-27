@@ -520,9 +520,12 @@ public class BuildCraftGameTests {
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
         reg.accept("buildcraftunofficial:quarry_adopts_resized_marker_box", () -> buildcraft.builders.tile.TileQuarryAreaAdoptionTester::adoptsResizedMarkerBox);
-        // Taking a marker volume breaks its markers: a Quarry asks claim mods first, as its owner, and refused anywhere
-        // leaves them standing and lays out its default area.
-        reg.accept("buildcraftunofficial:quarry_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.TileQuarryMarkerProtectionTester::quarryLeavesMarkersItMayNotBreak);
+        // Taking markers breaks them: a Quarry, Filler, Architect Table or Builder asks claim mods first, as its
+        // owner, and refused anywhere leaves them standing and is what it is with no markers there.
+        reg.accept("buildcraftunofficial:quarry_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::quarryLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:filler_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::fillerLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:architect_table_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::architectTableLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:builder_leaves_path_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderLeavesPathMarkersItMayNotBreak);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);

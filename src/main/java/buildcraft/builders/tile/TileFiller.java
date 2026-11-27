@@ -56,6 +56,7 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.Box;
@@ -217,6 +218,11 @@ public class TileFiller extends TileBC_Neptune
         VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
         IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
+        if (volumeBox == null && area != null && !mayTakeArea(area)) {
+            // Refused: the markers stay as they were, and the Filler is as it is with no markers behind it.
+            area = null;
+        }
+
         if (volumeBox != null) {
             box.reset();
             box.setMin(volumeBox.box.min());
@@ -246,6 +252,17 @@ public class TileFiller extends TileBC_Neptune
         if (level != null && !level.isClientSide()) {
             markForRenderUpdate();
         }
+    }
+
+    /**
+     * May this Filler take {@code area}? Taking markers breaks every marker of their connection, so the owner (the
+     * placer, recorded above) is asked about each, the way the Filler asks before it clears a block. A one-shot volume
+     * box is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked
+     * about.
+     */
+    private boolean mayTakeArea(IAreaProvider area) {
+        return !(area instanceof TileMarkerVolume marker)
+            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
     }
 
     /** Pins {@code volumeBox} to this Filler's block (no removal; a resize is followed, see {@link #followOwnedBox}) unless

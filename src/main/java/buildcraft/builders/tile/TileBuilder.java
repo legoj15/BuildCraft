@@ -55,6 +55,7 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
@@ -62,6 +63,7 @@ import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.TileMarker;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.block.BlockBuilder;
@@ -271,7 +273,12 @@ public class TileBuilder extends TileBC_Neptune
         BlockEntity inFront = level.getBlockEntity(worldPosition.relative(facing.getOpposite()));
         if (inFront instanceof IPathProvider provider) {
             ImmutableList<BlockPos> copiedPath = ImmutableList.copyOf(provider.getPath());
-            if (copiedPath.size() >= 2) {
+            // Taking the path breaks its markers, so the owner (recorded just above) is asked about each first, as
+            // the Builder asks before it breaks a block; refused, the markers stay and the Builder has no path, as
+            // with none behind it. Any other path provider is asked about its path's positions.
+            List<BlockPos> removed =
+                provider instanceof TileMarker<?> marker ? marker.getRemovedPositions() : copiedPath;
+            if (copiedPath.size() >= 2 && BlockUtil.canMachineBreakAll(level, removed, getOwner())) {
                 path = copiedPath;
                 provider.removeFromWorld();
             }

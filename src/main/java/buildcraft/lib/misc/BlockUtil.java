@@ -7,6 +7,7 @@
 package buildcraft.lib.misc;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -290,6 +291,24 @@ public class BlockUtil {
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
             return askBreak(level, pos, lease.player());
         }
+    }
+
+    /**
+     * {@link #canMachineBreak} for every one of {@code positions}, stopping at the first refusal: whether a machine
+     * owned by {@code owner} may break all of them. For an action that breaks a set of blocks or none at all, such as
+     * a machine taking the markers placed against it ({@link buildcraft.lib.tile.TileMarker#getRemovedPositions}),
+     * where one refusal must leave every block standing. True off the server, where nothing is broken.
+     */
+    public static boolean canMachineBreakAll(Level level, Collection<BlockPos> positions, @Nullable GameProfile owner) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return true;
+        }
+        for (BlockPos pos : positions) {
+            if (!canMachineBreak(serverLevel, pos, owner)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

@@ -457,8 +457,8 @@ public class TileQuarry extends TileBC_Neptune
     /**
      * May this quarry take {@code marker}'s volume? Taking it breaks every marker of the connection
      * ({@link TileMarkerVolume#getRemovedPositions}), so each one is asked about as the owner, the way the quarry asks
-     * before it mines a block ({@link BlockUtil#canMachineBreak}; an unowned quarry asks as the mod's own profile). A
-     * refusal anywhere refuses the volume, and is remembered in {@code refused} for the rest of this one search. No
+     * before it mines a block ({@link BlockUtil#canMachineBreakAll}; an unowned quarry asks as the mod's own profile).
+     * A refusal anywhere refuses the volume, and is remembered in {@code refused} for the rest of this one search. No
      * {@code RefusalMemory} past that: the search runs once per placement or build, never on a tick.
      */
     private boolean mayTakeMarkers(TileMarkerVolume marker, Set<VolumeConnection> refused) {
@@ -466,18 +466,13 @@ public class TileQuarry extends TileBC_Neptune
         if (connection != null && refused.contains(connection)) {
             return false;
         }
-        if (!(level instanceof ServerLevel serverLevel)) {
+        if (BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner())) {
             return true;
         }
-        for (BlockPos pos : marker.getRemovedPositions()) {
-            if (!BlockUtil.canMachineBreak(serverLevel, pos, getOwner())) {
-                if (connection != null) {
-                    refused.add(connection);
-                }
-                return false;
-            }
+        if (connection != null) {
+            refused.add(connection);
         }
-        return true;
+        return false;
     }
 
     /**

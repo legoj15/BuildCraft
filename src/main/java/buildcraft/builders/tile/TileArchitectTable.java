@@ -50,6 +50,7 @@ import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.nbt.NbtSquisher;
@@ -275,6 +276,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
         cachedLivePreview = null;
 
+        // The owner first: taking the markers below asks as the owner.
+        super.onPlacedBy(placer, stack);
+
         BlockState blockState = level.getBlockState(worldPosition);
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
@@ -283,6 +287,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
         IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
+
+        if (volumeBox == null && area != null && !mayTakeArea(area)) {
+            // Refused: the markers stay as they were, and the table is as it is with no markers behind it.
+            area = null;
+        }
 
         if (volumeBox != null) {
             box.reset();
@@ -320,15 +329,23 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             isValid = false;
         }
 
-        // Call parent to set the owner properly
-        super.onPlacedBy(placer, stack);
-
         setChanged();
         // No-re-mesh push: the scan box drives the architect BER and the owner feeds the GUI ledger;
         // the block model is unchanged.
         if (level != null && !level.isClientSide()) {
             markForRenderUpdate();
         }
+    }
+
+    /**
+     * May this table take {@code area}? Taking markers breaks every marker of their connection, so the owner (the
+     * placer, recorded first in {@link #onPlacedBy}) is asked about each, with the same probe the mining machines use.
+     * A one-shot volume box is saved data whose removal breaks no block, and a lone marker has nothing to break, so
+     * neither is asked about.
+     */
+    private boolean mayTakeArea(IAreaProvider area) {
+        return !(area instanceof TileMarkerVolume marker)
+            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
     }
 
     public void tick() {

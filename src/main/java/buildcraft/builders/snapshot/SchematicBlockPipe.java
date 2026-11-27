@@ -231,7 +231,7 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
      * <li>the logic of a gate among them ({@code plugs.<face>.data.data}): each statement's side and the
      * pipe-direction actions, see {@link GateLogic#rotateNbt};</li>
      * <li>the block state each facade among them shows ({@code plugs.<face>.data.facade.states[i].state}): a log's
-     * axis, a glazed terracotta's facing, a stair's. A state turns only when the turned state is one a facade may show
+     * axis, a glazed terracotta's facing. A state turns only when the turned state is one a facade may show
      * ({@link #facadeMayShow}); one that cannot be read, or turns into a state the reader would not keep, stays as
      * captured;</li>
      * <li>the {@code wires} pairs, moved onto rotated corners (a wire carries nothing but its corner and its colour,
@@ -369,15 +369,13 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
     }
 
     /**
-     * Whether a facade keeps {@code state} when it reads it back: it is one of the states the facade registry accepted
-     * ({@code allFacadeStates}, which {@code FacadeStateManager.resolve} reads saved facades against; the display map
-     * {@code validFacadeStates} is narrowed by the client's look-alike pass and is not what a facade keeps), or that
-     * registry is empty, which is the case while facade generation is switched off, when the reader keeps any state
-     * as itself.
+     * Whether a facade keeps {@code state} when it reads it back ({@code FacadeStateManager.keepsOnRead}): it is one
+     * of the states the facade registry accepted (the display map {@code validFacadeStates} is narrowed by the
+     * client's look-alike pass and is not what a facade keeps), or facade generation is switched off, when the
+     * reader keeps any state as itself.
      */
     private static boolean facadeMayShow(BlockState state) {
-        Map<BlockState, ?> known = FacadeStateManager.allFacadeStates;
-        return known.isEmpty() || known.containsKey(state);
+        return FacadeStateManager.keepsOnRead(state);
     }
 
     /**

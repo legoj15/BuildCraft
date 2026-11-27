@@ -527,8 +527,6 @@ public class SchematicBlockPipeTester {
         captured.tileNbt.put("plugs", plugs);
         CompoundTag input = captured.tileNbt.copy();
         ListTag capturedStates = facadeStatesOf(input, "north");
-        helper.assertTrue(capturedStates.size() == 6,
-                "The facade built for this test must hold six states, got " + capturedStates.size());
 
         ISchematicBlock quarter = captured.getRotated(Rotation.CLOCKWISE_90);
         helper.assertTrue(NBTUtilBC.getCompound(plugsOf(quarter), "north").isEmpty()
@@ -538,6 +536,25 @@ public class SchematicBlockPipeTester {
 
         ISchematicBlock half = captured.getRotated(Rotation.CLOCKWISE_180);
         assertFacadeStatesAfterTurn(helper, plugsOf(half), "south", logAlongX, input, capturedStates, "CLOCKWISE_180");
+
+        // The older layout the facade's reader still takes: the states at the root of its data, no "facade" key.
+        CompoundTag olderData = NBTUtilBC.getCompound(entry, "data").copy();
+        olderData.put("states",
+                NBTUtilBC.getList(NBTUtilBC.getCompound(olderData, "facade"), "states", Tag.TAG_COMPOUND).copy());
+        olderData.remove("facade");
+        CompoundTag olderEntry = entry.copy();
+        olderEntry.put("data", olderData);
+        CompoundTag olderPlugs = new CompoundTag();
+        olderPlugs.put(Direction.NORTH.getName(), olderEntry);
+        SchematicBlockPipe older = capture(helper, pipePos);
+        older.tileNbt.put("plugs", olderPlugs);
+        CompoundTag olderTurned = NBTUtilBC.getCompound(
+                NBTUtilBC.getCompound(plugsOf(older.getRotated(Rotation.CLOCKWISE_90)), "east"), "data");
+        BlockState olderFirst = BlockStateNbt.read(NBTUtilBC.getCompound(
+                NBTUtilBC.getCompound(NBTUtilBC.getList(olderTurned, "states", Tag.TAG_COMPOUND), 0), "state"));
+        helper.assertTrue(olderFirst == logAlongZ && !olderTurned.contains("facade"),
+                "A facade saved in the older layout (its states at the root of its data) must turn too and keep that"
+                        + " layout, got " + olderTurned);
 
         helper.assertTrue(captured.tileNbt.equals(input), "getRotated must not mutate the original schematic");
         helper.succeed();

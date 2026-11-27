@@ -5,7 +5,6 @@
  */
 package buildcraft.builders;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -14,7 +13,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -144,10 +142,7 @@ public class FillerOwnedVolumeBoxTester {
                 for (int i = 0; i < machines.length; i++) {
                     machines[i] = arena.abs(machineRels[i]);
                 }
-                Set<Integer> itemsBefore = new HashSet<>();
-                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
-                    itemsBefore.add(item.getId());
-                }
+                Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
                 try {
                     if (!(level.getBlockEntity(markers[0]) instanceof TileMarkerVolume volume)) {
                         throw new IllegalStateException("no volume marker tile at " + marker1);
@@ -266,11 +261,7 @@ public class FillerOwnedVolumeBoxTester {
                             || box.box.contains(markers[2]))) {
                         boxes.markDirtyAndBroadcast();
                     }
-                    for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
-                        if (!itemsBefore.contains(item.getId())) {
-                            item.discard();
-                        }
-                    }
+                    EntityArenaUtil.discardNewItems(helper, itemsBefore);
                 }
                 arena.finish();
             }, "Volume markers never registered in the cache");
@@ -505,10 +496,7 @@ public class FillerOwnedVolumeBoxTester {
                 ServerLevel level = helper.getLevel();
                 LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
                 BlockPos fillerAbs = arena.abs(fillerRel);
-                Set<Integer> itemsBefore = new HashSet<>();
-                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
-                    itemsBefore.add(item.getId());
-                }
+                Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
                 try {
                     if (!(level.getBlockEntity(arena.abs(marker1)) instanceof TileMarkerVolume volume)) {
                         throw new IllegalStateException("no volume marker tile at " + marker1);
@@ -585,11 +573,7 @@ public class FillerOwnedVolumeBoxTester {
                         boxes.volumeBoxes.remove(leftover);
                         boxes.markDirtyAndBroadcast();
                     }
-                    for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
-                        if (!itemsBefore.contains(item.getId())) {
-                            item.discard();
-                        }
-                    }
+                    EntityArenaUtil.discardNewItems(helper, itemsBefore);
                 }
                 arena.finish();
             }, "Volume markers never registered in the cache");

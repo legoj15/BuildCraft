@@ -36,11 +36,12 @@ import buildcraft.lib.test.EntityArenaUtil;
 
 /**
  * A machine a Builder builds belongs to the Builder's owner, never to the owner its blueprint was scanned from: the
- * built tag carries no owner, and the Builder stamps its own on what it placed (none, for a Builder nobody owns). A
+ * built tag carries no owner, and the Builder sets its own on what it placed (none, for a Builder nobody owns). A
  * machine that dug as the blueprint's owner could break where only that player may, and a copy of someone's
  * blueprint would hand its builder that player's permissions. The machine is a Quarry, the one that acts on its own
- * the moment it is built (it lays out its default area, which reaches far outside the test's cell; it has no power,
- * so it digs nothing, and is removed with the Builder on every way out).
+ * the moment it is built (the Builder's finish of the build tells it so, and it lays out its default area, which
+ * reaches far outside the test's cell; it has no power, so it digs nothing, and is removed with the Builder on every
+ * way out).
  */
 public class BlueprintBuiltOwnerTester {
 
@@ -117,7 +118,11 @@ public class BlueprintBuiltOwnerTester {
                 return false;
             }
             check(level.getBlockEntity(builtAbs) instanceof TileQuarry, "the built Quarry must have its block entity");
-            GameProfile owner = ((TileQuarry) level.getBlockEntity(builtAbs)).getOwner();
+            TileQuarry quarry = (TileQuarry) level.getBlockEntity(builtAbs);
+            // The Builder finishes the build in the same step that places the block: by now the Quarry has been told a
+            // blueprint built it, and has laid out its area.
+            check(quarry.frameBox.isInitialized(), "the Quarry the Builder built must have laid out its area");
+            GameProfile owner = quarry.getOwner();
             if (builderOwner == null) {
                 check(owner == null,
                         "a Quarry built by a Builder nobody owns must have no owner, got " + describe(owner));

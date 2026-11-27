@@ -39,12 +39,10 @@ public class TileMarkerPath extends TileMarker<PathConnection> implements IPathP
         if (level == null || level.isClientSide()) {
             return;
         }
-        for (BlockPos pos : getPath()) {
+        for (BlockPos pos : getRemovedPositions()) {
             BlockState markerState = level.getBlockState(pos);
-            if (!markerState.isAir()) {
-                Block.popResource(level, pos, new ItemStack(markerState.getBlock()));
-                level.destroyBlock(pos, false);
-            }
+            Block.popResource(level, pos, new ItemStack(markerState.getBlock()));
+            level.destroyBlock(pos, false);
         }
     }
 

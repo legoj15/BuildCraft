@@ -6,8 +6,6 @@ package buildcraft.core.tile;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -140,16 +138,10 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
         if (level == null || level.isClientSide()) {
             return;
         }
-        VolumeConnection connection = getCurrentConnection();
-        if (connection != null) {
-            List<BlockPos> allPositions = ImmutableList.copyOf(connection.getMarkerPositions());
-            for (BlockPos p : allPositions) {
-                BlockState markerState = level.getBlockState(p);
-                if (!markerState.isAir()) {
-                    Block.popResource(level, p, new ItemStack(markerState.getBlock()));
-                    level.destroyBlock(p, false);
-                }
-            }
+        for (BlockPos p : getRemovedPositions()) {
+            BlockState markerState = level.getBlockState(p);
+            Block.popResource(level, p, new ItemStack(markerState.getBlock()));
+            level.destroyBlock(p, false);
         }
     }
 

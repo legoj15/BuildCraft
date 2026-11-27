@@ -50,9 +50,11 @@ import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.nbt.NbtSquisher;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -78,7 +80,8 @@ import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.platform.Platform;
 
-public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, IBCMenuProvider {
+public class TileArchitectTable extends TileBC_Neptune
+        implements IDebuggable, IBCMenuProvider, BuiltFromBlueprint {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect");
@@ -275,6 +278,47 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
         cachedLivePreview = null;
 
+        // The owner first: taking the markers below asks as the owner.
+        super.onPlacedBy(placer, stack);
+
+        takeAreaBehind();
+        setChanged();
+        // No-re-mesh push: the scan box drives the architect BER and the owner feeds the GUI ledger;
+        // the block model is unchanged.
+        if (level != null && !level.isClientSide()) {
+            markForRenderUpdate();
+        }
+    }
+
+    /**
+     * A blueprint build calls no placement hook, and its rules take the original's box and validity out of what it
+     * loads (a copy must never scan the original's area), so a table a blueprint builds is left invalid and scans
+     * nothing. It takes the area behind it as one a player placed does. Its builder's owner is already set
+     * ({@code BlueprintOwner.finishBuild}), so markers it may take are asked about as that owner. Validity is the
+     * test: a table is valid exactly while it holds an area, so one that is valid already keeps what it has, and
+     * with nothing behind it the table is left exactly as it is, as one placed with nothing behind it.
+     */
+    @Override
+    public void onBuiltFromBlueprint() {
+        if (level == null || level.isClientSide() || isValid) {
+            return;
+        }
+        if (takeAreaBehind()) {
+            setChanged();
+            // No-re-mesh push: the scan box drives the architect BER and the owner feeds the GUI ledger;
+            // the block model is unchanged.
+            if (level != null && !level.isClientSide()) {
+                markForRenderUpdate();
+            }
+        }
+    }
+
+    /**
+     * Takes the scan area behind this table, the way a placement looks for one: a free volume box behind it, else
+     * the area of the markers behind it (asked about first, see {@link #mayTakeArea}). Returns true when it took
+     * one; with nothing behind it, or refused, the table is left not valid, with no area.
+     */
+    private boolean takeAreaBehind() {
         BlockState blockState = level.getBlockState(worldPosition);
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
@@ -284,11 +328,19 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
         IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
+        if (volumeBox == null && area != null && !mayTakeArea(area)) {
+            // Refused: the markers stay as they were, and the table is as it is with no markers behind it.
+            area = null;
+        }
+
         if (volumeBox != null) {
             box.reset();
             box.setMin(volumeBox.box.min());
             box.setMax(volumeBox.box.max());
             isValid = true;
+            // The area is the volume box's, which draws itself, so the table draws no outline of its own
+            // (markerBox off; the markers branch below turns it on).
+            markerBox = false;
             volumeBox.locks.add(
                 new Lock(
                     new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
@@ -299,6 +351,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 )
             );
             volumeBoxes.markDirtyAndBroadcast();
+            return true;
         } else if (area != null) {
             // A lone marker has no connection: the table scans its one cell, but there is nothing to take over.
             boolean taken = !(area instanceof TileMarkerVolume marker) || marker.getCurrentConnection() != null;
@@ -316,19 +369,22 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
                     Lock.Target.TargetUsedByMachine.EnumType.STRIPES_READ);
             }
+            return true;
         } else {
             isValid = false;
+            return false;
         }
+    }
 
-        // Call parent to set the owner properly
-        super.onPlacedBy(placer, stack);
-
-        setChanged();
-        // No-re-mesh push: the scan box drives the architect BER and the owner feeds the GUI ledger;
-        // the block model is unchanged.
-        if (level != null && !level.isClientSide()) {
-            markForRenderUpdate();
-        }
+    /**
+     * May this table take {@code area}? Taking markers breaks every marker of their connection, so the owner already
+     * set (the player who placed it, or the builder of a blueprint build; a table with neither has none and asks as
+     * the mod's own profile) is asked about each, with the same probe the mining machines use. A one-shot volume box
+     * is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked about.
+     */
+    private boolean mayTakeArea(IAreaProvider area) {
+        return !(area instanceof TileMarkerVolume marker)
+            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
     }
 
     public void tick() {

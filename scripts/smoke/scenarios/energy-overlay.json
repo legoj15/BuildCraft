@@ -1,0 +1,33 @@
+{
+    "name": "energy-overlay",
+    "description": "The energy readout a server sends as a raw amount and the client words (MessageEnergyOverlay, #258): a wrench click on a Creative Engine steps its output and puts the new figure over the hotbar. One engine on a small platform, three clicks, a shot after each of the last two; the rig is taken down again.",
+    "base": [0, 150, 0],
+    "steps": [
+        { "do": "wait", "ms": 2500 },
+        { "label": "platform and a Creative Engine", "do": "cmd", "run": [
+            "gamemode creative @p",
+            "time set 6000",
+            "weather clear",
+            "fill {X-3} {Y-1} {Z-3} {X+3} {Y-1} {Z+6} minecraft:smooth_stone",
+            "?fill {X-3} {Y} {Z-3} {X+3} {Y+4} {Z+6} minecraft:air",
+            "setblock {X} {Y} {Z+3} buildcraftunofficial:engine_creative"
+        ] },
+        { "do": "wait", "ms": 1500 },
+        { "do": "hold", "item": "buildcraftunofficial:wrench" },
+        { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 20 },
+        { "do": "aim", "at": [0, 0, 3] },
+        { "label": "wrench click: the output steps up", "do": "use" },
+        { "do": "wait", "ms": 600 },
+        { "do": "use" },
+        { "do": "wait", "ms": 600 },
+        { "do": "shot", "name": "overlay-second-click", "look": "a line of text over the hotbar says what the engine was switched to: a number, an energy unit and a rate (per tick or per second, by the client's setting); not a raw translation key, not blank" },
+        { "do": "use" },
+        { "do": "wait", "ms": 600 },
+        { "do": "shot", "name": "overlay-third-click", "look": "the same line with a larger number than the shot before" },
+        { "label": "take the rig down", "do": "cmd", "run": [
+            "setblock {X} {Y} {Z+3} minecraft:air",
+            "clear @p"
+        ] },
+        { "do": "wait", "ms": 500 }
+    ]
+}

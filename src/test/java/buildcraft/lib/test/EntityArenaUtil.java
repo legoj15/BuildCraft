@@ -5,7 +5,9 @@
  */
 package buildcraft.lib.test;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -515,6 +517,25 @@ public final class EntityArenaUtil {
             }
             return false;
         };
+    }
+
+    /** The ids of the item entities in the test's cell now: what {@link #discardNewItems} will leave alone. */
+    public static Set<Integer> itemIdsInCell(GameTestHelper gth) {
+        Set<Integer> ids = new HashSet<>();
+        for (ItemEntity item : gth.getLevel().getEntitiesOfClass(ItemEntity.class, cellBounds(gth))) {
+            ids.add(item.getId());
+        }
+        return ids;
+    }
+
+    /** Discards every item entity in the test's cell that {@code before} ({@link #itemIdsInCell}) does not name: what
+     *  the test dropped since (a taken marker pops as an item), so that no later test finds it. */
+    public static void discardNewItems(GameTestHelper gth, Set<Integer> before) {
+        for (ItemEntity item : gth.getLevel().getEntitiesOfClass(ItemEntity.class, cellBounds(gth))) {
+            if (!before.contains(item.getId())) {
+                item.discard();
+            }
+        }
     }
 
     /** Discards every non-null, still-present entity: the null-safe body of a {@code tickUntil} cleanup. */

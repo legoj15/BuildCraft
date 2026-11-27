@@ -409,7 +409,8 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             }),
             concat(BOX_KEYS, "markerBox", "finished"), List.of(),
             List.of("inverted", "patternStatement")),
-        // TileArchitectTable.writeData: the box, the scan flags that belong to it, then the table's own settings.
+        // TileArchitectTable.writeData: the box, the scan flags that belong to it and whether it came from markers
+        // (a copy takes its own area and works that out again), then the table's own settings.
         new Area("architect", BCBuildersBlocks.ARCHITECT::get,
             tag(tag -> {
                 putBox(tag);
@@ -420,8 +421,8 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 tag.putString("name", "tower");
                 putOwner(tag);
             }),
-            concat(BOX_KEYS, "isValid", "scanning", "scanRefused"), List.of(),
-            List.of("name", "markerBox", "snapshotType")),
+            concat(BOX_KEYS, "isValid", "scanning", "scanRefused", "markerBox"), List.of(),
+            List.of("name", "snapshotType")),
         // TileBuilder.writeData: the box, the path of base positions (a count, then three ints per position) and the
         // index into it, beside the turn and settings that are the Builder's own.
         new Area("builder", BCBuildersBlocks.BUILDER::get,
@@ -599,7 +600,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     private static final UUID BLUEPRINT_OWNER = UUID.fromString(OWNER_ID);
 
     /**
-     * Every machine and pipe a blueprint rebuilds belongs to whoever builds it (the Builder stamps its own owner on
+     * Every machine and pipe a blueprint rebuilds belongs to whoever builds it (the Builder sets its own owner on
      * it, or none), so what the blueprint holds of the owner it was scanned from never reaches the placed tag: a
      * machine loading it would otherwise act (dig, place, ask claim mods) as someone who never built it. Each machine
      * of the energy list is given an owner, scanned, and built in both container modes: the built tag has neither

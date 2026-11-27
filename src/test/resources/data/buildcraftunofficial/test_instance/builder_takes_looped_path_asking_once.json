@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_takes_looped_path_asking_once",
+    "environment": "buildcraftunofficial:builder_takes_looped_path_asking_once",
+    "structure": "minecraft:empty",
+    "max_ticks": 350,
+    "setup_ticks": 0,
+    "required": true
+}

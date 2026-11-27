@@ -56,11 +56,13 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.statement.FullStatement;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -83,7 +85,8 @@ import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.builders.BCBuildersEventDist;
 
 public class TileFiller extends TileBC_Neptune
-        implements IDebuggable, IFillerStatementContainer, IControllable, ITileForTemplateBuilder, IBCMenuProvider {
+        implements IDebuggable, IFillerStatementContainer, IControllable, ITileForTemplateBuilder, IBCMenuProvider,
+        BuiltFromBlueprint {
 
     public static final int INV_SIZE = 27;
 
@@ -208,6 +211,43 @@ public class TileFiller extends TileBC_Neptune
             setOwner(player.getGameProfile());
         }
 
+        takeAreaBehind();
+        updateBuildingInfo();
+        setChanged();
+        // Sync to client so the box data reaches the renderer (BER outline) — no chunk re-mesh needed.
+        if (level != null && !level.isClientSide()) {
+            markForRenderUpdate();
+        }
+    }
+
+    /**
+     * A blueprint build calls no placement hook, and its rules take the original's box out of what it loads (a copy
+     * must never fill the original's area), so a Filler a blueprint builds is left with no box and never builds. It
+     * takes the area behind it as one a player placed does. Its builder's owner is already set
+     * ({@code BlueprintOwner.finishBuild}), so markers it may take are asked about as that owner. The box is the
+     * test: a Filler that already holds an area keeps it, and with nothing behind it the Filler is left exactly as
+     * it is, as one placed with nothing behind it.
+     */
+    @Override
+    public void onBuiltFromBlueprint() {
+        if (level == null || level.isClientSide() || box.isInitialized()) {
+            return;
+        }
+        if (takeAreaBehind()) {
+            updateBuildingInfo();
+            setChanged();
+            if (level != null && !level.isClientSide()) {
+                markForRenderUpdate();
+            }
+        }
+    }
+
+    /**
+     * Takes the working area behind this Filler, the way a placement looks for one: a free volume box behind it,
+     * else the area of the markers behind it (asked about first, see {@link #mayTakeArea}). Returns true when it
+     * took one; with nothing behind it, or refused, the Filler is left with no box.
+     */
+    private boolean takeAreaBehind() {
         BlockState blockState = level.getBlockState(worldPosition);
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
@@ -217,12 +257,18 @@ public class TileFiller extends TileBC_Neptune
         VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
         IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
+        if (volumeBox == null && area != null && !mayTakeArea(area)) {
+            // Refused: the markers stay as they were, and the Filler is as it is with no markers behind it.
+            area = null;
+        }
+
         if (volumeBox != null) {
             box.reset();
             box.setMin(volumeBox.box.min());
             box.setMax(volumeBox.box.max());
             lockVolumeBox(volumeBoxes, volumeBox, blockState);
             markerBox = false;
+            return true;
         } else if (area != null) {
             // A lone marker has no connection: the Filler works on its one cell, but there is nothing to take over.
             boolean taken = !(area instanceof TileMarkerVolume marker) || marker.getCurrentConnection() != null;
@@ -238,14 +284,21 @@ public class TileFiller extends TileBC_Neptune
                 volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
                     Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE);
             }
+            return true;
         }
+        return false;
+    }
 
-        updateBuildingInfo();
-        setChanged();
-        // Sync to client so the box data reaches the renderer (BER outline) — no chunk re-mesh needed.
-        if (level != null && !level.isClientSide()) {
-            markForRenderUpdate();
-        }
+    /**
+     * May this Filler take {@code area}? Taking markers breaks every marker of their connection, so the owner already
+     * set (the player who placed it, or the builder of a blueprint build; a Filler with neither has none and asks as
+     * the mod's own profile) is asked about each, the way the Filler asks before it clears a block. A one-shot volume
+     * box is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked
+     * about.
+     */
+    private boolean mayTakeArea(IAreaProvider area) {
+        return !(area instanceof TileMarkerVolume marker)
+            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
     }
 
     /** Pins {@code volumeBox} to this Filler's block (no removal; a resize is followed, see {@link #followOwnedBox}) unless

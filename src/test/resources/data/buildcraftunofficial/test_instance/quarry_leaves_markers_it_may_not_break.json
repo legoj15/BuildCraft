@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:quarry_leaves_markers_it_may_not_break",
+    "environment": "buildcraftunofficial:quarry_leaves_markers_it_may_not_break",
+    "structure": "minecraft:empty",
+    "max_ticks": 350,
+    "setup_ticks": 0,
+    "required": true
+}

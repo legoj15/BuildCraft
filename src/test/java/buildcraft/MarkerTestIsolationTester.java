@@ -12,8 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -37,9 +40,20 @@ public class MarkerTestIsolationTester {
     private static final String TEST_SOURCES = "src/test/java";
     private static final String RESOURCES = "src/test/resources/data/buildcraftunofficial";
 
-    /** reg.accept("buildcraftunofficial:<id>", () -> ...MarkerTester::<method>) */
-    private static final Pattern MARKER_TESTER_REGISTRATION = Pattern.compile(
-        "reg\\.accept\\(\"buildcraftunofficial:([a-z0-9_/]+)\",\\s*\\(\\)\\s*->\\s*(?:[\\w.]*\\.)?MarkerTester::");
+    /** reg.accept("buildcraftunofficial:<id>", () -> <package>.<Class>::<method>): the id, the class, the method. */
+    private static final Pattern REGISTRATION = Pattern.compile(
+        "reg\\.accept\\(\"buildcraftunofficial:([a-z0-9_/]+)\",\\s*\\(\\)\\s*->\\s*(?:[\\w.]*\\.)?(\\w+)::(\\w+)");
+
+    /** Every test of this class is a marker test, whether it opens a session or tests the sessions themselves. */
+    private static final String MARKER_TESTER = "MarkerTester";
+
+    /** The call that opens a marker session. Opening one clears every stray marker in scan range, so a test that
+     *  does it removes the markers of any marker test running beside it. */
+    private static final String OPENS_SESSION = "MarkerArenaUtil.open(";
+
+    /** A static method declared directly in a test class (one indent step), up to its name. */
+    private static final Pattern METHOD_HEAD =
+        Pattern.compile("(?m)^    (?:public |private |protected )?static [\\w<>\\[\\], .?]+? (\\w+)\\(");
 
     private static final Pattern ENVIRONMENT_FIELD =
         Pattern.compile("\"environment\"\\s*:\\s*\"([a-z0-9_:/]+)\"");
@@ -68,18 +82,93 @@ public class MarkerTestIsolationTester {
         }
     }
 
-    private static List<String> markerTesterIds() {
-        Path registrar = TestHelper.repoRoot().resolve(REGISTRAR);
-        List<String> ids = new ArrayList<>();
-        Matcher m = MARKER_TESTER_REGISTRATION.matcher(read(registrar));
-        while (m.find()) {
-            ids.add(m.group(1));
+    /**
+     * The static methods of {@code source} that open a marker session, themselves or through another method of the
+     * same file (a shared body two tests call). A method runs from its head to the next method's head, so the
+     * Javadoc of the method after it counts as its text: a mention there errs on the side of asking for isolation.
+     */
+    private static Set<String> sessionOpeners(String source) {
+        Map<String, String> bodies = new HashMap<>();
+        Matcher head = METHOD_HEAD.matcher(source);
+        String name = null;
+        int bodyStart = 0;
+        while (head.find()) {
+            if (name != null) {
+                bodies.merge(name, source.substring(bodyStart, head.start()), String::concat);
+            }
+            name = head.group(1);
+            bodyStart = head.end();
         }
-        // Liveness: the five original marker tests plus the three hermeticity tests. An empty or short scan
-        // would make every check below vacuous.
-        Assertions.assertTrue(ids.size() >= 8,
-            "expected at least 8 MarkerTester registrations in " + REGISTRAR + " but found " + ids
-                + " - the registration shape drifted; update MARKER_TESTER_REGISTRATION");
+        if (name != null) {
+            bodies.merge(name, source.substring(bodyStart), String::concat);
+        }
+        Set<String> openers = new HashSet<>();
+        for (boolean grew = true; grew;) {
+            grew = false;
+            for (Map.Entry<String, String> method : bodies.entrySet()) {
+                if (openers.contains(method.getKey())) {
+                    continue;
+                }
+                String body = method.getValue();
+                boolean opens = body.contains(OPENS_SESSION);
+                for (String opener : openers) {
+                    opens = opens || Pattern.compile("\\b" + opener + "\\s*\\(").matcher(body).find();
+                }
+                if (opens) {
+                    openers.add(method.getKey());
+                    grew = true;
+                }
+            }
+        }
+        return openers;
+    }
+
+    /** The ids of the marker tests: every test of {@code MarkerTester}, and every other registered test that opens a
+     *  marker session, in whatever class it lives. */
+    private static List<String> markerTestIds() {
+        Path root = TestHelper.repoRoot();
+        // The session-opening methods of each test class that has any, by the class's simple name.
+        Map<String, Set<String>> openers = new HashMap<>();
+        try (Stream<Path> files = Files.walk(root.resolve(TEST_SOURCES))) {
+            for (Path file : (Iterable<Path>) files.filter(p -> p.toString().endsWith(".java"))::iterator) {
+                String rel = root.relativize(file).toString().replace('\\', '/');
+                String source = read(file);
+                if (MACHINERY.contains(rel) || !source.contains(OPENS_SESSION)) {
+                    continue;
+                }
+                String simpleName = file.getFileName().toString().replace(".java", "");
+                openers.put(simpleName, sessionOpeners(source));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        List<String> ids = new ArrayList<>();
+        int ofMarkerTester = 0;
+        Set<String> classesFound = new HashSet<>();
+        Matcher m = REGISTRATION.matcher(read(root.resolve(REGISTRAR)));
+        while (m.find()) {
+            if (MARKER_TESTER.equals(m.group(2))) {
+                ids.add(m.group(1));
+                ofMarkerTester++;
+            } else if (openers.getOrDefault(m.group(2), Set.of()).contains(m.group(3))) {
+                ids.add(m.group(1));
+                classesFound.add(m.group(2));
+            }
+        }
+        // Liveness: MarkerTester alone registers eight and more, and every other class that opens a session at all
+        // must show at least one registered test that does. A class whose method heads or registrations stopped
+        // matching would otherwise drop out of the check below without a word.
+        Assertions.assertTrue(ofMarkerTester >= 8,
+            "expected at least 8 MarkerTester registrations in " + REGISTRAR + " but found " + ofMarkerTester
+                + " - the registration shape drifted; update REGISTRATION");
+        // Machines that take markers are tested outside MarkerTester, so none at all means the call the scan looks for
+        // was renamed under it: both sets below would be empty, and equal.
+        Assertions.assertFalse(classesFound.isEmpty(),
+            "no registered test outside " + MARKER_TESTER + " was found to call " + OPENS_SESSION + ") - the call was "
+                + "renamed or moved; update OPENS_SESSION");
+        Assertions.assertEquals(openers.keySet(), classesFound,
+            "every test class that calls " + OPENS_SESSION + ") must have a registered test found to do so; the "
+                + "method or registration shape drifted for the classes missing on the right; update the patterns");
         return ids;
     }
 
@@ -89,7 +178,7 @@ public class MarkerTestIsolationTester {
     public void everyMarkerTestHasItsOwnEnvironment() {
         Path root = TestHelper.repoRoot().resolve(RESOURCES);
         List<String> problems = new ArrayList<>();
-        for (String id : markerTesterIds()) {
+        for (String id : markerTestIds()) {
             Path manifest = root.resolve("test_instance/" + id + ".json");
             if (!Files.isRegularFile(manifest)) {
                 problems.add(id + ": no manifest");
@@ -107,7 +196,8 @@ public class MarkerTestIsolationTester {
             }
         }
         Assertions.assertTrue(problems.isEmpty(),
-            "marker tests must each run in their own batch (see MarkerTester's javadoc):\n    "
+            "marker tests must each run in their own batch (see MarkerTester's javadoc; a test is one when it is "
+                + "MarkerTester's or opens a marker session):\n    "
                 + String.join("\n    ", problems));
     }
 

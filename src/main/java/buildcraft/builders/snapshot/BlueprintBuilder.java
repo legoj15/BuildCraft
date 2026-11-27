@@ -831,9 +831,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             return PlaceResult.FAILED;
         }
         // What the Builder built belongs to the Builder's owner (none, for a Builder nobody owns), whoever the
-        // blueprint was scanned from: a machine acts, and asks claim mods, as its owner. A build that placed
-        // nothing (the block entity found before it is still there) stamps nothing.
-        BlueprintOwner.stamp(tile.getWorldBC(), placeTask.pos, tile.getOwner(), before);
+        // blueprint was scanned from: a machine acts, and asks claim mods, as its owner. The owner is set first and
+        // then the built block entity is told a blueprint built it (a Quarry lays out its area then, as that owner).
+        // A build that placed nothing (the block entity found before it is still there) is left alone.
+        BlueprintOwner.finishBuild(tile.getWorldBC(), placeTask.pos, tile.getOwner(), before);
         return PlaceResult.PLACED;
     }
 

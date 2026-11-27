@@ -219,7 +219,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
         // A machine a Builder builds belongs to the Builder's owner (none, for a Builder nobody owns), never to the
-        // owner its blueprint was scanned from: the built tag carries no owner and the Builder stamps its own on it.
+        // owner its blueprint was scanned from: the built tag carries no owner and the Builder sets its own on it.
         reg.accept("buildcraftunofficial:blueprint_builder_owns_what_it_builds", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::blueprintBuilderOwnsWhatItBuilds);
         reg.accept("buildcraftunofficial:blueprint_builder_without_owner_builds_unowned_machine", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::unownedBlueprintBuilderBuildsAnUnownedMachine);
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.
@@ -520,6 +520,14 @@ public class BuildCraftGameTests {
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
         reg.accept("buildcraftunofficial:quarry_adopts_resized_marker_box", () -> buildcraft.builders.tile.TileQuarryAreaAdoptionTester::adoptsResizedMarkerBox);
+        // Taking markers breaks them: a Quarry, Filler, Architect Table or Builder asks claim mods first, as its
+        // owner, and refused anywhere leaves them standing and is what it is with no markers there.
+        reg.accept("buildcraftunofficial:quarry_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::quarryLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:filler_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::fillerLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:architect_table_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::architectTableLeavesMarkersItMayNotBreak);
+        reg.accept("buildcraftunofficial:builder_leaves_path_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderLeavesPathMarkersItMayNotBreak);
+        // A closed loop of path markers names its first marker twice; a Builder placed at it asks about it once.
+        reg.accept("buildcraftunofficial:builder_takes_looped_path_asking_once", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderTakesLoopedPathAskingOnce);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);
@@ -649,6 +657,14 @@ public class BuildCraftGameTests {
         // lays it out the way a placement does: the volume box behind it if there is one, else its default area.
         reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_with_its_default_area", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryWithItsDefaultArea);
         reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_onto_a_volume_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryOntoAVolumeBox);
+        // The build is finished (owner, then the hook) by whoever built it, so the Quarry asks claim mods as its builder
+        // before it breaks the markers it takes.
+        reg.accept("buildcraftunofficial:machine_schematic_quarry_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicQuarryTakesMarkersAsItsBuilder);
+        // A Filler, Architect Table or Builder built from a blueprint takes the markers behind it the same way, as its
+        // builder; a Builder takes the path markers behind it.
+        reg.accept("buildcraftunofficial:machine_schematic_filler_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicFillerTakesMarkersAsItsBuilder);
+        reg.accept("buildcraftunofficial:machine_schematic_architect_table_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicArchitectTableTakesMarkersAsItsBuilder);
+        reg.accept("buildcraftunofficial:machine_schematic_builder_takes_path_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuilderTakesPathAsItsBuilder);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);

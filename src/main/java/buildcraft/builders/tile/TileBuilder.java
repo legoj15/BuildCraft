@@ -55,13 +55,16 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.TileMarker;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.block.BlockBuilder;
@@ -80,7 +83,7 @@ import buildcraft.builders.snapshot.Template;
 import buildcraft.builders.snapshot.TemplateBuilder;
 
 public class TileBuilder extends TileBC_Neptune
-    implements IDebuggable, ITileForTemplateBuilder, ITileForBlueprintBuilder, IBCMenuProvider {
+    implements IDebuggable, ITileForTemplateBuilder, ITileForBlueprintBuilder, IBCMenuProvider, BuiltFromBlueprint {
 
     public static final int RESOURCE_SLOTS = 27;
     public static final int TANK_COUNT = 4;
@@ -267,17 +270,56 @@ public class TileBuilder extends TileBC_Neptune
         // fails with a null-owner exception deep inside TemplateAPI.
         super.onPlacedBy(placer, stack);
 
-        Direction facing = getBlockState().getValue(HorizontalDirectionalBlock.FACING);
-        BlockEntity inFront = level.getBlockEntity(worldPosition.relative(facing.getOpposite()));
-        if (inFront instanceof IPathProvider provider) {
-            ImmutableList<BlockPos> copiedPath = ImmutableList.copyOf(provider.getPath());
-            if (copiedPath.size() >= 2) {
-                path = copiedPath;
-                provider.removeFromWorld();
-            }
-        }
+        takePathBehind();
         updateBasePoses();
         updateSnapshot(true);
+    }
+
+    /**
+     * A blueprint build calls no placement hook, and its rules take the original's path out of what it loads (a copy
+     * must never follow the original's route), so a Builder a blueprint builds is left with no path and works from
+     * the one position behind it. It takes the path behind it as one a player placed does. Its builder's owner is
+     * already set ({@code BlueprintOwner.finishBuild}), so path markers it may take are asked about as that owner.
+     * The path is the test: one that already holds a path keeps it, and with nothing behind it the Builder is left
+     * exactly as it is. The follow-ups a placement makes run only when a path was taken: a built Builder that took
+     * nothing and holds a blueprint already worked it out against its own single base position while its data
+     * loaded, and {@code updateSnapshot(true)} would lay the same blueprint out again for no reason; one that holds
+     * none has nothing to lay out until it is given one ({@link #onSnapshotSlotChanged}).
+     */
+    @Override
+    public void onBuiltFromBlueprint() {
+        if (level == null || level.isClientSide() || path != null) {
+            return;
+        }
+        if (takePathBehind()) {
+            updateBasePoses();
+            updateSnapshot(true);
+        }
+    }
+
+    /**
+     * Takes the path of the {@link IPathProvider} behind this Builder (path markers, usually), the way a placement
+     * looks for one. Returns true when it took a path; with none behind it, or refused, the Builder has no path.
+     */
+    private boolean takePathBehind() {
+        Direction facing = getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+        BlockEntity inFront = level.getBlockEntity(worldPosition.relative(facing.getOpposite()));
+        if (!(inFront instanceof IPathProvider provider)) {
+            return false;
+        }
+        ImmutableList<BlockPos> copiedPath = ImmutableList.copyOf(provider.getPath());
+        // Taking the path breaks its markers, so the owner (recorded by the placement, and the builder's own for one
+        // a blueprint built) is asked about each first, as the Builder asks before it breaks a block; refused, the
+        // markers stay and the Builder has no path, as with none behind it. Any other path provider is asked about
+        // its path's positions.
+        List<BlockPos> removed =
+            provider instanceof TileMarker<?> marker ? marker.getRemovedPositions() : copiedPath;
+        if (copiedPath.size() >= 2 && BlockUtil.canMachineBreakAll(level, removed, getOwner())) {
+            path = copiedPath;
+            provider.removeFromWorld();
+            return true;
+        }
+        return false;
     }
 
     public void tick() {

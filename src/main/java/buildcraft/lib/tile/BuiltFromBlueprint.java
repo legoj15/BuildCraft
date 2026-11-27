@@ -17,7 +17,8 @@ package buildcraft.lib.tile;
  *
  * <p>The tile has no owner yet: the saved data it loaded carries none ({@link BlueprintOwner#strip}), and whoever
  * built it stamps their own ({@link BlueprintOwner#stamp}) after the build returns, hook included. A hook must not act
- * as the owner (ask a claim mod, record an advancement) and must not rely on {@code getOwner()}.
+ * as the owner (ask a claim mod, record an advancement) and must not rely on {@code getOwner()}. It must not
+ * remove or replace its own block either: the builder stamps whatever block entity stands there afterwards.
  */
 public interface BuiltFromBlueprint {
     /** Takes what a placement would have taken, for a tile that has not got it already. Server side only. */

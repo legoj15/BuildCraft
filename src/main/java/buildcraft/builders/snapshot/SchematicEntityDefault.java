@@ -51,6 +51,7 @@ import buildcraft.api.schematics.SchematicEntityContext;
 
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RotationUtil;
+import buildcraft.lib.tile.BlueprintOwner;
 
 import buildcraft.core.item.ZoneMapPortability;
 
@@ -268,6 +269,8 @@ public class SchematicEntityDefault implements ISchematicEntity {
         CompoundTag placed = JsonRule.applyReplaceNbt(newEntityNbt, rules);
         // The carried zone plans go to this world's store (ZoneMapPortability); map locations are not moved.
         ZoneMapPortability.settlePlans(placed);
+        // The block twin's rule: what a blueprint builds never carries the owner it was scanned from.
+        BlueprintOwner.stripEntity(placed);
         return placed;
     }
 

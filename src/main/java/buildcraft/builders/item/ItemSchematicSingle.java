@@ -24,6 +24,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -186,10 +187,11 @@ public class ItemSchematicSingle extends Item {
                                     true
                                 ).isEmpty()
                             )) {
+                                BlockEntity before = world.getBlockEntity(placePos);
                                 if (schematicBlock.build(world, placePos)) {
                                     // What a player places belongs to that player, not to whoever the schematic
                                     // was captured from.
-                                    BlueprintOwner.stamp(world, placePos, player.getGameProfile());
+                                    BlueprintOwner.stamp(world, placePos, player.getGameProfile(), before);
                                     StackUtil.mergeSameItems(requiredItems).forEach(s ->
                                         itemTransactor.extract(
                                             RequiredExtractor.payer(s),

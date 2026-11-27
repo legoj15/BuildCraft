@@ -78,6 +78,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.tile.BlueprintOwner;
 import buildcraft.lib.tile.BuiltFromBlueprint;
 
@@ -1030,6 +1031,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
         data.putInt("x", blockPos.getX());
         data.putInt("y", blockPos.getY());
         data.putInt("z", blockPos.getZ());
+        // Whatever made this tag, a block entity of this mod (or of an add-on built on its base class) never loads
+        // a blueprint's owner: BlueprintOwner.strip gates on the captured block, this on what is really loaded.
+        if (tileEntity instanceof AbstractBCBlockEntity) {
+            BlueprintOwner.stripKeys(data);
+        }
         try {
             //? if >=1.21.10 {
             tileEntity.loadWithComponents(
@@ -1060,9 +1066,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * a tile that takes something from the world on a placement the build never makes (a Quarry's area). Called by both
      * build paths after the tile data step, so it runs whether or not the schematic held tile data, and on the fresh
      * block entity {@link #loadTileData} falls back to; the block entity is read from the level here for that reason.
-     * Server side only. The guard is the one {@link #loadTileData} has: a tile that throws must not crash the server
-     * tick, which would recur on every restart while the Builder retries the cell, so the failure is logged and the
-     * placement still counts.
+     * Server side only. Guarded for the reason {@link #loadTileData} is: a tile that throws must not crash the
+     * server tick, which would recur on every restart while the Builder retries the cell. Here the failure is only
+     * logged (the block entity is not reset) and the placement still counts.
      */
     private static void notifyBuiltFromBlueprint(Level level, BlockPos blockPos) {
         if (level.isClientSide() || !(level.getBlockEntity(blockPos) instanceof BuiltFromBlueprint built)) {

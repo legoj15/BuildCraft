@@ -38,6 +38,7 @@ import buildcraft.builders.snapshot.SchematicBlockManager;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.BlueprintOwner;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -149,6 +150,15 @@ public class ItemSchematicSingleTester {
                                 + GameProfileUtil.getName(placer) + "), got "
                                 + (owner == null ? "no owner" : GameProfileUtil.getName(owner)));
             }
+            // A build that placed nothing stamps nothing (a schematic can report success without placing a block):
+            // with the block entity that stood there before the build still standing, the machine keeps its owner.
+            BlockPos quarryAbs = helper.absolutePos(quarryFloor.above());
+            AbstractBCBlockEntity standing = (AbstractBCBlockEntity) helper.getLevel().getBlockEntity(quarryAbs);
+            BlueprintOwner.stamp(helper.getLevel(), quarryAbs, alice, standing);
+            helper.assertTrue(GameProfileUtil.getId(standing.getOwner()).equals(
+                            GameProfileUtil.getId(player.getGameProfile())),
+                    "a build that left the block entity it found must not change that machine's owner, got "
+                            + GameProfileUtil.getName(standing.getOwner()));
             helper.succeed();
         } finally {
             for (BlockPos rel : List.of(quarrySource, pipeSource, quarryFloor.above(), pipeFloor.above(), quarryFloor,

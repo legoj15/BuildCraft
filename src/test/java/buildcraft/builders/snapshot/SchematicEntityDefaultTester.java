@@ -247,6 +247,23 @@ public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
         return entity;
     }
 
+    /** What a blueprint builds never carries the owner it was scanned from. A robot saves who deployed it and
+     *  answers to that player when it asks a claim mod; no shipped rule captures a robot, but another mod's rule
+     *  file could. An entity of another mod keeps a key of the same name: its data is not ours to edit. */
+    @Test
+    public void aBuiltRobotCarriesNoDeployerAndAnotherModsEntityKeepsItsKey() throws InvalidInputDataException {
+        Consumer<CompoundTag> deployed = nbt -> {
+            CompoundTag deployer = new CompoundTag();
+            deployer.putString("ownerUUID", "00000000-0000-0000-0000-00000000000a");
+            deployer.putString("ownerName", "Alice");
+            nbt.put("deployer", deployer);
+        };
+        CompoundTag robot = schematicOf("buildcraftunofficial:robot", deployed).entityNbtToPlace(BlockPos.ZERO, true);
+        Assertions.assertFalse(robot.contains("deployer"), "a built robot must not keep its deployer: " + robot);
+        CompoundTag stand = schematicOf("minecraft:armor_stand", deployed).entityNbtToPlace(BlockPos.ZERO, true);
+        Assertions.assertTrue(stand.contains("deployer"), "another mod's key is not ours to remove: " + stand);
+    }
+
     private static boolean charges(List<ItemStack> required, Item item) {
         return required.stream().anyMatch(stack -> stack.is(item));
     }

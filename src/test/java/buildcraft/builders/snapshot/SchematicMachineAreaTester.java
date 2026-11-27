@@ -244,7 +244,7 @@ public class SchematicMachineAreaTester {
             helper.assertFalse(boxes.volumeBoxes.contains(box),
                     "The volume box the built Quarry took must be used up");
             // Told once more that a blueprint built it, a Quarry that holds an area takes nothing: a second box behind
-            // it stays where it is (what it would take is the same frame, so the box is what tells the two apart).
+            // it stays where it is.
             second = VolumeBox.fromMarkers(level, boxMin, boxMax, List.of());
             boxes.volumeBoxes.add(second);
             built.onBuiltFromBlueprint();

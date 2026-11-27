@@ -96,7 +96,8 @@ public class BlueprintBuiltOwnerTester {
             check(scanned instanceof SchematicBlockDefault, "a Quarry must scan to a SchematicBlockDefault");
             check(GameProfileUtil.getId(BLUEPRINT_OWNER).toString()
                             .equals(NBTUtilBC.getString(((SchematicBlockDefault) scanned).tileNbt, "ownerUUID", "")),
-                    "precondition: the blueprint must hold its owner, got " + ((SchematicBlockDefault) scanned).tileNbt);
+                    "precondition: the blueprint must hold its owner, got "
+                            + ((SchematicBlockDefault) scanned).tileNbt);
             helper.setBlock(sourceRel, Blocks.AIR);
 
             builder[0] = BuilderRefloodTester.setUpBuilder(helper, new int[] {BuilderRefloodTester.FIRST_EXTRA_KIND},
@@ -118,7 +119,8 @@ public class BlueprintBuiltOwnerTester {
             check(level.getBlockEntity(builtAbs) instanceof TileQuarry, "the built Quarry must have its block entity");
             GameProfile owner = ((TileQuarry) level.getBlockEntity(builtAbs)).getOwner();
             if (builderOwner == null) {
-                check(owner == null, "a Quarry built by a Builder nobody owns must have no owner, got " + describe(owner));
+                check(owner == null,
+                        "a Quarry built by a Builder nobody owns must have no owner, got " + describe(owner));
             } else {
                 check(owner != null && GameProfileUtil.getId(owner).equals(GameProfileUtil.getId(builderOwner)),
                         "a Quarry built by the Builder of " + describe(builderOwner) + " must belong to them, got "

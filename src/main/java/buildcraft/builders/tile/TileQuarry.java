@@ -69,6 +69,7 @@ import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.data.BoxIterator;
 import buildcraft.lib.misc.data.EnumAxisOrder;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.IPumpHost;
 import buildcraft.lib.tile.TileBC_Neptune;
 
@@ -89,7 +90,8 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.tile.TileMarkerVolume;
 
 @SuppressWarnings("this-escape")
-public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget, IPumpHost {
+public class TileQuarry extends TileBC_Neptune
+        implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget, IPumpHost, BuiltFromBlueprint {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
     private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftunofficial:diggy_diggy_hole");
@@ -314,6 +316,28 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         // "Diggy diggy hole" gates on getOwner() != null, and "Destroying the world"
         // can't pair quarries without an owner UUID.
         super.onPlacedBy(placer, stack);
+        layOutArea();
+    }
+
+    /**
+     * A blueprint build calls no placement hook, and its rules take the original's area out of what it loads (a copy
+     * must never work the original's pit), so a Quarry it builds is left with no box and would stay idle. It lays out
+     * its area as a placed one does. The owner is not touched: the Quarry keeps the one the blueprint saved, or none.
+     * A Quarry that somehow has a valid box keeps it.
+     */
+    @Override
+    public void onBuiltFromBlueprint() {
+        if (level == null || level.isClientSide() || frameBox.isInitialized()) {
+            return;
+        }
+        layOutArea();
+    }
+
+    /**
+     * Takes the quarry's working area, as a placement does: a volume box behind it, else a marker volume beside it,
+     * else the default area behind it; then sets the frame and mining boxes, the frame positions and the chunk tickets.
+     */
+    private void layOutArea() {
         Direction facing = level.getBlockState(worldPosition).getValue(HorizontalDirectionalBlock.FACING);
         BlockPos areaPos = worldPosition.relative(facing.getOpposite());
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);

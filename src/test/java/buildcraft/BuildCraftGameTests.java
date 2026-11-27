@@ -639,6 +639,10 @@ public class BuildCraftGameTests {
         // and the index into it, and works out its own box from its blueprint and its own position.
         reg.accept("buildcraftunofficial:machine_schematic_builds_filler_without_its_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsFillerWithoutItsBox);
         reg.accept("buildcraftunofficial:machine_schematic_builds_builder_with_its_own_box_and_no_path", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsBuilderWithItsOwnBoxAndNoPath);
+        // A Quarry takes its area when a player places it and a blueprint build calls no placement hook, so the build
+        // lays it out the way a placement does: the volume box behind it if there is one, else its default area.
+        reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_with_its_default_area", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryWithItsDefaultArea);
+        reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_onto_a_volume_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryOntoAVolumeBox);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);

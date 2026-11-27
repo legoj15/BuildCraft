@@ -78,6 +78,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.BuiltFromBlueprint;
 
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockFiller;
@@ -923,6 +924,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
+            notifyBuiltFromBlueprint(level, blockPos);
             return true;
         }
         // setBlock refused: it returns null only when the cell already holds the placed state, so there is nothing
@@ -1047,6 +1049,28 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
     }
 
+    /**
+     * Tells the block entity just built at {@code blockPos} that a blueprint built it ({@link BuiltFromBlueprint}), for
+     * a tile that takes something from the world on a placement the build never makes (a Quarry's area). Called by both
+     * build paths after the tile data step, so it runs whether or not the schematic held tile data, and on the fresh
+     * block entity {@link #loadTileData} falls back to; the block entity is read from the level here for that reason.
+     * Server side only. The guard is the one {@link #loadTileData} has: a tile that throws must not crash the server
+     * tick, which would recur on every restart while the Builder retries the cell, so the failure is logged and the
+     * placement still counts.
+     */
+    private static void notifyBuiltFromBlueprint(Level level, BlockPos blockPos) {
+        if (level.isClientSide() || !(level.getBlockEntity(blockPos) instanceof BuiltFromBlueprint built)) {
+            return;
+        }
+        try {
+            built.onBuiltFromBlueprint();
+        } catch (RuntimeException e) {
+            LOGGER.warn("Skipping the after-build step of {} at {}: its block entity failed it ({})",
+                BuiltInRegistries.BLOCK.getKey(level.getBlockState(blockPos).getBlock()), blockPos,
+                Snapshot.logSafe(e, 256));
+        }
+    }
+
     /** Replaces the block entity at {@code blockPos} with the fresh default one its block creates. */
     private static void resetBlockEntity(Level level, BlockPos blockPos) {
         BlockState state = level.getBlockState(blockPos);
@@ -1085,6 +1109,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
+            notifyBuiltFromBlueprint(level, blockPos);
             return true;
         }
         return false;

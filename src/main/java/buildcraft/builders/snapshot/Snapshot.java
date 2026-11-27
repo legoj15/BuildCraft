@@ -205,7 +205,7 @@ public abstract class Snapshot {
      * own) becomes {@code ?}, and it is cut to {@code maxLength}. For text read from untrusted snapshot bytes, or a
      * loader's exception message, which may echo them.
      */
-    static String logSafe(@Nullable Object value, int maxLength) {
+    public static String logSafe(@Nullable Object value, int maxLength) {
         String text = String.valueOf(value).replaceAll("\\p{Cntrl}", "?");
         return text.length() > maxLength ? text.substring(0, maxLength) + "..." : text;
     }

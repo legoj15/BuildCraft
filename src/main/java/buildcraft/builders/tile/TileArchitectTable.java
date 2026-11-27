@@ -338,10 +338,10 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     }
 
     /**
-     * May this table take {@code area}? Taking markers breaks every marker of their connection, so the owner (the
-     * placer, recorded first in {@link #onPlacedBy}) is asked about each, with the same probe the mining machines use.
-     * A one-shot volume box is saved data whose removal breaks no block, and a lone marker has nothing to break, so
-     * neither is asked about.
+     * May this table take {@code area}? Taking markers breaks every marker of their connection, so the owner recorded
+     * first in {@link #onPlacedBy} (the player who placed it; a table no player placed has none and asks as the mod's
+     * own profile) is asked about each, with the same probe the mining machines use. A one-shot volume box is saved
+     * data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked about.
      */
     private boolean mayTakeArea(IAreaProvider area) {
         return !(area instanceof TileMarkerVolume marker)

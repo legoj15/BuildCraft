@@ -6,7 +6,6 @@ package buildcraft.core.tile;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;

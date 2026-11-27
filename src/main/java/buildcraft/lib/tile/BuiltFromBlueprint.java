@@ -18,11 +18,12 @@ package buildcraft.lib.tile;
  * {@code build} that does not finish the build through {@link BlueprintOwner} gives the tile neither its owner nor
  * this call.
  *
- * <p>The owner is set when this runs: the saved data carried none ({@link BlueprintOwner#strip}), and
- * {@link BlueprintOwner#finishBuild} gives the tile its builder's (null for a builder nobody owns, which acts as the
- * mod's own profile) just before calling this. A hook acts as that owner: what it breaks or takes, it asks claim mods
- * about as {@code getOwner()}, as the same tile would after a placement. It must not remove or replace its own block:
- * the owner was set on this block entity, and a new one would have none.
+ * <p>For a tile on this mod's base class ({@link AbstractBCBlockEntity}) the owner is set when this runs: the saved
+ * data carried none ({@link BlueprintOwner#strip}), and {@link BlueprintOwner#finishBuild} gives the tile its
+ * builder's (null for a builder nobody owns, which acts as the mod's own profile) just before calling this. A hook
+ * acts as that owner: what it breaks or takes, it asks claim mods about as {@code getOwner()}, as the same tile would
+ * after a placement. It must not remove or replace its own block: the owner was set on this block entity, and a new
+ * one would have none. A block entity on another base has no owner the build could set, and gets this call alone.
  */
 public interface BuiltFromBlueprint {
     /** Takes what a placement would have taken, for a tile that has not got it already. Server side only. */

@@ -35,6 +35,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.snapshot.SchematicBlockManager;
+import buildcraft.builders.tile.TileQuarry;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
@@ -110,7 +111,7 @@ public class ItemSchematicSingleTester {
 
     /**
      * A machine or pipe a player builds from a single schematic belongs to that player, not to the owner the schematic
-     * was captured from: the tag it builds from carries no owner, and the placing player's profile is stamped on what
+     * was captured from: the tag it builds from carries no owner, and the placing player's profile is set on what
      * was placed. Alice's Quarry and her pipe are captured, then each schematic is used by another player, whose
      * Quarry and pipe it builds. The Quarry lays out its default area, far outside the cell, so everything is removed
      * before the test ends.
@@ -150,6 +151,10 @@ public class ItemSchematicSingleTester {
                                 + GameProfileUtil.getName(placer) + "), got "
                                 + (owner == null ? "no owner" : GameProfileUtil.getName(owner)));
             }
+            // The click finishes the build as a Builder does, so the Quarry was told it was built and has its area.
+            helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(quarryFloor.above()))
+                            instanceof TileQuarry quarry && quarry.frameBox.isInitialized(),
+                    "a Quarry built from a single schematic must lay out its area, as a placed one does");
             // The finish's own rule, asked directly: told that the block entity standing there is the one that stood
             // there before the build (a schematic can report success without placing a block), it changes no owner.
             BlockPos quarryAbs = helper.absolutePos(quarryFloor.above());

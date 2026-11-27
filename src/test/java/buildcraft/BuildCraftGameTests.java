@@ -219,7 +219,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
         // A machine a Builder builds belongs to the Builder's owner (none, for a Builder nobody owns), never to the
-        // owner its blueprint was scanned from: the built tag carries no owner and the Builder stamps its own on it.
+        // owner its blueprint was scanned from: the built tag carries no owner and the Builder sets its own on it.
         reg.accept("buildcraftunofficial:blueprint_builder_owns_what_it_builds", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::blueprintBuilderOwnsWhatItBuilds);
         reg.accept("buildcraftunofficial:blueprint_builder_without_owner_builds_unowned_machine", () -> buildcraft.builders.snapshot.BlueprintBuiltOwnerTester::unownedBlueprintBuilderBuildsAnUnownedMachine);
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.

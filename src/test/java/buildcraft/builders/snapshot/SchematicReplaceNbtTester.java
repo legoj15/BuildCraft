@@ -599,7 +599,7 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     private static final UUID BLUEPRINT_OWNER = UUID.fromString(OWNER_ID);
 
     /**
-     * Every machine and pipe a blueprint rebuilds belongs to whoever builds it (the Builder stamps its own owner on
+     * Every machine and pipe a blueprint rebuilds belongs to whoever builds it (the Builder sets its own owner on
      * it, or none), so what the blueprint holds of the owner it was scanned from never reaches the placed tag: a
      * machine loading it would otherwise act (dig, place, ask claim mods) as someone who never built it. Each machine
      * of the energy list is given an owner, scanned, and built in both container modes: the built tag has neither

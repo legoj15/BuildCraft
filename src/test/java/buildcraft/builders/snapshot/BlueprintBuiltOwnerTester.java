@@ -36,7 +36,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 
 /**
  * A machine a Builder builds belongs to the Builder's owner, never to the owner its blueprint was scanned from: the
- * built tag carries no owner, and the Builder stamps its own on what it placed (none, for a Builder nobody owns). A
+ * built tag carries no owner, and the Builder sets its own on what it placed (none, for a Builder nobody owns). A
  * machine that dug as the blueprint's owner could break where only that player may, and a copy of someone's
  * blueprint would hand its builder that player's permissions. The machine is a Quarry, the one that acts on its own
  * the moment it is built (the Builder's finish of the build tells it so, and it lays out its default area, which

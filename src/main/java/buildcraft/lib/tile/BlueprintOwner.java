@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -124,14 +125,8 @@ public final class BlueprintOwner {
                 hook.onBuiltFromBlueprint();
             } catch (RuntimeException e) {
                 LOGGER.warn("Skipping the after-build step of {} at {}: its block entity failed it ({})",
-                    BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()), pos, logSafe(e));
+                    BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()), pos, Snapshot.logSafe(e, 256));
             }
         }
-    }
-
-    /** {@code value} as one log line of at most 256 characters: another mod's exception text is not ours to trust. */
-    private static String logSafe(Object value) {
-        String text = String.valueOf(value).replaceAll("\\p{Cntrl}", "?");
-        return text.length() > 256 ? text.substring(0, 256) + "..." : text;
     }
 }

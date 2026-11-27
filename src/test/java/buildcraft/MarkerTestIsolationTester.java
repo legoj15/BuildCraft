@@ -37,9 +37,13 @@ public class MarkerTestIsolationTester {
     private static final String TEST_SOURCES = "src/test/java";
     private static final String RESOURCES = "src/test/resources/data/buildcraftunofficial";
 
-    /** reg.accept("buildcraftunofficial:<id>", () -> ...MarkerTester::<method>) */
+    /**
+     * reg.accept("buildcraftunofficial:<id>", () -> ...MarkerTester::<method>), and the same for
+     * MarkerTakingProtectionTester, whose every test asserts that a connection it built is still standing.
+     */
     private static final Pattern MARKER_TESTER_REGISTRATION = Pattern.compile(
-        "reg\\.accept\\(\"buildcraftunofficial:([a-z0-9_/]+)\",\\s*\\(\\)\\s*->\\s*(?:[\\w.]*\\.)?MarkerTester::");
+        "reg\\.accept\\(\"buildcraftunofficial:([a-z0-9_/]+)\",\\s*\\(\\)\\s*->\\s*(?:[\\w.]*\\.)?"
+            + "(?:MarkerTester|MarkerTakingProtectionTester)::");
 
     private static final Pattern ENVIRONMENT_FIELD =
         Pattern.compile("\"environment\"\\s*:\\s*\"([a-z0-9_:/]+)\"");

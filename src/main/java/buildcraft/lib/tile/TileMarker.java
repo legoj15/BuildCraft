@@ -7,6 +7,7 @@
 package buildcraft.lib.tile;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import net.minecraft.core.Direction;
@@ -110,9 +111,13 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
 
     /**
      * The blocks taking these markers breaks ({@code removeFromWorld} on a volume or path marker): every position of
-     * this marker's connection that holds a block, this marker's own included, and none without a connection. A
-     * machine about to take the markers asks protection mods about exactly these first
-     * ({@link buildcraft.lib.misc.BlockUtil#canMachineBreakAll}).
+     * this marker's connection that holds a block, this marker's own included, each once (a looped path names its
+     * first marker twice), and none without a connection. A machine about to take the markers asks protection mods
+     * about exactly these first ({@link buildcraft.lib.misc.BlockUtil#canMachineBreakAll}).
+     *
+     * <p>Reading a position loads its chunk, as breaking the marker there does: a connection keeps the positions of
+     * markers whose chunks unloaded, and they are part of what is taken. A taking that is then refused has loaded
+     * those chunks for nothing, once per placement or build.
      */
     public List<BlockPos> getRemovedPositions() {
         C connection = getCurrentConnection();
@@ -120,8 +125,8 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
             return List.of();
         }
         List<BlockPos> removed = new ArrayList<>();
-        // A copy: breaking a marker edits the connection's own list.
-        for (BlockPos p : new ArrayList<>(connection.getMarkerPositions())) {
+        // A copy: breaking a marker edits the connection's own list. A set: each position once.
+        for (BlockPos p : new LinkedHashSet<>(connection.getMarkerPositions())) {
             if (!level.getBlockState(p).isAir()) {
                 removed.add(p);
             }

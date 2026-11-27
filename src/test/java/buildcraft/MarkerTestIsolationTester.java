@@ -79,10 +79,10 @@ public class MarkerTestIsolationTester {
         while (m.find()) {
             ids.add(m.group(1));
         }
-        // Liveness: the five original marker tests plus the three hermeticity tests. An empty or short scan
-        // would make every check below vacuous.
+        // Liveness: MarkerTester alone registers more than this. An empty or short scan would make every check
+        // below vacuous.
         Assertions.assertTrue(ids.size() >= 8,
-            "expected at least 8 MarkerTester registrations in " + REGISTRAR + " but found " + ids
+            "expected at least 8 marker test registrations in " + REGISTRAR + " but found " + ids
                 + " - the registration shape drifted; update MARKER_TESTER_REGISTRATION");
         return ids;
     }

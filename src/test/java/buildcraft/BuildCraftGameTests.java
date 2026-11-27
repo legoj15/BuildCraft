@@ -658,6 +658,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_diamond_filter_rows", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesDiamondFilterRows);
         // A gate's statements read a face, so their sides (and the pipe-direction actions) turn with the blueprint.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_gate_statement_sides", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesGateStatementSides);
+        // A facade draws a block state, so a rotated blueprint turns it too (a log's axis) when a facade may show the turned one.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_facade_state", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesFacadeState);
         // A machine whose tile saves a direction turns it with the blueprint: an engine's orientation, a flood gate's
         // open sides (the block state only draws them) and a Builder's saved turn.
         reg.accept("buildcraftunofficial:machine_schematic_rotates_engine_orientation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesEngineOrientation);

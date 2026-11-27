@@ -347,27 +347,34 @@ public class RobotActionAIsTester {
         EntityRobot robot = unaddedRobot(helper, robotRel);
         robot.setItemInUse(new ItemStack(Items.WHEAT_SEEDS));
 
-        // The AI's target is the SOIL block — CropHandlerPlantable plants into pos.above().
-        AIRobotPlant planter = new AIRobotPlant(robot, helper.absolutePos(soilRel.below()));
-        int cycles = 0;
-        while (!level.getBlockState(helper.absolutePos(soilRel)).is(Blocks.WHEAT) && cycles < 80) {
-            planter.cycle();
-            cycles++;
-        }
-        helper.assertTrue(level.getBlockState(helper.absolutePos(soilRel)).is(Blocks.WHEAT),
-                "the farmland now carries a wheat crop (after its 40-cycle delay)");
-        helper.assertTrue(planter.success(), "the planting reports success");
-        helper.assertTrue(
-                level.getBlockState(helper.absolutePos(soilRel)).getValue(CropBlock.AGE) == 0,
-                "the planted crop starts at age 0");
-        boolean spilledSeed = false;
-        for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
-            spilledSeed |= item.getItem().is(Items.WHEAT_SEEDS);
-            item.discard();
-        }
-        helper.assertTrue(!spilledSeed,
-                "the single seed is planted, not spilled — the B4 fetch/plant pair");
-        helper.succeed();
+        // The planting and the scan for a spilled seed run once the cell's entities tick. The framework waits only
+        // for the origin's chunk and the robot's column is in another one in about three runs in ten: a seed
+        // spilled there on the first tick is invisible to the scan, and "nothing spilled" passed whatever happened.
+        // Entity-only on purpose: nothing here waits on a block entity, and the body is synchronous.
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), () -> {
+            // The AI's target is the SOIL block — CropHandlerPlantable plants into pos.above().
+            AIRobotPlant planter = new AIRobotPlant(robot, helper.absolutePos(soilRel.below()));
+            int cycles = 0;
+            while (!level.getBlockState(helper.absolutePos(soilRel)).is(Blocks.WHEAT) && cycles < 80) {
+                planter.cycle();
+                cycles++;
+            }
+            helper.assertTrue(level.getBlockState(helper.absolutePos(soilRel)).is(Blocks.WHEAT),
+                    "the farmland now carries a wheat crop (after its 40-cycle delay)");
+            helper.assertTrue(planter.success(), "the planting reports success");
+            helper.assertTrue(
+                    level.getBlockState(helper.absolutePos(soilRel)).getValue(CropBlock.AGE) == 0,
+                    "the planted crop starts at age 0");
+            boolean spilledSeed = false;
+            for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
+                spilledSeed |= item.getItem().is(Items.WHEAT_SEEDS);
+            }
+            helper.assertTrue(!spilledSeed,
+                    "the single seed is planted, not spilled — the B4 fetch/plant pair");
+            helper.succeed();
+        }, "the cell never became entity-ticking",
+                () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).forEach(item -> item.discard()));
     }
 
     /** A water source is drained into the robot's 4000 mB tank: exactly one bucket moves, the source is

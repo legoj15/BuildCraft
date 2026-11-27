@@ -89,6 +89,7 @@
             "box_maxX": null,
             "box_maxY": null,
             "box_maxZ": null,
+            "boxIterator_data": null,
             "currentTaskId": null,
             "task_breakX": null,
             "task_breakY": null,

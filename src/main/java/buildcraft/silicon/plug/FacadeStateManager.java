@@ -422,9 +422,11 @@ public enum FacadeStateManager implements IFacadeRegistry {
         return info != null ? info : createFallbackInfo(state);
     }
 
-    /** Whether {@link #resolve} gives {@code state} back as itself: it is in {@link #allFacadeStates}, or generation
-     *  is switched off, when the fallback keeps any state. With generation on, a state outside the map reads as the
-     *  default one, so code that rewrites a saved facade state (a rotated blueprint) must not write such a state. */
+    /** Whether a saved {@code state} is safe to write for a facade, because {@link #resolve} gives it back as itself:
+     *  it is in {@link #allFacadeStates}, or generation is switched off, when the fallback keeps any state. With
+     *  generation on, a state outside the map reads as the default one (air), so code that rewrites a saved facade
+     *  state (a rotated blueprint) must not write such a state. False for that air default itself, which resolves
+     *  to itself but is never a state to write. */
     public static boolean keepsOnRead(BlockState state) {
         return generationDisabled || allFacadeStates.containsKey(state);
     }

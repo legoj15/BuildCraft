@@ -648,8 +648,11 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 + ": building must not touch the schematic's own data");
         }
         // Liveness: a list whose tiles saved no owner at all would pass without testing anything.
-        Assertions.assertFalse(carriers.isEmpty(),
-            "at least one machine of the list must save an owner once given one, or this checks nothing");
+        // The machines known to save their owner must be among them: one that stopped saving it would skip the
+        // checks above without a word, and would forget its owner on every reload.
+        Assertions.assertTrue(carriers.containsAll(
+            List.of("quarry", "filler", "builder", "chute", "distiller", "mining_well", "engine_stone")),
+            "these machines must save an owner once given one, the ones that did: " + carriers);
     }
 
     /** A pipe holder saves its owner under the same two keys, beside the pipe, and a built pipe holds none. */

@@ -247,21 +247,31 @@ public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
         return entity;
     }
 
-    /** What a blueprint builds never carries the owner it was scanned from. A robot saves who deployed it and
-     *  answers to that player when it asks a claim mod; no shipped rule captures a robot, but another mod's rule
-     *  file could. An entity of another mod keeps a key of the same name: its data is not ours to edit. */
+    /** What a blueprint builds never carries the owner it was scanned from. A robot answers, when it asks a claim
+     *  mod, to the player who deployed it or else to the owner of the docking station it is linked to, and it
+     *  saves all three; no shipped rule captures a robot, but another mod's rule file could. An entity that is
+     *  not this mod's keeps keys of the same names: its data is not ours to edit. */
     @Test
-    public void aBuiltRobotCarriesNoDeployerAndAnotherModsEntityKeepsItsKey() throws InvalidInputDataException {
+    public void aBuiltRobotAnswersToNobodyAndAnEntityThatIsNotOursKeepsItsKeys() throws InvalidInputDataException {
+        List<String> answersTo = List.of("deployer", "linkedStation", "currentStation");
         Consumer<CompoundTag> deployed = nbt -> {
             CompoundTag deployer = new CompoundTag();
             deployer.putString("ownerUUID", "00000000-0000-0000-0000-00000000000a");
             deployer.putString("ownerName", "Alice");
             nbt.put("deployer", deployer);
+            for (String station : List.of("linkedStation", "currentStation")) {
+                CompoundTag link = new CompoundTag();
+                link.putIntArray("pos", new int[] { 100, 64, 200 });
+                link.putByte("side", (byte) 1);
+                nbt.put(station, link);
+            }
         };
         CompoundTag robot = schematicOf("buildcraftunofficial:robot", deployed).entityNbtToPlace(BlockPos.ZERO, true);
-        Assertions.assertFalse(robot.contains("deployer"), "a built robot must not keep its deployer: " + robot);
         CompoundTag stand = schematicOf("minecraft:armor_stand", deployed).entityNbtToPlace(BlockPos.ZERO, true);
-        Assertions.assertTrue(stand.contains("deployer"), "another mod's key is not ours to remove: " + stand);
+        for (String key : answersTo) {
+            Assertions.assertFalse(robot.contains(key), "a built robot must not keep \"" + key + "\": " + robot);
+            Assertions.assertTrue(stand.contains(key), "\"" + key + "\" of an entity that is not ours stays: " + stand);
+        }
     }
 
     private static boolean charges(List<ItemStack> required, Item item) {

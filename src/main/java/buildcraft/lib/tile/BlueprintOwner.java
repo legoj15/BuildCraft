@@ -26,10 +26,10 @@ import buildcraft.lib.misc.NBTUtilBC;
  * someone's blueprint would lend its builder that player's rights). Two halves, both needed:
  * <ul>
  *   <li>{@link #strip} takes the owner out of the tag a build loads, so the built block entity starts with none;</li>
- *   <li>{@link #stamp} gives the built block entity its builder's owner afterwards. Every caller of a schematic's
- *       {@code build} calls it with the owner it has: a Builder its own, a player placing a single schematic theirs.
- *       A caller with no owner to give stamps {@code null}, and the machine is unowned, which acts as the mod's own
- *       profile, as any unowned machine does.</li>
+ *   <li>{@link #stamp} gives the built block entity its builder's owner afterwards. Every caller of a block
+ *       schematic's {@code build} calls it with the owner it has: a Builder its own, a player placing a single
+ *       schematic theirs. A caller with no owner to give stamps {@code null}, and the machine is unowned, which acts
+ *       as the mod's own profile, as any unowned machine does.</li>
  * </ul>
  * An entity has the same problem and the first half of the answer: {@link #stripEntity}.
  */
@@ -50,10 +50,11 @@ public final class BlueprintOwner {
     }
 
     /**
-     * Takes out of {@code tag} every shape this mod's block entities save an owner in: the
+     * Takes out of {@code tag} every shape this mod's own block entities save an owner in: the
      * {@code ownerUUID}/{@code ownerName} pair of the owner-bearing machines and of the pipe holder
      * ({@link OwnerData}; a laser or a tank saves none), and the {@code owner} child the Filler saved before it shared
-     * that field (it still reads it). For a tag that is known to be loaded into one of this mod's block entities.
+     * that field (it still reads it). For the tag of one of this mod's blocks; a caller that only knows the block
+     * entity is built on this mod's base class removes the pair alone ({@link OwnerData#removeOwner}).
      */
     public static void stripKeys(CompoundTag tag) {
         OwnerData.removeOwner(tag);
@@ -63,16 +64,20 @@ public final class BlueprintOwner {
     }
 
     /**
-     * Takes who deployed it out of {@code entityTag}, the saved data a blueprint is about to spawn an entity from,
-     * when the entity is this mod's: a robot answers to its deployer when it asks a claim mod, and saves that under
-     * {@code deployer}. No rule this mod ships lets a blueprint capture a robot, but a rule file of another mod could,
-     * and the built robot must then not act as the player the blueprint was scanned from. It is left with no
-     * deployer, which makes it answer to its docking station's owner.
+     * Takes out of {@code entityTag}, the saved data a blueprint is about to spawn an entity from, who a robot of
+     * this mod answers to: the player who deployed it ({@code deployer}) and the docking stations it is linked to and
+     * docked at ({@code linkedStation}, {@code currentStation}, saved as positions in the world it was scanned in). A
+     * robot asks a claim mod as its deployer, or else as the owner of its station, so a copy that kept either would
+     * act as the player the blueprint was scanned from, and would take the original's station for its own. No rule
+     * this mod ships lets a blueprint capture a robot, but a rule file of another mod could. The built robot is left
+     * with no deployer and no station: it answers as the mod's own profile until it is given a home.
      */
     public static void stripEntity(CompoundTag entityTag) {
         // An id with no namespace is vanilla's, so the prefix is the whole test.
         if (NBTUtilBC.getString(entityTag, "id", "").startsWith(BCCore.MODID + ":")) {
             entityTag.remove("deployer");
+            entityTag.remove("linkedStation");
+            entityTag.remove("currentStation");
         }
     }
 
@@ -81,10 +86,13 @@ public final class BlueprintOwner {
      * mod's ({@link AbstractBCBlockEntity}); any other block entity, or none, is left alone. Server side only, and for
      * a build that succeeded. {@code before} is the block entity that stood at {@code pos} before the build, or null:
      * when it is still the one standing there the build placed nothing (a schematic may report success without
-     * placing a block), and a machine somebody else put in that cell keeps its owner. The owner is set once the build
-     * is over, so a {@link BuiltFromBlueprint} hook, which runs inside the build, sees none and must not act as the
-     * owner. Marks the chunk dirty so the owner persists, as a placement does; clients get it with the placement's own
-     * block update, which the game sends at the end of the tick and reads the block entity for then.
+     * placing a block), and a machine somebody else put in that cell keeps its owner. That holds for {@code build},
+     * which refuses a cell that holds a block entity; {@code buildWithoutChecks}, which no code of this mod calls,
+     * can place onto a machine of the same kind and keep its block entity, and such a machine is left unstamped. The
+     * owner is set once the build is over, so a {@link BuiltFromBlueprint} hook, which runs inside the build, sees
+     * none and must not act as the owner. Marks the chunk dirty so the owner persists, as a placement does; clients
+     * get it with the placement's own block update, which the game sends at the end of the tick and reads the block
+     * entity for then.
      */
     public static void stamp(Level level, BlockPos pos, @Nullable GameProfile owner, @Nullable BlockEntity before) {
         if (level.isClientSide() || !(level.getBlockEntity(pos) instanceof AbstractBCBlockEntity tile)

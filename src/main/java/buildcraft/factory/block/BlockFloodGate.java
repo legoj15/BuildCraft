@@ -15,8 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -107,9 +107,9 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> implement
      *  side bits move to the bits of the sides they turn into, and any bit above them is carried over unchanged. */
     @Override
     public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
-        // A tag with no mask, or one that is not a byte (the only shape the gate writes), is left as it is: a mask
-        // of another number type reads as 0 on the newer Minecraft lines, and turning that would close every side.
-        if (!(tileNbt.get("openSides") instanceof ByteTag)) {
+        // A tag with no mask, or one that is not a number, is left as it is. Any number type reads as its byte
+        // value on every Minecraft line (the gate itself writes a byte).
+        if (!(tileNbt.get("openSides") instanceof NumericTag)) {
             return;
         }
         int sides = NBTUtilBC.getByte(tileNbt, "openSides", (byte) 0) & 0xFF;

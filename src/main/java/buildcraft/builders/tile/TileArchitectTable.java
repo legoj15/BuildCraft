@@ -338,8 +338,8 @@ public class TileArchitectTable extends TileBC_Neptune
             box.setMin(volumeBox.box.min());
             box.setMax(volumeBox.box.max());
             isValid = true;
-            // The area is the volume box's, which draws itself: the table draws no outline of its own, as the
-            // markers branch below turns on.
+            // The area is the volume box's, which draws itself, so the table draws no outline of its own
+            // (markerBox off; the markers branch below turns it on).
             markerBox = false;
             volumeBox.locks.add(
                 new Lock(

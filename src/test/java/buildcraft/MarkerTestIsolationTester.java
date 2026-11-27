@@ -161,6 +161,11 @@ public class MarkerTestIsolationTester {
         Assertions.assertTrue(ofMarkerTester >= 8,
             "expected at least 8 MarkerTester registrations in " + REGISTRAR + " but found " + ofMarkerTester
                 + " - the registration shape drifted; update REGISTRATION");
+        // Machines that take markers are tested outside MarkerTester, so none at all means the call the scan looks for
+        // was renamed under it: both sets below would be empty, and equal.
+        Assertions.assertFalse(classesFound.isEmpty(),
+            "no registered test outside " + MARKER_TESTER + " was found to call " + OPENS_SESSION + ") - the call was "
+                + "renamed or moved; update OPENS_SESSION");
         Assertions.assertEquals(openers.keySet(), classesFound,
             "every test class that calls " + OPENS_SESSION + ") must have a registered test found to do so; the "
                 + "method or registration shape drifted for the classes missing on the right; update the patterns");

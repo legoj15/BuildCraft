@@ -69,10 +69,10 @@ import buildcraft.lib.tile.BlueprintOwner;
  * <p>A Quarry takes its area when it is placed, and a blueprint build calls no placement hook, so whoever built it
  * tells it once its owner is set ({@link BlueprintOwner#finishBuild} calls {@code BuiltFromBlueprint}): it lays out
  * the area of one a player placed, the volume box or markers behind it if there are any and its default area
- * otherwise, and asks claim mods as that owner before it breaks any markers. A Filler, an Architect Table and a
- * Builder take the volume box, the markers or the path behind them the same way, and have no default. The tests of a
- * built machine below finish each build the way the Builder and the single schematic do, and read the built tile,
- * never the original's.
+ * otherwise, and asks claim mods as that owner before it breaks any markers. A Filler and an Architect Table take
+ * the volume box or the markers behind them the same way, and a Builder the path of the path markers behind it; none
+ * of the three has a default. The tests of a built machine below finish each build the way the Builder and the single
+ * schematic do, and read the built tile, never the original's.
  */
 public class SchematicMachineAreaTester {
 

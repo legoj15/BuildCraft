@@ -143,21 +143,27 @@ public class MarkerTestIsolationTester {
             throw new UncheckedIOException(e);
         }
         List<String> ids = new ArrayList<>();
-        int outsideMarkerTester = 0;
+        int ofMarkerTester = 0;
+        Set<String> classesFound = new HashSet<>();
         Matcher m = REGISTRATION.matcher(read(root.resolve(REGISTRAR)));
         while (m.find()) {
             if (MARKER_TESTER.equals(m.group(2))) {
                 ids.add(m.group(1));
+                ofMarkerTester++;
             } else if (openers.getOrDefault(m.group(2), Set.of()).contains(m.group(3))) {
                 ids.add(m.group(1));
-                outsideMarkerTester++;
+                classesFound.add(m.group(2));
             }
         }
-        // Liveness: MarkerTester alone registers eight and more, and machines that take markers are tested outside
-        // it. A short scan on either side would make the check below vacuous.
-        Assertions.assertTrue(ids.size() - outsideMarkerTester >= 8 && outsideMarkerTester >= 4,
-            "expected at least 8 MarkerTester registrations and 4 session-opening tests of other classes in "
-                + REGISTRAR + " but found " + ids + " - the registration or method shape drifted; update the patterns");
+        // Liveness: MarkerTester alone registers eight and more, and every other class that opens a session at all
+        // must show at least one registered test that does. A class whose method heads or registrations stopped
+        // matching would otherwise drop out of the check below without a word.
+        Assertions.assertTrue(ofMarkerTester >= 8,
+            "expected at least 8 MarkerTester registrations in " + REGISTRAR + " but found " + ofMarkerTester
+                + " - the registration shape drifted; update REGISTRATION");
+        Assertions.assertEquals(openers.keySet(), classesFound,
+            "every test class that calls " + OPENS_SESSION + ") must have a registered test found to do so; the "
+                + "method or registration shape drifted for the classes missing on the right; update the patterns");
         return ids;
     }
 

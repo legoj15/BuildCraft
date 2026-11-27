@@ -31,7 +31,8 @@
         "replaceNbt": {
             "isValid": null,
             "scanning": null,
-            "scanRefused": null
+            "scanRefused": null,
+            "markerBox": null
         }
     },
     {

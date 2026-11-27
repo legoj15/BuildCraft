@@ -55,11 +55,17 @@ public class ArchitectScanRefusalTester {
         int overLimitHeight = LibraryUploadBuffer.Limits.readCeiling().maxCells() / (CELL_X * CELL_Z) - 1;
         giveValidBox(helper, big, origin, overLimitHeight);
         giveValidBox(helper, small, origin, WITHIN_LIMIT_HEIGHT);
-        big.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
-        small.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+        // The blank blueprints go in on the gate's first call, not before it. The small table's scan is over in
+        // about 28 ticks, and a table whose own chunk ticks before the rest of the cell would have finished it
+        // behind a gate that opened later (found with the gate delayed 60 polls, 2026-11-26).
+        Runnable start = () -> {
+            big.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+            small.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+        };
 
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WORK,
-            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WORK, () -> big.isScanRefused() && small.isScanning(),
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WORK,
+                EntityArenaUtil.actThenLook(start, () -> big.isScanRefused() && small.isScanning()),
                 () -> "the over-limit table refused=" + big.isScanRefused() + " scanning=" + big.isScanning()
                     + ", the small one scanning=" + small.isScanning()),
             () -> {

@@ -74,7 +74,9 @@ public class PipeBehaviourStripesDropTester {
             helper.fail("the stripes pipe item did not produce a stripes behaviour");
             return;
         }
-        // Set synchronously and used in the same call: an unconnected stripes pipe clears its direction on tick.
+        // Set by hand: a lone stripes pipe has no connection to take a direction from, and it keeps
+        // one on a face with no connection (its tick recomputes only a direction it lacks or one a
+        // connection took over).
         stripes.direction = Direction.UP;
 
         ItemStack travelling = new ItemStack(Items.COBBLESTONE, 5);
@@ -129,7 +131,9 @@ public class PipeBehaviourStripesDropTester {
             helper.fail("the stripes pipe item did not produce a stripes behaviour");
             return;
         }
-        // Set synchronously and used in the same call: an unconnected stripes pipe clears its direction on tick.
+        // Set by hand: a lone stripes pipe has no connection to take a direction from, and it keeps
+        // one on a face with no connection (its tick recomputes only a direction it lacks or one a
+        // connection took over).
         stripes.direction = Direction.UP;
         helper.setBlock(soilRel, Blocks.DIRT);
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
@@ -909,7 +913,9 @@ public class PipeBehaviourStripesDropTester {
                 helper.fail("the stripes pipe item did not produce a stripes behaviour");
             }
             PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
-            // Set synchronously and used in the same call: an unconnected stripes pipe clears its direction on tick.
+            // Set by hand: a lone stripes pipe has no connection to take a direction from, and it keeps
+            // one on a face with no connection (its tick recomputes only a direction it lacks or one a
+            // connection took over).
             stripes.direction = direction;
             return new StripesRig(helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
         }

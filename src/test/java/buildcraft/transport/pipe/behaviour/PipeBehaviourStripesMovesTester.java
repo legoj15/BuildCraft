@@ -146,9 +146,9 @@ public class PipeBehaviourStripesMovesTester {
         // Fed on the gate's first call, not before it: the extension manager moves the pipe at the end of that
         // level tick whatever the cell's block entities do, and the stacks it sends back are in the moved pipe
         // only while they travel. Fed before a gate that opened late they had moved on (26.3, 2026-11-26: found
-        // 0 on tick 53). The lone pipe's direction is set again first: unconnected, it clears it on its tick.
+        // 0 on tick 53). The direction the rig gave the lone pipe is still there: one on a face with no
+        // connection is kept.
         Runnable feed = () -> {
-            rig.stripes().direction = Direction.EAST;
             PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
             rig.stripes().onDrop(drop);
             helper.assertTrue(drop.getStack().isEmpty(), "the pipe stack is taken for the extension");
@@ -424,7 +424,6 @@ public class PipeBehaviourStripesMovesTester {
         // at the end of that level tick, and it does not always come to rest on the pipe: fed before a gate that
         // opened late, a drop that fell off was out of the box (26.3-forge, 2026-11-26).
         Runnable feed = () -> {
-            rig.stripes().direction = Direction.EAST;
             PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
             rig.stripes().onDrop(drop);
             helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");

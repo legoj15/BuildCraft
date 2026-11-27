@@ -450,10 +450,10 @@ public final class EntityArenaUtil {
     }
 
     /** {@link #whenCellTicking} for a poll that only looks for something that already exists or is made outside a
-     *  block entity's tick: a drop the test made before the poll, or one a level-tick hook makes (the stripes
-     *  pipe's extension manager). Entities tick before block entities do, by a dozen ticks on a loaded machine,
-     *  and such a drop falls through that gap: with no floor under the arena it is out of a 1.5 or 3 block scan
-     *  about ten ticks later. So this gate asks {@code condition} from the tick the cell's entities tick
+     *  block entity's tick: a drop the test body made before the poll (the wheat a harvest it ran synchronously
+     *  left). Entities tick before block entities do, by a dozen ticks on a loaded machine, and such a drop falls
+     *  through that gap: with no floor under the arena it is out of a scan a block or two wide about ten ticks
+     *  later. Where the act can wait, make it the gate's first call instead ({@link #actThenLook}). So this gate asks {@code condition} from the tick the cell's entities tick
      *  ({@link #isCellEntityTicking}) and a true answer ends the poll there; the work budget still starts only
      *  when the block entities tick. {@code condition} must be a pure look: no setup, no spawn and no count of its
      *  own polls, since its first calls come while block entities do not tick yet. (With every gated poll on

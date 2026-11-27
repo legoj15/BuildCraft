@@ -259,7 +259,8 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   what a condition that acts or counts needs, but an item the test dropped before the poll, or one a level-tick hook
   drops (the stripes pipe's extension manager), is already falling, and an arena has no floor: about ten ticks later
   it is outside a scan a block or two wide (the drop harness measured a radius of 1 lost on tick 9). The same goes
-  for anything else that passes: stacks sent down a pipe have travelled on some fifty ticks later. That gap lost
+  for anything else that passes: stacks sent down a pipe have travelled on a few dozen ticks later, and an Architect
+  Table's small scan is over in about 28 (`architect_refuses_oversized_scan` waited to see it scanning). That gap lost
   `robot_harvest_reaps_mature_wheat` its wheat whenever it passed ten ticks, and in full suite runs on a loaded
   machine it failed `stripes_lone_pipe_drops_what_it_cannot_send_back` (gate open on tick 12) and
   `stripes_item_pipe_extends_line` (tick 53). A negative check is hit the other way round: "nothing was dropped"
@@ -288,7 +289,7 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   promotion and entity read are the machine's clock, and a budget counted from tick 1 charges them to the code under
   test. A robot's first tick and a drop that must become visible to a scan are entities and need only the entity
   predicate; they go through the same gate when they share a poll with such a block entity, and then the robot is
-  spawned or the drop made on the gate's first call, never before it (the drop harness does both; see the half-awake
+  spawned or the drop made on the gate's first call, never before it (the drop harness makes its drop that way; see the half-awake
   gap above).
   Two kinds do not use it: a poll whose condition is itself `isEntityTicking`/`isCellEntityTicking`/
   `areBlockEntitiesTicking`/`isCellTicking` (its whole budget is the

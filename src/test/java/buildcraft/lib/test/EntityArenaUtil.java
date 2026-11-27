@@ -396,18 +396,22 @@ public final class EntityArenaUtil {
     /** The readiness test of a cell gate: whether block entities tick in the whole cell ({@link #isCellTicking}). A
      *  poll that finds it not ready first parks the server thread ({@link #PACER}), so the chunk IO that readiness
      *  waits for gets wall-clock time instead of being outrun by back-to-back ticks. Passed to {@link #gateOnReady},
-     *  which stays pure budget arithmetic. */
+     *  which knows no level and no clock of its own. */
     static BooleanSupplier cellReady(GameTestHelper gth) {
         return () -> readyOrPark(gth.getLevel(), isCellTicking(gth));
     }
 
     /** A {@link #tickUntil} condition that starts the clock only once the cell's block entities tick
      *  ({@link #isCellTicking}): it answers {@code false} until then, never asking {@code condition}, and then
-     *  gives {@code condition} {@code workTicks} polls to come true. Pass {@code readyTicks + workTicks} as the
+     *  gives {@code condition} {@code workTicks} polls to come true. So a condition that acts on its first call (a
+     *  setup, a spawn) or counts its own polls (a hold: nothing happens for 20 polls) does so in a cell where
+     *  everything ticks. Pass {@code readyTicks + workTicks} as the
      *  poll's own budget (a literal or a {@code static final int}, so {@code GameTestPollBudgetTester} can read it)
      *  and keep the manifest's {@code max_ticks} above it. Use it for a poll whose condition waits on something
      *  that ticks in a block entity (a pipe, a station, a machine, a fluid's scheduled tick). Entities tick earlier
-     *  ({@link #isCellEntityTicking}), so a robot or an item is fine for the whole wait.
+     *  ({@link #isCellEntityTicking}), so a robot that hovers is fine for the whole wait. An item is not: one the
+     *  test dropped before the poll is already falling while this gate is shut, and an arena has no floor. A poll
+     *  that scans for such a drop takes {@link #watchingCell} instead.
      *
      *  <p>Chunk promotion and the entity read are asynchronous, so how long a cell takes to start ticking depends
      *  on the machine, not on the code under test; a budget that includes that wait flakes under load (see the
@@ -428,6 +432,22 @@ public final class EntityArenaUtil {
         return gateOnReady(cellReady(gth), gth::fail, readyTicks, workTicks, condition, stalled);
     }
 
+    /** {@link #whenCellTicking} for a poll that only looks for something that already exists or is made outside a
+     *  block entity's tick: a drop the test made before the poll, or one a level-tick hook makes (the stripes
+     *  pipe's extension manager). Entities tick before block entities do, by a dozen ticks on a loaded machine,
+     *  and such a drop falls through that gap: with no floor under the arena it is out of a 1.5 or 3 block scan
+     *  about ten ticks later. So this gate asks {@code condition} from the tick the cell's entities tick
+     *  ({@link #isCellEntityTicking}) and a true answer ends the poll there; the work budget still starts only
+     *  when the block entities tick. {@code condition} must be a pure look: no setup, no spawn and no count of its
+     *  own polls, since its first calls come while block entities do not tick yet. (With every gated poll on
+     *  this rule a hold of 20 polls could pass before anything it watches had ticked, which is why it is not the
+     *  default.) */
+    public static BooleanSupplier watchingCell(GameTestHelper gth, int readyTicks, int workTicks,
+                                               BooleanSupplier condition) {
+        return gateOnReady(() -> isCellEntityTicking(gth), cellReady(gth), gth::fail, readyTicks, workTicks, condition,
+                () -> null);
+    }
+
     /** The GameTestHelper-free core of {@link #whenCellTicking}: one call of the result is one tick's poll.
      *  {@code fail} must throw, as {@code GameTestHelper.fail} does on every node. */
     static BooleanSupplier gateOnReady(BooleanSupplier ready, Consumer<String> fail, int readyTicks, int workTicks,
@@ -437,12 +457,28 @@ public final class EntityArenaUtil {
 
     static BooleanSupplier gateOnReady(BooleanSupplier ready, Consumer<String> fail, int readyTicks, int workTicks,
                                        BooleanSupplier condition, Supplier<String> stalled) {
+        return gateOnReady(() -> false, ready, fail, readyTicks, workTicks, condition, stalled);
+    }
+
+    /** The gate with its two clocks apart. {@code watching} says the condition may be asked (the cell's entities
+     *  tick, so what the test made or dropped is visible and moving); {@code ready} says the work budget may start
+     *  (its block entities tick too). Between the two the condition is asked on every poll and a true answer ends
+     *  the poll, but no work tick is counted: something that happens before the block entities tick (a drop made
+     *  on the test's first tick, which falls from the tick entities start) is seen while it is there, and a slow
+     *  entity read is still not charged to the code under test. {@code ready} is asked first on every poll that is
+     *  not ready yet, so its park runs whether or not the cell is watched. */
+    static BooleanSupplier gateOnReady(BooleanSupplier watching, BooleanSupplier ready, Consumer<String> fail,
+                                       int readyTicks, int workTicks, BooleanSupplier condition,
+                                       Supplier<String> stalled) {
         int[] polls = { 0 };
         int[] readyAt = { -1 };
         return () -> {
             int poll = ++polls[0];
             if (readyAt[0] < 0) {
                 if (!ready.getAsBoolean()) {
+                    if (watching.getAsBoolean() && condition.getAsBoolean()) {
+                        return true;
+                    }
                     if (poll >= readyTicks) {
                         fail.accept("the arena cell's block entities never started ticking within " + readyTicks
                                 + " ticks: its chunks were still being promoted or their entities read in, which is"

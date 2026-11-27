@@ -231,7 +231,7 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   `robot_picker_picks_up_dropped_item` flaked that way. Call `EntityArenaUtil.forceLoadCell(helper)`
   (the 5x5 around every chunk the cell touches; with it every corner ticked on tick 1 in 48 of 48
   arenas) and wrap the condition: `tickUntil(helper, READY + WORK, whenCellTicking(helper, READY,
-  WORK, cond), ...)`. The wrapper answers false until `isCellTicking`, then gives `cond`
+  WORK, cond), ...)`. The wrapper answers false until `isCellTicking`, never asking `cond`, then gives `cond`
   `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. A fifth
   argument, a `Supplier<String>`, is asked only when `WORK` runs out and its text joins the failure:
   use it to name the side, source or item that never came. Write
@@ -250,15 +250,31 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   before a block entity's tick runs (and a scheduled block or fluid tick waits for it too): the chunk's saved entities
   are read on an IO thread and handed over on a later server tick, and the game-test server does not pace its ticks, so
   that arrives up to hundreds of ticks (measured: 380 ms) after the entity-ticking flag. A pipe, a docking station (it
-  registers on its pipe's tick), a machine or a fluid tick needs the second, and `whenCellTicking` gates on it. A poll
-  that waits on a block entity behind a private `isEntityTicking` gate has a budget that lag eats: move it onto
-  `forceLoadCell` + `whenCellTicking`.
+  registers on its pipe's tick), a machine or a fluid tick needs the second, and `whenCellTicking` starts its work
+  budget on it. A poll that waits on a block entity behind a private `isEntityTicking` gate has a budget that lag eats:
+  move it onto `forceLoadCell` + `whenCellTicking`.
+- **Between the two predicates the world is half awake: a drop made before the poll falls through the gap.**
+  Entities tick from the first predicate; block entities start at the second, which can be a dozen ticks later even
+  with the park below (12 on a loaded machine, 2026-11-26). `whenCellTicking` is shut for that whole gap, which is
+  what a condition that acts or counts needs, but an item the test dropped before the poll, or one a level-tick hook
+  drops (the stripes pipe's extension manager), is already falling, and an arena has no floor: about ten ticks later
+  it is outside a 1.5 or 3 block scan. `robot_harvest_reaps_mature_wheat` lost its wheat that way whenever the gap
+  passed ten ticks, and `stripes_lone_pipe_drops_what_it_cannot_send_back` failed once in a full suite. Two ways out.
+  Make the drop inside the gated condition (its first call acts, later calls look: `DropArenaUtil.awaitDrops` is
+  built that way), or, when the drop has to come first, poll with `EntityArenaUtil.watchingCell(helper, READY, WORK,
+  look)`: it asks `look` from the tick the cell's entities tick and ends on a true answer, while the work budget
+  still starts only with the block entities. `look` must be a pure look: no setup, no spawn, no count of its own
+  polls, because its first calls come before block entities tick (a 20-poll hold on that gate could pass before
+  anything it watches had ticked, which is why it is not the default). To find such a test, delay the gate: make
+  `cellReady` answer false for its first 20 polls and run the node's game tests; a deterministic one fails by name
+  (that is how the wheat test was found), one whose drop only sometimes falls needs several runs.
+  `EntityArenaReadinessGateTest` pins both gates.
 - **A not-ready cell gate parks the server.** `CELL_READY_TICKS` counts polls, and unpaced ticks turn 300 polls into
   milliseconds, which bounds no IO. While the gate of `whenCellTicking` (also the marker session's `await` and so the
   drop harness's) is not ready, each poll parks the server thread for 20 ms, once per game tick however many tests wait
   (`EntityArenaUtil.cellReady`), so the 300 polls are worth at least 6 s and the park costs about the wait it covers.
-  The park lives in the readiness supplier handed to `gateOnReady`, which stays pure budget arithmetic: a new harness
-  that builds its own gate passes `cellReady(helper)`, never a bare predicate. A poll that waits on another
+  The park lives in the readiness supplier handed to `gateOnReady`, which knows no level and no clock of its own: a
+  new harness that builds its own gate passes `cellReady(helper)`, never a bare predicate. A poll that waits on another
   dimension's chunks (the gas test's Nether stage) tests `areBlockEntitiesTicking(level, pos)` and wraps it in
   `readyOrPark(level, ready)`.
 - **Which polls need that gate.** Every poll whose condition waits on something that ticks in a block entity (a

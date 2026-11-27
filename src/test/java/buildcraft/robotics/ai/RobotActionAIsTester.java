@@ -323,9 +323,10 @@ public class RobotActionAIsTester {
 
         // The drops are spawned this tick; an entity added to a chunk whose entity section is not loaded yet
         // is invisible to entity scans until it is, so poll on observed state rather than reading tick 0
-        // (flaked on 1.21.11, 2026-10-17).
+        // (flaked on 1.21.11, 2026-10-17). They fall from the tick entities tick and nothing is under the robot,
+        // so the scan watches from then: a gate that opened only with the block entities found them gone.
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DROP_WORK_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DROP_WORK_TICKS,
+                EntityArenaUtil.watchingCell(helper, EntityArenaUtil.CELL_READY_TICKS, DROP_WORK_TICKS,
                         () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).stream()
                                 .anyMatch(item -> item.getItem().is(Items.WHEAT))),
                 helper::succeed,

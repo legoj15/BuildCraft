@@ -405,8 +405,11 @@ public class PipeBehaviourStripesMovesTester {
         helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
 
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
+        // The extension manager drops the void pipe at the end of the next level tick, whatever the cell's block
+        // entities do, and it does not always come to rest on the pipe: the scan watches from the tick entities
+        // tick, or a drop that fell off is out of the box before a later gate opens (26.3-forge, 2026-11-26).
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                EntityArenaUtil.watchingCell(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
                         () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
                                 e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty()),
                 () -> {

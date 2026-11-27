@@ -526,6 +526,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:filler_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::fillerLeavesMarkersItMayNotBreak);
         reg.accept("buildcraftunofficial:architect_table_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::architectTableLeavesMarkersItMayNotBreak);
         reg.accept("buildcraftunofficial:builder_leaves_path_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderLeavesPathMarkersItMayNotBreak);
+        // A closed loop of path markers names its first marker twice; a Builder placed at it asks about it once.
+        reg.accept("buildcraftunofficial:builder_takes_looped_path_asking_once", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderTakesLoopedPathAskingOnce);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);
@@ -658,6 +660,11 @@ public class BuildCraftGameTests {
         // The build is finished (owner, then the hook) by whoever built it, so the Quarry asks claim mods as its builder
         // before it breaks the markers it takes.
         reg.accept("buildcraftunofficial:machine_schematic_quarry_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicQuarryTakesMarkersAsItsBuilder);
+        // A Filler, Architect Table or Builder built from a blueprint takes the markers behind it the same way, as its
+        // builder; a Builder takes the path markers behind it.
+        reg.accept("buildcraftunofficial:machine_schematic_filler_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicFillerTakesMarkersAsItsBuilder);
+        reg.accept("buildcraftunofficial:machine_schematic_architect_table_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicArchitectTableTakesMarkersAsItsBuilder);
+        reg.accept("buildcraftunofficial:machine_schematic_builder_takes_path_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuilderTakesPathAsItsBuilder);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);

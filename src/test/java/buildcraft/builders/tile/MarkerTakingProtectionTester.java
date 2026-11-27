@@ -276,6 +276,68 @@ public class MarkerTakingProtectionTester {
     }
 
     /**
+     * A Builder PLACED against a CLOSED loop of path markers takes the loop's path, and asks about each marker of it
+     * once. A looped connection lists its first marker twice (the closing segment back to it), so the loop's FIRST
+     * marker is the one a naive list of the positions to remove would ask about twice; the claim watches that marker
+     * and must see exactly one ask. The path the Builder holds keeps the closing position (its first again), which
+     * its base positions are laid out along.
+     */
+    public static void builderTakesLoopedPathAskingOnce(GameTestHelper helper) {
+        Session arena = MarkerArenaUtil.open(helper);
+        // Facing west, so the Builder's back (where it looks for a path) is PATH_1, the loop's first marker.
+        BlockPos builderRel = new BlockPos(0, 2, 1);
+        arena.guard(() -> {
+            arena.place(PATH_1, BCCoreBlocks.MARKER_PATH.get());
+            arena.place(PATH_2, BCCoreBlocks.MARKER_PATH.get());
+            arena.place(PATH_3, BCCoreBlocks.MARKER_PATH.get());
+            arena.await(REGISTER_TICKS, () -> arena.isRegistered(PathCache.INSTANCE, PATH_1)
+                && arena.isRegistered(PathCache.INSTANCE, PATH_2)
+                && arena.isRegistered(PathCache.INSTANCE, PATH_3), () -> {
+                ServerLevel level = helper.getLevel();
+                BlockPos[] markers = {arena.abs(PATH_1), arena.abs(PATH_2), arena.abs(PATH_3)};
+                Set<Integer> itemsBefore = itemIds(helper);
+                try {
+                    check(!BCCoreConfig.minePlayerProtected.get(),
+                        "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+                    if (!(level.getBlockEntity(markers[0]) instanceof TileMarkerPath path)) {
+                        throw new IllegalStateException("no path marker tile at " + PATH_1);
+                    }
+                    path.getCache().getSubCache(level).tryConnect(markers[0], markers[1]);
+                    path.getCache().getSubCache(level).tryConnect(markers[1], markers[2]);
+                    // Connecting the last marker back to the first closes the loop: the connection's positions run
+                    // around it and name the first marker again at the end, as the segment that closes it.
+                    path.getCache().getSubCache(level).tryConnect(markers[2], markers[0]);
+                    List<BlockPos> loop = path.getPath();
+                    check(loop.size() == 4 && loop.get(0).equals(markers[0]) && loop.get(3).equals(markers[0]),
+                        "precondition: the path markers did not close into a loop, got " + loop);
+                    Player placer = helper.makeMockPlayer(GameType.SURVIVAL);
+
+                    try (ClaimProtectionMod claim = new ClaimProtectionMod(markers[0], false)) {
+                        TileBuilder builder = place(helper, BCBuildersBlocks.BUILDER.get(), builderRel,
+                            Direction.WEST, TileBuilder.class);
+                        builder.onPlacedBy(placer, ItemStack.EMPTY);
+                        check(builder.path != null && builder.path.size() == 4
+                                && builder.path.get(0).equals(markers[0]) && builder.path.get(3).equals(markers[0]),
+                            "a Builder placed at a closed loop must take its path, first position last to close it, "
+                                + "got " + builder.path);
+                        for (BlockPos marker : markers) {
+                            check(level.getBlockState(marker).isAir(),
+                                "the Builder took the loop but left the marker at " + arena.rel(marker));
+                        }
+                        check(claim.asks() == 1, "a Builder must ask about the loop's first marker exactly once "
+                            + "(a loop names it twice, once to break it), asked " + claim.asks() + " times");
+                        checkAskedAs(claim, placer, "a Builder");
+                    }
+                } finally {
+                    helper.setBlock(builderRel, Blocks.AIR);
+                    discardNewItems(helper, itemsBefore);
+                }
+                arena.finish();
+            }, "Path markers never registered in the cache");
+        });
+    }
+
+    /**
      * The three volume markers, connected into a box, and a mock placer; {@code body} runs with them once the markers
      * are registered, and every marker and new dropped item is cleared after it, whatever failed.
      */

@@ -6,8 +6,9 @@
 package buildcraft.lib.tile;
 
 /**
- * A block entity that takes something from the world when it is placed (a working area) and would be left without it
- * when a blueprint builds it, because a blueprint build calls no placement hook ({@code onPlacedBy} and the like).
+ * A block entity that takes something from the world when it is placed (the working area of a Quarry, a Filler or an
+ * Architect Table, the path of a Builder) and would be left without it when a blueprint builds it, because a
+ * blueprint build calls no placement hook ({@code onPlacedBy} and the like).
  *
  * <p>Whoever built the block calls this on the server once the schematic's build is over
  * ({@link BlueprintOwner#finishBuild}: the Builder, a player placing a single schematic): the block is placed and its

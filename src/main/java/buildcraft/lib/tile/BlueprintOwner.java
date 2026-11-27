@@ -92,8 +92,9 @@ public final class BlueprintOwner {
     /**
      * Finishes what a schematic just built at {@code pos}: makes {@code owner} the owner of the block entity there when
      * it is one of this mod's ({@link AbstractBCBlockEntity}), then calls its hook when it is a
-     * {@link BuiltFromBlueprint} (of this mod or not). Owner first, so a hook that asks claim mods (a Quarry about to
-     * break the markers it takes) asks as the builder. Server side only, and for a build that succeeded.
+     * {@link BuiltFromBlueprint} (of this mod or not). Owner first, so a hook that asks claim mods (a Quarry, Filler
+     * or Architect Table about to break the markers it takes, a Builder about to break its path markers) asks as the
+     * builder. Server side only, and for a build that succeeded.
      * {@code before} is the block entity that stood at {@code pos} before the build, or null: when it is still the one
      * standing there the build placed nothing (a schematic may report success without placing a block), and a machine
      * somebody else put in that cell keeps its owner and is not told it was built. That holds for {@code build}, which

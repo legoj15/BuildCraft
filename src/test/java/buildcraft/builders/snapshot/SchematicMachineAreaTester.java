@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
@@ -32,14 +33,17 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersConfig;
 import buildcraft.builders.BuilderRefloodTester;
+import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.VolumeBox;
+import buildcraft.core.tile.TileMarkerPath;
 import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -386,6 +390,212 @@ public class SchematicMachineAreaTester {
     }
 
     /**
+     * A Filler a blueprint builds against a connected marker volume takes the volume, as one placed there does: the
+     * markers go, asked about first as whoever built it (its owner is set before the taking), and the box the Filler
+     * holds is the volume's. The schematic is captured from a Filler that was never placed, so the blueprint holds no
+     * box of the original's, and the built Filler is removed in the tick it was built in, before it ever ticks.
+     */
+    public static void machineSchematicFillerTakesMarkersAsItsBuilder(GameTestHelper helper) {
+        Session arena = MarkerArenaUtil.open(helper);
+        BlockPos marker1 = new BlockPos(1, 2, 1);
+        BlockPos marker2 = new BlockPos(4, 2, 1);
+        BlockPos marker3 = new BlockPos(1, 2, 4);
+        BlockPos boxMax = new BlockPos(4, 2, 4);
+        BlockPos sourceRel = new BlockPos(3, 2, 6);
+        // Facing west, so its back is marker1.
+        BlockPos builtRel = new BlockPos(0, 2, 1);
+        arena.guard(() -> {
+            arena.place(marker1, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.place(marker2, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.place(marker3, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.await(REGISTER_TICKS, () -> arena.isRegistered(VolumeCache.INSTANCE, marker1)
+                    && arena.isRegistered(VolumeCache.INSTANCE, marker2)
+                    && arena.isRegistered(VolumeCache.INSTANCE, marker3), () -> {
+                ServerLevel level = helper.getLevel();
+                LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
+                BlockPos[] markers = {arena.abs(marker1), arena.abs(marker2), arena.abs(marker3)};
+                BlockPos builtAbs = arena.abs(builtRel);
+                Set<Integer> itemsBefore = new HashSet<>();
+                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
+                    itemsBefore.add(item.getId());
+                }
+                try {
+                    checkVolumeMarkersConnected(helper, arena, markers, boxMax);
+
+                    helper.setBlock(sourceRel, machineState(BCBuildersBlocks.FILLER.get(), Direction.WEST));
+                    SchematicBlockDefault captured = capture(helper, sourceRel);
+                    helper.setBlock(sourceRel, Blocks.AIR);
+
+                    try (ClaimProtectionMod claim = new ClaimProtectionMod(markers[1], false)) {
+                        buildAndFinish(level, captured, builtAbs, "The Filler");
+                        checkAskedAsItsBuilder(helper, claim, "The built Filler");
+                    }
+                    TileFiller built = (TileFiller) level.getBlockEntity(builtAbs);
+                    helper.assertTrue(built != null, "The built Filler must have its block entity");
+                    checkBelongsToItsBuilder(helper, built.getOwner(), "The built Filler");
+                    helper.assertTrue(built.hasBox() && built.getBox().min().equals(arena.abs(marker1))
+                                    && built.getBox().max().equals(arena.abs(boxMax)),
+                            "The built Filler must take the marker volume behind it, got "
+                                    + (built.hasBox() ? built.getBox() : "no box"));
+                    checkMarkersTaken(helper, arena, markers, "The built Filler");
+                } finally {
+                    // Never leave a Filler, the box it owns or a dropped marker behind, whatever failed. Removing the
+                    // block releases the box the Filler owns; the sweep is the backstop.
+                    helper.setBlock(sourceRel, Blocks.AIR);
+                    helper.setBlock(builtRel, Blocks.AIR);
+                    if (boxes.volumeBoxes.removeIf(box -> box.isOwnedBy(builtAbs) || box.box.contains(markers[0]))) {
+                        boxes.markDirtyAndBroadcast();
+                    }
+                    for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
+                            EntityArenaUtil.cellBounds(helper))) {
+                        if (!itemsBefore.contains(item.getId())) {
+                            item.discard();
+                        }
+                    }
+                }
+                arena.finish();
+            }, "Volume markers never registered in the cache");
+        });
+    }
+
+    /**
+     * An Architect Table a blueprint builds against a connected marker volume takes the volume, as one placed there
+     * does: the table is valid, its box is the volume's, and the markers went, asked about first as whoever built it
+     * (its owner is set before the taking). The schematic is captured from a table that was never placed, and the
+     * built table is removed in the tick it was built in, before it ever ticks.
+     */
+    public static void machineSchematicArchitectTableTakesMarkersAsItsBuilder(GameTestHelper helper) {
+        Session arena = MarkerArenaUtil.open(helper);
+        BlockPos marker1 = new BlockPos(1, 2, 1);
+        BlockPos marker2 = new BlockPos(4, 2, 1);
+        BlockPos marker3 = new BlockPos(1, 2, 4);
+        BlockPos boxMax = new BlockPos(4, 2, 4);
+        BlockPos sourceRel = new BlockPos(3, 2, 6);
+        // Facing west, so its back is marker1.
+        BlockPos builtRel = new BlockPos(0, 2, 1);
+        arena.guard(() -> {
+            arena.place(marker1, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.place(marker2, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.place(marker3, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.await(REGISTER_TICKS, () -> arena.isRegistered(VolumeCache.INSTANCE, marker1)
+                    && arena.isRegistered(VolumeCache.INSTANCE, marker2)
+                    && arena.isRegistered(VolumeCache.INSTANCE, marker3), () -> {
+                ServerLevel level = helper.getLevel();
+                LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
+                BlockPos[] markers = {arena.abs(marker1), arena.abs(marker2), arena.abs(marker3)};
+                BlockPos builtAbs = arena.abs(builtRel);
+                Set<Integer> itemsBefore = new HashSet<>();
+                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
+                    itemsBefore.add(item.getId());
+                }
+                try {
+                    checkVolumeMarkersConnected(helper, arena, markers, boxMax);
+
+                    helper.setBlock(sourceRel, machineState(BCBuildersBlocks.ARCHITECT.get(), Direction.WEST));
+                    SchematicBlockDefault captured = capture(helper, sourceRel);
+                    helper.setBlock(sourceRel, Blocks.AIR);
+
+                    try (ClaimProtectionMod claim = new ClaimProtectionMod(markers[1], false)) {
+                        buildAndFinish(level, captured, builtAbs, "The Architect Table");
+                        checkAskedAsItsBuilder(helper, claim, "The built Architect Table");
+                    }
+                    TileArchitectTable built = (TileArchitectTable) level.getBlockEntity(builtAbs);
+                    helper.assertTrue(built != null, "The built Architect Table must have its block entity");
+                    checkBelongsToItsBuilder(helper, built.getOwner(), "The built Architect Table");
+                    helper.assertTrue(built.getIsValid(),
+                            "The built Architect Table must be valid, with the marker volume behind it");
+                    helper.assertTrue(built.box.isInitialized() && built.box.min().equals(arena.abs(marker1))
+                                    && built.box.max().equals(arena.abs(boxMax)),
+                            "The built Architect Table must take the marker volume behind it, got "
+                                    + (built.box.isInitialized() ? built.box : "no box"));
+                    checkMarkersTaken(helper, arena, markers, "The built Architect Table");
+                } finally {
+                    // Never leave a table, the box it owns or a dropped marker behind, whatever failed. Removing the
+                    // block releases the box the table owns; the sweep is the backstop.
+                    helper.setBlock(sourceRel, Blocks.AIR);
+                    helper.setBlock(builtRel, Blocks.AIR);
+                    if (boxes.volumeBoxes.removeIf(box -> box.isOwnedBy(builtAbs) || box.box.contains(markers[0]))) {
+                        boxes.markDirtyAndBroadcast();
+                    }
+                    for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
+                            EntityArenaUtil.cellBounds(helper))) {
+                        if (!itemsBefore.contains(item.getId())) {
+                            item.discard();
+                        }
+                    }
+                }
+                arena.finish();
+            }, "Volume markers never registered in the cache");
+        });
+    }
+
+    /**
+     * A Builder a blueprint builds against a connected path of path markers takes the path, as one placed there
+     * does: the path markers go, asked about first as whoever built it (its owner is set before the taking), and the
+     * path the Builder holds is the markers'. The schematic is captured from a Builder that was never placed, and
+     * the built Builder is removed in the tick it was built in, before it ever ticks.
+     */
+    public static void machineSchematicBuilderTakesPathAsItsBuilder(GameTestHelper helper) {
+        Session arena = MarkerArenaUtil.open(helper);
+        BlockPos path1 = new BlockPos(1, 2, 1);
+        BlockPos path2 = new BlockPos(4, 2, 1);
+        BlockPos path3 = new BlockPos(4, 2, 4);
+        BlockPos sourceRel = new BlockPos(3, 2, 6);
+        // Facing west, so its back is path1.
+        BlockPos builtRel = new BlockPos(0, 2, 1);
+        arena.guard(() -> {
+            arena.place(path1, BCCoreBlocks.MARKER_PATH.get());
+            arena.place(path2, BCCoreBlocks.MARKER_PATH.get());
+            arena.place(path3, BCCoreBlocks.MARKER_PATH.get());
+            arena.await(REGISTER_TICKS, () -> arena.isRegistered(PathCache.INSTANCE, path1)
+                    && arena.isRegistered(PathCache.INSTANCE, path2)
+                    && arena.isRegistered(PathCache.INSTANCE, path3), () -> {
+                ServerLevel level = helper.getLevel();
+                BlockPos[] markers = {arena.abs(path1), arena.abs(path2), arena.abs(path3)};
+                BlockPos builtAbs = arena.abs(builtRel);
+                Set<Integer> itemsBefore = new HashSet<>();
+                for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
+                    itemsBefore.add(item.getId());
+                }
+                try {
+                    helper.assertFalse(BCCoreConfig.minePlayerProtected.get(),
+                            "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+                    TileMarkerPath path = connectPathMarkers(level, markers);
+                    helper.assertTrue(path.getPath().size() == 3,
+                            "precondition: the path markers did not connect, got " + path.getPath());
+
+                    helper.setBlock(sourceRel, machineState(BCBuildersBlocks.BUILDER.get(), Direction.WEST));
+                    SchematicBlockDefault captured = capture(helper, sourceRel);
+                    helper.setBlock(sourceRel, Blocks.AIR);
+
+                    try (ClaimProtectionMod claim = new ClaimProtectionMod(markers[2], false)) {
+                        buildAndFinish(level, captured, builtAbs, "The Builder");
+                        checkAskedAsItsBuilder(helper, claim, "The built Builder");
+                    }
+                    TileBuilder built = (TileBuilder) level.getBlockEntity(builtAbs);
+                    helper.assertTrue(built != null, "The built Builder must have its block entity");
+                    checkBelongsToItsBuilder(helper, built.getOwner(), "The built Builder");
+                    helper.assertTrue(built.path != null && built.path.size() == 3
+                                    && built.path.containsAll(List.of(markers)),
+                            "The built Builder must take the path of the path markers behind it, got " + built.path);
+                    checkMarkersTaken(helper, arena, markers, "The built Builder");
+                } finally {
+                    // Never leave a Builder or a dropped marker behind, whatever failed.
+                    helper.setBlock(sourceRel, Blocks.AIR);
+                    helper.setBlock(builtRel, Blocks.AIR);
+                    for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
+                            EntityArenaUtil.cellBounds(helper))) {
+                        if (!itemsBefore.contains(item.getId())) {
+                            item.discard();
+                        }
+                    }
+                }
+                arena.finish();
+            }, "Path markers never registered in the cache");
+        });
+    }
+
+    /**
      * Builds {@code schematic} at {@code builtAbs} and finishes the build as the Builder does, for {@link #BUILDER}
      * ({@link BlueprintOwner#finishBuild}, given the block entity that stood there before). {@code what} names the
      * built Quarry in the failure.
@@ -488,5 +698,60 @@ public class SchematicMachineAreaTester {
         SchematicBlockDefault captured = (SchematicBlockDefault) schematic;
         helper.assertTrue(captured.tileNbt != null, "The scan must keep the machine's tile data");
         return captured;
+    }
+
+    /** The preconditions every built-machine test below needs: claims are asked at all, and the three volume
+     *  markers, {@code markers[0]} the one behind the machine, are connected into the box reaching
+     *  {@code boxMaxRel}. */
+    private static void checkVolumeMarkersConnected(GameTestHelper helper, Session arena, BlockPos[] markers,
+            BlockPos boxMaxRel) {
+        helper.assertFalse(BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+        helper.assertTrue(helper.getLevel().getBlockEntity(markers[0]) instanceof TileMarkerVolume,
+                "no volume marker tile at " + arena.rel(markers[0]));
+        TileMarkerVolume volume = (TileMarkerVolume) helper.getLevel().getBlockEntity(markers[0]);
+        volume.onManualConnectionAttempt(null);
+        helper.assertTrue(volume.max().equals(arena.abs(boxMaxRel)),
+                "precondition: the markers did not connect into a box");
+    }
+
+    /** Connects the three path markers into one path, from {@code markers[0]}, the one behind the machine. */
+    private static TileMarkerPath connectPathMarkers(ServerLevel level, BlockPos[] markers) {
+        if (!(level.getBlockEntity(markers[0]) instanceof TileMarkerPath path)) {
+            throw new IllegalStateException("no path marker tile at " + markers[0]);
+        }
+        path.getCache().getSubCache(level).tryConnect(markers[0], markers[1]);
+        path.getCache().getSubCache(level).tryConnect(markers[1], markers[2]);
+        return path;
+    }
+
+    /** The claim saw at least one ask, and the first came from {@link #BUILDER}: a built machine asks as its
+     *  builder, so its owner must be set before it takes the markers. */
+    private static void checkAskedAsItsBuilder(GameTestHelper helper, ClaimProtectionMod claim, String who) {
+        helper.assertTrue(claim.asks() >= 1, who + " must ask about the far marker before it breaks it");
+        Player asker = claim.askedBy.get(0);
+        helper.assertTrue(asker != null && GameProfileUtil.getId(BUILDER).equals(asker.getUUID()),
+                who + " must ask as its builder " + GameProfileUtil.getName(BUILDER)
+                        + ", so its owner must be set before it takes the markers; asked as "
+                        + (asker == null ? "nobody" : asker.getGameProfile()));
+    }
+
+    /** The built machine belongs to {@link #BUILDER}, never to whoever made the blueprint it was built from. */
+    private static void checkBelongsToItsBuilder(GameTestHelper helper, GameProfile owner, String who) {
+        helper.assertTrue(owner != null && GameProfileUtil.getId(owner).equals(GameProfileUtil.getId(BUILDER)),
+                who + " must belong to its builder, got " + owner);
+    }
+
+    /** Every marker of the connection is gone: the machine took them all. */
+    private static void checkMarkersTaken(GameTestHelper helper, Session arena, BlockPos[] markers, String who) {
+        for (BlockPos marker : markers) {
+            helper.assertTrue(helper.getLevel().getBlockState(marker).isAir(),
+                    who + " took the markers but left the marker at " + arena.rel(marker));
+        }
+    }
+
+    /** The machine's block state turned to face {@code facing}, the state a capture builds back. */
+    private static BlockState machineState(Block block, Direction facing) {
+        return block.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, facing);
     }
 }

@@ -25,7 +25,8 @@ import net.minecraft.world.phys.AABB;
  * drifts out of a one-block scan after about ten ticks. {@link #awaitDrops} instead gates everything on observed
  * state, in this order:
  * <ol>
- * <li>force-load the cell and wait for it to be entity-ticking ({@link EntityArenaUtil#whenCellTicking});</li>
+ * <li>force-load the cell and wait for its block entities to tick, which also means its entities do
+ *     ({@link EntityArenaUtil#whenCellTicking});</li>
  * <li>run the test's {@code act} (place, fill, break) in one tick, so nothing ticks between filling a machine and
  *     breaking it;</li>
  * <li>poll until every drop the test expects is in its scan, which is normally the very next tick;</li>
@@ -57,13 +58,14 @@ public final class DropArenaUtil {
      *  sees everything, asserts about six ticks after the pop. */
     private static final int SETTLE_TICKS = 5;
     /** The whole poll: the budget {@code GameTestPollBudgetTester} compares a manifest's {@code max_ticks} with.
-     *  {@link EntityArenaUtil#CELL_READY_TICKS} (the cell's wait to become entity-ticking, the machine's clock and
+     *  {@link EntityArenaUtil#CELL_READY_TICKS} (the cell's wait for its block entities to tick, the machine's clock and
      *  not the code under test's, so generous: it costs nothing unless the cell never ticks) plus the constants
      *  above, a sum which that guard resolves. */
     public static final int POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + WORK_TICKS + SETTLE_TICKS;
 
     /**
-     * Runs {@code act} once the test's cell is entity-ticking, waits for every drop {@code expected} names to appear,
+     * Runs {@code act} once block entities tick in the test's cell (its entities tick by then too), waits for every
+     * drop {@code expected} names to appear,
      * settles, asserts, and passes the test.
      *
      * @param act       places and fills the block, then breaks or removes it ({@link #breakBlock},

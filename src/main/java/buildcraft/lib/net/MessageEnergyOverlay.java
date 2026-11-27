@@ -97,8 +97,8 @@ public record MessageEnergyOverlay(String key, Kind kind, long amount, boolean d
     }
 
     /** Client-side handler: shows the resolved message on the action bar. Reaches no client-only class
-     *  ({@code ctx.player()} is the local player), so it is safe to link on either side. */
+     *  (the player the overlay is sent to is the local player), so it is safe to link on either side. */
     public static void handle(MessageEnergyOverlay message, PacketContext ctx) {
-        ctx.runOnMain(() -> MessageUtil.sendOverlayMessage(ctx.player(), message.resolve()));
+        ctx.runOnMainWithPlayer(player -> MessageUtil.sendOverlayMessage(player, message.resolve()));
     }
 }

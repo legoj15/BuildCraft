@@ -213,9 +213,11 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   that tester's allowlist. Recharge is zone-free by design (`AIRobotRecharge` searches every
   powered station), so the pin does not narrow a recharge search: such a test stays hermetic through
   its own `test_environment` and the nearest-station rule.
-- **Gate a same-tick scan on `EntityArenaUtil.isEntityTicking(helper, relPos)`.** The framework
+- **Gate a same-tick scan on `EntityArenaUtil.isEntityTicking(helper, relPos)`.** It means entities
+  there tick and an entity added there is visible to `getEntitiesOfClass` at once; it says nothing about
+  block entities (see "Two readiness predicates" below). The framework
   waits only for the 1x1 structure's own chunk, so a position a couple of blocks in can sit in a
-  neighbouring chunk whose entities are not loaded yet (measured on 26.2 and 1.21.11: 6 of 50
+  neighbouring chunk that is not entity-ticking yet (measured on 26.2 and 1.21.11: 6 of 50
   samples were not entity-ticking at the first tick). An entity
   added there is invisible to `getEntitiesOfClass` in the same tick, so a test that adds something
   and scans for it at once polls `isEntityTicking` first (and `forceLoadEntityArena` around the
@@ -229,7 +231,7 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   `robot_picker_picks_up_dropped_item` flaked that way. Call `EntityArenaUtil.forceLoadCell(helper)`
   (the 5x5 around every chunk the cell touches; with it every corner ticked on tick 1 in 48 of 48
   arenas) and wrap the condition: `tickUntil(helper, READY + WORK, whenCellTicking(helper, READY,
-  WORK, cond), ...)`. The wrapper answers false until `isCellEntityTicking`, then gives `cond`
+  WORK, cond), ...)`. The wrapper answers false until `isCellTicking`, never asking `cond`, then gives `cond`
   `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. A fifth
   argument, a `Supplier<String>`, is asked only when `WORK` runs out and its text joins the failure:
   use it to name the side, source or item that never came. Write
@@ -241,11 +243,56 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   only in a ticking chunk (`placeSource`'s tick is kept if the fluid already scheduled its own: 5 ticks for water, 30
   for lava), `BlockWaterloggingTester.buildBasin` force-loads the cell, and `waterloggable_marker_holds_back_lava`
   waits with `whenCellTicking`.
-- **Which polls need that gate.** Every poll whose condition waits on something that ticks (a robot's first tick, a
-  station registering on its pipe's tick, an item crossing a pipe, a comparator following a block entity, a drop that
-  must become visible to a scan) gets `forceLoadCell` and `whenCellTicking`, a one-block rig included: its chunk's
-  promotion is the machine's clock, and a budget counted from tick 1 charges it to the code under test. Two kinds
-  do not: a poll whose condition is itself `isEntityTicking`/`isCellEntityTicking` (its whole budget is the
+- **Two readiness predicates: pick by what the poll waits on.** `isEntityTicking(helper, relPos)` /
+  `isCellEntityTicking(helper)` mean entities tick and an entity added there is seen by a scan at once: right for
+  drop and spill scans and for a robot's or item's own state. `areBlockEntitiesTicking(helper, relPos)` /
+  `isCellTicking(helper)` add `ServerLevel.areEntitiesLoaded` of the chunk, which `LevelChunk.isTicking` requires
+  before a block entity's tick runs (and a scheduled block or fluid tick waits for it too): the chunk's saved entities
+  are read on an IO thread and handed over on a later server tick, and the game-test server does not pace its ticks, so
+  that arrives up to hundreds of ticks (measured: 380 ms) after the entity-ticking flag. A pipe, a docking station (it
+  registers on its pipe's tick), a machine or a fluid tick needs the second, and `whenCellTicking` starts its work
+  budget on it. A poll that waits on a block entity behind a private `isEntityTicking` gate has a budget that lag eats:
+  move it onto `forceLoadCell` + `whenCellTicking`.
+- **Between the two predicates the world is half awake: a drop made before the poll falls through the gap.**
+  Entities tick from the first predicate; block entities start at the second, which can be a dozen ticks later even
+  with the park below (12 on a loaded machine, 2026-11-26). `whenCellTicking` is shut for that whole gap, which is
+  what a condition that acts or counts needs, but an item the test dropped before the poll, or one a level-tick hook
+  drops (the stripes pipe's extension manager), is already falling, and an arena has no floor: about ten ticks later
+  it is outside a scan a block or two wide (the drop harness measured a radius of 1 lost on tick 9). The same goes
+  for anything else that passes: stacks sent down a pipe have travelled on a few dozen ticks later, and an Architect
+  Table's small scan is over in about 28 (`architect_refuses_oversized_scan` waited to see it scanning). That gap lost
+  `robot_harvest_reaps_mature_wheat` its wheat whenever it passed ten ticks, and in full suite runs on a loaded
+  machine it failed `stripes_lone_pipe_drops_what_it_cannot_send_back` (gate open on tick 12) and
+  `stripes_item_pipe_extends_line` (tick 53). A negative check is hit the other way round: "nothing was dropped"
+  passes once the drop has fallen out of its box. Two ways out. Make the act the gate's first call
+  (`EntityArenaUtil.actThenLook(act, look)`: the first call acts, later calls look; the stripes move tests and
+  `DropArenaUtil.awaitDrops` are built that way), so nothing it starts runs while the gate is shut. Or, when the act
+  has to come first, poll with `EntityArenaUtil.watchingCell(helper, READY, WORK,
+  look)`: it asks `look` from the tick the cell's entities tick and ends on a true answer, while the work budget
+  still starts only with the block entities. `look` must be a pure look: no setup, no spawn, no count of its own
+  polls, because its first calls come before block entities tick (a 20-poll hold on that gate could pass before
+  anything it watches had ticked, which is why it is not the default). To find such a test, delay the gate: make
+  `cellReady` answer false for its first 20 polls and run the node's game tests; a deterministic one fails by name
+  (that is how the wheat test was found), one whose drop only sometimes falls needs several runs.
+  `EntityArenaReadinessGateTest` pins both gates.
+- **A not-ready cell gate parks the server.** `CELL_READY_TICKS` counts polls, and unpaced ticks turn 300 polls into
+  milliseconds, which bounds no IO. While the gate of `whenCellTicking` (also the marker session's `await` and so the
+  drop harness's) is not ready, each poll parks the server thread for 20 ms, once per game tick however many tests wait
+  (`EntityArenaUtil.cellReady`), so the 300 polls are worth at least 6 s and the park costs about the wait it covers.
+  The park lives in the readiness supplier handed to `gateOnReady`, which knows no level and no clock of its own: a
+  new harness that builds its own gate passes `cellReady(helper)`, never a bare predicate. A poll that waits on another
+  dimension's chunks (the gas test's Nether stage) tests `areBlockEntitiesTicking(level, pos)` and wraps it in
+  `readyOrPark(level, ready)`.
+- **Which polls need that gate.** Every poll whose condition waits on something that ticks in a block entity (a
+  station registering on its pipe's tick, an item crossing a pipe, a comparator following a block entity, a machine
+  working, a scheduled fluid tick) gets `forceLoadCell` and `whenCellTicking`, a one-block rig included: its chunk's
+  promotion and entity read are the machine's clock, and a budget counted from tick 1 charges them to the code under
+  test. A robot's first tick and a drop that must become visible to a scan are entities and need only the entity
+  predicate; they go through the same gate when they share a poll with such a block entity, and then the robot is
+  spawned or the drop made on the gate's first call, never before it (the drop harness makes its drop that way; see the half-awake
+  gap above).
+  Two kinds do not use it: a poll whose condition is itself `isEntityTicking`/`isCellEntityTicking`/
+  `areBlockEntitiesTicking`/`isCellTicking` (its whole budget is the
   readiness wait and its body is synchronous), and a poll that drives the machine by hand on every poll tick (the
   Quarry and Filler tests call `tick()` themselves, so no chunk's ticking matters to them). A fixture that polls for
   every test of its file (`whenStationRegistered`) gates once, inside the fixture, and every manifest of those tests
@@ -297,7 +344,7 @@ was the 2026-09-26 flake: orientation, volume_los and triangulation_3d failing t
   everything already in scan range (WARN-logged, so the polluter is findable), `Session.place` refuses
   coordinates outside the 6x7 cell, `await`/`awaitThen` gate on the marker joining the cache (it does on the
   first level tick, not on placement) and clean up on timeout, `guard`/`finish` clean up on every other exit. Their
-  budget starts when the whole cell is entity-ticking (`open` force-loads it), so the poll runs for up to
+  budget starts when the cell's block entities tick (`isCellTicking`; `open` force-loads it), so the poll runs for up to
   `CELL_READY_TICKS + budget` ticks: the guard adds that itself, so the test passes its own `REGISTER_TICKS`-style
   budget and the manifest's `max_ticks` sits above the sum (350 for a 40 tick budget). A wait that runs before the
   arena opens (strays planted to be evicted by `open`) goes through `MarkerArenaUtil.openWithoutEviction` and `adopt`,
@@ -338,6 +385,21 @@ never on `setChunkForced`:
 - A test that merely runs code which now refuses to touch a chunk that is not in memory (the robot pump AI and its
   board, `BlockUtil.drainStaysInLoadedChunks`) must have its neighbours loaded: `EntityArenaUtil.forceLoadCell(helper)`
   first, because the framework loads only the one chunk under the arena.
+
+## Tests that depend on the weather
+
+The Fabric and Forge game-test worlds persist between runs and their weather cycle runs; NeoForge's test server turns
+the cycle off. A test with `"environment": "minecraft:default"`, or with an environment of ours that has no definitions,
+therefore starts in whatever weather the last run ended in. Rain puts a fire out on a fire tick and blocks its spread,
+so `oil_burns_with_vanilla_fire` failed on a Fabric node whose saved world had started to rain ("the fire went out
+without burning anything", twice in a row on that node and on no other).
+
+A test whose outcome depends on the weather sets it: give the test its own `test_environment` holding
+`{"type": "minecraft:weather", "weather": "clear"}`, and call `level.setRainLevel(0)` in its first poll. The
+environment alone is not enough: the rain level eases down by 0.01 a tick and the world counts as raining until it is
+under 0.2 (measured: environment only, 5 of 5 runs failed in a raining world; with the level set, 6 of 6 passed), and
+the 1.21.1 nodes have no test environments (an environment only names the batch there, so its definitions never run).
+Name the weather in the failure message too, so the next odd failure says what the world was doing.
 
 ## To verify your test is actually running (not silently skipped)
 

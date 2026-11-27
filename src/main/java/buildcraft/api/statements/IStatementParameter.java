@@ -47,7 +47,12 @@ public interface IStatementParameter extends IGuiSlot {
         buffer.writeNbt(nbt);
     }
 
-    /** This returns the parameter after a left rotation. Used in particular in blueprints orientation. */
+    /** The parameter this one becomes when what it belongs to is turned one quarter turn clockwise about the Y axis
+     * ({@code Rotation.CLOCKWISE_90}: NORTH becomes EAST), or itself when it has nothing to turn or does not turn
+     * it (not every parameter that names a direction does: check the implementation). A gate or a Filler in a
+     * blueprint that is built rotated turns its statements' parameters once per quarter turn: each by this method,
+     * unless the statement that holds them turns its whole list by a rule of its own (a parameter that means
+     * something only beside another, which then returns itself here). */
     IStatementParameter rotateLeft();
 
     /** @return An array of all the possible alternative params for this state. Note that the return array may contain

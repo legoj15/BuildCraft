@@ -9,6 +9,8 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -25,6 +27,8 @@ import net.minecraft.world.level.ScheduledTickAccess;
 //?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -46,7 +50,9 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 
 import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 /**
  * Abstract base block for all BuildCraft engine blocks.
@@ -58,7 +64,7 @@ import buildcraft.lib.misc.BlockUtil;
  */
 @SuppressWarnings("this-escape")
 public abstract class BlockEngineBase_BC8 extends Block
-        implements EntityBlock, ICustomRotationHandler, SimpleWaterloggedBlock {
+        implements EntityBlock, ICustomRotationHandler, SimpleWaterloggedBlock, RotatedTileData {
 
     public BlockEngineBase_BC8(Properties properties) {
         // Not a redstone conductor, as in 1.7.10/1.12.2: a lever on the engine's back must switch the engine on
@@ -108,6 +114,27 @@ public abstract class BlockEngineBase_BC8 extends Block
     public BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rot) {
         return state.setValue(BuildCraftProperties.BLOCK_FACING_6,
             rot.rotate(state.getValue(BuildCraftProperties.BLOCK_FACING_6)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, Mirror mirror) {
+        return state.setValue(BuildCraftProperties.BLOCK_FACING_6,
+            mirror.mirror(state.getValue(BuildCraftProperties.BLOCK_FACING_6)));
+    }
+
+    /** The face the tile powers is its own copy of the facing, saved as {@code orientation} (a byte holding the
+     *  direction's ordinal): it turns with the block state, or the rotated engine would power the face it was
+     *  captured with. A value that is no direction is left as it is. */
+    @Override
+    public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        // A tag with no orientation, or one that is not a number, is left as it is.
+        if (!(tileNbt.get("orientation") instanceof NumericTag)) {
+            return;
+        }
+        Direction saved = NBTUtilBC.getDirectionOrNull(tileNbt, "orientation", (byte) -1);
+        if (saved != null) {
+            tileNbt.putByte("orientation", (byte) rotation.rotate(saved).ordinal());
+        }
     }
 
     @Override

@@ -44,6 +44,42 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
         return null;
     }
 
+    /**
+     * The axis turns by itself ({@link PatternParameterAxis#rotateLeft}); the quarter-turn count turns the shape within
+     * its plane, so what a quarter turn of the world makes of it depends on the axis. A shape lying flat (Y) is turned
+     * a quarter clockwise in its plane, which is one more count. A shape standing in the plane of X lands in the plane
+     * of Z with its across axis (south on X, east on Z) reversed, which reverses the count (a quarter becomes three
+     * quarters, see {@link #mirroredCount}); one standing in the plane of Z lands in the plane of X with the across
+     * axis kept, so its count is as it was. A shape with no rotation slot (Square, Octagon) ignores any count and is
+     * left as it is. A count the tag lacks reads as NONE, so a shape lying flat with none saved gets a QUARTER count
+     * written.
+     */
+    @Override
+    public IStatementParameter[] rotateParameters(IStatementParameter[] params) {
+        IStatementParameter[] turned = super.rotateParameters(params);
+        if (maxParameters() > 2 && params.length > 2) {
+            int count = getParam(2, params, PatternParameterRotation.NONE).rotationCount;
+            int turnedCount = switch (getParam(0, params, PatternParameterAxis.Y)) {
+                case Y -> (count + 1) & 3;
+                case X -> mirroredCount(count);
+                case Z -> count;
+            };
+            if (turnedCount != count) {
+                turned[2] = PatternParameterRotation.values()[turnedCount];
+            }
+        }
+        return turned;
+    }
+
+    /**
+     * The quarter-turn count that draws the mirror image of this shape at {@code count} (the across axis reversed).
+     * The shapes that are symmetric across their upright line draw the mirror image of a shape turned {@code count}
+     * quarters by turning it the other way, so the count is reversed.
+     */
+    protected int mirroredCount(int count) {
+        return (4 - count) & 3;
+    }
+
     @Override
     public boolean fillTemplate(IFilledTemplate filledTemplate, IStatementParameter[] params) {
         PatternParameterAxis axis = getParam(0, params, PatternParameterAxis.Y);

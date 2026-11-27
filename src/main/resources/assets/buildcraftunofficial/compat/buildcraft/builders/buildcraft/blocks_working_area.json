@@ -1,0 +1,73 @@
+[
+    {
+        "selectors": [
+            "buildcraftunofficial:filler",
+            "buildcraftunofficial:architect",
+            "buildcraftunofficial:builder"
+        ],
+        "replaceNbt": {
+            "box_initialized": null,
+            "box_minX": null,
+            "box_minY": null,
+            "box_minZ": null,
+            "box_maxX": null,
+            "box_maxY": null,
+            "box_maxZ": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:filler"
+        ],
+        "replaceNbt": {
+            "markerBox": null,
+            "finished": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:architect"
+        ],
+        "replaceNbt": {
+            "isValid": null,
+            "scanning": null,
+            "scanRefused": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:builder"
+        ],
+        "replaceNbt": {
+            "path_count": null,
+            "currentBasePosIndex": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:mining_well"
+        ],
+        "replaceNbt": {
+            "hasCurrentPos": null,
+            "currentPosX": null,
+            "currentPosY": null,
+            "currentPosZ": null,
+            "wantedLength": null,
+            "progress": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:laser"
+        ],
+        "replaceNbt": {
+            "laser_x": null,
+            "laser_y": null,
+            "laser_z": null,
+            "target_x": null,
+            "target_y": null,
+            "target_z": null,
+            "has_target": null
+        }
+    }
+]

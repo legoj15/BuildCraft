@@ -75,6 +75,7 @@ import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
+import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -548,6 +549,12 @@ public class SchematicBlockDefault implements ISchematicBlock {
         schematicBlock.ignoredProperties.addAll(ignoredProperties);
         // A copy, like every other field: the rotated schematic is handed to builders that may adjust it.
         schematicBlock.tileNbt = tileNbt == null ? null : tileNbt.copy();
+        // The state's own rotation cannot reach a direction the block entity saves under its own keys; the block
+        // turns that, on the copy.
+        if (rotation != Rotation.NONE && schematicBlock.tileNbt != null
+            && blockState.getBlock() instanceof RotatedTileData turnsTileData) {
+            turnsTileData.rotateTileData(schematicBlock.tileNbt, rotation);
+        }
         schematicBlock.tileRotation = tileRotation.getRotated(rotation);
         schematicBlock.placeBlock = placeBlock;
         updateBlockOffsets.stream()

@@ -91,12 +91,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_connectivity_in_cube_same_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeSameColourConnected);
         reg.accept("buildcraftunofficial:wire_connectivity_in_cube_different_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeDifferentColourNotConnected);
         reg.accept("buildcraftunofficial:wire_connectivity_cross_tile_same_colour", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileSameColourConnected);
+        reg.accept("buildcraftunofficial:wire_connectivity_cross_tile_needs_a_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileNeedsAWireLink);
         reg.accept("buildcraftunofficial:wire_link_drops_when_neighbour_removed", () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileLinkDropsWhenNeighbourRemoved);
         reg.accept("buildcraftunofficial:wire_system_follows_unconnected_link", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsUnconnectedLink);
         reg.accept("buildcraftunofficial:wire_system_follows_connection", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsConnection);
         reg.accept("buildcraftunofficial:wire_system_follows_nbt_write", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemFollowsNbtWrite);
         reg.accept("buildcraftunofficial:wire_system_missing_wire_dropped_on_load", () -> buildcraft.transport.block.PipeWireConnectivityTester::testLoadDropsSystemNamingMissingWire);
         reg.accept("buildcraftunofficial:wire_load_rejoins_stranded_wire", () -> buildcraft.transport.block.PipeWireConnectivityTester::testLoadRejoinsStrandedWire);
+        reg.accept("buildcraftunofficial:wire_chunk_load_rejoins_wire", () -> buildcraft.transport.block.PipeWireChunkLoadTester::testChunkLoadRejoinsWire);
         reg.accept("buildcraftunofficial:wire_system_cut_by_power_adaptor", () -> buildcraft.transport.block.PipeWireConnectivityTester::testWireSystemCutByPowerAdaptor);
 
         // Per-player wire-colour tracking gating the colorful_electrician advancement
@@ -633,6 +635,10 @@ public class BuildCraftGameTests {
         // Blueprint replaceNbt wiring: a charged quarry/laser, scanned and rebuilt through each real build path, starts with no stored energy.
         reg.accept("buildcraftunofficial:blueprint_build_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildDropsStoredEnergy);
         reg.accept("buildcraftunofficial:blueprint_build_without_checks_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildWithoutChecksDropsStoredEnergy);
+        // A machine built from a blueprint starts with no working area of its own: a Filler loses its box, and a Builder its path
+        // and the index into it, and works out its own box from its blueprint and its own position.
+        reg.accept("buildcraftunofficial:machine_schematic_builds_filler_without_its_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsFillerWithoutItsBox);
+        reg.accept("buildcraftunofficial:machine_schematic_builds_builder_with_its_own_box_and_no_path", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsBuilderWithItsOwnBoxAndNoPath);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);
@@ -642,6 +648,23 @@ public class BuildCraftGameTests {
         // Pluggables must rotate with the blueprint: a plug on NORTH moves to EAST under a 90° CW
         // rotation, otherwise facades stay on captured faces after a rotated build and block flow.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
+        // Wire corners must rotate with the blueprint too: wires are stored by corner in the tile
+        // NBT and are not recomputed on placement, so the corners are remapped like the faces are.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_wire_corners", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesWireCorners);
+        // A directional pipe's face (iron, wood, emerald, emzuli, daizuli) and a stripes pipe's working face are stored
+        // as compass names, so they turn with the blueprint too.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_pipe_direction", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPipeDirection);
+        // A diamond pipe's filter rows are indexed by face, so each row moves to the rotated face.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_diamond_filter_rows", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesDiamondFilterRows);
+        // A gate's statements read a face, so their sides (and the pipe-direction actions) turn with the blueprint.
+        reg.accept("buildcraftunofficial:pipe_schematic_rotates_gate_statement_sides", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesGateStatementSides);
+        // A machine whose tile saves a direction turns it with the blueprint: an engine's orientation, a flood gate's
+        // open sides (the block state only draws them) and a Builder's saved turn.
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_engine_orientation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesEngineOrientation);
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_flood_gate_sides", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesFloodGateSides);
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_builder_rotation", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesBuilderRotation);
+        // A Filler lays its pattern out in world axes, so a rotated blueprint turns the direction parameters it saved.
+        reg.accept("buildcraftunofficial:machine_schematic_rotates_filler_pattern", () -> buildcraft.builders.snapshot.SchematicMachineRotationTester::machineSchematicRotatesFillerPattern);
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);
@@ -1067,6 +1090,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
         reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
         reg.accept("buildcraftunofficial:wire_recompute_leaves_absent_emitter_chunk_unloaded", () -> buildcraft.transport.WireSystemTester::testRecomputeLeavesAbsentEmitterChunkUnloaded);
+
+        // Wire rebuild identity - a rebuild that reproduces the system it took out puts the old instance back (the
+        // client knows a system by its instance's key) and flags nothing; only
+        // a system that appeared, went or changed reaches the clients, and a kept system's power flip goes out as a
+        // power-only update.
+        reg.accept("buildcraftunofficial:wire_rebuild_changing_nothing_leaves_structure_flag", () -> buildcraft.transport.WireSystemTester::testRebuildThatChangesNothingKeepsSystemAndFlags);
+        reg.accept("buildcraftunofficial:wire_rebuild_keeps_power_of_kept_system", () -> buildcraft.transport.WireSystemTester::testRebuildKeepsPowerOfKeptSystem);
+        reg.accept("buildcraftunofficial:wire_rebuild_reports_power_change_of_kept_system", () -> buildcraft.transport.WireSystemTester::testRebuildReportsPowerChangeOfKeptSystem);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
         // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an

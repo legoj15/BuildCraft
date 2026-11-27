@@ -67,7 +67,8 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
  * saved data, so a quarry, laser or engine would be rebuilt holding the power it had; 1.12.2 stripped it with the rule
  * directive {@code replaceNbt}, which this port parsed and never applied. Every case builds its fixture from the real
  * tile's own save (so a rule naming a key the tile no longer writes fails here) and reads the rebuilt data back through
- * the real tile's own load.
+ * the real tile's own load. A machine that works an area it saves as absolute positions is rebuilt without that area
+ * the same way ({@link #aRebuiltMachineHoldsNoWorkingArea}).
  */
 public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
 
@@ -99,8 +100,14 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
         new Machine("quarry", BCBuildersBlocks.QUARRY::get,
             tile -> {
                 // A task mid-way has already been paid for: its power is energy too. Loaded before the battery is
-                // set, because the load writes every key it does not carry back to its default.
-                load(tile, longs("currentTaskId", 0, "task_power", CHARGE));
+                // set, because the load writes every key it does not carry back to its default. The quarry stands
+                // against its frame (the tile is at the origin, the frame starts one block east of it, the mining box
+                // is the frame's inside): a quarry that does not drops its box on load, and its task with it.
+                load(tile, longs("currentTaskId", 0, "task_power", CHARGE,
+                    "frame_init", 1, "frame_minX", 1, "frame_minY", 0, "frame_minZ", -2,
+                    "frame_maxX", 5, "frame_maxY", 4, "frame_maxZ", 2,
+                    "box_init", 1, "box_minX", 2, "box_minY", -60, "box_minZ", -1,
+                    "box_maxX", 4, "box_maxY", 3, "box_maxZ", 1));
                 fill(((TileQuarry) tile).getBattery());
             },
             tile -> ((TileQuarry) tile).getBattery().getStored()
@@ -245,11 +252,17 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             Assertions.assertEquals(0L, machine.stored().applyAsLong(rebuilt),
                 mode + ": the rebuilt machine must start with no stored energy: " + placed);
 
-            // Only the energy goes: whatever else the machine was scanned with is rebuilt as it was. In IGNORE mode
+            // The energy goes, and nothing else but a working area: whatever else the machine was scanned with is
+            // rebuilt as it was. In IGNORE mode
             // the inventories go as well, which is not what is under test here; every other key still has to be kept
-            // in that mode, so a regression that drops configuration on the IGNORE path is caught.
+            // in that mode, so a regression that drops configuration on the IGNORE path is caught. A machine that
+            // works an area drops that too ({@link #aRebuiltMachineHoldsNoWorkingArea} pins it), and is not
+            // configuration either.
+            List<String> areaKeys = AREAS.stream().filter(area -> area.name().equals(machine.name()))
+                .flatMap(area -> area.removed().stream()).toList();
             for (String key : keysOf(scanned)) {
-                if (List.of(machine.energyKeys()).contains(key) || (!includeContents && INVENTORY_KEYS.contains(key))) {
+                if (List.of(machine.energyKeys()).contains(key) || areaKeys.contains(key)
+                    || (!includeContents && INVENTORY_KEYS.contains(key))) {
                     continue;
                 }
                 Assertions.assertEquals(scanned.get(key), placed.get(key), mode + ": \"" + key + "\" must be kept");
@@ -326,6 +339,195 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     @Test
     public void aSchematicWithoutTileDataPlacesNone() {
         Assertions.assertNull(schematic(BCBuildersBlocks.QUARRY.get(), null).tileNbtToPlace(true));
+    }
+
+    // --- A rebuilt machine holds no working area ---
+
+    /**
+     * One machine that works an area it saves as absolute world positions. {@code given} is written by hand with the
+     * key names the tile's own {@code writeData} uses (the fixture is checked against that writer below) and gives
+     * the machine an area through its own reader. {@code removed} are the keys a rebuilt copy must not carry,
+     * {@code notLoaded} keys that may stay in the tag but that the tile's reader no longer reads once {@code removed}
+     * are gone (a Builder's numbered path positions follow {@code path_count}), and {@code kept} keys of the same
+     * machine that are not its area and must come through untouched.
+     */
+    private record Area(String name, Supplier<? extends Block> block, CompoundTag given, List<String> removed,
+                        List<String> notLoaded, List<String> kept) {}
+
+    private static final String OWNER_ID = "00000000-0000-0000-0000-000000000001";
+
+    private static final List<String> BOX_KEYS = List.of("box_initialized", "box_minX", "box_minY", "box_minZ",
+        "box_maxX", "box_maxY", "box_maxZ");
+
+    private static CompoundTag tag(Consumer<CompoundTag> fill) {
+        CompoundTag tag = new CompoundTag();
+        fill.accept(tag);
+        return tag;
+    }
+
+    /** The box keys {@code TileFiller}, {@code TileArchitectTable} and {@code TileBuilder} write for a box that is set. */
+    private static void putBox(CompoundTag tag) {
+        tag.putBoolean("box_initialized", true);
+        tag.putInt("box_minX", 100);
+        tag.putInt("box_minY", 64);
+        tag.putInt("box_minZ", 200);
+        tag.putInt("box_maxX", 104);
+        tag.putInt("box_maxY", 66);
+        tag.putInt("box_maxZ", 204);
+    }
+
+    /** {@code OwnerData.writeOwner}'s keys, which every machine but the laser saves. */
+    private static void putOwner(CompoundTag tag) {
+        tag.putString("ownerUUID", OWNER_ID);
+        tag.putString("ownerName", "Steve");
+    }
+
+    private static List<String> concat(List<String> first, String... more) {
+        List<String> all = new ArrayList<>(first);
+        all.addAll(List.of(more));
+        return all;
+    }
+
+    private static final List<Area> AREAS = List.of(
+        // TileFiller.writeData: the box, the flag that says it came from a volume box behind the Filler (false for a
+        // Filler placed against one; a copy that kept it would adopt whatever box lies behind it) and the flag that
+        // says it finished filling that box (a copy that kept it would stay parked once it had a box of its own), then
+        // the pattern, the invert flag and the owner.
+        new Area("filler", BCBuildersBlocks.FILLER::get,
+            tag(tag -> {
+                putBox(tag);
+                tag.putBoolean("markerBox", false);
+                tag.putBoolean("finished", true);
+                tag.putBoolean("inverted", true);
+                putOwner(tag);
+            }),
+            concat(BOX_KEYS, "markerBox", "finished"), List.of(),
+            List.of("inverted", "patternStatement", "ownerUUID", "ownerName")),
+        // TileArchitectTable.writeData: the box, the scan flags that belong to it, then the table's own settings.
+        new Area("architect", BCBuildersBlocks.ARCHITECT::get,
+            tag(tag -> {
+                putBox(tag);
+                tag.putBoolean("isValid", true);
+                tag.putBoolean("scanning", true);
+                tag.putBoolean("scanRefused", true);
+                tag.putBoolean("markerBox", true);
+                tag.putString("name", "tower");
+                putOwner(tag);
+            }),
+            concat(BOX_KEYS, "isValid", "scanning", "scanRefused"), List.of(),
+            List.of("name", "markerBox", "snapshotType", "ownerUUID", "ownerName")),
+        // TileBuilder.writeData: the box, the path of base positions (a count, then three ints per position) and the
+        // index into it, beside the turn and settings that are the Builder's own.
+        new Area("builder", BCBuildersBlocks.BUILDER::get,
+            tag(tag -> {
+                putBox(tag);
+                tag.putInt("path_count", 2);
+                tag.putInt("path_0_x", 100);
+                tag.putInt("path_0_y", 64);
+                tag.putInt("path_0_z", 200);
+                tag.putInt("path_1_x", 100);
+                tag.putInt("path_1_y", 64);
+                tag.putInt("path_1_z", 210);
+                tag.putInt("currentBasePosIndex", 1);
+                tag.putInt("rotation", Rotation.CLOCKWISE_90.ordinal());
+                tag.putBoolean("canExcavate", false);
+                putOwner(tag);
+            }),
+            concat(BOX_KEYS, "path_count", "currentBasePosIndex"),
+            List.of("path_0_x", "path_0_y", "path_0_z", "path_1_x", "path_1_y", "path_1_z"),
+            List.of("rotation", "canExcavate", "ownerUUID", "ownerName")),
+        // TileMiner.writeData: the position being mined, the tube length that goes with it and the progress on it.
+        new Area("mining_well", BCFactoryBlocks.MINING_WELL::get,
+            tag(tag -> {
+                tag.putBoolean("hasCurrentPos", true);
+                tag.putInt("currentPosX", 100);
+                tag.putInt("currentPosY", 20);
+                tag.putInt("currentPosZ", 200);
+                tag.putInt("wantedLength", 12);
+                tag.putInt("progress", 5);
+                putOwner(tag);
+            }),
+            List.of("hasCurrentPos", "currentPosX", "currentPosY", "currentPosZ", "wantedLength", "progress"),
+            List.of(), List.of("ownerUUID", "ownerName")),
+        // TileLaser.writeData: where the beam ends (laser_*, as doubles) and the cell it targets.
+        new Area("laser", BCSiliconBlocks.LASER::get,
+            tag(tag -> {
+                tag.putDouble("laser_x", 100.5);
+                tag.putDouble("laser_y", 64.5);
+                tag.putDouble("laser_z", 200.5);
+                tag.putInt("target_x", 100);
+                tag.putInt("target_y", 64);
+                tag.putInt("target_z", 200);
+                tag.putBoolean("has_target", true);
+            }),
+            List.of("laser_x", "laser_y", "laser_z", "target_x", "target_y", "target_z", "has_target"),
+            List.of(), List.of("avg_power")));
+
+    @TestFactory
+    public Stream<DynamicTest> aRebuiltMachineHoldsNoWorkingArea() {
+        return AREAS.stream().map(area -> DynamicTest.dynamicTest(area.name(), () -> checkNoWorkingArea(area)));
+    }
+
+    private static void checkNoWorkingArea(Area area) throws Exception {
+        Block block = area.block().get();
+        CompoundTag fresh = save(newTile(block));
+
+        // The fixture is real: the machine loads the area and saves it back under these keys, with a value a machine
+        // nobody gave an area does not have. Without this the checks below could pass on keys the tile never writes.
+        BlockEntity working = newTile(block);
+        load(working, area.given().copy());
+        CompoundTag scanned = save(working);
+        for (String key : area.removed()) {
+            Assertions.assertTrue(scanned.contains(key) && !scanned.get(key).equals(fresh.get(key)),
+                area.name() + ": the tile no longer saves its working area under \"" + key + "\": " + scanned);
+        }
+        for (String key : area.kept()) {
+            Assertions.assertTrue(scanned.contains(key),
+                area.name() + ": the tile no longer saves \"" + key + "\": " + scanned);
+        }
+
+        CompoundTag scannedBefore = scanned.copy();
+        SchematicBlockDefault schematic = schematic(block, scanned);
+        for (boolean includeContents : new boolean[] {true, false}) {
+            String mode = area.name() + (includeContents ? " (contents placed)" : " (contents ignored)");
+            CompoundTag placed = schematic.tileNbtToPlace(includeContents);
+
+            for (String key : area.removed()) {
+                Assertions.assertFalse(placed.contains(key), mode + ": \"" + key + "\" must not be built: " + placed);
+            }
+            for (String key : area.kept()) {
+                Assertions.assertEquals(scannedBefore.get(key), placed.get(key), mode + ": \"" + key + "\" must be kept");
+            }
+
+            // The placed tile starts as one nobody gave an area, and keeps the rest of what it was scanned with.
+            BlockEntity rebuilt = newTile(block);
+            load(rebuilt, placed.copy());
+            CompoundTag reloaded = save(rebuilt);
+            for (String key : concat(area.removed(), area.notLoaded().toArray(String[]::new))) {
+                Assertions.assertEquals(fresh.get(key), reloaded.get(key),
+                    mode + ": \"" + key + "\" must read back as it does on a machine with no area: " + reloaded);
+            }
+            for (String key : area.kept()) {
+                Assertions.assertEquals(scannedBefore.get(key), reloaded.get(key),
+                    mode + ": \"" + key + "\" must survive the load");
+            }
+        }
+        Assertions.assertEquals(scannedBefore, schematic.tileNbt, "building must not touch the schematic's own data");
+
+        // A blueprint saved before the keys were dropped holds them in its stored tag, and the stored form of this one
+        // is exactly that: reading it back and building it must give what building the capture gives.
+        // Reading it back runs the capture's own sanitizing (a Filler's or Builder's queued tasks go), so the scan is
+        // sanitized the same way before the two are compared.
+        CompoundTag expected = schematic(block,
+            SchematicBlockDefault.sanitizeTileNbt(scannedBefore.copy(), block.defaultBlockState())).tileNbtToPlace(true);
+        SchematicBlockDefault stored = new SchematicBlockDefault();
+        stored.deserializeNbt(schematic.serializeNbt());
+        for (String key : area.removed()) {
+            Assertions.assertTrue(stored.tileNbt.contains(key),
+                area.name() + ": the stored blueprint should still hold \"" + key + "\": " + stored.tileNbt);
+        }
+        Assertions.assertEquals(expected, stored.tileNbtToPlace(true),
+            area.name() + ": a stored blueprint must build without the working area too");
     }
 
     // --- NBTUtilBC.merge: 1.12.2's replaceNbt semantics ---

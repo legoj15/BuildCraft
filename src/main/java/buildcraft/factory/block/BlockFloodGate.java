@@ -15,6 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -24,7 +26,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -38,7 +42,10 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.ConnectedSides;
+import buildcraft.lib.block.RotatedTileData;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 /**
  * The Flood Gate block. Has 5 configurable sides (all except UP) that can be
@@ -46,7 +53,7 @@ import buildcraft.lib.misc.BlockUtil;
  * Ported from 1.12.2 BlockFloodGate.
  */
 @SuppressWarnings("this-escape")
-public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
+public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> implements RotatedTileData {
     //? if <26.3 {
     /*public static final MapCodec<BlockFloodGate> CODEC =
             simpleCodec(BlockFloodGate::new);
@@ -80,6 +87,37 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         CONNECTED_MAP.values().forEach(builder::add);
+    }
+
+    // The connected booleans only draw the open sides; a rotated or mirrored state (a blueprint built turned, a
+    // structure block) moves each one to the side it turns into. The sides the gate acts on are the tile's openSides,
+    // which a rotated blueprint turns through rotateTileData.
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return ConnectedSides.rotate(state, CONNECTED_MAP, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return ConnectedSides.mirror(state, CONNECTED_MAP, mirror);
+    }
+
+    /** The {@code openSides} byte {@link TileFloodGate} saves: bit {@code 1 << get3DDataValue()} per open side. The six
+     *  side bits move to the bits of the sides they turn into, and any bit above them is carried over unchanged. */
+    @Override
+    public void rotateTileData(CompoundTag tileNbt, Rotation rotation) {
+        // A tag with no mask, or one that is not a number, is left as it is.
+        if (!(tileNbt.get("openSides") instanceof NumericTag)) {
+            return;
+        }
+        int sides = NBTUtilBC.getByte(tileNbt, "openSides", (byte) 0) & 0xFF;
+        int turned = sides & ~((1 << Direction.values().length) - 1);
+        for (Direction side : Direction.values()) {
+            if ((sides & (1 << side.get3DDataValue())) != 0) {
+                turned |= 1 << rotation.rotate(side).get3DDataValue();
+            }
+        }
+        tileNbt.putByte("openSides", (byte) turned);
     }
 
     @Nullable

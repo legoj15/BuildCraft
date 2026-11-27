@@ -11,7 +11,6 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
 
@@ -66,8 +65,7 @@ public record MessageContainerPayload(
      * {@link BCContainer#readMessage}.
      */
     public static void handle(MessageContainerPayload message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            Player player = ctx.player();
+        ctx.runOnMainWithPlayer(player -> {
             AbstractContainerMenu openContainer = player.containerMenu;
             if (openContainer == null) {
                 BCLog.logger.warn("[lib.net] Received container message but player has no open container");

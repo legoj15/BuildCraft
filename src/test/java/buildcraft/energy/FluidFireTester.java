@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 
 /**
@@ -26,7 +27,8 @@ import buildcraft.lib.test.EntityArenaUtil;
  * detonates with a chain that stays inside its reach.
  *
  * <p>Both run alone (each has its own {@code test_environment}) because they change global state for a while: the
- * fire-tick game rule and the two fire configs.
+ * fire-tick game rule and the two fire configs. The burn test's environment also sets clear weather: rain puts a
+ * vanilla fire out, and the Fabric and Forge test worlds persist between runs with their weather cycle running.
  */
 public class FluidFireTester {
 
@@ -103,6 +105,12 @@ public class FluidFireTester {
         Runnable[] restoreRule = { null };
         BooleanSupplier burned = () -> {
             if (!built[0]) {
+                // Vanilla puts a fire out under rain within a few fire ticks (20% plus 3% per age, per tick), so a
+                // burn in the rain ends with the pool untouched. The test environment sets clear weather, but the
+                // rain level then eases down by 0.01 a tick and the world counts as raining until it is under 0.2:
+                // the level is set to 0 here. (A server whose world outlives the run and whose weather cycle runs,
+                // Fabric and Forge, starts a run in the weather the last one ended in.)
+                level.setRainLevel(0.0F);
                 built[0] = true;
                 BCEnergyConfig.canBurn.set(true);
                 restoreRule[0] = enableFireTicks(level);
@@ -112,7 +120,9 @@ public class FluidFireTester {
                 return false;
             }
             if (!helper.getBlockState(FIRE_REL).is(Blocks.FIRE) && !fireAnywhereOnPool(helper)) {
-                helper.fail("the fire on the oil went out without burning anything: " + helper.getBlockState(FIRE_REL));
+                helper.fail("the fire on the oil went out without burning anything: " + helper.getBlockState(FIRE_REL)
+                    + " (raining " + level.isRaining() + ", rain level " + level.getRainLevel(1.0F) + ", canBurn "
+                    + BCEnergyConfig.canBurnEnabled() + ", crude burn odds " + flammability(level, probe, crude) + ")");
             }
             for (int i = 0; i < FIRE_TICKS_PER_POLL; i++) {
                 for (int x = 1; x <= 3; x++) {
@@ -297,6 +307,7 @@ public class FluidFireTester {
         int[] stage = { 0 };
         int[] stageStart = { 0 };
         int[] polls = { 0 };
+        BlockState[] beforeGas = { null };
         BooleanSupplier machine = () -> {
             polls[0]++;
             switch (stage[0]) {
@@ -351,7 +362,13 @@ public class FluidFireTester {
                     }
                 }
                 case 5 -> {
-                    if (nether.isPositionEntityTicking(NETHER_SPOT)) {
+                    // The gas explodes on a fluid tick, which runs only where block entities tick: the chunk's saved
+                    // entities must be read in as well. A forced chunk turns entity-ticking a tick or more before that
+                    // read is handed over (a gas set on the first entity-ticking tick had to wait for it in 116 of 120
+                    // measured Nether loads), and the read is IO, so the wait is parked, not counted in ticks.
+                    if (EntityArenaUtil.readyOrPark(nether,
+                            EntityArenaUtil.areBlockEntitiesTicking(nether, NETHER_SPOT))) {
+                        beforeGas[0] = nether.getBlockState(NETHER_SPOT);
                         nether.setBlock(NETHER_SPOT, gas.defaultBlockState(), 3);
                         advance(stage, stageStart, polls);
                     }
@@ -365,7 +382,16 @@ public class FluidFireTester {
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GAS_WORK_TICKS,
             EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GAS_WORK_TICKS, machine,
                 () -> "stuck in stage " + stage[0] + " (0 build, 1 first blast and chain, 2 settle, 3 gasExplodes off,"
-                    + " 4 fire catches the guard, 5 the Nether's chunks load, 6 gas in the Nether)"),
+                    + " 4 fire catches the guard, 5 the Nether's chunks load, 6 gas in the Nether)"
+                    + (nether == null ? "" : "; at the Nether spot after " + (polls[0] - stageStart[0])
+                        + " ticks in this stage: block " + nether.getBlockState(NETHER_SPOT) + " (before the gas: "
+                        + beforeGas[0] + "), entity-ticking " + nether.isPositionEntityTicking(NETHER_SPOT)
+                        + ", entities loaded " + nether.areEntitiesLoaded(BlockUtil.chunkKey(
+                            NETHER_SPOT.getX() >> 4, NETHER_SPOT.getZ() >> 4))
+                        + ", fluid tick scheduled " + nether.getFluidTicks().hasScheduledTick(NETHER_SPOT,
+                            nether.getBlockState(NETHER_SPOT).getFluidState().getType())
+                        + ", gasExplodes " + BCEnergyConfig.gasExplodesEnabled() + ", ultra-warm "
+                        + FluidVolatility.isUltraWarm(nether, NETHER_SPOT))),
             helper::succeed,
             "the gas never finished detonating",
             () -> {

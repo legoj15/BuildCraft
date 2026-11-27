@@ -75,6 +75,63 @@ public final class PatternSpherePart extends Pattern implements IFillerPatternSh
         return BCBuildersSprites.FILLER_SPHERE_PART.get(type);
     }
 
+    /**
+     * The face a sphere part opens beyond the one it faces, for a quarter-turn count of {@code rotationCount}: the
+     * second open face for the count itself, the third (the eighth sphere's) for the next count. The axis of the face
+     * alternates with the count and the sign comes from the upper half of the counts, so the counts 0 to 3 go round the
+     * faces of the two other axes: WEST, NORTH, EAST, SOUTH about a vertical facing.
+     */
+    private static Direction openFace(Direction facing, int rotationCount) {
+        Axis axis = facing.getAxis();
+        Axis openAxis;
+        if (rotationCount % 2 == 1) {
+            openAxis = axis == Axis.X ? Axis.Y : axis == Axis.Y ? Axis.Z : Axis.X;
+        } else {
+            openAxis = axis == Axis.X ? Axis.Z : axis == Axis.Y ? Axis.X : Axis.Y;
+        }
+        return VecUtil.getFacing(openAxis, rotationCount >= 2);
+    }
+
+    /** A quarter turn clockwise about Y: a horizontal face moves to the next one, UP and DOWN stay. */
+    private static Direction turnedFace(Direction face) {
+        return face.getAxis().isHorizontal() ? face.getClockWise() : face;
+    }
+
+    /**
+     * The facing turns by itself ({@link PatternParameterFacing#rotateLeft}); the quarter-turn count has to follow it,
+     * because the second and third open faces are chosen by the count together with the facing. Every open face moves
+     * to its turned face, and the count is the one that picks exactly those faces round the turned facing: the second
+     * face of a quarter sphere, the second and third of an eighth in either order (the shape is the set of its open
+     * faces, and a turn does not always keep which of the three is the facing). It is not always one more: a face on
+     * the X axis and one on the Z axis are picked by different counts. A count the tag lacks reads as NONE, so a
+     * quarter or eighth sphere with none saved gets the turned count written when it is not NONE.
+     */
+    @Override
+    public IStatementParameter[] rotateParameters(IStatementParameter[] params) {
+        IStatementParameter[] turned = super.rotateParameters(params);
+        if (type.openFaces > 1 && params.length > 2) {
+            Direction facing = getParam(1, params, PatternParameterFacing.DOWN).face;
+            int count = getParam(2, params, PatternParameterRotation.NONE).rotationCount;
+            Direction turnedFacing = turnedFace(facing);
+            Direction secondary = turnedFace(openFace(facing, count));
+            Direction tertiary = turnedFace(openFace(facing, (count + 1) & 3));
+            for (int turnedCount = 0; turnedCount < 4; turnedCount++) {
+                Direction second = openFace(turnedFacing, turnedCount);
+                Direction third = openFace(turnedFacing, (turnedCount + 1) & 3);
+                boolean picks = type.openFaces < 3
+                    ? second == secondary
+                    : (second == secondary && third == tertiary) || (second == tertiary && third == secondary);
+                if (picks) {
+                    if (turnedCount != count) {
+                        turned[2] = PatternParameterRotation.values()[turnedCount];
+                    }
+                    break;
+                }
+            }
+        }
+        return turned;
+    }
+
     @Override
     public boolean fillTemplate(IFilledTemplate filledTemplate, IStatementParameter[] params) {
         PatternParameterFacing facing = getParam(1, params, PatternParameterFacing.DOWN);
@@ -98,13 +155,8 @@ public final class PatternSpherePart extends Pattern implements IFillerPatternSh
         radius = VecUtil.replaceValue(radius, axis, VecUtil.getValue(radius, axis) * 2);
 
         if (type.openFaces > 1) {
-            Axis secondaryAxis;
-            if (rotation.rotationCount % 2 == 1) {
-                secondaryAxis = axis == Axis.X ? Axis.Y : axis == Axis.Y ? Axis.Z : Axis.X;
-            } else {
-                secondaryAxis = axis == Axis.X ? Axis.Z : axis == Axis.Y ? Axis.X : Axis.Y;
-            }
-            Direction secondaryFace = VecUtil.getFacing(secondaryAxis, rotation.rotationCount >= 2);
+            Direction secondaryFace = openFace(facing.face, rotation.rotationCount);
+            Axis secondaryAxis = secondaryFace.getAxis();
             innerSides.add(secondaryFace);
 
             offset = VecUtil.offset(Vec3.ZERO, secondaryFace, VecUtil.getValue(radius, secondaryAxis));
@@ -112,14 +164,8 @@ public final class PatternSpherePart extends Pattern implements IFillerPatternSh
             radius = VecUtil.replaceValue(radius, secondaryAxis, VecUtil.getValue(radius, secondaryAxis) * 2);
 
             if (type.openFaces > 2) {
-                Axis tertiaryAxis;
-                int rotationCount = (rotation.rotationCount + 1) & 3;
-                if (rotationCount % 2 == 1) {
-                    tertiaryAxis = axis == Axis.X ? Axis.Y : axis == Axis.Y ? Axis.Z : Axis.X;
-                } else {
-                    tertiaryAxis = axis == Axis.X ? Axis.Z : axis == Axis.Y ? Axis.X : Axis.Y;
-                }
-                Direction tertiaryFace = VecUtil.getFacing(tertiaryAxis, rotationCount >= 2);
+                Direction tertiaryFace = openFace(facing.face, (rotation.rotationCount + 1) & 3);
+                Axis tertiaryAxis = tertiaryFace.getAxis();
                 innerSides.add(tertiaryFace);
 
                 offset = VecUtil.offset(Vec3.ZERO, tertiaryFace, VecUtil.getValue(radius, tertiaryAxis));

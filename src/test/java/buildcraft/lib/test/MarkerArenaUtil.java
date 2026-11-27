@@ -53,7 +53,7 @@ import buildcraft.lib.marker.MarkerSubCache;
  *     {@code onLoad} is deferred to {@code tickBlockEntities}), so {@link Session#isRegistered} +
  *     {@link Session#awaitThen} replace the old {@code runAfterDelay(2)} guesses. The cell's chunks are
  *     force-loaded (5x5 around each corner) because the framework forces only the one chunk under the
- *     arena's north-west corner, and a wait's budget starts only once the whole cell is entity-ticking: that
+ *     arena's north-west corner, and a wait's budget starts only once block entities tick in the whole cell: that
  *     registration itself needs only a loaded chunk, but what a marker test observes next (a path marker popping on
  *     a scheduled block tick, the drop it leaves, a connection held across ticks) needs the chunk ticking, and a
  *     budget counted from tick 1 would charge the chunk promotion to the code under test.</li>
@@ -336,7 +336,7 @@ public final class MarkerArenaUtil {
         }
 
         /** Polls once per tick for {@code condition}, then runs {@code then}. The budget {@code maxTicks} starts
-         *  counting only once the cell is entity-ticking ({@link EntityArenaUtil#isCellEntityTicking}), never from the
+         *  counting only once the cell's block entities tick ({@link EntityArenaUtil#isCellTicking}), never from the
          *  test's first tick: the cell crosses a chunk border in about 57% of runs and the half the test is not
          *  standing in starts ticking later, so a budget counted from tick 1 charges that chunk promotion to the
          *  code under test (the scheduled block ticks that pop a path marker, the drop it leaves for a scan). A cell
@@ -362,7 +362,7 @@ public final class MarkerArenaUtil {
         public void awaitThen(int maxTicks, BooleanSupplier condition, Runnable first, int gapTicks, Runnable second,
                               Supplier<String> failureMessage) {
             int pollTicks = EntityArenaUtil.CELL_READY_TICKS + maxTicks;
-            BooleanSupplier gated = EntityArenaUtil.gateOnReady(() -> EntityArenaUtil.isCellEntityTicking(gth),
+            BooleanSupplier gated = EntityArenaUtil.gateOnReady(EntityArenaUtil.cellReady(gth),
                 detail -> {
                     // The gate fails by throwing and the poll's own cleanup then runs, but the caches are dumped BEFORE
                     // anything is removed, so the report names what the markers looked like when the wait gave up.

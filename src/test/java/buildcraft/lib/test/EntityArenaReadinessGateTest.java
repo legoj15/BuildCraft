@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /** {@link EntityArenaUtil#gateOnReady}: a robot test's work budget counts from the moment its arena cell is
- *  entity-ticking, not from the test's first tick.
+ *  ready (its block entities tick), not from the test's first tick; and {@link EntityArenaUtil.Pacer}: a waiting
+ *  server is parked once per game tick, however many gates wait.
  *
  *  <p>Why it exists: a forced chunk's promotion to entity-ticking is asynchronous and an arena can straddle a chunk
  *  border, so one half of the cell can start ticking ~20 ticks after the other on an idle machine (measured on 26.3
@@ -72,6 +73,30 @@ public class EntityArenaReadinessGateTest {
     }
 
     @Test
+    void whatHappensBeforeTheBlockEntitiesTickIsStillSeen() {
+        int[] tick = { 0 };
+        List<Integer> askedAt = new ArrayList<>();
+        // Entities tick from tick 3 and block entities from tick 30. A drop made on the test's first tick falls
+        // from tick 3 and is out of a scan's reach around tick 13: the scan has to be asked while it is there.
+        BooleanSupplier gate = EntityArenaUtil.gateOnReady(() -> tick[0] >= 3, () -> tick[0] >= 30,
+                EntityArenaReadinessGateTest::fail, 100, 20, () -> {
+                    askedAt.add(tick[0]);
+                    return tick[0] >= 4 && tick[0] <= 13;
+                }, () -> null);
+        Assertions.assertEquals(4, answeredAt(tick, gate, 60),
+                "a condition that comes true while only entities tick ends the poll then");
+        Assertions.assertEquals(List.of(3, 4), askedAt, "and it is not asked before entities tick");
+
+        // The work budget still starts with the block entities: watched from tick 3, ready on tick 30, and the
+        // 20-tick budget runs out on tick 50, not on tick 23.
+        Assertions.assertEquals(50, failedAt(tick, EntityArenaUtil.gateOnReady(() -> tick[0] >= 3,
+                () -> tick[0] >= 30, EntityArenaReadinessGateTest::fail, 100, 20, () -> false, () -> null), 100));
+        // And a cell whose block entities never tick fails on the readiness budget, watched or not.
+        Assertions.assertEquals(40, failedAt(tick, EntityArenaUtil.gateOnReady(() -> true, () -> false,
+                EntityArenaReadinessGateTest::fail, 40, 20, () -> false, () -> null), 100));
+    }
+
+    @Test
     void theWorkBudgetCountsFromTheTickTheCellStartsTicking() {
         int[] tick = { 0 };
         // Ready on tick 200 (the machine was slow), done 99 ticks later: inside the 100-tick work budget, though
@@ -114,6 +139,23 @@ public class EntityArenaReadinessGateTest {
         }, 300, 5, () -> false), 20);
         Assertions.assertEquals(message[0], plain, "a null detail leaves the plain message");
         Assertions.assertNotEquals(plain, named, "and a named one is not the plain message");
+    }
+
+    @Test
+    void aWaitingServerIsParkedOncePerGameTickHoweverManyGatesWait() {
+        List<Long> parks = new ArrayList<>();
+        EntityArenaUtil.Pacer pacer = new EntityArenaUtil.Pacer(7L, parks::add);
+        int parked = 0;
+        for (int gate = 0; gate < 50; gate++) {
+            if (pacer.pace(100)) {
+                parked++;
+            }
+        }
+        Assertions.assertEquals(1, parked, "fifty gates waiting in one game tick cost one park, not fifty");
+        Assertions.assertEquals(List.of(7L), parks, "and it parks for the configured time");
+        Assertions.assertTrue(pacer.pace(101), "the next game tick parks again");
+        Assertions.assertFalse(pacer.pace(101), "once");
+        Assertions.assertEquals(List.of(7L, 7L), parks);
     }
 
     @Test

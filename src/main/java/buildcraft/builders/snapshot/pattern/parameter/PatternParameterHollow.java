@@ -89,6 +89,7 @@ public enum PatternParameterHollow implements IStatementParameter {
         return null;
     }
 
+    /** How a shape is filled names no direction. */
     @Override
     public IStatementParameter rotateLeft() {
         return this;

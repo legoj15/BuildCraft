@@ -263,7 +263,8 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         if (id == NET_DISPLAY_LIST && isClient) {
-            RegistryFriendlyByteBuf rbuf = BCContainerSupport.registryBuf(buffer, ctx.player().level().registryAccess());
+            // The menu's own player: the context's may be gone on a client, and this menu cannot be open without one.
+            RegistryFriendlyByteBuf rbuf = BCContainerSupport.registryBuf(buffer, player.level().registryAccess());
             // Decoded in full before the synced list is touched, so a refused message leaves the last good list up.
             List<ItemStack> newList = readDisplayList(rbuf);
             syncedDisplay.clear();

@@ -20,6 +20,8 @@ import org.apache.logging.log4j.Logger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -27,6 +29,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
 import buildcraft.api.schematics.SchematicBlockContext;
+import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
@@ -35,8 +38,13 @@ import buildcraft.api.transport.pluggable.PluggableDefinition;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
+import buildcraft.silicon.BCSiliconPlugs;
+import buildcraft.silicon.gate.GateLogic;
+
+import buildcraft.transport.BCTransportPipes;
 import buildcraft.transport.block.BlockPipeHolder;
 import buildcraft.transport.pipe.PipeRegistry;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamond;
 
 /**
  * Pipe-aware schematic. BuildCraft pipes are all one block (the pipe holder); the pipe TYPE
@@ -196,40 +204,193 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
     @Override
     public SchematicBlockDefault getRotated(Rotation rotation) {
         SchematicBlockDefault rotated = super.getRotated(rotation);
-        // super hands the rotated copy its own copy of tileNbt. Pipes additionally need their face-indexed
-        // pluggables rotated, so a facade captured on (say) NORTH lands on the face matching the
-        // rotated blueprint instead of staying NORTH — where it would block the wrong pipe
-        // connection and cut off flow. Pipe connections themselves recompute on placement, so only
-        // the pluggable mounting faces need remapping here. Rotating the copy (never this.tileNbt) keeps
-        // the unrotated schematic's data out of the rotated one's reach, rotation NONE included.
+        // super hands the rotated copy its own copy of tileNbt. Everything in a pipe's tile data that names a face
+        // keeps its captured compass direction there, so a rotated blueprint would point it the wrong way:
+        // rotateDirectionalData turns the pluggables' mounting faces (a facade captured on NORTH would otherwise
+        // block the wrong pipe connection and cut off flow), the wire corners (stored by corner and not recomputed
+        // on placement), the face a directional or stripes pipe points at, a diamond pipe's per-face filter rows
+        // and a gate's statement sides and direction-named statements. The facade's mimicked block state and the
+        // runtime state a running pipe rebuilds (flow display, connections) are deliberately not rotated. Rotating
+        // the copy (never this.tileNbt) keeps the unrotated schematic's data out of the rotated one's reach,
+        // rotation NONE included.
         if (rotated instanceof SchematicBlockPipe pipe && pipe.tileNbt != null) {
-            pipe.tileNbt = rotatePluggableFaces(pipe.tileNbt, rotation);
+            pipe.tileNbt = rotateDirectionalData(pipe.tileNbt, rotation);
         }
         return rotated;
     }
 
     /**
-     * Return a copy of the pipe tile NBT with the {@code plugs} entries remapped onto rotated faces.
-     * UP/DOWN are unaffected (rotation is about the Y axis). The facade's mimicked block state is
-     * intentionally left unrotated: a directional facade (stairs, logs) keeps its captured
-     * orientation — only its mounting face moves, which is what the flow-blocking issue needs.
+     * Return a copy of the pipe tile NBT with everything that names a face turned by {@code rotation}, or
+     * {@code original} itself when the rotation is {@link Rotation#NONE}. UP/DOWN are unaffected (rotation is about
+     * the Y axis). Turned:
+     * <ul>
+     * <li>the {@code plugs} entries, moved onto rotated faces;</li>
+     * <li>the logic of a gate among them ({@code plugs.<face>.data.data}): each statement's side and the
+     * pipe-direction actions, see {@link GateLogic#rotateNbt};</li>
+     * <li>the {@code wires} pairs, moved onto rotated corners (a wire carries nothing but its corner and its colour,
+     * so moving the corner is the whole of its rotation);</li>
+     * <li>the face a directional pipe points at ({@code pipe.beh.currentDir}: wooden, iron, emerald, emzuli and
+     * daizuli pipes) and the face a stripes pipe works at ({@code pipe.beh.direction});</li>
+     * <li>a diamond pipe's filter rows ({@code pipe.beh.filters}), each row moved to the rotated face.</li>
+     * </ul>
+     * Left as captured: the facade's mimicked block state (a directional facade (stairs, logs) keeps its captured
+     * orientation; only its mounting face moves, which is what the flow-blocking issue needs), the power flow's display
+     * arrays and the fluid flow's per-face sections (a running pipe sets them again), and the {@code con} connection
+     * mask (recomputed on the pipe's first tick). Travelling items and fluid are cargo, which a build does not carry
+     * over.
      */
     @Nonnull
-    private static CompoundTag rotatePluggableFaces(@Nonnull CompoundTag original, Rotation rotation) {
-        if (rotation == Rotation.NONE || !original.contains("plugs")) {
+    private static CompoundTag rotateDirectionalData(@Nonnull CompoundTag original, Rotation rotation) {
+        if (rotation == Rotation.NONE) {
             return original;
         }
+        boolean hasPlugs = original.contains("plugs");
+        boolean hasWires = original.contains("wires");
         CompoundTag copy = original.copy();
-        CompoundTag oldPlugs = NBTUtilBC.getCompound(copy, "plugs");
-        CompoundTag newPlugs = new CompoundTag();
+        if (hasPlugs) {
+            CompoundTag oldPlugs = NBTUtilBC.getCompound(copy, "plugs");
+            CompoundTag newPlugs = new CompoundTag();
+            for (Direction face : Direction.values()) {
+                CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
+                if (!entry.isEmpty()) {
+                    rotateGateLogic(entry, rotation);
+                    newPlugs.put(rotation.rotate(face).getName(), entry);
+                }
+            }
+            copy.put("plugs", newPlugs);
+        }
+        if (hasWires) {
+            // A copy of the old wires compound, so any key in it besides "parts" survives.
+            CompoundTag wires = NBTUtilBC.getCompound(copy, "wires").copy();
+            int[] parts = NBTUtilBC.getIntArray(wires, "parts", new int[0]);
+            int[] rotatedParts = new int[parts.length];
+            // Flat (part ordinal, colour id) pairs, as WireManager writes them. The blueprint data is not
+            // guaranteed well formed, so a pair naming no part and an unpaired trailing element are copied
+            // unchanged (the reader drops both) rather than letting this throw.
+            for (int i = 0; i < parts.length; i++) {
+                int part = parts[i];
+                if (i % 2 == 0 && i + 1 < parts.length && part >= 0 && part < EnumWirePart.VALUES.length) {
+                    part = rotateWirePart(EnumWirePart.VALUES[part], rotation).ordinal();
+                }
+                rotatedParts[i] = part;
+            }
+            wires.putIntArray("parts", rotatedParts);
+            copy.put("wires", wires);
+        }
+        rotatePipeBehaviour(copy, rotation);
+        return copy;
+    }
+
+    /**
+     * Turns, in place, the logic of the gate in a {@code plugs} entry ({@code {id, data}}); any other pluggable is left
+     * as it is. {@code PluggableGate.writeToNbt} stores {@code GateLogic.writeToNbt()} under the {@code data} of the
+     * entry's own {@code data}. The caller passes an entry of its own copy of the tile NBT.
+     */
+    private static void rotateGateLogic(CompoundTag entry, Rotation rotation) {
+        if (BCSiliconPlugs.gate == null
+            || !BCSiliconPlugs.gate.identifier.toString().equals(NBTUtilBC.getString(entry, "id", ""))) {
+            return;
+        }
+        CompoundTag data = NBTUtilBC.getCompoundOrNull(entry, "data");
+        CompoundTag logic = data == null ? null : NBTUtilBC.getCompoundOrNull(data, "data");
+        if (logic != null) {
+            data.put("data", GateLogic.rotateNbt(logic, rotation));
+        }
+    }
+
+    /**
+     * Turns, in place, the directional state of the pipe's behaviour tag ({@code pipe.beh}) in {@code tileNbt}, a copy
+     * of the captured data: the face of a directional pipe ({@code currentDir}) and of a stripes pipe
+     * ({@code direction}), and the filter rows of a diamond pipe.
+     */
+    private static void rotatePipeBehaviour(CompoundTag tileNbt, Rotation rotation) {
+        CompoundTag pipeTag = NBTUtilBC.getCompoundOrNull(tileNbt, "pipe");
+        CompoundTag behaviour = pipeTag == null ? null : NBTUtilBC.getCompoundOrNull(pipeTag, "beh");
+        if (behaviour == null) {
+            return;
+        }
+        rotateDirectionName(behaviour, "currentDir", rotation);
+        rotateDirectionName(behaviour, "direction", rotation);
+        if (isDiamondPipe(NBTUtilBC.getString(pipeTag, "def", ""))) {
+            rotateFilterRows(behaviour, rotation);
+        }
+    }
+
+    /**
+     * Replaces the {@link Direction} name stored under {@code key} ({@code NBTUtilBC.writeEnum}) with the one the
+     * rotation moves it to; an absent or unparseable value is left as it is.
+     */
+    private static void rotateDirectionName(CompoundTag behaviour, String key, Rotation rotation) {
+        Direction direction = NBTUtilBC.readEnum(behaviour.get(key), Direction.class);
+        if (direction != null) {
+            behaviour.put(key, NBTUtilBC.writeEnum(rotation.rotate(direction)));
+        }
+    }
+
+    /**
+     * Whether the pipe definition {@code defId} names keeps one row of filters per face, which is true of the two
+     * diamond pipes ({@code PipeBehaviourDiamondItem} and {@code PipeBehaviourDiamondFluid}) and not of the emerald
+     * pipes ({@code PipeBehaviourWoodDiamond}), whose filters are one row for the whole pipe.
+     */
+    private static boolean isDiamondPipe(String defId) {
+        PipeDefinition def = PipeRegistry.INSTANCE.getDefinition(defId);
+        return def != null && (def == BCTransportPipes.diamondItem || def == BCTransportPipes.diamondFluid);
+    }
+
+    /**
+     * Moves each face's row of a diamond pipe's filters to the row of the rotated face, in place, keeping the column
+     * order. The filters are {@code ItemHandlerSimple.serializeNBT()}'s {@code {items: [one tag per slot]}} with the row
+     * of face {@code f} starting at slot {@code FILTERS_PER_SIDE * f.ordinal()}; a list of any other size is not that
+     * layout and is left as it is.
+     */
+    private static void rotateFilterRows(CompoundTag behaviour, Rotation rotation) {
+        CompoundTag filters = NBTUtilBC.getCompoundOrNull(behaviour, "filters");
+        if (filters == null) {
+            return;
+        }
+        int perSide = PipeBehaviourDiamond.FILTERS_PER_SIDE;
+        ListTag items = NBTUtilBC.getList(filters, "items", Tag.TAG_COMPOUND);
+        if (items.size() != perSide * Direction.values().length) {
+            return;
+        }
+        CompoundTag[] moved = new CompoundTag[items.size()];
         for (Direction face : Direction.values()) {
-            CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
-            if (!entry.isEmpty()) {
-                newPlugs.put(rotation.rotate(face).getName(), entry);
+            int from = perSide * face.ordinal();
+            int to = perSide * rotation.rotate(face).ordinal();
+            for (int column = 0; column < perSide; column++) {
+                moved[to + column] = NBTUtilBC.getCompound(items, from + column);
             }
         }
-        copy.put("plugs", newPlugs);
-        return copy;
+        ListTag rotated = new ListTag();
+        for (CompoundTag slot : moved) {
+            rotated.add(slot);
+        }
+        filters.put("items", rotated);
+    }
+
+    /**
+     * The corner {@code part} sits on once the blueprint is rotated: a corner is the meeting point of one
+     * X-facing side (EAST or WEST), one Z-facing side (NORTH or SOUTH) and UP or DOWN, and rotating the two
+     * horizontal sides about the Y axis moves the corner with them. The vertical side, and so the part's
+     * {@code y}, is unchanged by a Y-axis rotation.
+     */
+    private static EnumWirePart rotateWirePart(EnumWirePart part, Rotation rotation) {
+        Direction xSide = part.x == Direction.AxisDirection.POSITIVE ? Direction.EAST : Direction.WEST;
+        Direction zSide = part.z == Direction.AxisDirection.POSITIVE ? Direction.SOUTH : Direction.NORTH;
+        Direction rotatedX = rotation.rotate(xSide);
+        Direction rotatedZ = rotation.rotate(zSide);
+        // Of the two rotated sides exactly one lies on each horizontal axis, whichever way the rotation went.
+        Direction.AxisDirection newX = rotatedX.getAxis() == Direction.Axis.X
+            ? rotatedX.getAxisDirection()
+            : rotatedZ.getAxisDirection();
+        Direction.AxisDirection newZ = rotatedX.getAxis() == Direction.Axis.Z
+            ? rotatedX.getAxisDirection()
+            : rotatedZ.getAxisDirection();
+        return EnumWirePart.get(
+            newX == Direction.AxisDirection.POSITIVE,
+            part.y == Direction.AxisDirection.POSITIVE,
+            newZ == Direction.AxisDirection.POSITIVE
+        );
     }
 
     /**

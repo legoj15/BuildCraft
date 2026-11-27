@@ -48,8 +48,6 @@ import buildcraft.lib.test.LoaderTestEvents;
  */
 public class PipeBehaviourStripesMovesTester {
 
-    private static final int POLL_TICKS = 60;
-
     /** The work budget of the polls that wait on a pipe line, counted from the arena cell ticking: a poll's own
      *  budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
      *  manifest's {@code max_ticks} stays above that sum. The line spans up to four cells, the framework forces only
@@ -66,7 +64,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos feederRel = new BlockPos(1, 2, 2);
         BlockPos pipeRel = feederRel.east();
         BlockPos frontRel = pipeRel.east();
-        EntityArenaUtil.forceLoadEntityArena(helper, frontRel);
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
         connect(feeder, tile);
@@ -86,12 +84,11 @@ public class PipeBehaviourStripesMovesTester {
             }
             return false;
         });
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS, () -> {
+        // The stripes pipe breaks the cart on its own tick, so the clock starts when the cell's block entities tick.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS, () -> {
             switch (phase[0]) {
                 case 0 -> {
-                    if (!EntityArenaUtil.isEntityTicking(helper, frontRel)) {
-                        return false;
-                    }
                     //? if >=26.2 {
                     cart[0] = helper.spawn(net.minecraft.world.entity.EntityTypes.MINECART, frontRel);
                     //?} else {
@@ -118,7 +115,7 @@ public class PipeBehaviourStripesMovesTester {
                     return cart[0].isRemoved();
                 }
             }
-        }, () -> {
+        }), () -> {
             helper.assertTrue(count(tile.getPipe().getFlow(), Items.MINECART) == 1,
                     "the broken cart's item travels back down the pipe, found "
                             + count(tile.getPipe().getFlow(), Items.MINECART));
@@ -146,17 +143,24 @@ public class PipeBehaviourStripesMovesTester {
         EntityArenaUtil.forceLoadCell(helper);
         PipeBehaviourStripesDropTester.StripesRig rig =
                 PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
-        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
-        rig.stripes().onDrop(drop);
-        helper.assertTrue(drop.getStack().isEmpty(), "the pipe stack is taken for the extension");
-        PipeEventItem.Drop sameTick = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
-        rig.stripes().onDrop(sameTick);
-        helper.assertTrue(sameTick.getStack().isEmpty(), "a second pipe stack in the same tick is taken too");
+        // Fed on the gate's first call, not before it: the extension manager moves the pipe at the end of that
+        // level tick whatever the cell's block entities do, and the stacks it sends back are in the moved pipe
+        // only while they travel. Fed before a gate that opened late they had moved on (26.3, 2026-11-26: found
+        // 0 on tick 53). The direction the rig gave the lone pipe is still there: one on a face with no
+        // connection is kept.
+        Runnable feed = () -> {
+            PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
+            rig.stripes().onDrop(drop);
+            helper.assertTrue(drop.getStack().isEmpty(), "the pipe stack is taken for the extension");
+            PipeEventItem.Drop sameTick = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+            rig.stripes().onDrop(sameTick);
+            helper.assertTrue(sameTick.getStack().isEmpty(), "a second pipe stack in the same tick is taken too");
+        };
 
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> isStripes(pipeAt(helper, frontRel))
-                                && isPipe(pipeAt(helper, pipeRel), BCTransportPipes.cobbleItem)),
+                        EntityArenaUtil.actThenLook(feed, () -> isStripes(pipeAt(helper, frontRel))
+                                && isPipe(pipeAt(helper, pipeRel), BCTransportPipes.cobbleItem))),
                 () -> {
                     TilePipeHolder moved = pipeAt(helper, frontRel);
                     helper.assertTrue(count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2,
@@ -193,13 +197,17 @@ public class PipeBehaviourStripesMovesTester {
                 "precondition: the fed stripes pipe points away from its feeder, got " + stripes.direction);
         PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
                 helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
-        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
-        stripes.onDrop(drop);
-        helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        // Fed on the gate's first call (see testItemPipeExtendsTheLine): what travels back is counted in transit.
+        Runnable feed = () -> {
+            PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
+            stripes.onDrop(drop);
+            helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        };
 
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> isStripes(pipeAt(helper, feederRel)) && helper.getBlockState(pipeRel).isAir()),
+                        EntityArenaUtil.actThenLook(feed,
+                                () -> isStripes(pipeAt(helper, feederRel)) && helper.getBlockState(pipeRel).isAir())),
                 () -> {
                     PipeFlow flow = pipeAt(helper, feederRel).getPipe().getFlow();
                     helper.assertTrue(count(flow, BCTransportItems.PIPE_VOID_ITEM.get()) == 1,
@@ -242,16 +250,20 @@ public class PipeBehaviourStripesMovesTester {
                 "precondition: the pipe behind feeds from the chest, so the straight retraction is refused");
         PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
                 helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
-        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
-        stripes.onDrop(drop);
-        helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        // Fed on the gate's first call (see testItemPipeExtendsTheLine): what travels back is counted in transit.
+        Runnable feed = () -> {
+            PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
+            stripes.onDrop(drop);
+            helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        };
 
         Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
         Item voidPipe = BCTransportItems.PIPE_VOID_ITEM.get();
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(2.5);
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> isStripes(pipeAt(helper, cornerRel)) && helper.getBlockState(pipeRel).isAir()),
+                        EntityArenaUtil.actThenLook(feed,
+                                () -> isStripes(pipeAt(helper, cornerRel)) && helper.getBlockState(pipeRel).isAir())),
                 () -> {
                     TilePipeHolder moved = pipeAt(helper, cornerRel);
                     Direction facing = ((PipeBehaviourStripes) moved.getPipe().getBehaviour()).direction;
@@ -320,12 +332,13 @@ public class PipeBehaviourStripesMovesTester {
         PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
                 helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
         ClaimProtectionMod claim = new ClaimProtectionMod(helper.absolutePos(pipeRel), true);
-        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
-        stripes.onDrop(drop);
+        // Fed on the gate's first call (see testItemPipeExtendsTheLine): the stack sent back is counted in transit.
+        Runnable feed = () -> stripes.onDrop(rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2)));
 
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> claim.asks() >= 1 && rig.count(BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2),
+                        EntityArenaUtil.actThenLook(feed, () -> claim.asks() >= 1
+                                && rig.count(BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2)),
                 () -> {
                     helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "a refused move leaves the stripes pipe");
                     helper.assertTrue(helper.getBlockState(frontRel).isAir(), "...and places nothing in front");
@@ -355,18 +368,22 @@ public class PipeBehaviourStripesMovesTester {
                 helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
         BlockPos front = helper.absolutePos(frontRel);
         WorkClaimMod claim = new WorkClaimMod(front::equals, front::equals);
-        PipeEventItem.Drop first = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
-        stripes.onDrop(first);
-        PipeEventItem.Drop second = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
-        stripes.onDrop(second);
-        helper.assertTrue(first.getStack().isEmpty() && second.getStack().isEmpty(),
-                "both pipe stacks are taken for the extension");
+        // Fed on the gate's first call (see testItemPipeExtendsTheLine): the stacks sent back are counted in transit.
+        Runnable feed = () -> {
+            PipeEventItem.Drop first = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
+            stripes.onDrop(first);
+            PipeEventItem.Drop second = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+            stripes.onDrop(second);
+            helper.assertTrue(first.getStack().isEmpty() && second.getStack().isEmpty(),
+                    "both pipe stacks are taken for the extension");
+        };
 
         Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> claim.placeAsks(front) >= 1 && countLine(helper, cobble, feederRel, pipeRel) == 3),
+                        EntityArenaUtil.actThenLook(feed, () -> claim.placeAsks(front) >= 1
+                                && countLine(helper, cobble, feederRel, pipeRel) == 3)),
                 () -> {
                     helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "a refused move leaves the stripes pipe");
                     helper.assertTrue(helper.getBlockState(frontRel).isAir(), "...and places nothing in front");
@@ -403,15 +420,21 @@ public class PipeBehaviourStripesMovesTester {
         EntityArenaUtil.forceLoadCell(helper);
         PipeBehaviourStripesDropTester.StripesRig rig =
                 PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
-        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
-        rig.stripes().onDrop(drop);
-        helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        // Fed on the gate's first call (see testItemPipeExtendsTheLine). The extension manager drops the void pipe
+        // at the end of that level tick, and it does not always come to rest on the pipe: fed before a gate that
+        // opened late, a drop that fell off was out of the box (26.3-forge, 2026-11-26).
+        Runnable feed = () -> {
+            PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
+            rig.stripes().onDrop(drop);
+            helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+        };
 
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
-                        () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
-                                e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty()),
+                        EntityArenaUtil.actThenLook(feed,
+                                () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
+                                        e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty())),
                 () -> {
                     helper.assertTrue(rig.count(BCTransportItems.PIPE_VOID_ITEM.get()) == 0,
                             "nothing is sent into the lone stripes pipe, found "

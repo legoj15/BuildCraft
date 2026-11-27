@@ -248,7 +248,7 @@ public class PickerCarrierTester {
         item.setNoGravity(true);
         level.addFreshEntity(item);
 
-        // The work budget starts once the cell is entity-ticking (CELL_READY_TICKS is the wait for that, a matter of
+        // The work budget starts once the cell's block entities tick (CELL_READY_TICKS is the wait for that, a matter of
         // the machine's load): the pick-up takes ~35 ticks from there.
         EntityArenaUtil.tickUntil(helper, PICKER_POLL_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PICKER_WORK_TICKS,

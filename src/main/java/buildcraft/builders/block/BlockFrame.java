@@ -20,7 +20,9 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 //?}
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -35,6 +37,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import buildcraft.api.properties.BuildCraftProperties;
 
 import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.ConnectedSides;
 
 @SuppressWarnings("this-escape")
 public class BlockFrame extends Block implements SimpleWaterloggedBlock {
@@ -126,6 +129,18 @@ public class BlockFrame extends Block implements SimpleWaterloggedBlock {
             state = state.setValue(prop, canConnectTo(level, neighborPos));
         }
         return state;
+    }
+
+    // The arms name sides, so a rotated or mirrored state (a blueprint built turned, a structure block) moves each
+    // one to the side it turns into.
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return ConnectedSides.rotate(state, CONNECTED_MAP, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return ConnectedSides.mirror(state, CONNECTED_MAP, mirror);
     }
 
     @Override

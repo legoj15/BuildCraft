@@ -209,7 +209,9 @@ public class RobotStripesTester {
      *  entity-ticking. The framework waits only for the 1x1 structure's own chunk, and {@code ROBOT_REL} lands in a
      *  neighbouring chunk whenever the arena sits near a chunk edge: an item dropped there is invisible to the scan
      *  (measured: the swap test saw 0 of its 2 dropped paper at tick 0, intermittently). Any item the body leaves
-     *  behind is swept out of this cell on every exit. */
+     *  behind is swept out of this cell on every exit. Entity-only on purpose, not
+     *  {@code EntityArenaUtil.whenCellTicking}: nothing here waits on a block entity, and the whole budget is the
+     *  readiness wait (the body is synchronous). */
     private static void whenRobotCellIsEntityTicking(GameTestHelper helper, Runnable body) {
         EntityArenaUtil.forceLoadEntityArena(helper, ROBOT_REL);
         EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isEntityTicking(helper, ROBOT_REL), body,

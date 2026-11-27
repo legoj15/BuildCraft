@@ -87,8 +87,8 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
 
     /** Client-side handler: apply the full snapshot or the incremental delta to ClientVolumeBoxes. */
     public static void handle(MessageVolumeBoxes message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            Level world = ctx.player().level();
+        ctx.runOnMainWithPlayer(player -> {
+            Level world = player.level();
             List<VolumeBox> boxes = ClientVolumeBoxes.INSTANCE.volumeBoxes;
 
             if (message.fullReplace) {

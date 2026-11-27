@@ -72,10 +72,8 @@ public record MessagePipePayload(
      * dispatches the payload to the correct receiver (flow, behaviour, or pluggable).
      */
     public static void handle(MessagePipePayload message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            Level world = ctx.player().level();
-            if (world == null) return;
-
+        ctx.runOnMainWithPlayer(player -> {
+            Level world = player.level();
             BlockEntity tile = world.getBlockEntity(message.pos);
             if (!(tile instanceof buildcraft.transport.tile.TilePipeHolder holder)) {
                 return;

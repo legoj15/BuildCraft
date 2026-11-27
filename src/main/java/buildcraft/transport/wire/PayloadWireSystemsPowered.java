@@ -13,7 +13,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -29,16 +28,16 @@ public class PayloadWireSystemsPowered implements CustomPacketPayload {
     public static final StreamCodec<FriendlyByteBuf, PayloadWireSystemsPowered> STREAM_CODEC =
         StreamCodec.of(PayloadWireSystemsPowered::encode, PayloadWireSystemsPowered::decode);
 
-    private final Map<Integer, Boolean> hashesPowered;
+    private final Map<Integer, Boolean> keysPowered;
 
-    public PayloadWireSystemsPowered(Map<Integer, Boolean> hashesPowered) {
-        this.hashesPowered = hashesPowered;
+    public PayloadWireSystemsPowered(Map<Integer, Boolean> keysPowered) {
+        this.keysPowered = keysPowered;
     }
 
     private static void encode(FriendlyByteBuf buf, PayloadWireSystemsPowered msg) {
-        buf.writeInt(msg.hashesPowered.size());
-        msg.hashesPowered.forEach((wiresHashCode, powered) -> {
-            buf.writeInt(wiresHashCode);
+        buf.writeInt(msg.keysPowered.size());
+        msg.keysPowered.forEach((clientKey, powered) -> {
+            buf.writeInt(clientKey);
             buf.writeBoolean(powered);
         });
     }
@@ -58,17 +57,13 @@ public class PayloadWireSystemsPowered implements CustomPacketPayload {
     }
 
     public static void handle(PayloadWireSystemsPowered message, PacketContext ctx) {
-        ctx.runOnMain(() -> {
-            // No local player when the connection closed before this ran.
-            Player player = ctx.player();
-            if (player == null) {
-                return;
-            }
+        ctx.runOnMainWithPlayer(player -> {
+            // Skipped when the client has no local player.
             Level world = player.level();
-            for (Map.Entry<Integer, Boolean> hashPowered : message.hashesPowered.entrySet()) {
-                WireSystem wireSystem = ClientWireSystems.INSTANCE.wireSystems.get(hashPowered.getKey());
+            for (Map.Entry<Integer, Boolean> keyPowered : message.keysPowered.entrySet()) {
+                WireSystem wireSystem = ClientWireSystems.INSTANCE.wireSystems.get(keyPowered.getKey());
                 if (wireSystem == null) continue;
-                boolean powered = hashPowered.getValue();
+                boolean powered = keyPowered.getValue();
                 for (WireSystem.WireElement element : wireSystem.elements) {
                     if (element.type == WireSystem.WireElement.Type.WIRE_PART) {
                         BlockEntity tile = world.getBlockEntity(element.blockPos);

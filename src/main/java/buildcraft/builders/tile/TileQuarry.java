@@ -1393,6 +1393,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             frameBox.reset();
             miningBox.reset();
             drillPos = null;
+            // The task belongs to the box that is gone (its positions are that box's). The tick never reaches it
+            // without a box, and the client would go on drawing it.
+            currentTask = null;
             // A quarry with no box never walks again: give a Pump on it nothing to drain.
             blockingFluid = null;
             drainedSinceWalk = false;

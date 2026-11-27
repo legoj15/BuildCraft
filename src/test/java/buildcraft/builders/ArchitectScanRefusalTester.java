@@ -29,8 +29,9 @@ import buildcraft.lib.test.EntityArenaUtil;
  */
 public class ArchitectScanRefusalTester {
 
-    /** Polls spent waiting for the arena cell to tick, and spent on the work once it does. */
-    private static final int READY = 40;
+    /** Polls spent on the work once the arena cell's block entities tick. The wait for that is the shared
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}: it covers a read on another thread, which a shorter wait of this
+     *  test's own would not. */
     private static final int WORK = 60;
 
     /** A box the width of the arena cell (6 by 7) and this many blocks tall: the height is what pushes the box past
@@ -54,11 +55,17 @@ public class ArchitectScanRefusalTester {
         int overLimitHeight = LibraryUploadBuffer.Limits.readCeiling().maxCells() / (CELL_X * CELL_Z) - 1;
         giveValidBox(helper, big, origin, overLimitHeight);
         giveValidBox(helper, small, origin, WITHIN_LIMIT_HEIGHT);
-        big.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
-        small.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+        // The blank blueprints go in on the gate's first call, not before it. The small table's scan is over in
+        // about 28 ticks, and a table whose own chunk ticks before the rest of the cell would have finished it
+        // behind a gate that opened later (found with the gate delayed 60 polls, 2026-11-26).
+        Runnable start = () -> {
+            big.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+            small.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+        };
 
-        EntityArenaUtil.tickUntil(helper, READY + WORK,
-            EntityArenaUtil.whenCellTicking(helper, READY, WORK, () -> big.isScanRefused() && small.isScanning(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WORK,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WORK,
+                EntityArenaUtil.actThenLook(start, () -> big.isScanRefused() && small.isScanning()),
                 () -> "the over-limit table refused=" + big.isScanRefused() + " scanning=" + big.isScanning()
                     + ", the small one scanning=" + small.isScanning()),
             () -> {

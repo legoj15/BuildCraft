@@ -79,6 +79,7 @@ public enum PatternParameterYDir implements IStatementParameter {
         return true;
     }
 
+    /** Up and down are not changed by a turn about the Y axis. */
     @Override
     public IStatementParameter rotateLeft() {
         return this;

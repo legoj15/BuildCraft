@@ -134,7 +134,12 @@ public final class NeoForgeNetwork implements BCNetwork {
     private record Context(IPayloadContext ctx) implements PacketContext {
         @Override
         public Player player() {
-            return ctx.player();
+            // NeoForge throws where a client has no local player; the PacketContext contract is null there.
+            try {
+                return ctx.player();
+            } catch (UnsupportedOperationException noPlayer) {
+                return null;
+            }
         }
 
         @Override

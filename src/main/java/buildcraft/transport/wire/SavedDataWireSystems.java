@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -184,8 +185,12 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
             }));
     }
 
-    public void removeWireSystem(WireSystem wireSystem) {
-        if (wireSystems.remove(wireSystem) != null) {
+    /** Takes {@code wireSystem} out of the registry and answers the power it had ({@code false} when it was not
+     *  registered). Everything {@link #removeWireSystem} does except the flag, so a rebuild pass can drop a system
+     *  and put it back without telling the clients of a structure change. */
+    private boolean unregisterWireSystem(WireSystem wireSystem) {
+        Boolean powered = wireSystems.remove(wireSystem);
+        if (powered != null) {
             indexChunks(wireSystem, -1);
         }
         wireSystem.elements.forEach(elementIn -> {
@@ -202,6 +207,11 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                 lastEmitting.remove(new EmitterColour(element, wireSystem.color));
             }
         }
+        return powered != null && powered;
+    }
+
+    public void removeWireSystem(WireSystem wireSystem) {
+        unregisterWireSystem(wireSystem);
         markStructureChanged();
     }
 
@@ -219,7 +229,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     public void buildAndAddWireSystem(WireSystem.WireElement element) {
-        rebuild(List.of(element));
+        rebuild(List.of(element), new LinkedHashMap<>());
     }
 
     /** The wire systems through the pipe at {@code pos} no longer match what its wires can link to (a pluggable, a
@@ -258,10 +268,17 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
      *  into its chunk): a rebuild cuts a system at the edge of the loaded world, and a gate beyond that edge stops
      *  counting. The walk itself crosses to a neighbour through {@code IPipeHolder.getNeighbourPipe}, whose loaded
      *  check is the chunk's ticket, so it can complete the load of a neighbouring chunk that is queued but not yet in
-     *  memory; it never reaches one that has no ticket. */
-    private void rebuild(Collection<WireSystem.WireElement> seeds) {
+     *  memory; it never reaches one that has no ticket.
+     *  <p>{@code dropped} receives every system this pass takes out, with the power it had, and loses it again when
+     *  an identical system is put back: a built system that has the colour and the set of elements of one it took out
+     *  is that system rebuilt, so the old instance goes back in (a rebuilt copy is another instance with
+     *  another {@link WireSystem#getClientKey()}, the key the client holds, and so a new system to it). The structure flag
+     *  is set only when a system appeared, went or changed; a kept system whose power flipped goes out through
+     *  {@link #changedSystems}. */
+    private void rebuild(Collection<WireSystem.WireElement> seeds, Map<WireSystem, Boolean> dropped) {
         Deque<WireSystem.WireElement> queue = new ArrayDeque<>(seeds);
         Set<WireSystem.WireElement> built = new HashSet<>();
+        boolean registeredNew = false;
         while (!queue.isEmpty()) {
             WireSystem.WireElement seed = queue.remove();
             if (seed.type != WireSystem.WireElement.Type.WIRE_PART || built.contains(seed)
@@ -278,38 +295,75 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                 }
                 for (WireSystem old : getWireSystemsWithElement(element)) {
                     if (old.color == wireSystem.color) {
-                        removeWireSystem(old);
+                        dropped.put(old, unregisterWireSystem(old));
                         queue.addAll(old.elements);
                     }
                 }
             }
-            addWireSystem(wireSystem, false);
-            wireSystems.put(wireSystem, wireSystem.update(this, false));
+            WireSystem kept = null;
+            for (WireSystem old : dropped.keySet()) {
+                if (isSameSystem(old, wireSystem)) {
+                    kept = old;
+                    break;
+                }
+            }
+            if (kept == null) {
+                addWireSystem(wireSystem, false);
+                wireSystems.put(wireSystem, wireSystem.update(this, false));
+                registeredNew = true;
+            } else {
+                boolean was = dropped.remove(kept);
+                addWireSystem(kept, was);
+                boolean now = kept.update(this, was);
+                if (now != was) {
+                    wireSystems.put(kept, now);
+                    changedSystems.add(kept);
+                }
+            }
             built.addAll(wireSystem.elements);
         }
-        markStructureChanged();
+        if (registeredNew || !dropped.isEmpty()) {
+            markStructureChanged();
+        }
+    }
+
+    /** Whether two systems are one and the same: same colour, same set of elements. The walk orders elements by where
+     *  it started, so a rebuilt copy of a system matches here and not always through {@link WireSystem#equals}. */
+    private static boolean isSameSystem(WireSystem a, WireSystem b) {
+        if (a.color != b.color || a.elements.size() != b.elements.size()) {
+            return false;
+        }
+        // Most candidates of one colour and size are other systems, and asking for one shared element tells them
+        // apart without building the two sets.
+        if (!a.elements.isEmpty() && !b.elements.contains(a.elements.get(0))) {
+            return false;
+        }
+        return new HashSet<>(a.elements).equals(new HashSet<>(b.elements));
     }
 
     /** Drops every system through a stale block, whatever its colour (so a system naming a wire that is no longer
      *  there goes too), and rebuilds from what those systems held plus the block's own eight wire positions: a
-     *  position without a wire, or a block without a pipe, builds nothing. */
+     *  position without a wire, or a block without a pipe, builds nothing. Most rebuilds reproduce exactly the
+     *  systems that were there (a wired pipe whose chunk loads), and those are put back as they were: only a system
+     *  that appeared, went or changed reaches the clients. */
     private void rebuildStale() {
         if (staleHolders.isEmpty()) {
             return;
         }
         Set<WireSystem.WireElement> seeds = new LinkedHashSet<>();
+        Map<WireSystem, Boolean> dropped = new LinkedHashMap<>();
         for (BlockPos pos : staleHolders) {
             for (EnumWirePart part : EnumWirePart.VALUES) {
                 WireSystem.WireElement element = new WireSystem.WireElement(pos, part);
                 for (WireSystem wireSystem : getWireSystemsWithElement(element)) {
-                    removeWireSystem(wireSystem);
+                    dropped.put(wireSystem, unregisterWireSystem(wireSystem));
                     seeds.addAll(wireSystem.elements);
                 }
                 seeds.add(element);
             }
         }
         staleHolders.clear();
-        rebuild(seeds);
+        rebuild(seeds, dropped);
     }
 
     /** Whether the emitter on that pipe side is emitting {@code color}. Never loads a chunk: an emitter whose chunk
@@ -331,7 +385,11 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         rebuildStale();
         // Wakeup matrix (all paths confirmed by audit 2026-05-19):
         //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
-        //                              / removeWireSystem → markStructureChanged
+        //                              / removeWireSystem → markStructureChanged. A rebuild flags
+        //                              only when a system appeared, went or changed: one that puts
+        //                              every system it took out back as it was flags nothing, and
+        //                              the power flip of such a kept system goes out through
+        //                              changedSystems below.
         //   • Pipe BE load           → TilePipeHolder.onLoaded → markWireSystemsStale → markStaleIfWired,
         //                              covering a chunk that loads without ticking
         //   • Pipe removed (any cause but a chunk unload: player, /setblock, /fill, explosion,
@@ -342,7 +400,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         //                              → TilePipeHolder.readData → markStale
         //   • markStaleIfWired reaches markStale when the pipe has wires or a system still names
         //     one at its position. Every markStale drains through rebuildStale at the top of this
-        //     method, which ends in markStructureChanged.
+        //     method, which flags only when a system appeared, went or changed.
         //   • Gate emit state change → GateLogic.resolveActions sets gatesChanged = true directly
         //                              whenever the resolved wireBroadcasts set differs from
         //                              the previous one. (GateLogic is the sole IWireEmitter
@@ -373,7 +431,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
             if (structureChanged || !changedSystems.isEmpty() || !resendDue.isEmpty()) {
                 for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
                     Map<Integer, WireSystem> changedWires = new HashMap<>();
-                    Map<Integer, Boolean> hashesPowered = new HashMap<>();
+                    Map<Integer, Boolean> keysPowered = new HashMap<>();
                     if (structureChanged || resendDue.contains(player)) {
                         // This is the whole structure, so whatever chunk deliveries asked for is answered by it
                         // and the pacing interval restarts from here.
@@ -382,8 +440,8 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                         for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
                             WireSystem ws = entry.getKey();
                             if (ws.isPlayerWatching(player)) {
-                                changedWires.put(ws.getWiresHashCode(), ws);
-                                hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
+                                changedWires.put(ws.getClientKey(), ws);
+                                keysPowered.put(ws.getClientKey(), entry.getValue());
                             }
                         }
                     } else {
@@ -391,15 +449,15 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
                         for (WireSystem ws : changedSystems) {
                             Boolean powered = wireSystems.get(ws);
                             if (powered != null && ws.isPlayerWatching(player)) {
-                                hashesPowered.put(ws.getWiresHashCode(), powered);
+                                keysPowered.put(ws.getClientKey(), powered);
                             }
                         }
                     }
                     if (!changedWires.isEmpty()) {
                         Platform.network().sendToPlayer(player, new PayloadWireSystems(changedWires));
                     }
-                    if (!hashesPowered.isEmpty()) {
-                        Platform.network().sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
+                    if (!keysPowered.isEmpty()) {
+                        Platform.network().sendToPlayer(player, new PayloadWireSystemsPowered(keysPowered));
                     }
                 }
             }

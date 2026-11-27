@@ -14,6 +14,14 @@ public class PatternShape2dArc extends PatternShape2d {
         return BCBuildersSprites.FILLER_2D_ARC;
     }
 
+    /** The arc is a quarter of an ellipse centred on the corner at the largest across and down (the bottom right of the
+     *  icon): reversing the across axis centres it on the bottom left, which is one quarter turn on, and so on round
+     *  the corners. */
+    @Override
+    protected int mirroredCount(int count) {
+        return (1 - count) & 3;
+    }
+
     @Override
     protected void genShape(int maxA, int maxB, LineList list) {
         if (maxA == 0 || maxB == 0) {

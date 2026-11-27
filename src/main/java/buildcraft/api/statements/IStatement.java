@@ -35,7 +35,9 @@ public interface IStatement extends IGuiSlot {
         return _new;
     }
 
-    /** This returns the statement after a left rotation. Used in particular in blueprints orientation. */
+    /** The statement this one becomes when what it belongs to is turned one quarter turn clockwise about the Y axis
+     * ({@code Rotation.CLOCKWISE_90}: NORTH becomes EAST), or itself when it names no direction. A gate in a
+     * blueprint that is built rotated asks each of its statements once per quarter turn. */
     IStatement rotateLeft();
 
     /** This returns a group of related statements. For example "redstone signal input" should probably return an array

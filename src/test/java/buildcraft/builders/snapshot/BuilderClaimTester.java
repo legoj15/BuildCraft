@@ -54,7 +54,7 @@ public class BuilderClaimTester {
      *  {@code RefusalWindowBudgetTest} fails when the window outgrows it. */
     public static final int RETRY_BUDGET = 400;
 
-    /** What the two Builder poll tests get once the arena cell is entity-ticking: the retry wait, the free cells'
+    /** What the two Builder poll tests get once the arena cell's block entities tick: the retry wait, the free cells'
      *  building and the 40-tick hold before the claim is lifted. A Builder is a block entity, so it runs only once its
      *  chunk does: the poll waits {@link EntityArenaUtil#CELL_READY_TICKS} for the cell first, and
      *  {@link #BUILDER_POLL_TICKS} is the sum of the two (a sum of constants, which {@code GameTestPollBudgetTester}

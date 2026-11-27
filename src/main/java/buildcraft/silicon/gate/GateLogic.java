@@ -22,6 +22,7 @@ import net.minecraft.util.profiling.Profiler;
 //?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.core.BCLog;
@@ -42,6 +43,8 @@ import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
+
+import buildcraft.core.statements.BCStatement;
 
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -223,6 +226,73 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
 
         // Runtime display state (isOn/triggerOn/actionOn) is recomputed every tick and rides the client update tag instead — see writeClientState() — never persisted to disk.
         return nbt;
+    }
+
+    /**
+     * A copy of a tag {@link #writeToNbt()} wrote with every statement turned by {@code rotation}, for a blueprint
+     * that is built rotated about the Y axis; {@link Rotation#NONE} returns {@code logicNbt} itself, and the argument
+     * is never changed. One {@link IStatement#rotateLeft()} (and one {@link IStatementParameter#rotateLeft()}) is one
+     * clockwise quarter turn, so {@link Rotation#CLOCKWISE_90} makes one call, {@link Rotation#CLOCKWISE_180} two and
+     * {@link Rotation#COUNTERCLOCKWISE_90} three.
+     *
+     * <p>Relies on the layout {@code TriggerType}/{@code ActionType} and {@code FullStatement} write: every key
+     * starting with {@code trigger[} or {@code action[} holds a {@code FullStatement} tag, whose {@code s} compound is
+     * {@code {kind: <statement unique tag>, side: <byte>}} and whose parameters sit under the numbered keys
+     * {@code "0"}, {@code "1"}, and so on. Per statement:
+     * <ul>
+     * <li>{@code side}, an {@code EnumPipePart} index: a byte 0 to 5 is a face ({@link Direction#get3DDataValue()})
+     * and is replaced by the face the rotation moves it to; anything else (6 is the pipe centre) stays.</li>
+     * <li>{@code kind}: a statement registered under it is asked to rotate, so one that carries a direction in its
+     * identity (the pipe-direction actions, one statement per face) is stored as the statement of the rotated face;
+     * an unknown kind stays.</li>
+     * <li>the parameters are turned by the statement that owns them ({@link BCStatement#rotateParametersOf}): each is
+     * read, the statement turns the list (a filler pattern a gate beside a Filler holds as an action turns its
+     * own, whose quarter-turn count depends on its facing; any other statement turns each parameter alone, and none of
+     * the gate's own parameters names a direction) and a parameter is stored again only when that gave a different
+     * one; one that does not read stays. A kind that does not resolve turns each parameter alone.</li>
+     * </ul>
+     * The 1.12.2 layout, with {@code kind} and {@code side} at the root of the statement tag, is upgraded by
+     * {@link #readConfigData} and never occurs in a tag {@link #writeToNbt()} wrote, so it is not handled here.
+     */
+    public static CompoundTag rotateNbt(CompoundTag logicNbt, Rotation rotation) {
+        if (rotation == Rotation.NONE) {
+            return logicNbt;
+        }
+        int quarterTurns = FullStatement.quarterTurns(rotation);
+        CompoundTag copy = logicNbt.copy();
+        for (String key : NBTUtilBC.keysOf(copy)) {
+            if (key.startsWith("trigger[") || key.startsWith("action[")) {
+                CompoundTag statement = NBTUtilBC.getCompoundOrNull(copy, key);
+                if (statement != null) {
+                    rotateStatement(statement, rotation, quarterTurns);
+                }
+            }
+        }
+        return copy;
+    }
+
+    /** Turns one statement tag in place: its side, its kind and its parameters (see {@link #rotateNbt}). */
+    private static void rotateStatement(CompoundTag statement, Rotation rotation, int quarterTurns) {
+        CompoundTag identity = NBTUtilBC.getCompoundOrNull(statement, "s");
+        if (identity == null) {
+            // Not the layout writeToNbt writes: left whole.
+            return;
+        }
+        if (identity.contains("side")) {
+            int side = NBTUtilBC.getByte(identity, "side", (byte) 6);
+            if (side >= 0 && side < Direction.values().length) {
+                identity.putByte("side", (byte) rotation.rotate(Direction.from3DDataValue(side)).get3DDataValue());
+            }
+        }
+        IStatement kind = StatementManager.statements.get(NBTUtilBC.getString(identity, "kind", ""));
+        IStatement turnedKind = kind;
+        for (int i = 0; turnedKind != null && i < quarterTurns; i++) {
+            turnedKind = turnedKind.rotateLeft();
+        }
+        if (kind != null && turnedKind != null && turnedKind != kind) {
+            identity.putString("kind", turnedKind.getUniqueTag());
+        }
+        BCStatement.rotateParametersOf(statement, kind, quarterTurns);
     }
 
     // Runtime display state (on/off glow, lit trigger/action slots): sent to clients in the block-entity update tag, never saved to disk — see TilePipeHolder.getUpdateTag.

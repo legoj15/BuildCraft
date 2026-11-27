@@ -290,10 +290,11 @@ public class TileFiller extends TileBC_Neptune
     }
 
     /**
-     * May this Filler take {@code area}? Taking markers breaks every marker of their connection, so the owner recorded
-     * above (the player who placed it; a Filler no player placed has none and asks as the mod's own profile) is asked
-     * about each, the way the Filler asks before it clears a block. A one-shot volume box is saved data whose removal
-     * breaks no block, and a lone marker has nothing to break, so neither is asked about.
+     * May this Filler take {@code area}? Taking markers breaks every marker of their connection, so the owner already
+     * set (the player who placed it, or the builder of a blueprint build; a Filler with neither has none and asks as
+     * the mod's own profile) is asked about each, the way the Filler asks before it clears a block. A one-shot volume
+     * box is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked
+     * about.
      */
     private boolean mayTakeArea(IAreaProvider area) {
         return !(area instanceof TileMarkerVolume marker)

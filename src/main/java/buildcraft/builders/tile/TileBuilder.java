@@ -282,8 +282,9 @@ public class TileBuilder extends TileBC_Neptune
      * already set ({@code BlueprintOwner.finishBuild}), so path markers it may take are asked about as that owner.
      * The path is the test: one that already holds a path keeps it, and with nothing behind it the Builder is left
      * exactly as it is. The follow-ups a placement makes run only when a path was taken: a built Builder that took
-     * nothing already worked its snapshot out against its own single base position while its data loaded, and
-     * {@code updateSnapshot(true)} would lay the same blueprint out again for no reason.
+     * nothing and holds a blueprint already worked it out against its own single base position while its data
+     * loaded, and {@code updateSnapshot(true)} would lay the same blueprint out again for no reason; one that holds
+     * none has nothing to lay out until it is given one ({@link #onSnapshotSlotChanged}).
      */
     @Override
     public void onBuiltFromBlueprint() {

@@ -5,7 +5,6 @@
  */
 package buildcraft.builders.tile;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -229,7 +228,7 @@ public class MarkerTakingProtectionTester {
                 && arena.isRegistered(PathCache.INSTANCE, PATH_3), () -> {
                 ServerLevel level = helper.getLevel();
                 BlockPos[] markers = {arena.abs(PATH_1), arena.abs(PATH_2), arena.abs(PATH_3)};
-                Set<Integer> itemsBefore = itemIds(helper);
+                Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
                 try {
                     check(!BCCoreConfig.minePlayerProtected.get(),
                         "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
@@ -268,7 +267,7 @@ public class MarkerTakingProtectionTester {
                     }
                 } finally {
                     helper.setBlock(builderRel, Blocks.AIR);
-                    discardNewItems(helper, itemsBefore);
+                    EntityArenaUtil.discardNewItems(helper, itemsBefore);
                 }
                 arena.finish();
             }, "Path markers never registered in the cache");
@@ -295,7 +294,7 @@ public class MarkerTakingProtectionTester {
                 && arena.isRegistered(PathCache.INSTANCE, PATH_3), () -> {
                 ServerLevel level = helper.getLevel();
                 BlockPos[] markers = {arena.abs(PATH_1), arena.abs(PATH_2), arena.abs(PATH_3)};
-                Set<Integer> itemsBefore = itemIds(helper);
+                Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
                 try {
                     check(!BCCoreConfig.minePlayerProtected.get(),
                         "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
@@ -330,7 +329,7 @@ public class MarkerTakingProtectionTester {
                     }
                 } finally {
                     helper.setBlock(builderRel, Blocks.AIR);
-                    discardNewItems(helper, itemsBefore);
+                    EntityArenaUtil.discardNewItems(helper, itemsBefore);
                 }
                 arena.finish();
             }, "Path markers never registered in the cache");
@@ -352,7 +351,7 @@ public class MarkerTakingProtectionTester {
                 && arena.isRegistered(VolumeCache.INSTANCE, MARKER_3), () -> {
                 ServerLevel level = helper.getLevel();
                 BlockPos[] markers = {arena.abs(MARKER_1), arena.abs(MARKER_2), arena.abs(MARKER_3)};
-                Set<Integer> itemsBefore = itemIds(helper);
+                Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
                 try {
                     check(!BCCoreConfig.minePlayerProtected.get(),
                         "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
@@ -366,7 +365,7 @@ public class MarkerTakingProtectionTester {
                     body.accept(new Rig(helper, arena, markers, BCCoreBlocks.MARKER_VOLUME.get(), volume, placer,
                         itemsBefore));
                 } finally {
-                    discardNewItems(helper, itemsBefore);
+                    EntityArenaUtil.discardNewItems(helper, itemsBefore);
                 }
                 arena.finish();
             }, "Volume markers never registered in the cache");
@@ -416,25 +415,6 @@ public class MarkerTakingProtectionTester {
             throw new IllegalStateException("no " + type.getSimpleName() + " at " + rel);
         }
         return type.cast(tile);
-    }
-
-    private static Set<Integer> itemIds(GameTestHelper helper) {
-        Set<Integer> ids = new HashSet<>();
-        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class,
-                EntityArenaUtil.cellBounds(helper))) {
-            ids.add(item.getId());
-        }
-        return ids;
-    }
-
-    /** Never leaves a dropped marker behind. */
-    private static void discardNewItems(GameTestHelper helper, Set<Integer> itemsBefore) {
-        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class,
-                EntityArenaUtil.cellBounds(helper))) {
-            if (!itemsBefore.contains(item.getId())) {
-                item.discard();
-            }
-        }
     }
 
     /** The last ask the claim saw came from the machine's owner, {@code placer}. */

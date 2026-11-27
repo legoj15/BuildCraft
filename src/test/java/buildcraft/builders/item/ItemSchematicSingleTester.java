@@ -150,11 +150,11 @@ public class ItemSchematicSingleTester {
                                 + GameProfileUtil.getName(placer) + "), got "
                                 + (owner == null ? "no owner" : GameProfileUtil.getName(owner)));
             }
-            // The stamp's own rule, asked directly: told that the block entity standing there is the one that stood
+            // The finish's own rule, asked directly: told that the block entity standing there is the one that stood
             // there before the build (a schematic can report success without placing a block), it changes no owner.
             BlockPos quarryAbs = helper.absolutePos(quarryFloor.above());
             AbstractBCBlockEntity standing = (AbstractBCBlockEntity) helper.getLevel().getBlockEntity(quarryAbs);
-            BlueprintOwner.stamp(helper.getLevel(), quarryAbs, alice, standing);
+            BlueprintOwner.finishBuild(helper.getLevel(), quarryAbs, alice, standing);
             helper.assertTrue(GameProfileUtil.getId(standing.getOwner()).equals(
                             GameProfileUtil.getId(player.getGameProfile())),
                     "a build that left the block entity it found must not change that machine's owner, got "

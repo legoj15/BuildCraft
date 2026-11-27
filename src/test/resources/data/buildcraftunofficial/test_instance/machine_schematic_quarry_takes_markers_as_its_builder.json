@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:machine_schematic_quarry_takes_markers_as_its_builder",
+    "environment": "buildcraftunofficial:machine_schematic_quarry_takes_markers_as_its_builder",
+    "structure": "minecraft:empty",
+    "max_ticks": 350,
+    "setup_ticks": 0,
+    "required": true
+}

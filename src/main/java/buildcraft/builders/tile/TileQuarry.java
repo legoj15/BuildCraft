@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -322,9 +323,9 @@ public class TileQuarry extends TileBC_Neptune
     /**
      * A blueprint build calls no placement hook, and its rules take the original's area out of what it loads (a copy
      * must never work the original's pit), so a Quarry it builds is left with no box and would stay idle. It lays out
-     * its area as a placed one does. The owner is not touched, and is not known yet: whoever built the Quarry stamps
-     * their own after the build, so nothing here may use it ({@link #layOutArea} does not). A Quarry that somehow has
-     * a valid box keeps it.
+     * its area as a placed one does. Its builder's owner is already set ({@code BlueprintOwner.finishBuild}), so the
+     * markers it may take are asked about as that owner, as after a placement. A Quarry that somehow has a valid box
+     * keeps it.
      */
     @Override
     public void onBuiltFromBlueprint() {
@@ -337,11 +338,15 @@ public class TileQuarry extends TileBC_Neptune
     /**
      * Takes the quarry's working area, as a placement does: a volume box behind it, else a marker volume beside it,
      * else the default area behind it; then sets the frame and mining boxes, the frame positions and the chunk tickets.
+     * Taking a marker volume breaks its markers, so it is taken only when the owner may break every one of them
+     * ({@link #mayTakeMarkers}); refused, the markers stay and the search goes on, down to the default area.
      */
     private void layOutArea() {
         Direction facing = level.getBlockState(worldPosition).getValue(HorizontalDirectionalBlock.FACING);
         BlockPos areaPos = worldPosition.relative(facing.getOpposite());
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
+        // The marker volumes refused here, so each is asked about once even when several of its markers are met.
+        Set<VolumeConnection> refused = Collections.newSetFromMap(new IdentityHashMap<>());
         BlockPos min = null, max = null;
         IAreaProvider provider = volumeBoxes.getTakeableAreaAt(areaPos);
         if (provider != null) {
@@ -349,8 +354,11 @@ public class TileQuarry extends TileBC_Neptune
             // The frame stands on the quarry's own level over the area's footprint: a box dragged with a wrench
             // follows the player's look, so its bottom is often below (or its top above) the quarry, and a frame
             // the quarry does not sit beside has no frame positions and fails the load-time validation. An area
-            // the quarry stands inside, or one with no column to mine, is left alone.
-            if (!area.contains(worldPosition) && fitsQuarry(area)) {
+            // the quarry stands inside, or one with no column to mine, is left alone. The provider is either the
+            // marker in the cell behind (taking it breaks its connection's markers, so they are asked about) or a
+            // one-shot volume box, saved data whose removal breaks no block and needs no ask.
+            if (!area.contains(worldPosition) && fitsQuarry(area)
+                    && (!(provider instanceof TileMarkerVolume marker) || mayTakeMarkers(marker, refused))) {
                 min = new BlockPos(area.min().getX(), worldPosition.getY(), area.min().getZ());
                 max = area.max();
                 provider.removeFromWorld();
@@ -389,7 +397,7 @@ public class TileQuarry extends TileBC_Neptune
                 }
                 box2.expand(1);
                 box2.setMin(box2.min().above());
-                if (box2.isOnEdge(worldPosition)) {
+                if (box2.isOnEdge(worldPosition) && mayTakeMarkers(marker, refused)) {
                     min = volBox.min();
                     max = volBox.max();
                     marker.removeFromWorld();
@@ -444,6 +452,32 @@ public class TileQuarry extends TileBC_Neptune
         if (level != null && !level.isClientSide()) {
             markForRenderUpdate();
         }
+    }
+
+    /**
+     * May this quarry take {@code marker}'s volume? Taking it breaks every marker of the connection
+     * ({@link TileMarkerVolume#getRemovedPositions}), so each one is asked about as the owner, the way the quarry asks
+     * before it mines a block ({@link BlockUtil#canMachineBreak}; an unowned quarry asks as the mod's own profile). A
+     * refusal anywhere refuses the volume, and is remembered in {@code refused} for the rest of this one search. No
+     * {@code RefusalMemory} past that: the search runs once per placement or build, never on a tick.
+     */
+    private boolean mayTakeMarkers(TileMarkerVolume marker, Set<VolumeConnection> refused) {
+        VolumeConnection connection = marker.getCurrentConnection();
+        if (connection != null && refused.contains(connection)) {
+            return false;
+        }
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return true;
+        }
+        for (BlockPos pos : marker.getRemovedPositions()) {
+            if (!BlockUtil.canMachineBreak(serverLevel, pos, getOwner())) {
+                if (connection != null) {
+                    refused.add(connection);
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

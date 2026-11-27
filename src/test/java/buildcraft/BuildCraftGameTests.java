@@ -520,6 +520,9 @@ public class BuildCraftGameTests {
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
         reg.accept("buildcraftunofficial:quarry_adopts_resized_marker_box", () -> buildcraft.builders.tile.TileQuarryAreaAdoptionTester::adoptsResizedMarkerBox);
+        // Taking a marker volume breaks its markers: a Quarry asks claim mods first, as its owner, and refused anywhere
+        // leaves them standing and lays out its default area.
+        reg.accept("buildcraftunofficial:quarry_leaves_markers_it_may_not_break", () -> buildcraft.builders.tile.TileQuarryMarkerProtectionTester::quarryLeavesMarkersItMayNotBreak);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);
@@ -649,6 +652,9 @@ public class BuildCraftGameTests {
         // lays it out the way a placement does: the volume box behind it if there is one, else its default area.
         reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_with_its_default_area", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryWithItsDefaultArea);
         reg.accept("buildcraftunofficial:machine_schematic_builds_quarry_onto_a_volume_box", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicBuildsQuarryOntoAVolumeBox);
+        // The build is finished (owner, then the hook) by whoever built it, so the Quarry asks claim mods as its builder
+        // before it breaks the markers it takes.
+        reg.accept("buildcraftunofficial:machine_schematic_quarry_takes_markers_as_its_builder", () -> buildcraft.builders.snapshot.SchematicMachineAreaTester::machineSchematicQuarryTakesMarkersAsItsBuilder);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);

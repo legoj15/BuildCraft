@@ -64,11 +64,7 @@ public abstract class BCStatement implements IStatement {
      * as the default, and turning it can make it a quarter turn); the array handed in is not changed.
      */
     public IStatementParameter[] rotateParameters(IStatementParameter[] params) {
-        IStatementParameter[] turned = new IStatementParameter[params.length];
-        for (int i = 0; i < params.length; i++) {
-            turned[i] = params[i] == null ? null : params[i].rotateLeft();
-        }
-        return turned;
+        return FullStatement.rotateEach(params);
     }
 
     /**

@@ -173,7 +173,7 @@ public class PatternRotationTest {
                 }
                 for (BlockPos box : boxes) {
                     if (pattern == BCBuildersStatements.PATTERN_OCTAGON && params[0] == PatternParameterAxis.Y
-                        && box.equals(boxes[0])) {
+                        && box.equals(new BlockPos(5, 4, 7))) {
                         // In this box the flat Octagon and the turned one differ in 8 columns of the hollow outline (4 of
                         // the filled ones), the same on every layer: its diagonals are stepped lines that start from the
                         // side vertex, so each corner side lands on other cells once the box is turned. It has no

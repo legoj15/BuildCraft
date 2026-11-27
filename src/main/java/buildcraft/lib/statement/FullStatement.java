@@ -285,7 +285,9 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
         }
     }
 
-    private static IStatementParameter[] rotateEach(IStatementParameter[] params) {
+    /** {@code params} with each parameter turned one clockwise quarter turn by its own
+     *  {@link IStatementParameter#rotateLeft()}, in a new array: a slot that holds nothing stays empty. */
+    public static IStatementParameter[] rotateEach(IStatementParameter[] params) {
         IStatementParameter[] turned = new IStatementParameter[params.length];
         for (int i = 0; i < params.length; i++) {
             turned[i] = params[i] == null ? null : params[i].rotateLeft();

@@ -150,8 +150,8 @@ public class ItemSchematicSingleTester {
                                 + GameProfileUtil.getName(placer) + "), got "
                                 + (owner == null ? "no owner" : GameProfileUtil.getName(owner)));
             }
-            // A build that placed nothing stamps nothing (a schematic can report success without placing a block):
-            // with the block entity that stood there before the build still standing, the machine keeps its owner.
+            // The stamp's own rule, asked directly: told that the block entity standing there is the one that stood
+            // there before the build (a schematic can report success without placing a block), it changes no owner.
             BlockPos quarryAbs = helper.absolutePos(quarryFloor.above());
             AbstractBCBlockEntity standing = (AbstractBCBlockEntity) helper.getLevel().getBlockEntity(quarryAbs);
             BlueprintOwner.stamp(helper.getLevel(), quarryAbs, alice, standing);

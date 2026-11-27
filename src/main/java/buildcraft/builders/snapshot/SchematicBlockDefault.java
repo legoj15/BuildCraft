@@ -81,6 +81,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.tile.BlueprintOwner;
 import buildcraft.lib.tile.BuiltFromBlueprint;
+import buildcraft.lib.tile.OwnerData;
 
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockFiller;
@@ -1033,8 +1034,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         data.putInt("z", blockPos.getZ());
         // Whatever made this tag, a block entity of this mod (or of an add-on built on its base class) never loads
         // a blueprint's owner: BlueprintOwner.strip gates on the captured block, this on what is really loaded.
+        // Only the pair the base class's owner is saved in: an add-on's own "owner" child is not ours to judge.
         if (tileEntity instanceof AbstractBCBlockEntity) {
-            BlueprintOwner.stripKeys(data);
+            OwnerData.removeOwner(data);
         }
         try {
             //? if >=1.21.10 {

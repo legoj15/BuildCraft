@@ -347,16 +347,20 @@ public class MarkerTakingProtectionTester {
 
     /** A block entity of another mod that offers an area and a path through the API, standing where a lectern is (a
      *  vanilla block entity type with no ticker, that nothing reads and anyone may break). It only records being
-     *  taken. */
+     *  taken. Its path runs over empty cells and does not start at its own block (nothing says a provider stands on
+     *  its path), so only an ask about the provider itself reaches a claim that watches its block. */
     private static final class ForeignProvider extends BlockEntity implements IAreaProvider, IPathProvider {
         private final BlockPos areaMax;
+        private final BlockPos pathStart;
         private final BlockPos pathEnd;
         boolean removed;
 
         /** {@code type} is the type of the block entity it replaces (the vanilla constants moved in 26.2). */
-        ForeignProvider(BlockEntityType<?> type, BlockPos pos, BlockState state, BlockPos areaMax, BlockPos pathEnd) {
+        ForeignProvider(BlockEntityType<?> type, BlockPos pos, BlockState state, BlockPos areaMax,
+                BlockPos pathStart, BlockPos pathEnd) {
             super(type, pos, state);
             this.areaMax = areaMax;
+            this.pathStart = pathStart;
             this.pathEnd = pathEnd;
         }
 
@@ -372,7 +376,7 @@ public class MarkerTakingProtectionTester {
 
         @Override
         public List<BlockPos> getPath() {
-            return List.of(getBlockPos(), pathEnd);
+            return List.of(pathStart, pathEnd);
         }
 
         @Override
@@ -389,6 +393,10 @@ public class MarkerTakingProtectionTester {
      * mod's own code: the one block this mod knows it removes is the provider itself. Each of the four machines asks
      * about that block, as its owner, before it takes such a provider; refused, the provider is not removed and the
      * machine is what it is with nothing behind it, and allowed, it takes what the provider offers.
+     *
+     * <p>No marker session: the test places no marker, and the marker state its machines read (a volume box or a
+     * marker volume over the cell behind them) could only be in this cell if a marker test that ran in it had
+     * failed and left it there, and that run is red already.
      */
     public static void machinesAskBeforeTakingAnotherModsProvider(GameTestHelper helper) {
         // Facing west, so each machine's back (where it looks for an area or a path) is the provider.
@@ -415,7 +423,7 @@ public class MarkerTakingProtectionTester {
             check(lectern != null, "precondition: the lectern has no block entity to stand in for");
             ForeignProvider provider = new ForeignProvider(lectern.getType(), providerAbs,
                 level.getBlockState(providerAbs), helper.absolutePos(new BlockPos(4, 2, 4)),
-                helper.absolutePos(new BlockPos(4, 2, 1)));
+                helper.absolutePos(new BlockPos(2, 2, 1)), helper.absolutePos(new BlockPos(4, 2, 1)));
             level.setBlockEntity(provider);
             check(level.getBlockEntity(providerAbs) == provider, "precondition: the provider is not in the world");
             Player placer = helper.makeMockPlayer(GameType.SURVIVAL);

@@ -528,6 +528,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_leaves_path_markers_it_may_not_break", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderLeavesPathMarkersItMayNotBreak);
         // A closed loop of path markers names its first marker twice; a Builder placed at it asks about it once.
         reg.accept("buildcraftunofficial:builder_takes_looped_path_asking_once", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::builderTakesLoopedPathAskingOnce);
+        // What stands behind a machine may be another mod's area or path provider: its block is asked about first.
+        reg.accept("buildcraftunofficial:machines_ask_before_taking_another_mods_provider", () -> buildcraft.builders.tile.MarkerTakingProtectionTester::machinesAskBeforeTakingAnotherModsProvider);
 
         // Per-owner pairing predicate gating the destroying_the_world advancement
         reg.accept("buildcraftunofficial:destroying_the_world_same_player_grants", () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);

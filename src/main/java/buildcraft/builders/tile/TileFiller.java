@@ -64,6 +64,7 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.statement.FullStatement;
 import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.TileMarker;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -292,13 +293,13 @@ public class TileFiller extends TileBC_Neptune
     /**
      * May this Filler take {@code area}? Taking markers breaks every marker of their connection, so the owner already
      * set (the player who placed it, or the builder of a blueprint build; a Filler with neither has none and asks as
-     * the mod's own profile) is asked about each, the way the Filler asks before it clears a block. A one-shot volume
-     * box is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked
-     * about.
+     * the mod's own profile) is asked about each, the way the Filler asks before it clears a block. Another mod's
+     * area provider is asked about for its own block. A one-shot volume box is saved data whose removal breaks no
+     * block, and a lone marker has nothing to break, so neither is asked about
+     * ({@link TileMarker#blocksTakingBreaks}).
      */
     private boolean mayTakeArea(IAreaProvider area) {
-        return !(area instanceof TileMarkerVolume marker)
-            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
+        return BlockUtil.canMachineBreakAll(level, TileMarker.blocksTakingBreaks(area), getOwner());
     }
 
     /** Pins {@code volumeBox} to this Filler's block (no removal; a resize is followed, see {@link #followOwnedBox}) unless

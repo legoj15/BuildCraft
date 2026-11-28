@@ -73,6 +73,7 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.IPumpHost;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.TileMarker;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -354,11 +355,13 @@ public class TileQuarry extends TileBC_Neptune
             // The frame stands on the quarry's own level over the area's footprint: a box dragged with a wrench
             // follows the player's look, so its bottom is often below (or its top above) the quarry, and a frame
             // the quarry does not sit beside has no frame positions and fails the load-time validation. An area
-            // the quarry stands inside, or one with no column to mine, is left alone. The provider is either the
-            // marker in the cell behind (taking it breaks its connection's markers, so they are asked about) or a
-            // one-shot volume box, saved data whose removal breaks no block and needs no ask.
+            // the quarry stands inside, or one with no column to mine, is left alone. The provider is the marker in
+            // the cell behind (taking it breaks its connection's markers, so they are asked about), another mod's
+            // area provider there (asked about for its own block), or a one-shot volume box, saved data whose
+            // removal breaks no block and needs no ask.
             if (!area.contains(worldPosition) && fitsQuarry(area)
-                    && (!(provider instanceof TileMarkerVolume marker) || mayTakeMarkers(marker, refused))) {
+                    && (provider instanceof TileMarkerVolume marker ? mayTakeMarkers(marker, refused)
+                        : BlockUtil.canMachineBreakAll(level, TileMarker.blocksTakingBreaks(provider), getOwner()))) {
                 min = new BlockPos(area.min().getX(), worldPosition.getY(), area.min().getZ());
                 max = area.max();
                 provider.removeFromWorld();

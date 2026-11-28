@@ -8,6 +8,8 @@ package buildcraft.builders.tile;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,6 +23,11 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+
+import buildcraft.api.core.IAreaProvider;
+import buildcraft.api.core.IPathProvider;
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersConfig;
@@ -37,6 +44,7 @@ import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil.Session;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.tile.TileMarker;
 
 /**
@@ -46,7 +54,8 @@ import buildcraft.lib.tile.TileMarker;
  * standing and connected, drops nothing, and is what it is with no markers there. Allowed, it still takes them.
  *
  * <p>The claim always refuses the far marker, one no machine stands against, so only an ask about every marker the
- * taking breaks reaches it.
+ * taking breaks reaches it. What stands behind a machine need not be one of this mod's markers: another mod's block
+ * entity may offer an area or a path, and is asked about too ({@link #machinesAskBeforeTakingAnotherModsProvider}).
  */
 public class MarkerTakingProtectionTester {
 
@@ -334,6 +343,113 @@ public class MarkerTakingProtectionTester {
                 arena.finish();
             }, "Path markers never registered in the cache");
         });
+    }
+
+    /** A block entity of another mod that offers an area and a path through the API, standing where a lectern is (a
+     *  vanilla block entity type with no ticker, that nothing reads and anyone may break). It only records being
+     *  taken. */
+    private static final class ForeignProvider extends BlockEntity implements IAreaProvider, IPathProvider {
+        private final BlockPos areaMax;
+        private final BlockPos pathEnd;
+        boolean removed;
+
+        /** {@code type} is the type of the block entity it replaces (the vanilla constants moved in 26.2). */
+        ForeignProvider(BlockEntityType<?> type, BlockPos pos, BlockState state, BlockPos areaMax, BlockPos pathEnd) {
+            super(type, pos, state);
+            this.areaMax = areaMax;
+            this.pathEnd = pathEnd;
+        }
+
+        @Override
+        public BlockPos min() {
+            return getBlockPos();
+        }
+
+        @Override
+        public BlockPos max() {
+            return areaMax;
+        }
+
+        @Override
+        public List<BlockPos> getPath() {
+            return List.of(getBlockPos(), pathEnd);
+        }
+
+        @Override
+        public void removeFromWorld() {
+            removed = true;
+        }
+    }
+
+    /** One of the four machines, and whether it holds what the provider behind it offered. */
+    private record Taker(String who, Supplier<? extends Block> block, Predicate<BlockEntity> tookIt) {}
+
+    /**
+     * The API lets another mod's block entity offer a machine its area or path, and {@code removeFromWorld} is that
+     * mod's own code: the one block this mod knows it removes is the provider itself. Each of the four machines asks
+     * about that block, as its owner, before it takes such a provider; refused, the provider is not removed and the
+     * machine is what it is with nothing behind it, and allowed, it takes what the provider offers.
+     */
+    public static void machinesAskBeforeTakingAnotherModsProvider(GameTestHelper helper) {
+        // Facing west, so each machine's back (where it looks for an area or a path) is the provider.
+        BlockPos machineRel = new BlockPos(0, 2, 1);
+        BlockPos providerRel = new BlockPos(1, 2, 1);
+        ServerLevel level = helper.getLevel();
+        BlockPos machineAbs = helper.absolutePos(machineRel);
+        BlockPos providerAbs = helper.absolutePos(providerRel);
+        LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
+        // A Quarry's default area starts five blocks to the side of it; the provider's starts in the Quarry's row.
+        List<Taker> takers = List.of(
+            new Taker("a Quarry", BCBuildersBlocks.QUARRY::get, tile -> ((TileQuarry) tile).frameBox.isInitialized()
+                && ((TileQuarry) tile).frameBox.min().getZ() == providerAbs.getZ()),
+            new Taker("a Filler", BCBuildersBlocks.FILLER::get, tile -> ((TileFiller) tile).hasBox()),
+            new Taker("an Architect Table", BCBuildersBlocks.ARCHITECT::get,
+                tile -> ((TileArchitectTable) tile).getIsValid()),
+            new Taker("a Builder", BCBuildersBlocks.BUILDER::get, tile -> ((TileBuilder) tile).path != null));
+        Set<Integer> itemsBefore = EntityArenaUtil.itemIdsInCell(helper);
+        try {
+            check(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            helper.setBlock(providerRel, Blocks.LECTERN);
+            BlockEntity lectern = level.getBlockEntity(providerAbs);
+            check(lectern != null, "precondition: the lectern has no block entity to stand in for");
+            ForeignProvider provider = new ForeignProvider(lectern.getType(), providerAbs,
+                level.getBlockState(providerAbs), helper.absolutePos(new BlockPos(4, 2, 4)),
+                helper.absolutePos(new BlockPos(4, 2, 1)));
+            level.setBlockEntity(provider);
+            check(level.getBlockEntity(providerAbs) == provider, "precondition: the provider is not in the world");
+            Player placer = helper.makeMockPlayer(GameType.SURVIVAL);
+
+            for (Taker taker : takers) {
+                for (boolean refuse : new boolean[] {true, false}) {
+                    String who = taker.who() + (refuse ? " refused" : " allowed") + " another mod's provider";
+                    provider.removed = false;
+                    try (ClaimProtectionMod claim = new ClaimProtectionMod(providerAbs, refuse)) {
+                        // Removed in the tick it was placed in, before it ever ticks (a Quarry builds no frame).
+                        AbstractBCBlockEntity machine = place(helper, taker.block().get(), machineRel, Direction.WEST,
+                            AbstractBCBlockEntity.class);
+                        machine.onPlacedBy(placer, ItemStack.EMPTY);
+                        check(claim.asks() == 1, who + " must ask about the provider's block once, asked "
+                            + claim.asks() + " times");
+                        checkAskedAs(claim, placer, who);
+                        check(provider.removed == !refuse, who + (refuse ? " must not remove it" : " must remove it"));
+                        check(taker.tookIt().test(machine) == !refuse,
+                            who + (refuse ? " must hold nothing of it" : " must hold what it offered"));
+                    } finally {
+                        helper.setBlock(machineRel, Blocks.AIR);
+                        if (boxes.volumeBoxes.removeIf(box -> box.isOwnedBy(machineAbs)
+                                || box.box.contains(providerAbs))) {
+                            boxes.markDirtyAndBroadcast();
+                        }
+                    }
+                }
+            }
+        } finally {
+            helper.setBlock(machineRel, Blocks.AIR);
+            helper.setBlock(providerRel, Blocks.AIR);
+            EntityArenaUtil.discardNewItems(helper, itemsBefore);
+        }
+        helper.succeed();
     }
 
     /**

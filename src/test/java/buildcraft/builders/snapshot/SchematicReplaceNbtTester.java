@@ -352,7 +352,8 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
     /**
      * One machine that works an area it saves as absolute world positions. {@code given} is written by hand with the
      * key names the tile's own {@code writeData} uses (the fixture is checked against that writer below) and gives
-     * the machine an area through its own reader. {@code removed} are the keys a rebuilt copy must not carry,
+     * the machine an area through its own reader. {@code removed} are the keys a rebuilt copy must not carry (the
+     * area, and what the original had earned its owner toward an advancement),
      * {@code notLoaded} keys that may stay in the tag but that the tile's reader no longer reads once {@code removed}
      * are gone (a Builder's numbered path positions follow {@code path_count}), and {@code kept} keys of the same
      * machine that are not its area and must come through untouched.
@@ -424,7 +425,9 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
             concat(BOX_KEYS, "isValid", "scanning", "scanRefused", "markerBox"), List.of(),
             List.of("name", "snapshotType")),
         // TileBuilder.writeData: the box, the path of base positions (a count, then three ints per position) and the
-        // index into it, beside the turn and settings that are the Builder's own.
+        // index into it, beside the turn and settings that are the Builder's own. What the original built toward its
+        // owner's advancements goes too (the cell count, both latches and the done flag their grant waits on): a
+        // copy is its builder's machine, and would otherwise grant from the original's work, or never grant at all.
         new Area("builder", BCBuildersBlocks.BUILDER::get,
             tag(tag -> {
                 putBox(tag);
@@ -438,15 +441,22 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 tag.putInt("currentBasePosIndex", 1);
                 tag.putInt("rotation", Rotation.CLOCKWISE_90.ordinal());
                 tag.putBoolean("canExcavate", false);
+                tag.putLong("bigStructureCellsBuilt", 500L);
+                tag.putBoolean("pavingTheWayGranted", true);
+                tag.putBoolean("startOfSomethingBigGranted", true);
+                tag.putBoolean("wasDoneLastTick", true);
                 putOwner(tag);
             }),
-            concat(BOX_KEYS, "path_count", "currentBasePosIndex"),
+            concat(BOX_KEYS, "path_count", "currentBasePosIndex", "bigStructureCellsBuilt", "pavingTheWayGranted",
+                "startOfSomethingBigGranted", "wasDoneLastTick"),
             List.of("path_0_x", "path_0_y", "path_0_z", "path_1_x", "path_1_y", "path_1_z"),
             List.of("rotation", "canExcavate")),
         // TileQuarry.writeData: the frame, the mining box inside it, the task under way and the drill's position. The
         // quarry checks its boxes on load, but only that the block beside it lies on the frame's edge: a copy built
         // anywhere along that edge would pass and work the original's area, so the rule has to take them out. The
         // tile is at the origin and the frame starts one block east of it, so this fixture loads as a valid quarry.
+        // The latch of the advancement the original's pit earned its owner goes too: a copy digs a pit of its own,
+        // for its builder.
         new Area("quarry", BCBuildersBlocks.QUARRY::get,
             tag(tag -> {
                 tag.putBoolean("frame_init", true);
@@ -471,11 +481,13 @@ public class SchematicReplaceNbtTester extends VanillaSetupBaseTester {
                 tag.putDouble("drillX", 3.5);
                 tag.putDouble("drillY", 2.0);
                 tag.putDouble("drillZ", 0.5);
+                tag.putBoolean("advancementGranted", true);
                 putOwner(tag);
             }),
             List.of("frame_init", "frame_minX", "frame_minY", "frame_minZ", "frame_maxX", "frame_maxY", "frame_maxZ",
                 "box_init", "box_minX", "box_minY", "box_minZ", "box_maxX", "box_maxY", "box_maxZ",
-                "currentTaskId", "task_breakX", "task_breakY", "task_breakZ", "hasDrill", "drillX", "drillY", "drillZ"),
+                "currentTaskId", "task_breakX", "task_breakY", "task_breakZ", "hasDrill", "drillX", "drillY", "drillZ",
+                "advancementGranted"),
             List.of(), List.of()),
         // TileMiner.writeData: the position being mined, the tube length that goes with it and the progress on it.
         new Area("mining_well", BCFactoryBlocks.MINING_WELL::get,

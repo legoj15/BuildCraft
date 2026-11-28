@@ -56,6 +56,7 @@ import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.nbt.NbtSquisher;
 import buildcraft.lib.tile.BuiltFromBlueprint;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.TileMarker;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -379,12 +380,12 @@ public class TileArchitectTable extends TileBC_Neptune
     /**
      * May this table take {@code area}? Taking markers breaks every marker of their connection, so the owner already
      * set (the player who placed it, or the builder of a blueprint build; a table with neither has none and asks as
-     * the mod's own profile) is asked about each, with the same probe the mining machines use. A one-shot volume box
-     * is saved data whose removal breaks no block, and a lone marker has nothing to break, so neither is asked about.
+     * the mod's own profile) is asked about each, with the same probe the mining machines use. Another mod's area
+     * provider is asked about for its own block. A one-shot volume box is saved data whose removal breaks no block,
+     * and a lone marker has nothing to break, so neither is asked about ({@link TileMarker#blocksTakingBreaks}).
      */
     private boolean mayTakeArea(IAreaProvider area) {
-        return !(area instanceof TileMarkerVolume marker)
-            || BlockUtil.canMachineBreakAll(level, marker.getRemovedPositions(), getOwner());
+        return BlockUtil.canMachineBreakAll(level, TileMarker.blocksTakingBreaks(area), getOwner());
     }
 
     public void tick() {

@@ -273,6 +273,9 @@ public class TileBuilder extends TileBC_Neptune
         takePathBehind();
         updateBasePoses();
         updateSnapshot(true);
+        // The path is saved state the client draws from, as the Filler's box is: marked and pushed like it.
+        setChanged();
+        markForRenderUpdate();
     }
 
     /**
@@ -283,8 +286,9 @@ public class TileBuilder extends TileBC_Neptune
      * The path is the test: one that already holds a path keeps it, and with nothing behind it the Builder is left
      * exactly as it is. The follow-ups a placement makes run only when a path was taken: a built Builder that took
      * nothing and holds a blueprint already worked it out against its own single base position while its data
-     * loaded, and {@code updateSnapshot(true)} would lay the same blueprint out again for no reason; one that holds
-     * none has nothing to lay out until it is given one ({@link #onSnapshotSlotChanged}).
+     * loaded (with the turn it saved, which a rotated build turned with it: {@code BlockBuilder.rotateTileData}),
+     * and {@code updateSnapshot(true)} would lay the same blueprint out again for no reason; one that holds none has
+     * nothing to lay out until it is given one ({@link #onSnapshotSlotChanged}).
      */
     @Override
     public void onBuiltFromBlueprint() {
@@ -294,6 +298,8 @@ public class TileBuilder extends TileBC_Neptune
         if (takePathBehind()) {
             updateBasePoses();
             updateSnapshot(true);
+            setChanged();
+            markForRenderUpdate();
         }
     }
 
@@ -310,11 +316,10 @@ public class TileBuilder extends TileBC_Neptune
         ImmutableList<BlockPos> copiedPath = ImmutableList.copyOf(provider.getPath());
         // Taking the path breaks its markers, so the owner (recorded by the placement, and the builder's own for one
         // a blueprint built) is asked about each first, as the Builder asks before it breaks a block; refused, the
-        // markers stay and the Builder has no path, as with none behind it. Any other path provider is asked about
-        // its path's positions.
-        List<BlockPos> removed =
-            provider instanceof TileMarker<?> marker ? marker.getRemovedPositions() : copiedPath;
-        if (copiedPath.size() >= 2 && BlockUtil.canMachineBreakAll(level, removed, getOwner())) {
+        // markers stay and the Builder has no path, as with none behind it. Another mod's path provider is asked
+        // about its own block and the blocks standing on its path.
+        if (copiedPath.size() >= 2
+                && BlockUtil.canMachineBreakAll(level, TileMarker.blocksTakingBreaks(provider), getOwner())) {
             path = copiedPath;
             provider.removeFromWorld();
             return true;
@@ -767,9 +772,10 @@ public class TileBuilder extends TileBC_Neptune
             }
         }
 
-        // Reload snapshot if invSnapshot carries a header. Placement/path state (basePoses,
-        // rotation, currentBox) is already restored above, so this call re-materializes the
-        // Snapshot object from GlobalSavedDataSnapshots without resetting the base-pos index.
+        // Reload snapshot if invSnapshot carries a header. Placement/path state (the path, rotation,
+        // currentBox) is already restored above and the base positions are worked out again from the
+        // path, so this call re-materializes the Snapshot object from GlobalSavedDataSnapshots without
+        // resetting the base-pos index.
         if (!invSnapshot.isEmpty() && invSnapshot.getItem() instanceof ItemSnapshot) {
             Snapshot.Header header = ItemSnapshot.getHeader(invSnapshot);
             if (header != null && level != null) {

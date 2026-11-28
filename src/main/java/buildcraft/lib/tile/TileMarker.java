@@ -9,6 +9,7 @@ package buildcraft.lib.tile;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -16,12 +17,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
+import buildcraft.api.core.IPathProvider;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.BCValueInput;
@@ -132,6 +135,35 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
             }
         }
         return removed;
+    }
+
+    /**
+     * The blocks that taking {@code provider} breaks, as far as this mod can know: what a machine asks protection
+     * mods about before it calls the {@code removeFromWorld} of the area or path provider it found behind it
+     * ({@link buildcraft.lib.misc.BlockUtil#canMachineBreakAll}). One of this mod's markers names its connection's
+     * ({@link #getRemovedPositions}; none for a lone marker). Another mod's block entity (the API lets one offer an
+     * area or a path) removes whatever its own code decides: the one block known to go is the provider itself, and
+     * for a path the blocks standing on it, where its markers would be. Anything that is no block entity is saved
+     * data (a one-shot volume box), whose removal breaks no block.
+     */
+    public static List<BlockPos> blocksTakingBreaks(Object provider) {
+        if (provider instanceof TileMarker<?> marker) {
+            return marker.getRemovedPositions();
+        }
+        if (!(provider instanceof BlockEntity tile)) {
+            return List.of();
+        }
+        Set<BlockPos> blocks = new LinkedHashSet<>();
+        blocks.add(tile.getBlockPos());
+        Level level = tile.getLevel();
+        if (level != null && provider instanceof IPathProvider path) {
+            for (BlockPos p : path.getPath()) {
+                if (!level.getBlockState(p).isAir()) {
+                    blocks.add(p);
+                }
+            }
+        }
+        return List.copyOf(blocks);
     }
 
     protected void disconnectFromOthers() {

@@ -296,7 +296,7 @@ public class TileFiller extends TileBC_Neptune
      * the mod's own profile) is asked about each, the way the Filler asks before it clears a block. Another mod's
      * area provider is asked about for its own block. A one-shot volume box is saved data whose removal breaks no
      * block, and a lone marker has nothing to break, so neither is asked about
-     * ({@link TileMarker#blocksTakingBreaks}).
+     * ({@link TileMarker#blocksTakingBreaks(IAreaProvider)}).
      */
     private boolean mayTakeArea(IAreaProvider area) {
         return BlockUtil.canMachineBreakAll(level, TileMarker.blocksTakingBreaks(area), getOwner());

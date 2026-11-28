@@ -41,7 +41,11 @@
         ],
         "replaceNbt": {
             "path_count": null,
-            "currentBasePosIndex": null
+            "currentBasePosIndex": null,
+            "bigStructureCellsBuilt": null,
+            "pavingTheWayGranted": null,
+            "startOfSomethingBigGranted": null,
+            "wasDoneLastTick": null
         }
     },
     {
@@ -107,7 +111,8 @@
             "hasDrill": null,
             "drillX": null,
             "drillY": null,
-            "drillZ": null
+            "drillZ": null,
+            "advancementGranted": null
         }
     }
 ]

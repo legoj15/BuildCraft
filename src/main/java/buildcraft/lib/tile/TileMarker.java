@@ -9,6 +9,7 @@ package buildcraft.lib.tile;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -16,12 +17,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
+import buildcraft.api.core.IAreaProvider;
+import buildcraft.api.core.IPathProvider;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.BCValueInput;
@@ -132,6 +136,46 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
             }
         }
         return removed;
+    }
+
+    /**
+     * The blocks that taking {@code area} breaks, as far as this mod can know: what a machine asks protection mods
+     * about before it calls the {@code removeFromWorld} of the area provider it found behind it
+     * ({@link buildcraft.lib.misc.BlockUtil#canMachineBreakAll}). One of this mod's markers names its connection's
+     * ({@link #getRemovedPositions}; none for a lone marker). Another mod's block entity (the API lets one offer an
+     * area) removes whatever its own code decides, and the one block known to go is the provider itself. Anything
+     * that is no block entity is saved data (a one-shot volume box), whose removal breaks no block.
+     */
+    public static List<BlockPos> blocksTakingBreaks(IAreaProvider area) {
+        if (area instanceof TileMarker<?> marker) {
+            return marker.getRemovedPositions();
+        }
+        return area instanceof BlockEntity tile ? List.of(tile.getBlockPos()) : List.of();
+    }
+
+    /**
+     * {@link #blocksTakingBreaks(IAreaProvider)} for the path provider behind a Builder. Another mod's block entity
+     * is asked about for its own block and for the blocks standing on its path, where its markers would be (an
+     * empty position on the path holds nothing to break; reading one loads its chunk, as for this mod's markers).
+     */
+    public static List<BlockPos> blocksTakingBreaks(IPathProvider path) {
+        if (path instanceof TileMarker<?> marker) {
+            return marker.getRemovedPositions();
+        }
+        if (!(path instanceof BlockEntity tile)) {
+            return List.of();
+        }
+        Set<BlockPos> blocks = new LinkedHashSet<>();
+        blocks.add(tile.getBlockPos());
+        Level level = tile.getLevel();
+        if (level != null) {
+            for (BlockPos p : path.getPath()) {
+                if (!level.getBlockState(p).isAir()) {
+                    blocks.add(p);
+                }
+            }
+        }
+        return List.copyOf(blocks);
     }
 
     protected void disconnectFromOthers() {
